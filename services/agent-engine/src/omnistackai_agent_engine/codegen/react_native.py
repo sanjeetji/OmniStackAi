@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from ..application_ir import ApplicationIR, Entity, FieldType, MobileProfile
 from .adapter import GenerationTarget
 from .files import GeneratedFile, GeneratedProject
+from .mobile_release import bundle_identifier, release_files
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -90,6 +91,11 @@ class ReactNativeAdapter:
         files.append(self._generate_root_navigator(ir))
         files.append(self._generate_app_root(ir))
 
+        # 6. Store release (R-546): eas.json, brand-coloured icons, the iOS privacy manifest,
+        # listing metadata, a CI workflow and the publish guide. No credential is created, used or
+        # embedded — every secret is referenced by name so the publisher supplies it later.
+        files.extend(release_files(ir, _slug(ir.name), bundle_identifier(_slug(ir.name))))
+
         return GeneratedProject(self.target.value, files)
 
     # ── Configurations ─────────────────────────────────────────────────────────
@@ -134,27 +140,54 @@ class ReactNativeAdapter:
         return GeneratedFile("package.json", json.dumps(manifest, indent=2) + "\n")
 
     def _generate_app_json(self, ir: ApplicationIR, slug: str) -> GeneratedFile:
+        """R-546: what a store build needs, not just what a dev server needs.
+
+        Four things were missing and each one blocks a submission on its own: no icon or splash
+        image (a listing would carry Expo's default), no `buildNumber`/`versionCode` (a store
+        refuses a second upload that reuses one), no privacy manifest reference, and a bundle
+        identifier under `com.omnistackai.*` — our domain on the user's app, which they cannot
+        register. The brand colour comes from the IR, so the app is its own colour rather than a
+        hard-coded navy.
+        """
+        identifier = bundle_identifier(slug)
+        background = ir.brand.primary_color
         cfg = {
             "expo": {
                 "name": ir.name,
                 "slug": slug,
                 "version": "1.0.0",
                 "orientation": "portrait",
-                "userInterfaceStyle": "dark",
+                "userInterfaceStyle": "automatic",
+                "icon": "./assets/icon.png",
                 "splash": {
+                    "image": "./assets/splash.png",
                     "resizeMode": "contain",
-                    "backgroundColor": "#090d16",
+                    "backgroundColor": background,
                 },
+                "assetBundlePatterns": ["**/*"],
                 "ios": {
                     "supportsTablet": True,
-                    "bundleIdentifier": f"com.omnistackai.{slug.replace('-', '')}",
-                },
-                "android": {
-                    "package": f"com.omnistackai.{slug.replace('-', '')}",
-                    "adaptiveIcon": {
-                        "backgroundColor": "#090d16",
+                    "bundleIdentifier": identifier,
+                    # Both stores refuse a second upload that reuses a build number.
+                    "buildNumber": "1",
+                    "privacyManifests": {"NSPrivacyAccessedAPITypes": []},
+                    "infoPlist": {
+                        # Generated apps talk to an API over TLS; no arbitrary-loads exemption.
+                        "ITSAppUsesNonExemptEncryption": False,
                     },
                 },
+                "android": {
+                    "package": identifier,
+                    "versionCode": 1,
+                    "adaptiveIcon": {
+                        "foregroundImage": "./assets/adaptive-icon.png",
+                        "backgroundColor": background,
+                    },
+                    # Declared explicitly: Play rejects builds requesting permissions they cannot
+                    # justify, and a generated app needs none beyond network access.
+                    "permissions": [],
+                },
+                "web": {"favicon": "./assets/favicon.png"},
             }
         }
         return GeneratedFile("app.json", json.dumps(cfg, indent=2) + "\n")

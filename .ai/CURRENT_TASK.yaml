@@ -1,31 +1,32 @@
-task_id: R-545
+task_id: R-546
 status: completed
 phase: MVP
-tracker_row: 12
+tracker_row: 13
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-545-mobile-app-runs
+branch: ai/R-546-store-ready
 objective: >-
-  `codegen/react_native.py` emits a genuine Expo app — 27 files, a design system, navigation, an
-  API client, auth context and per-entity screens, with iOS and Android bundle identifiers already
-  set. The platform can do nothing with it: `APP_KINDS` is ("web", "admin", "pwa", "api") with no
-  mobile kind, and `localrun/plan.py` contains zero references to `apps/mobile`. A user who asks
-  for a mobile app gets working code the platform never installs, starts, previews or offers a QR
-  for. Make the generated mobile app run: install it, start Expo, and put its QR in front of the
-  user so they can open it in Expo Go on a real phone. The console already has a from-scratch QR
-  component and a phone frame; what is missing is a running app to point them at.
-  PWA stays the default for generated apps — this adds React Native alongside it, it does not
-  replace it.
+  R-545 made the generated Expo app run on a phone. It cannot be built for the stores: there is no
+  `eas.json`, so `eas build` has nothing to read; `app.json` sets a splash and adaptive-icon
+  background colour but no icon or splash **image**, and Apple and Google both reject a submission
+  without one; there is no `versionCode`/`buildNumber`, so a second upload to either store is
+  refused; no permissions are declared; there is no iOS privacy manifest, which Apple has required
+  since 2024; and the bundle identifier is `com.omnistackai.<slug>` — our domain on the user's app,
+  which they cannot register.
+  Generate everything a store build needs, so that the founder's only remaining work is buying the
+  accounts and pasting credentials. No account, key or paid service is used by this task.
 founder_gate: >-
-  AGENTS.md forbids starting native mobile work without approval. The founder asked for it
-  explicitly on 2026-09-24 ("we need to build feature for React Native also, and it should be
-  fully functional, so that user can publish the app in Google and App stores"). Recorded here as
-  the approval. No paid service is used or required by this task; store submission needs an Apple
-  Developer account, a Google Play account and an EAS account, and is a separate gated decision.
+  Founder approved React Native work on 2026-09-24 and asked specifically that publishing should
+  need no further coding. This task does the code and configuration; R-547 is the credentials.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/react_native.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/git_service/materialize.py
+# Widened deliberately: GeneratedFile.content is str-only and materialize.py is the single writer
+# (`write_text`), so an app icon — a PNG — cannot reach disk without a binary path. An icon is the
+# most visible thing in a store listing, and R-544 now extracts the user's brand colour, so the
+# generated app can carry its own colour rather than Expo's default. Two contained changes: an
+# opt-in flag on GeneratedFile, and one branch in the writer.
   - services/agent-engine/tests/
   - scripts/test.sh
   - .ai/
@@ -33,16 +34,19 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - No paid cloud service, no EAS build, no store submission in this task
-  - PWA remains the default; nothing about the existing pwa kind changes
-  - No new agent-engine runtime dependency (stdlib only)
-  - A project without apps/mobile behaves exactly as it does today
+  - No EAS account, API key, certificate or store credential is created, used or committed
+  - No paid cloud service
+  - No secret value in any generated file — credentials are referenced, never embedded
+  - The app must still bundle: every relative import resolves, babel helpers stay declared
   - task verify stays offline with 0 model calls
 required_gates:
-  - A project containing apps/mobile is installed and started by the run plan on its own port
-  - The preview reports the mobile app with its Expo URL and the QR payload a phone can scan
-  - The mobile app's API base is the machine's LAN address, not 127.0.0.1, or a phone cannot reach it
-  - A project without apps/mobile produces a byte-identical run plan to today
+  - A generated project contains an eas.json with development, preview and production profiles
+  - app.json declares an icon and a splash image, and those files are actually generated
+  - iOS buildNumber and Android versionCode are present, so a second upload is not refused
+  - An iOS privacy manifest is generated, since Apple rejects submissions without one
+  - The bundle identifier is derived from the project, not from com.omnistackai
+  - Store metadata for eas submit is generated, with credentials referenced by name and never embedded
+  - The generated README documents the exact publish sequence and what the founder must supply
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -50,17 +54,26 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - "R-546: eas.json, real icon and splash assets, versionCode/buildNumber, permissions, the iOS privacy manifest, a user-owned bundle identifier and store metadata — everything needed to build for the stores, none of it needing an account"
-  - "R-547 (gated on the founder buying accounts): actually submitting to Google Play and the App Store"
+  - "R-547: buying the Apple Developer ($99/yr), Google Play ($25) and EAS accounts, and pasting their credentials — the founder's decision, no code left to write"
 evidence:
-  - "task verify: 4,099 tests OK, offline, 0 model calls"
-  - "scripts/test.sh green with a new R-545 block; lint and security:quick pass"
-  - "live: the generated app installed, Expo started in LAN mode, iOS bundle HTTP 200 6,532,286 bytes"
-  - "live: Android bundle HTTP 200 6,551,905 bytes through the same server"
-  - "live: the manifest a phone fetches reports runtimeVersion exposdk:51.0.0 and a launchAsset URL on the LAN"
-  - "18 new offline tests in tests/test_mobile_app_runs.py"
+  - "task verify: 4,122 tests OK, offline, 0 model calls"
+  - "scripts/test.sh green with a new R-546 block; lint and security:quick pass"
+  - "live: the generated app still bundles with the new configuration - iOS HTTP 200, 6,532,286 bytes"
+  - "icons verified as real PNGs by `file` and macOS `sips`: 1024x1024 icon, adaptive foreground and splash; 48x48 favicon"
+  - "23 new offline tests in tests/test_mobile_store_release.py, including a scan of every generated file for embedded credentials"
 found_and_fixed:
-  - "@babel/runtime was undeclared, so the very first Metro bundle failed: babel-preset-expo emits imports of its helpers and pnpm's strict resolution cannot find them"
-  - "src/app/screens/OverviewScreen.tsx imported ../design-system/... but sits two levels deep, so Metro resolved none of the components on the app's home screen"
-  - "the Expo adapter had never been executed end to end, so neither defect had ever been seen"
-  - "Expo in CI mode skips the dev server rather than failing when its port is taken; the platform allocates a fresh port each time, so this only bites manual runs"
+  - "no eas.json existed, so `eas build` had nothing to read"
+  - "app.json set splash and adaptive-icon background colours but referenced no icon or splash image, so a listing would carry Expo's default"
+  - "no iOS buildNumber and no Android versionCode, so the second upload to either store is refused"
+  - "no iOS privacy manifest, which Apple has required since spring 2024"
+  - "the bundle identifier was com.omnistackai.<slug> - our domain on a user's app, unregisterable by them and bound permanently by both stores on first upload"
+  - "GeneratedFile.content is text-only, so a PNG could not reach disk; added an opt-in base64_encoded flag decoded at the single writer"
+  - "my first contract guard grepped react_native.py for 'com.omnistackai.' and matched the docstring explaining the fix; narrowed to the f-string that would emit it"
+what_the_founder_must_supply:
+  - "Apple Developer Program, 99 USD/year"
+  - "Google Play Developer, 25 USD once"
+  - "an Expo account for EAS cloud builds (free tier available), as EXPO_TOKEN"
+  - "a Google Play service-account JSON at credentials/play-service-account.json"
+  - "EXPO_APPLE_ID, EXPO_ASC_APP_ID and EXPO_APPLE_TEAM_ID"
+  - "a bundle identifier on a domain they own, replacing the derived placeholder"
+  - "a privacy policy URL, store screenshots, and their own icon artwork"

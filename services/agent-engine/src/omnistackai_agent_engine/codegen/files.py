@@ -41,11 +41,25 @@ class GeneratedFile:
     path: str
     content: str
     executable: bool = False
+    #: R-546: `content` is base64 and the writer must decode it to bytes. An app icon is a PNG,
+    #: and a store listing without one shows Expo's default. Opt-in, so every existing file and
+    #: every digest computed over `content` is untouched.
+    base64_encoded: bool = False
 
     def __post_init__(self) -> None:
         _validate_path(self.path)
         if not isinstance(self.content, str):
             raise InvalidGeneratedFileError("content must be a string")
+        if not isinstance(self.base64_encoded, bool):
+            raise InvalidGeneratedFileError("base64_encoded must be a boolean")
+        if self.base64_encoded:
+            import base64 as _b64
+            import binascii
+
+            try:
+                _b64.b64decode(self.content, validate=True)
+            except (binascii.Error, ValueError) as error:
+                raise InvalidGeneratedFileError(f"content is not valid base64: {error}") from error
         if len(self.content) > _MAX_CONTENT:
             raise InvalidGeneratedFileError("content exceeds the size limit")
         if not isinstance(self.executable, bool):

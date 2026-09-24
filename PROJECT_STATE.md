@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-546 (2026-09-24): the generated Expo app can be built and submitted to the stores.**
+> R-545 made it run on a phone; it could not be *built*. No `eas.json`; no icon or splash **image**, only a background colour; no `buildNumber`/`versionCode`, so a second upload is refused; no iOS privacy manifest, required by Apple since 2024; and a bundle identifier under `com.omnistackai.*` — our domain on a user's app, bound permanently by both stores on first upload.
+> `codegen/mobile_release.py` generates all of it offline: EAS build and submit profiles, the privacy manifest, listing metadata, a manual-dispatch CI workflow, a credential-aware `.gitignore`, and a release guide whose first section is *change the bundle identifier*.
+> **No credential is created, used or embedded** — every secret is referenced by name, and a test scans every generated file for PEM headers, tokens and service-account keys.
+> Icons are real PNGs encoded in pure Python (text-only `GeneratedFile` gained an opt-in `base64_encoded` flag, decoded at the single writer) and take the **brand colour R-544 extracts from the prompt**. Verified by `file` and macOS `sips`.
+> Evidence: the app still bundles live — iOS HTTP 200, 6,532,286 bytes. 23 new tests; `task verify` 4,122 OK offline, 0 model calls.
+> **What remains is not code:** Apple ($99/yr), Google Play ($25) and an Expo account. With those, `eas build` and `eas submit` work against what is generated.
+
 > **R-545 (2026-09-24): the generated mobile app runs, and a phone can open it.**
 > The Expo adapter had been emitting a real app that the platform could do nothing with — no mobile kind in `APP_KINDS`, no `apps/mobile` anywhere in `plan.py`. It is now installed and started in LAN mode on its own port, and the preview reports the `exp://` URL for a QR. Not proxied: a native app is not an iframe, so the QR *is* the preview. `EXPO_PUBLIC_API_URL` points at the **LAN address** — on a phone, loopback is the phone itself.
 > **The adapter had never been run, and no generated mobile app had ever bundled.** `@babel/runtime` was undeclared (the first bundle failed outright), and `OverviewScreen.tsx` imported `../design-system/...` when it needed `../../` — Metro could not resolve one component on the home screen. Both now have static gates that catch the same defects offline.

@@ -2576,4 +2576,32 @@ if rg -qF '("EXPO_PUBLIC_API_URL", f"http://127.0.0.1' \
   exit 1
 fi
 
+# R-546: the generated Expo app must be buildable and submittable. Each gap blocks a submission on
+# its own — no eas.json, no icon, no buildNumber/versionCode, no iOS privacy manifest, and a bundle
+# identifier under our own domain that the user cannot register.
+r546_tests="$repo_root/services/agent-engine/tests/test_mobile_store_release.py"
+if [[ ! -f "$r546_tests" ]]; then
+  printf 'R-546 the store-release gate is required.\n'
+  exit 1
+fi
+for guard in test_no_generated_file_contains_a_credential \
+  test_secrets_are_referenced_by_name_not_value \
+  test_credentials_are_git_ignored \
+  test_the_bundle_identifier_is_not_ours \
+  test_the_ios_privacy_manifest_exists \
+  test_every_icon_expo_references_is_generated \
+  test_they_are_valid_pngs_at_the_sizes_expo_expects; do
+  if ! rg -qF "$guard" "$r546_tests"; then
+    printf 'R-546 the store-release gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# Our domain must never go back onto a user's app: both stores bind it permanently on first upload.
+# Matched on the f-string that would emit it, not on prose — a comment explaining the fix is fine.
+if rg -qF 'f"com.omnistackai' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/react_native.py"; then
+  printf "R-546 the generated bundle identifier must not use our domain.\n"
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

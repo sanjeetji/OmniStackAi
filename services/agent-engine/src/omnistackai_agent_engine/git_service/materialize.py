@@ -52,7 +52,14 @@ def materialize_project(
         except ValueError as error:  # defense-in-depth; paths are already validated safe
             raise MaterializeError(f"refusing to write outside the target: {generated.path}") from error
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(generated.content, encoding="utf-8")
+        if getattr(generated, "base64_encoded", False):
+            # R-546: binary assets (the generated app icon) travel as base64 through the
+            # text-only GeneratedFile contract and are decoded here, at the single writer.
+            import base64
+
+            destination.write_bytes(base64.b64decode(generated.content))
+        else:
+            destination.write_text(generated.content, encoding="utf-8")
         if generated.executable:
             destination.chmod(0o755)
 
