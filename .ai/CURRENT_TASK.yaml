@@ -1,51 +1,69 @@
-task_id: R-557
-status: completed
+task_id: R-558
+status: complete
 phase: MVP
-tracker_row: 23
+tracker_row: 24
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-557-console-shows-ecosystem
+branch: ai/R-558-designed-ui
 objective: >-
-  A user who describes a food delivery app with customers, drivers and restaurants now receives
-  four apps over one API — and no explanation. The build streams a line while it runs, then that
-  scrolls away; the result carries `ecosystem_apps` and `ecosystem_reason`, and
-  `app_build_result_to_dict` drops both, so they never leave the agent-engine at all. What is left
-  on screen is four directories and no reason for them.
-  Carry the decision through to the console and show it: which apps were built, and why there is
-  more than one.
+  The generated project ships a real design system — 59 colour tokens, a type scale, a space scale,
+  six shadows, seven motion tokens — and the pages ignore almost all of it. Measured on a generated
+  storefront home page: `--shadow-*` used 0 times, `--transition-*` 0, `--font-size-*` 0,
+  `--space-*` 0, against 26 hardcoded pixel values and **zero hover or focus states**. The result
+  looks flat and static because it is flat and static.
+  Part of that is structural: inline React styles cannot express `:hover` or `:focus-visible` at
+  all, so no amount of tuning inline values would have produced an interface that responds to a
+  cursor. The page needs a real stylesheet.
+  Make the deterministic pages use the system they ship with, and give them the depth, motion and
+  interaction feedback that separates a designed interface from a tidy one. This is what a user
+  sees whenever no model is available or a model's output fails validation, so it is not a
+  fallback in any sense that permits it to look like one.
 founder_gate: >-
-  Founder asked on 2026-09-24 to finish this. It is the last item from the ecosystem queue, and
-  the first console-web change of the session.
+  Founder on 2026-09-24: make the deterministic template "just like a modern, cool and latest UI
+  not a simple UI", and asked for this before Phase E.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/tests/
-  - apps/console-web/
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - apps/console-web/data/overview.json
 forbidden_changes:
-  - A single-app build must look exactly as it does today, with no empty ecosystem panel
-  - No new console dependency
-  - The reason is generated text, not free-form model output, so it is rendered as text and never as HTML
+  - No new dependency in generated projects; a stylesheet is emitted, not a CSS-in-JS library
+  - Every page stays a server component with no client JavaScript
+  - Every variant keeps passing the engine's own JSX validator
+  - Deterministic output — one project renders identically twice
+  - The archetype's language and the brand colour survive
   - task verify stays offline with 0 model calls
 required_gates:
-  - app_build_result_to_dict carries the apps that were built and the reason
-  - A single-app build carries neither, so the console has nothing to render
-  - The console shows the app list and the reason after an ecosystem build
-  - The console shows nothing extra after a single-app build
+  - The page uses the shipped type, space, shadow and motion tokens rather than hardcoded values
+  - Interactive elements have hover and focus-visible states, which inline styles cannot express
+  - Focus states are visible for keyboard users, not removed
+  - Motion is suppressed under prefers-reduced-motion
+  - Every layout variant still passes clean_and_validate_jsx, including against an empty IR
+  - Output stays byte-stable and the brand colour still drives it
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-evidence:
-  - "task verify: 4,223 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
-  - "tsc --noEmit clean across apps/console-web"
-  - "live: a real console build streamed 'Planning 4 apps over one API and one database' and its payload carried ecosystem_apps ['web','merchant','driver','admin'] with the reason"
-  - "3 new offline tests covering presence, absence for a single app, and that the reason is plain text"
+deferred:
+  - "IR v2 (maximum features): the IR models entities, fields, relations, CRUD, screens and roles and nothing else, so workflows, ledgers, state machines, payments and realtime cannot be expressed at any model quality. Designed as its own sequence after this."
 found_and_fixed:
-  - "app_build_result_to_dict dropped ecosystem_apps and ecosystem_reason, so they never left the agent-engine and the console could not have rendered them"
-  - "two of the three workspace snapshot sites are chat edits reading result.ecosystem_apps from a BuildEditResponse that has no such field; an edit never builds apps, so they carry the existing shape forward instead"
-
+  - >-
+    R-549 shipped `lib/brand.ts` with two `@ts-expect-error` directives over imports TypeScript
+    resolves on its own. An unused suppression is itself an error, so `next build` has failed on
+    every generated web app since that task. Nothing caught it because the tests of that change
+    asserted on the file's text, and the text was the defect. Found by building a generated
+    project rather than reading one.
+  - >-
+    The generated `tsconfig.json` never set `allowJs`, so `lib/brand.ts` could not import the
+    shared `brand/derive.mjs` and a fresh clone showed TS7016 in the editor and on `tsc`. This
+    stayed invisible because `next build` writes `allowJs` into tsconfig.json itself on first
+    run: the build repaired the file it was about to read, so only someone typechecking before
+    their first build ever saw it. Found by the new gate, within a minute of it existing.
+  - >-
+    The same defect also made `RADIUS_VALUES[radius]` an implicit-any index under `strict`, which
+    surfaced only once the suppressions above were removed.

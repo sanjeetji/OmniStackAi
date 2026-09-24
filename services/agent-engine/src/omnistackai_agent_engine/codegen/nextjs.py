@@ -5611,16 +5611,17 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
 def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -> str:  # noqa: PLR0912, PLR0915
     """Generate the public-facing home page (app/page.tsx) for the customer-facing web app.
 
-    R-543 shaped this by archetype, so a storefront invites you to shop and a publication to read.
-    R-556 adds the arrangement: two storefronts used to render one structure with different nouns,
-    which is the repetitiveness archetypes alone did not fix. The layout is chosen from the product
-    name, so two products differ while one product stays stable across runs.
+    R-543 shaped this by archetype, R-556 gave it four arrangements, and R-558 made it use the
+    design system the project already ships: the shipped type, space, shadow and motion tokens
+    rather than hardcoded pixels, with hover and focus-visible states that inline React styles
+    cannot express at all. That last point is structural, not cosmetic — it is why the page now
+    carries a stylesheet instead of a pile of `style={{...}}`.
 
-    A server component with no hooks in every variant: byte-stable for a given IR, and no client
-    JavaScript for a page that needs none.
+    Still a server component with no client JavaScript, and still byte-stable for a given IR.
     """
     from .archetype import HOME_COPY, Archetype, detect_archetype
     from .layout import Layout, layout_for
+    from .page_style import PREFIX, style_tag
 
     resolved = archetype or detect_archetype(ir)
     copy = HOME_COPY.get(resolved, HOME_COPY[Archetype.MARKETING])
@@ -5646,288 +5647,150 @@ def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -
 
     lines: list[str] = []
     if browse or auth:
-        lines.append('import Link from "next/link";')
-        lines.append("")
+        lines += ['import Link from "next/link";', ""]
 
-    def cta_buttons(indent: str, align: str) -> list[str]:
+    def actions(indent: str) -> list[str]:
         if not (browse or auth):
             return []
         out = [
-            f'{indent}<div style={{{{ display: "flex", gap: 12, justifyContent: "{align}", flexWrap: "wrap" }}}}>',
-            f'{indent}  <Link href="{primary_href}" style={{{{',
-            f'{indent}    padding: "13px 28px", borderRadius: "var(--radius-md, 8px)",',
-            f'{indent}    background: "var(--color-primary)", color: "var(--color-primary-foreground)",',
-            f'{indent}    fontWeight: 600, fontSize: 15, textDecoration: "none",',
-            f"{indent}  }}}}>",
-            f'{indent}    {_escape_ts(primary_label)}',
+            f'{indent}<div className="{PREFIX}-actions">',
+            f'{indent}  <Link href="{primary_href}" className="{PREFIX}-btn {PREFIX}-btn-primary">',
+            f"{indent}    {_escape_ts(primary_label)}",
             f"{indent}  </Link>",
         ]
         if auth:
             out += [
-                f'{indent}  <Link href="/login" style={{{{',
-                f'{indent}    padding: "13px 28px", borderRadius: "var(--radius-md, 8px)",',
-                f'{indent}    background: "var(--color-surface)", color: "var(--color-text)",',
-                f'{indent}    border: "1px solid var(--color-neutral-200)",',
-                f'{indent}    fontWeight: 600, fontSize: 15, textDecoration: "none",',
-                f"{indent}  }}}}>",
+                f'{indent}  <Link href="/login" className="{PREFIX}-btn {PREFIX}-btn-secondary">',
                 f"{indent}    Sign in",
                 f"{indent}  </Link>",
             ]
         out.append(f"{indent}</div>")
         return out
 
+    def offering_items(indent: str, kind: str) -> list[str]:
+        out: list[str] = []
+        for index, entity in enumerate(highlights, start=1):
+            label = _escape_ts(_title_case(entity.name))
+            detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
+            detail = _escape_ts(detail) if detail else "Managed from your dashboard."
+            if kind == "rows":
+                out += [
+                    f'{indent}<li className="{PREFIX}-row">',
+                    f'{indent}  <span aria-hidden="true" className="{PREFIX}-num">{index:02d}</span>',
+                    f"{indent}  <span>",
+                    f"{indent}    <strong>{label}</strong>",
+                    f"{indent}    <span>{detail}</span>",
+                    f"{indent}  </span>",
+                    f"{indent}</li>",
+                ]
+            else:
+                out += [
+                    f'{indent}<article className="{PREFIX}-card">',
+                    f"{indent}  <h3>{label}</h3>",
+                    f"{indent}  <p>{detail}</p>",
+                    f"{indent}</article>",
+                ]
+        return out
+
     lines += [
         "export default function HomePage() {",
         "  return (",
-        '    <main style={{ background: "var(--color-background)", color: "var(--color-text)" }}>',
-        "",
+        f'    <main className="{PREFIX}-page">',
     ]
+    lines += style_tag("      ")
+    lines.append("")
 
     # ── Hero ─────────────────────────────────────────────────────────────────
     if layout is Layout.SPLIT:
         lines += [
-            "      {/* Hero: text beside a panel */}",
-            '      <section style={{ padding: "88px 24px 72px", maxWidth: 1120, margin: "0 auto" }}>',
-            '        <div style={{ display: "grid", gap: 48, alignItems: "center",',
-            '          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>',
+            f'      <section className="{PREFIX}-hero {PREFIX}-shell">',
+            f'        <div className="{PREFIX}-split">',
             "          <div>",
-            f'            <span style={{{{ fontSize: 13, fontWeight: 600, letterSpacing: "0.08em",',
-            '              textTransform: "uppercase", color: "var(--color-primary)" }}>',
-            f'              {_escape_ts(copy["eyebrow"])}',
-            "            </span>",
-            '            <h1 style={{ margin: "14px 0 18px", fontSize: "clamp(2rem, 4vw, 3.25rem)",',
-            '              lineHeight: 1.12, letterSpacing: "-0.03em", fontWeight: 800 }}>',
-            f'              {escaped_name}',
-            "            </h1>",
+            f'            <span className="{PREFIX}-eyebrow">{_escape_ts(copy["eyebrow"])}</span>',
+            f'            <h1 className="{PREFIX}-display">{escaped_name}</h1>',
         ]
         if escaped_desc:
-            lines += [
-                '            <p style={{ margin: "0 0 32px", maxWidth: 460, fontSize: "1.1rem",',
-                '              lineHeight: 1.65, color: "var(--color-text-muted)" }}>',
-                f'              {escaped_desc}',
-                "            </p>",
-            ]
-        lines += cta_buttons("            ", "flex-start")
+            lines.append(f'            <p className="{PREFIX}-lede">{escaped_desc}</p>')
+        lines += actions("            ")
         lines += [
             "          </div>",
-            '          <div aria-hidden="true" style={{ minHeight: 280, borderRadius: "var(--radius-lg, 12px)",',
-            '            background: "linear-gradient(135deg, var(--color-primary-subtle) 0%, var(--color-surface) 100%)",',
-            '            border: "1px solid var(--color-neutral-200)" }} />',
+            f'          <div aria-hidden="true" className="{PREFIX}-panel" />',
             "        </div>",
             "      </section>",
             "",
         ]
     elif layout is Layout.BANNER:
         lines += [
-            "      {/* Hero: full-bleed brand band */}",
-            '      <section style={{ padding: "96px 24px", background: "var(--color-primary)",',
-            '        color: "var(--color-primary-foreground)" }}>',
-            '        <div style={{ maxWidth: 940, margin: "0 auto" }}>',
-            f'          <span style={{{{ fontSize: 13, fontWeight: 600, letterSpacing: "0.1em",',
-            '            textTransform: "uppercase", opacity: 0.85 }}>',
-            f'            {_escape_ts(copy["eyebrow"])}',
-            "          </span>",
-            '          <h1 style={{ margin: "16px 0 20px", fontSize: "clamp(2.25rem, 5vw, 3.75rem)",',
-            '            lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 800 }}>',
-            f'            {escaped_name}',
-            "          </h1>",
+            f'      <section className="{PREFIX}-hero {PREFIX}-band">',
+            f'        <div className="{PREFIX}-shell">',
+            f'          <span className="{PREFIX}-eyebrow">{_escape_ts(copy["eyebrow"])}</span>',
+            f'          <h1 className="{PREFIX}-display">{escaped_name}</h1>',
         ]
         if escaped_desc:
-            lines += [
-                '          <p style={{ margin: "0 0 34px", maxWidth: 620, fontSize: "1.175rem",',
-                '            lineHeight: 1.6, opacity: 0.92 }}>',
-                f'            {escaped_desc}',
-                "          </p>",
-            ]
-        lines += cta_buttons("          ", "flex-start")
+            lines.append(f'          <p className="{PREFIX}-lede">{escaped_desc}</p>')
+        lines += actions("          ")
         lines += ["        </div>", "      </section>", ""]
     elif layout is Layout.EDITORIAL:
         lines += [
-            "      {/* Hero: typographic, no ornament */}",
-            '      <section style={{ padding: "104px 24px 64px", maxWidth: 780, margin: "0 auto" }}>',
-            '        <h1 style={{ margin: "0 0 24px", fontSize: "clamp(2.5rem, 6vw, 4rem)",',
-            '          lineHeight: 1.05, letterSpacing: "-0.04em", fontWeight: 800 }}>',
-            f'          {escaped_name}',
-            "        </h1>",
+            f'      <section className="{PREFIX}-hero {PREFIX}-shell">',
+            f'        <h1 className="{PREFIX}-display">{escaped_name}</h1>',
         ]
         if escaped_desc:
-            lines += [
-                '        <p style={{ margin: "0 0 32px", fontSize: "1.25rem", lineHeight: 1.7,',
-                '          color: "var(--color-text-muted)" }}>',
-                f'          {escaped_desc}',
-                "        </p>",
-            ]
-        lines += cta_buttons("        ", "flex-start")
+            lines.append(f'        <p className="{PREFIX}-lede">{escaped_desc}</p>')
+        lines += actions("        ")
+        lines += [f'        <hr className="{PREFIX}-rule" />', "      </section>", ""]
+    else:  # CENTERED
         lines += [
-            '        <hr style={{ margin: "48px 0 0", border: 0, borderTop: "1px solid var(--color-neutral-200)" }} />',
-            "      </section>",
-            "",
-        ]
-    else:  # Layout.CENTERED
-        lines += [
-            "      {/* Hero: centred over a soft wash */}",
-            '      <section style={{ padding: "96px 24px 80px", textAlign: "center",',
-            '        background: "linear-gradient(180deg, var(--color-primary-subtle) 0%, var(--color-background) 100%)" }}>',
-            '        <div style={{ maxWidth: 820, margin: "0 auto" }}>',
-            '          <span style={{ display: "inline-block", marginBottom: 20, padding: "6px 14px",',
-            '            borderRadius: 999, background: "var(--color-surface)",',
-            '            border: "1px solid var(--color-primary-subtle)",',
-            '            fontSize: 13, fontWeight: 600, color: "var(--color-primary)" }}>',
-            f'            {_escape_ts(copy["eyebrow"])}',
-            "          </span>",
-            '          <h1 style={{ margin: "0 0 20px", fontSize: "clamp(2.25rem, 5vw, 3.75rem)",',
-            '            lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>',
-            f'            {escaped_name}',
-            "          </h1>",
+            f'      <section className="{PREFIX}-hero {PREFIX}-wash {PREFIX}-center">',
+            f'        <div className="{PREFIX}-shell">',
+            f'          <span className="{PREFIX}-eyebrow">{_escape_ts(copy["eyebrow"])}</span>',
+            f'          <h1 className="{PREFIX}-display">{escaped_name}</h1>',
         ]
         if escaped_desc:
-            lines += [
-                '          <p style={{ margin: "0 auto 36px", maxWidth: 620, fontSize: "1.175rem",',
-                '            lineHeight: 1.65, color: "var(--color-text-muted)" }}>',
-                f'            {escaped_desc}',
-                "          </p>",
-            ]
-        lines += cta_buttons("          ", "center")
+            lines.append(f'          <p className="{PREFIX}-lede">{escaped_desc}</p>')
+        lines += actions("          ")
         lines += ["        </div>", "      </section>", ""]
 
     # ── What this offers ─────────────────────────────────────────────────────
     if highlights:
         centred = layout is Layout.CENTERED
-        heading_align = "center" if centred else "left"
-        # Precomputed: nesting these quotes inside the f-string below is unreadable and was a
-        # syntax error the first time round.
-        centre_margins = 'marginLeft: "auto", marginRight: "auto",' if centred else ""
+        section_class = f"{PREFIX}-section {PREFIX}-shell" + (f" {PREFIX}-center" if centred else "")
         lines += [
-            "      {/* What this product offers */}",
-            '      <section style={{ padding: "72px 24px", maxWidth: 1120, margin: "0 auto" }}>',
-            f'        <h2 style={{{{ margin: "0 0 8px", fontSize: "2rem", fontWeight: 700,',
-            f'          letterSpacing: "-0.02em", textAlign: "{heading_align}" }}}}>',
-            f'          {_escape_ts(copy["section"])}',
-            "        </h2>",
-            f'        <p style={{{{ margin: "0 0 44px", maxWidth: 540, textAlign: "{heading_align}",',
-            f'          {centre_margins}',
-            '          color: "var(--color-text-muted)", fontSize: "1.05rem" }}>',
-            f'          {_escape_ts(copy["section_lede"])}',
-            "        </p>",
+            f'      <section className="{section_class}">',
+            f'        <h2 className="{PREFIX}-heading">{_escape_ts(copy["section"])}</h2>',
+            f'        <p className="{PREFIX}-sub">{_escape_ts(copy["section_lede"])}</p>',
         ]
         if layout is Layout.SPLIT:
-            lines.append('        <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 2 }}>')
-            for index, entity in enumerate(highlights, start=1):
-                label = _title_case(entity.name)
-                detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
-                lines += [
-                    '          <li style={{ display: "flex", gap: 20, padding: "22px 4px",',
-                    '            borderTop: "1px solid var(--color-neutral-200)" }}>',
-                    f'            <span aria-hidden="true" style={{{{ minWidth: 34, fontSize: 15,',
-                    '              fontWeight: 700, color: "var(--color-primary)" }}>',
-                    f"              {index:02d}",
-                    "            </span>",
-                    "            <span>",
-                    '              <strong style={{ display: "block", fontSize: "1.1rem", fontWeight: 650 }}>',
-                    f"                {_escape_ts(label)}",
-                    "              </strong>",
-                    '              <span style={{ color: "var(--color-text-muted)", fontSize: 14 }}>',
-                    f"                {_escape_ts(detail) if detail else 'Managed from your dashboard.'}",
-                    "              </span>",
-                    "            </span>",
-                    "          </li>",
-                ]
+            lines.append(f'        <ol className="{PREFIX}-rows">')
+            lines += offering_items("          ", "rows")
             lines.append("        </ol>")
-        elif layout is Layout.BANNER:
-            lines.append('        <div style={{ display: "grid", gap: 14 }}>')
-            for entity in highlights:
-                label = _title_case(entity.name)
-                detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
-                lines += [
-                    '          <article style={{ display: "flex", justifyContent: "space-between",',
-                    '            alignItems: "center", gap: 24, padding: "24px 28px",',
-                    '            borderRadius: "var(--radius-lg, 12px)", background: "var(--color-surface)",',
-                    '            border: "1px solid var(--color-neutral-200)" }}>',
-                    '            <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 650 }}>',
-                    f"              {_escape_ts(label)}",
-                    "            </h3>",
-                    '            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14 }}>',
-                    f"              {_escape_ts(detail) if detail else 'Managed from your dashboard.'}",
-                    "            </p>",
-                    "          </article>",
-                ]
-            lines.append("        </div>")
-        elif layout is Layout.EDITORIAL:
-            lines.append('        <div style={{ display: "grid", gap: 28,')
-            lines.append('          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>')
-            for entity in highlights:
-                label = _title_case(entity.name)
-                detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
-                lines += [
-                    "          <article>",
-                    '            <h3 style={{ margin: "0 0 6px", fontSize: "1.05rem", fontWeight: 650,',
-                    '              borderTop: "2px solid var(--color-primary)", paddingTop: 12 }}>',
-                    f"              {_escape_ts(label)}",
-                    "            </h3>",
-                    '            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14, lineHeight: 1.6 }}>',
-                    f"              {_escape_ts(detail) if detail else 'Managed from your dashboard.'}",
-                    "            </p>",
-                    "          </article>",
-                ]
-            lines.append("        </div>")
-        else:  # CENTERED
-            lines.append('        <div style={{ display: "grid", gap: 20,')
-            lines.append('          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>')
-            for entity in highlights:
-                label = _title_case(entity.name)
-                detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
-                lines += [
-                    '          <article style={{ padding: 26, borderRadius: "var(--radius-lg, 12px)",',
-                    '            background: "var(--color-surface)", border: "1px solid var(--color-neutral-200)" }}>',
-                    '            <h3 style={{ margin: "0 0 10px", fontSize: "1.175rem", fontWeight: 650 }}>',
-                    f"              {_escape_ts(label)}",
-                    "            </h3>",
-                    '            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14, lineHeight: 1.6 }}>',
-                    f"              {_escape_ts(detail) if detail else 'Managed from your dashboard.'}",
-                    "            </p>",
-                    "          </article>",
-                ]
+        else:
+            lines.append(f'        <div className="{PREFIX}-grid">')
+            lines += offering_items("          ", "cards")
             lines.append("        </div>")
         lines += ["      </section>", ""]
 
     # ── Browse ───────────────────────────────────────────────────────────────
     if len(browse) > 1:
         lines += [
-            "      {/* Browse */}",
-            '      <section style={{ padding: "64px 24px", background: "var(--color-background-subtle)" }}>',
-            '        <div style={{ maxWidth: 1120, margin: "0 auto" }}>',
-            '          <h2 style={{ margin: "0 0 28px", fontSize: "1.5rem", fontWeight: 700 }}>',
-            f'            {_escape_ts(copy["explore"])}',
-            "          </h2>",
-            '          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>',
+            f'      <section className="{PREFIX}-section" style={{{{ background: "var(--color-background-subtle)" }}}}>',
+            f'        <div className="{PREFIX}-shell">',
+            f'          <h2 className="{PREFIX}-heading">{_escape_ts(copy["explore"])}</h2>',
+            f'          <div className="{PREFIX}-actions">',
         ]
         for href, label in browse:
-            lines += [
-                f'            <Link href="{href}" style={{{{',
-                '              padding: "11px 20px", borderRadius: 999,',
-                '              background: "var(--color-surface)", color: "var(--color-text)",',
-                '              border: "1px solid var(--color-neutral-200)",',
-                '              fontSize: 14, fontWeight: 550, textDecoration: "none",',
-                "            }}>",
-                f"              {_escape_ts(label)}",
-                "            </Link>",
-            ]
+            lines.append(f'            <Link href="{href}" className="{PREFIX}-pill">{_escape_ts(label)}</Link>')
         lines += ["          </div>", "        </div>", "      </section>", ""]
 
     # ── Footer ───────────────────────────────────────────────────────────────
     lines += [
-        "      {/* Footer */}",
-        '      <footer style={{ padding: "40px 24px", borderTop: "1px solid var(--color-neutral-200)",',
-        '        color: "var(--color-text-subtle)", fontSize: 14, textAlign: "center" }}>',
-        f'        {escaped_name}',
-        "      </footer>",
+        f'      <footer className="{PREFIX}-footer">{escaped_name}</footer>',
         "",
         "    </main>",
         "  );",
         "}",
         "",
     ]
-
     return "\n".join(lines)
 
 
@@ -74068,6 +73931,12 @@ _TSCONFIG = {
         "skipLibCheck": True,
         "noEmit": True, "esModuleInterop": True, "module": "esnext", "moduleResolution": "bundler",
         "resolveJsonModule": True, "isolatedModules": True, "jsx": "preserve", "incremental": True,
+        # R-558: `lib/brand.ts` imports the shared `brand/derive.mjs`, which is plain ESM because
+        # `apps/mobile/app.config.js` loads the same file. Without this, a fresh clone reports
+        # TS7016 on that import in the editor and on `tsc`. `next build` writes this key into
+        # tsconfig.json itself on first run, which hid the gap: the build repaired the file it was
+        # about to read, so only someone typechecking before their first build ever saw it.
+        "allowJs": True,
         "plugins": [{"name": "next"}], "paths": {"@/*": ["./*"]},
     },
     "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

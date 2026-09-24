@@ -286,9 +286,10 @@ def web_brand_ts() -> GeneratedFile:
         """// Generated. Reads the repo's brand.json at build time and turns it into CSS custom
 // properties. Editing brand.json and reloading is all a rebrand takes for this app.
 //
-// @ts-expect-error - resolved from the repo root at build time.
+// Both imports resolve on their own: resolveJsonModule handles the JSON, and allowJs handles
+// derive.mjs, which is plain ESM so that apps/mobile/app.config.js can load the same file.
+// They need no compiler suppression, and adding one here is a build error rather than a nicety.
 import brand from "../../../brand.json";
-// @ts-expect-error - plain ESM, shared with apps/mobile/app.config.js.
 import { lightPalette, darkPalette, RADIUS_VALUES } from "../../../brand/derive.mjs";
 
 const block = (selector: string, values: Record<string, string>, extra: string[] = []) =>
@@ -304,7 +305,10 @@ export function brandCss(): string {
 
   const extras: string[] = [];
   if (font) extras.push(`--font-sans:${font},system-ui,-apple-system,sans-serif;`);
-  if (radius && RADIUS_VALUES[radius]) extras.push(`--radius-md:${RADIUS_VALUES[radius]};`);
+  // RADIUS_VALUES comes from a .js module, so TypeScript infers its exact keys and refuses a
+  // plain string index under `strict`. Widened once here rather than cast at the use site.
+  const radiusScale = (RADIUS_VALUES as Record<string, string | undefined>)[radius ?? ""];
+  if (radiusScale) extras.push(`--radius-md:${radiusScale};`);
 
   const dark = block(":root", darkPalette(primary));
   return [

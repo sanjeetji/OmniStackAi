@@ -2843,7 +2843,9 @@ for guard in test_storefronts_do_not_all_render_the_same_page \
   fi
 done
 # The layout must never be random: one project has to render the same page on every run.
-if rg -qE '\b(random|randint|choice|shuffle|uuid4|time\(\))' \
+# -E is --encoding in ripgrep, not "extended regex": with it this guard exited 2 on every run and
+# the `if` read that as "clean", so it never once checked anything. rg is regex by default.
+if rg -q '\b(random|randint|choice|shuffle|uuid4|time\(\))' \
   "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/layout.py"; then
   printf 'R-556 the layout choice must be seeded, never random.\n'
   exit 1
@@ -2862,6 +2864,37 @@ done
 # Generated copy must never be able to inject markup into the console.
 if rg -qF 'dangerouslySetInnerHTML' "$repo_root/apps/console-web/app/studio/studio-workspace.tsx"; then
   printf 'R-557 the ecosystem reason must be rendered as text, never as HTML.\n'
+  exit 1
+fi
+
+# R-558: the generated pages ignored the design system they shipped with, and inline styles cannot
+# express hover or focus at all, so a real stylesheet is emitted. Two gates here are about the
+# people who use the result, not about tidiness.
+r558_style="$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/page_style.py"
+if [[ ! -f "$r558_style" ]]; then
+  printf 'R-558 the generated page stylesheet is required.\n'
+  exit 1
+fi
+# What the stylesheet must contain -- styled focus, suppressed motion, real token use -- is
+# asserted against the *generated CSS* in test_page_design.py rather than against this file's
+# text. Grepping the source would have matched the docstring explaining why we never write
+# `outline: none`, which is the prose false-positive that already bit R-543 and R-546.
+# R-549 shipped generated TypeScript that could not compile, and text-level tests could not see it
+# because the text was the defect. The compiler gate is the thing that catches that class.
+r558_tests="$repo_root/services/agent-engine/tests/test_generated_typescript_compiles.py"
+for guard in test_web_brand_module_typechecks \
+  test_admin_brand_module_typechecks \
+  test_no_ts_expect_error_in_generated_typescript; do
+  if ! rg -qF "$guard" "$r558_tests"; then
+    printf 'R-558 the generated-TypeScript compile gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# The generated tsconfig must carry allowJs itself. Without it a fresh clone reports TS7016 on the
+# shared brand/derive.mjs import; next build writes the key in on first run, which is exactly what
+# hid the gap, so the generator has to emit it rather than rely on being repaired.
+if ! rg -qF '"allowJs": True' "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"; then
+  printf 'R-558 the generated tsconfig must set allowJs so a fresh clone typechecks.\n'
   exit 1
 fi
 

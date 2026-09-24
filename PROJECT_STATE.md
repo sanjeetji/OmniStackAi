@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-558 (2026-09-24): the deterministic pages use the design system they ship with.**
+> The project carried 59 colour tokens, a type scale, six shadows and seven motion tokens, and the pages used almost none of them: `--shadow-*` 0, `--transition-*` 0, `--font-size-*` 0, `--space-*` 0, 26 hardcoded pixels, **zero hover or focus states**.
+> Part of that was structural, not taste: **inline React styles cannot express `:hover`, `:focus-visible` or a media query at all**, so tuning inline values could never have produced an interface that responds to a cursor. A real scoped stylesheet is emitted with the page, built from the shipped tokens so a rebrand moves the shadows and motion too.
+> Focus is **styled, never removed**, and all motion is suppressed under `prefers-reduced-motion`. After: shadow 7, transition 16, font-size 14, space 25, hover 7, focus-visible 1. Still a server component, no new dependency, byte-stable.
+> **Two live regressions found, neither from this task.** R-549's two `@ts-expect-error` directives sat over imports TypeScript resolves fine — an unused suppression is itself an error, so **`next build` had failed on every generated web app since**. Beneath it, the generated `tsconfig.json` never set `allowJs`, so a fresh clone reported TS7016; invisible because `next build` writes that key into the tsconfig itself on first run, repairing the file it was about to read.
+> **Third green-suite-over-broken-product in one sitting** (`_prefixed`, the streaming twin, this). So: `lib/brand.ts` imports only generated files and now compiles under `tsc` inside `task verify`, offline, in about a second, with the options read from the *generated* tsconfig. Both original defects were replayed against the gate and both fail it.
+> Evidence, from real builds: fresh-clone `tsc --noEmit` exit 0, `next build` prerenders 12 routes, the served page carries 14 `shadow-`, 34 `transition-`, 14 `:hover`, 2 `:focus-visible` and the reduced-motion block, brand colour in both palettes; two products served structurally different pages. `task verify` 4,226 OK offline, 0 model calls.
+
 > **R-557 (2026-09-24): the console says why a project has four apps in it.**
 > The build streamed a line that then scrolled away, and `app_build_result_to_dict` **dropped `ecosystem_apps` and `ecosystem_reason`** — so a user who received four apps saw four directories and no reason for them.
 > Both now travel with the result, and the Studio header renders how many apps, which ones, and the sentence explaining it — emitted **only** when several were built, so an ordinary build shows nothing.
