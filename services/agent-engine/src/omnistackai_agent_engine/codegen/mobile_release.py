@@ -38,12 +38,20 @@ def _chunk(tag: bytes, payload: bytes) -> bytes:
     )
 
 
+#: R-549: stamped into every icon this platform generates, and read by the project's own
+#: `pnpm run brand`. An icon without it was put there by the app's owner and is never overwritten —
+#: losing somebody's logo to a rebuild is a far worse failure than a stale icon. The Python and
+#: JavaScript generators must agree on this string or the whole protection is silently inert.
+GENERATED_ICON_MARKER = "OmniStackAI-generated-icon"
+
+
 def png_bytes(width: int, height: int, rows: list[bytes]) -> bytes:
     """Encode 8-bit RGB rows as a PNG. `rows` holds `height` entries of `width * 3` bytes."""
     raw = b"".join(b"\x00" + row for row in rows)  # filter type 0 per scanline
     return (
         b"\x89PNG\r\n\x1a\n"
         + _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + _chunk(b"tEXt", b"Software\x00" + GENERATED_ICON_MARKER.encode("latin-1"))
         + _chunk(b"IDAT", zlib.compress(raw, 9))
         + _chunk(b"IEND", b"")
     )

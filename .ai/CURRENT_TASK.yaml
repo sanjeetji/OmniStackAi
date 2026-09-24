@@ -1,10 +1,10 @@
-task_id: R-548
+task_id: R-549
 status: completed
 phase: MVP
 tracker_row: 15
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-548-brand-source-of-truth
+branch: ai/R-549-brand-reaches-web
 objective: >-
   Branding is scattered across files that do not know about each other. Changing one colour means
   editing `apps/web/styles/tokens.css`, the same eleven variables again in `apps/admin`,
@@ -62,3 +62,12 @@ evidence:
 found_and_fixed:
   - "the JS and Python palette derivations differed on five of seven colours: Python's round() is half-to-even, JavaScript's Math.round() is half-up. A rebranded project would have drifted by one channel from what the platform generates."
   - "a static app.json alongside app.config.js would have let a user edit the losing file with no way to tell why nothing changed; only the dynamic config is generated now"
+
+r549_evidence:
+  - "task verify: 4,150 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
+  - "live: with one icon replaced by hand, `node brand/generate.mjs` kept it and regenerated exactly the other three"
+  - "the regenerated PNGs are byte-for-byte identical to the platform's Python output, SHA-256 verified across all three"
+  - "7 new offline tests, 18 in tests/test_brand_source_of_truth.py"
+r549_found_and_fixed:
+  - "the generated-icon marker existed only in the JavaScript generator, so a fresh project's Python-generated icons looked user-supplied and `pnpm run brand` silently refused to update any of them"
+  - "_prefixed rebuilt each GeneratedFile with only the path and the executable bit, dropping base64_encoded, so every icon became an ASCII text file the moment it moved into apps/mobile/ — the adapter's own tests passed because they never go through assembly"

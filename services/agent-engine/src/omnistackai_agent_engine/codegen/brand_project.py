@@ -267,6 +267,225 @@ edited separately in each console.
     )
 
 
+def web_brand_ts() -> GeneratedFile:
+    """The per-app bridge from `brand.json` to CSS custom properties (R-549).
+
+    CSS cannot read JSON at runtime, so a Next.js app has to do it at build time. This imports the
+    repo's `brand.json` and the same `derive.mjs` the mobile config uses — one derivation, three
+    surfaces, no chance of the web app and the phone showing different greens.
+
+    The output is injected into `<head>` after `styles/tokens.css`, so it overrides the generated
+    defaults rather than fighting them.
+    """
+    return GeneratedFile(
+        "lib/brand.ts",
+        """// Generated. Reads the repo's brand.json at build time and turns it into CSS custom
+// properties. Editing brand.json and reloading is all a rebrand takes for this app.
+//
+// @ts-expect-error - resolved from the repo root at build time.
+import brand from "../../../brand.json";
+// @ts-expect-error - plain ESM, shared with apps/mobile/app.config.js.
+import { lightPalette, darkPalette, RADIUS_VALUES } from "../../../brand/derive.mjs";
+
+const block = (selector: string, values: Record<string, string>, extra: string[] = []) =>
+  `${selector}{${Object.entries(values)
+    .map(([name, value]) => `${name}:${value};`)
+    .join("")}${extra.join("")}}`;
+
+/** Every CSS variable this product's branding sets, light and dark. */
+export function brandCss(): string {
+  const primary = (brand as { primaryColor: string }).primaryColor;
+  const font = (brand as { fontFamily?: string }).fontFamily;
+  const radius = (brand as { borderRadius?: string }).borderRadius;
+
+  const extras: string[] = [];
+  if (font) extras.push(`--font-sans:${font},system-ui,-apple-system,sans-serif;`);
+  if (radius && RADIUS_VALUES[radius]) extras.push(`--radius-md:${RADIUS_VALUES[radius]};`);
+
+  const dark = block(":root", darkPalette(primary));
+  return [
+    block(":root", lightPalette(primary), extras),
+    // Matches the structure styles/tokens.css already uses, so a user reading either file sees
+    // the same shape: a media query for the system preference, and an explicit override.
+    `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${dark.slice(":root{".length, -1)}}}`,
+    `:root[data-theme="dark"]{${dark.slice(":root{".length, -1)}}`,
+  ].join("");
+}
+""",
+    )
+
+
+def brand_script_mjs() -> GeneratedFile:
+    """`pnpm run brand` — regenerates what cannot be derived at render time (R-549).
+
+    Colours reach the apps live, so this exists for the icons: PNGs are binary and nothing can
+    produce them while a page renders. It **never overwrites artwork a user has supplied** — each
+    generated icon carries a marker, and an icon without one is left alone. Losing someone's logo
+    to a rebuild would be a far worse failure than a stale icon.
+    """
+    return GeneratedFile(
+        "brand/generate.mjs",
+        """#!/usr/bin/env node
+// Regenerates the brand's icons from ../brand.json. Run with `pnpm run brand`.
+//
+// Colours, fonts and corner styles do NOT need this: the apps derive those from brand.json when
+// they render. Icons are binary, so they are written here instead.
+//
+// Icons this script generated carry a marker in a PNG text chunk. An icon without that marker was
+// put there by you, and is never overwritten — a rebuild must not eat somebody's logo.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import zlib from 'node:zlib';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { rgb } from './derive.mjs';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, '..');
+const brand = JSON.parse(fs.readFileSync(path.join(root, 'brand.json'), 'utf8'));
+
+const MARKER = 'OmniStackAI-generated-icon';
+
+const crcTable = (() => {
+  const table = new Int32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c;
+  }
+  return table;
+})();
+
+function crc32(buf) {
+  let c = -1;
+  for (const byte of buf) c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8);
+  return (c ^ -1) >>> 0;
+}
+
+function chunk(tag, payload) {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(payload.length);
+  const body = Buffer.concat([Buffer.from(tag, 'ascii'), payload]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, crc]);
+}
+
+function png(size, rows) {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8;   // bit depth
+  ihdr[9] = 2;   // colour type: truecolour
+  const raw = Buffer.concat(rows.map((row) => Buffer.concat([Buffer.from([0]), row])));
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('tEXt', Buffer.from(`Software\0${MARKER}`, 'latin1')),
+    chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+/** A vertically mirrored grid derived from the app's name — unique, symmetric, deterministic. */
+function markGrid(seed, cells = 5) {
+  const digest = crypto.createHash('sha256').update(seed, 'utf8').digest();
+  const half = Math.floor(cells / 2) + (cells % 2);
+  const grid = Array.from({ length: cells }, () => Array(cells).fill(false));
+  let bit = 0;
+  for (let row = 0; row < cells; row++) {
+    for (let col = 0; col < half; col++) {
+      const filled = Boolean(digest[bit % digest.length] & (1 << (Math.floor(bit / digest.length) % 8)));
+      bit++;
+      grid[row][col] = filled;
+      grid[row][cells - 1 - col] = filled;
+    }
+  }
+  const density = () => grid.flat().filter(Boolean).length;
+  const floor = cells * 2;
+  for (let row = 0; row < cells && density() < floor; row++) grid[row][half - 1] = true;
+  for (let col = half - 1; col >= 0 && density() < floor; col--) {
+    for (let row = 0; row < cells && density() < floor; row++) {
+      if (!grid[row][col]) {
+        grid[row][col] = true;
+        grid[row][cells - 1 - col] = true;
+      }
+    }
+  }
+  return grid;
+}
+
+function renderMark(size, background, ink, seed, marginRatio) {
+  const bg = rgb(background);
+  const fg = rgb(ink);
+  const cells = 5;
+  const margin = Math.floor(size * marginRatio);
+  const cell = (size - 2 * margin) / cells;
+  const radius = cell * 0.5;
+  const grid = markGrid(seed, cells);
+
+  const rows = [];
+  for (let y = 0; y < size; y++) {
+    const row = Buffer.alloc(size * 3);
+    for (let x = 0; x < size; x++) {
+      let colour = bg;
+      const gx = (x - margin) / cell;
+      const gy = (y - margin) / cell;
+      if (gx >= 0 && gx < cells && gy >= 0 && gy < cells && grid[Math.floor(gy)][Math.floor(gx)]) {
+        const fx = (gx - Math.floor(gx)) * cell;
+        const fy = (gy - Math.floor(gy)) * cell;
+        if ((fx - radius) ** 2 + (fy - radius) ** 2 <= radius ** 2) colour = fg;
+      }
+      row[x * 3] = colour[0];
+      row[x * 3 + 1] = colour[1];
+      row[x * 3 + 2] = colour[2];
+    }
+    rows.push(row);
+  }
+  return png(size, rows);
+}
+
+/** True when this file was written by us and may be replaced. */
+function isGenerated(file) {
+  if (!fs.existsSync(file)) return true;
+  return fs.readFileSync(file).includes(MARKER);
+}
+
+const targets = [
+  ['assets/icon.png', 1024, 0.18],
+  ['assets/adaptive-icon.png', 1024, 0.28],
+  ['assets/splash.png', 1024, 0.34],
+  ['assets/favicon.png', 48, 0.16],
+];
+
+const mobile = path.join(root, 'apps', 'mobile');
+if (!fs.existsSync(mobile)) {
+  console.log('No apps/mobile in this project — nothing to regenerate.');
+  process.exit(0);
+}
+
+let written = 0;
+let kept = 0;
+for (const [relative, size, margin] of targets) {
+  const file = path.join(mobile, relative);
+  if (!isGenerated(file)) {
+    console.log(`kept    ${relative}  (yours — not overwritten)`);
+    kept++;
+    continue;
+  }
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, renderMark(size, brand.primaryColor, '#ffffff', brand.name, margin));
+  console.log(`wrote   ${relative}`);
+  written++;
+}
+
+console.log(`\n${written} regenerated, ${kept} of yours left alone.`);
+console.log('Colours, fonts and corners need no regeneration — the apps read brand.json directly.');
+""",
+    )
+
+
 def brand_files(ir: ApplicationIR, slug: str) -> list[GeneratedFile]:
     """The root-level branding files, shared by every app in the monorepo."""
-    return [brand_json(ir, slug), derive_mjs(), brand_readme()]
+    return [brand_json(ir, slug), derive_mjs(), brand_script_mjs(), brand_readme()]

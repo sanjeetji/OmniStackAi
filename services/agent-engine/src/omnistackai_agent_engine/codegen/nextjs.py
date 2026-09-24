@@ -19,6 +19,7 @@ if TYPE_CHECKING:  # annotation-only; keeps the generator free of a runtime mode
 from .adapter import GenerationTarget
 from .auth_guard import needs_auth
 from .brand import apply_brand
+from .brand_project import web_brand_ts
 from .errors import GenerationError
 from .field_validation import parse_field_rules
 from .files import GeneratedFile, GeneratedProject
@@ -73665,6 +73666,8 @@ def _ui_component_files() -> list[GeneratedFile]:
 def _layout_file(ir: ApplicationIR) -> str:
     auth = needs_auth(ir)
     auth_import = 'import { AuthProvider } from "@/components/auth-provider";\n' if auth else ""
+    # R-549: one import, so a rebrand reaches this app without regenerating it.
+    auth_import = 'import { brandCss } from "@/lib/brand";\n' + auth_import
     if auth:
         body_content = (
             "        <AuthProvider>\n"
@@ -73737,6 +73740,14 @@ def _layout_file(ir: ApplicationIR) -> str:
         "export default function RootLayout({ children }: { children: React.ReactNode }) {\n"
         "  return (\n"
         '    <html lang="en">\n'
+        "      <head>\n"
+        "        {/* R-549: the brand, derived at build time from the repo's brand.json. CSS cannot\n"
+        "            read JSON at runtime, so this is what makes editing that one file reach the web\n"
+        "            app and the admin console the way it already reaches the mobile app. It is\n"
+        "            emitted after styles/tokens.css so it wins, and uses the same derivation the\n"
+        "            mobile app does, so all three surfaces cannot drift apart. */}\n"
+        '        <style dangerouslySetInnerHTML={{ __html: brandCss() }} />\n'
+        "      </head>\n"
         '      <body style={{ margin: 0, background: "var(--color-background-subtle, #f8fafc)", color: "var(--color-text, #0f172a)", fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)" }}>\n'
         f"{json_ld}"
         f"{body_content}"
@@ -74287,6 +74298,9 @@ class NextjsWebAdapter:
                     flavour=self._flavour,
                 ),
             ),
+            # R-549: the bridge from the repo's brand.json to CSS variables, so a rebrand reaches
+            # this app without regenerating it.
+            web_brand_ts(),
             GeneratedFile("lib/types.ts", _types_file(ir)),
             GeneratedFile("lib/api.ts", _api_client_file(ir)),
             GeneratedFile("lib/hooks.ts", _hooks_file(ir)),

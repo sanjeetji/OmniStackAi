@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-549 (2026-09-24): a rebrand reaches the web app and the admin console, not only the phone.**
+> CSS cannot read JSON at runtime, so the two Next.js apps were left behind by R-548. Each now has a `lib/brand.ts` importing `brand.json` and the **same** `derive.mjs` the mobile config uses, emitted into `<head>` after `tokens.css`. Colours, fonts and corners need no regeneration — edit, reload, done.
+> Icons are binary, so `pnpm run brand` regenerates them with a plain-Node PNG encoder. **It never overwrites your artwork:** generated icons carry a marker; a file without one is left alone.
+> **Two defects found by running it.** The marker existed only in the JS generator, so a fresh project's icons looked user-supplied and the script refused to touch any of them. And `_prefixed` dropped `base64_encoded`, so **every icon became a text file the moment it entered `apps/mobile/`** — the adapter's tests never caught it because they skip assembly.
+> Evidence: with one icon replaced, the script kept it and regenerated the other three, byte-for-byte identical to the platform's Python output (SHA-256 verified). 7 new tests; `task verify` 4,150 OK offline, 0 model calls.
+> **Next:** R-550 — publish-state rules (identifier refused, the rest warned) and the chat agent editing `brand.json`.
+
 > **R-548 (2026-09-24): one `brand.json` every surface derives from.**
 > Branding was scattered across eleven CSS variables in `apps/web`, the same eleven in `apps/admin`, two places in `apps/mobile/app.json` and the RN design tokens — plus four PNGs a user could not regenerate at all.
 > `brand.json` holds **inputs only**; the palette is derived by `brand/derive.mjs`, never stored, because a stored palette goes stale the moment someone edits the base colour by hand. The mobile app moves to Expo's dynamic `app.config.js`, and the static `app.json` is no longer generated — two files configuring one app means a user edits the losing one and cannot tell why.

@@ -11,6 +11,7 @@ have generated. When first written they differed on five of seven colours, becau
 `round()` is half-to-even and JavaScript's `Math.round()` is half-up.
 """
 
+import base64
 import dataclasses
 import json
 import shutil
@@ -154,3 +155,71 @@ class TheTwoDerivationsAgree(TestCase):
         self.assertEqual(expo["splash"]["backgroundColor"], "#16a34a")
         self.assertEqual(expo["ios"]["bundleIdentifier"], expo["android"]["package"])
         self.assertNotIn("omnistackai", expo["ios"]["bundleIdentifier"])
+
+
+class TheBrandReachesTheWebApps(TestCase):
+    """R-549: CSS cannot read JSON at runtime, so a Next.js app derives the palette at build time.
+
+    Without this, editing brand.json moved the mobile app and left the web app and admin console
+    behind — the half-connected state that is worse than not having the feature.
+    """
+
+    def setUp(self) -> None:
+        self.files = _project("#16a34a")
+
+    def test_both_web_apps_get_the_bridge(self) -> None:
+        self.assertIn("apps/web/lib/brand.ts", self.files)
+        self.assertIn("apps/admin/lib/brand.ts", self.files)
+
+    def test_the_layout_emits_the_derived_brand(self) -> None:
+        for app in ("web", "admin"):
+            with self.subTest(app=app):
+                layout = self.files[f"apps/{app}/app/layout.tsx"].content
+                self.assertIn('from "@/lib/brand"', layout)
+                self.assertIn("brandCss()", layout)
+
+    def test_the_bridge_uses_the_same_derivation_as_the_mobile_app(self) -> None:
+        """Two derivations would mean the phone and the web app showing different greens."""
+        bridge = self.files["apps/web/lib/brand.ts"].content
+        self.assertIn("brand/derive.mjs", bridge)
+        self.assertIn("brand.json", bridge)
+
+    def test_a_regeneration_script_is_provided_for_what_cannot_be_derived(self) -> None:
+        self.assertIn("brand/generate.mjs", self.files)
+        scripts = json.loads(self.files["package.json"].content)["scripts"]
+        self.assertEqual(scripts["brand"], "node brand/generate.mjs")
+
+
+class GeneratedIconsAreMarkedAsOurs(TestCase):
+    """R-549: `pnpm run brand` must never overwrite artwork a user supplied. Losing somebody's logo
+    to a rebuild is a far worse failure than a stale icon."""
+
+    def test_every_generated_icon_carries_the_marker(self) -> None:
+        """Without the marker every fresh project's icons look user-supplied, and the regenerator
+        silently never updates any of them — which is exactly what happened first time."""
+        from omnistackai_agent_engine.codegen.mobile_release import GENERATED_ICON_MARKER
+
+        files = _project()
+        for path, generated in files.items():
+            if path.endswith(".png"):
+                with self.subTest(path=path):
+                    data = base64.b64decode(generated.content)
+                    self.assertIn(GENERATED_ICON_MARKER.encode(), data)
+
+    def test_the_two_generators_agree_on_the_marker(self) -> None:
+        """They are in different languages; a typo in either makes the protection silently inert."""
+        from omnistackai_agent_engine.codegen.mobile_release import GENERATED_ICON_MARKER
+
+        script = _project()["brand/generate.mjs"].content
+        self.assertIn(f"const MARKER = '{GENERATED_ICON_MARKER}'", script)
+
+
+class BinaryFilesSurviveAssembly(TestCase):
+    def test_an_icon_is_still_binary_after_being_placed_in_the_monorepo(self) -> None:
+        """R-549: `_prefixed` rebuilt each file without `base64_encoded`, so every icon became a
+        text file the moment it moved into apps/mobile/. The adapter's own tests passed because
+        they never went through assembly."""
+        files = _project()
+        icon = files["apps/mobile/assets/icon.png"]
+        self.assertTrue(icon.base64_encoded, "the icon lost its binary flag during assembly")
+        self.assertEqual(base64.b64decode(icon.content)[:8], b"\x89PNG\r\n\x1a\n")

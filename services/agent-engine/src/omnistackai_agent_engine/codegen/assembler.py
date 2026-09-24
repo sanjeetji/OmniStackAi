@@ -9,6 +9,7 @@ repository. Pure and deterministic — nothing is installed, built, run, or writ
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, replace
 
@@ -166,7 +167,18 @@ class AssembledApp:
 
 
 def _prefixed(project: GeneratedProject, directory: str) -> list[GeneratedFile]:
-    return [GeneratedFile(f"{directory}/{f.path}", f.content, f.executable) for f in project.files()]
+    # R-549: carry *every* attribute across, not just the path and the executable bit. Dropping
+    # `base64_encoded` here silently turned each generated icon into a text file the moment it moved
+    # into apps/mobile/ — the adapter's own tests passed because they never went through assembly.
+    return [
+        GeneratedFile(
+            f"{directory}/{f.path}",
+            f.content,
+            executable=f.executable,
+            base64_encoded=f.base64_encoded,
+        )
+        for f in project.files()
+    ]
 
 
 def _root_readme(ir: ApplicationIR, apps: list[AssembledApp], skipped: list[str]) -> str:
@@ -304,5 +316,23 @@ def assemble_project(
 
     files.append(GeneratedFile("README.md", _root_readme(ir, apps, skipped)))
     files.append(GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv/\n__pycache__/\nbin/\n.env\n"))
+    # R-549: `pnpm run brand` regenerates what cannot be derived while a page renders — the icons.
+    if any(app.target.startswith("nextjs") or app.target == "react-native" for app in apps):
+        files.append(
+            GeneratedFile(
+                "package.json",
+                json.dumps(
+                    {
+                        "name": _slug(ir.name),
+                        "private": True,
+                        "scripts": {
+                            "brand": "node brand/generate.mjs",
+                        },
+                    },
+                    indent=2,
+                )
+                + "\n",
+            )
+        )
 
     return GeneratedProject(MONOREPO_TARGET, tuple(files))

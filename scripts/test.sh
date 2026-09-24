@@ -2644,4 +2644,24 @@ if rg -qF 'GeneratedFile("app.json"' \
   exit 1
 fi
 
+# R-549: a rebrand must reach the web app and the admin console too, not just the phone. And
+# `pnpm run brand` must never overwrite artwork a user supplied.
+for guard in test_both_web_apps_get_the_bridge \
+  test_the_layout_emits_the_derived_brand \
+  test_the_bridge_uses_the_same_derivation_as_the_mobile_app \
+  test_every_generated_icon_carries_the_marker \
+  test_the_two_generators_agree_on_the_marker \
+  test_an_icon_is_still_binary_after_being_placed_in_the_monorepo; do
+  if ! rg -qF "$guard" "$r548_tests"; then
+    printf 'R-549 the brand-reach gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# Assembly must carry every attribute across; dropping base64_encoded turned icons into text files.
+if ! rg -qF 'base64_encoded=f.base64_encoded' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/assembler.py"; then
+  printf 'R-549 _prefixed must preserve base64_encoded or binary assets become text.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
