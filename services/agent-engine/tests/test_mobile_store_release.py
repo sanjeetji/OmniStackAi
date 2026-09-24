@@ -202,3 +202,83 @@ class OutputStaysReproducible(TestCase):
         first = {p: f.content for p, f in _files().items()}
         second = {p: f.content for p, f in _files().items()}
         self.assertEqual(first, second)
+
+
+class EveryCredentialHasATemplateEntry(TestCase):
+    """R-547: R-546 named the variables and stopped, which left a founder holding an Apple Team ID
+    with nowhere obvious to put it and no note on what the value should look like."""
+
+    def setUp(self) -> None:
+        self.files = _files()
+        self.env = self.files[".env.example"].content
+
+    def test_an_env_template_is_generated(self) -> None:
+        self.assertIn(".env.example", self.files)
+
+    def test_every_variable_eas_json_references_is_in_it(self) -> None:
+        """A referenced variable with no template entry is one a publisher will not know to set."""
+        import re
+
+        eas = self.files["eas.json"].content
+        referenced = set(re.findall(r"\$([A-Z][A-Z0-9_]+)", eas))
+        self.assertTrue(referenced, "expected eas.json to reference env vars")
+        for name in referenced:
+            with self.subTest(name=name):
+                self.assertIn(name, self.env)
+
+    def test_each_entry_says_where_the_value_comes_from(self) -> None:
+        """Naming a variable is not enough — the template has to say where to obtain it."""
+        for source in ("expo.dev", "developer.apple.com", "App Store Connect", "Play Console"):
+            with self.subTest(source=source):
+                self.assertIn(source, self.env + self.files["credentials/README.md"].content)
+
+    def test_the_service_account_file_is_explained(self) -> None:
+        guide = self.files["credentials/README.md"].content
+        self.assertIn("play-service-account.json", guide)
+        self.assertIn("Release manager", guide)
+        self.assertIn("git-ignored", guide)
+
+    def test_the_template_holds_no_real_credential(self) -> None:
+        """Placeholders are shaped like the real thing; none of them is one."""
+        for line in self.env.splitlines():
+            if "=" not in line or line.strip().startswith("#"):
+                continue
+            value = line.split("=", 1)[1].strip()
+            with self.subTest(line=line):
+                self.assertTrue(value == "" or "example.com" in value, value)
+
+    def test_env_files_are_git_ignored(self) -> None:
+        ignore = self.files[".gitignore"].content
+        self.assertIn(".env.local", ignore)
+
+
+class TheDefaultIconLooksDeliberate(TestCase):
+    """R-547: a flat coloured plate reads as unfinished. The mark is derived from the app name,
+    the way GitHub and GitLab derive default avatars — unique, symmetric, and clearly intentional."""
+
+    def test_two_projects_get_different_marks(self) -> None:
+        from omnistackai_agent_engine.codegen.mobile_release import _mark_grid
+
+        self.assertNotEqual(_mark_grid("Minimal Blog"), _mark_grid("Red Bakery Shop"))
+
+    def test_the_same_project_always_gets_the_same_mark(self) -> None:
+        from omnistackai_agent_engine.codegen.mobile_release import _mark_grid
+
+        self.assertEqual(_mark_grid("Minimal Blog"), _mark_grid("Minimal Blog"))
+
+    def test_the_mark_is_symmetric(self) -> None:
+        """Symmetry is what makes an arbitrary hash read as a design rather than noise."""
+        from omnistackai_agent_engine.codegen.mobile_release import _mark_grid
+
+        for name in ("Minimal Blog", "OmniNews", "Salon Booking"):
+            with self.subTest(name=name):
+                for row in _mark_grid(name):
+                    self.assertEqual(row, row[::-1])
+
+    def test_no_mark_is_too_sparse_to_read(self) -> None:
+        from omnistackai_agent_engine.codegen.mobile_release import _mark_grid
+
+        for name in ("a", "Minimal Blog", "X", "Zzz", "OmniNews"):
+            with self.subTest(name=name):
+                grid = _mark_grid(name)
+                self.assertGreaterEqual(sum(sum(r) for r in grid), 10, name)

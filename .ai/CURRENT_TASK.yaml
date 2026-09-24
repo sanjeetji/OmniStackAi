@@ -1,32 +1,25 @@
-task_id: R-546
+task_id: R-547
 status: completed
 phase: MVP
-tracker_row: 13
+tracker_row: 14
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-546-store-ready
+branch: ai/R-547-publish-ready
 objective: >-
-  R-545 made the generated Expo app run on a phone. It cannot be built for the stores: there is no
-  `eas.json`, so `eas build` has nothing to read; `app.json` sets a splash and adaptive-icon
-  background colour but no icon or splash **image**, and Apple and Google both reject a submission
-  without one; there is no `versionCode`/`buildNumber`, so a second upload to either store is
-  refused; no permissions are declared; there is no iOS privacy manifest, which Apple has required
-  since 2024; and the bundle identifier is `com.omnistackai.<slug>` — our domain on the user's app,
-  which they cannot register.
-  Generate everything a store build needs, so that the founder's only remaining work is buying the
-  accounts and pasting credentials. No account, key or paid service is used by this task.
+  R-546 referenced the credentials a publisher needs by name but generated no template for them:
+  there is no `.env.example` and no `credentials/` guide, so a founder holding an Apple Team ID has
+  nowhere obvious to put it and no note saying what the value should look like. And the generated
+  app icon is a flat coloured plate — valid and store-acceptable, but it reads as unfinished, which
+  is not what a user should receive.
+  Close both. Every key gets a template entry with a one-line note saying exactly what to paste and
+  where the value comes from, and the default icon becomes a deterministic mark that is unique per
+  app and looks intentional rather than blank.
 founder_gate: >-
-  Founder approved React Native work on 2026-09-24 and asked specifically that publishing should
-  need no further coding. This task does the code and configuration; R-547 is the credentials.
+  The founder's standing instruction on 2026-09-24: "we do not want to do any task/feature which is
+  incomplete and not good for a user, each should be complete with smoothness." This task exists
+  because R-546 shipped two things that met their gates but would not have felt finished.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/react_native.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/
-  - services/agent-engine/src/omnistackai_agent_engine/git_service/materialize.py
-# Widened deliberately: GeneratedFile.content is str-only and materialize.py is the single writer
-# (`write_text`), so an app icon — a PNG — cannot reach disk without a binary path. An icon is the
-# most visible thing in a store listing, and R-544 now extracts the user's brand colour, so the
-# generated app can carry its own colour rather than Expo's default. Two contained changes: an
-# opt-in flag on GeneratedFile, and one branch in the writer.
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/mobile_release.py
   - services/agent-engine/tests/
   - scripts/test.sh
   - .ai/
@@ -34,19 +27,17 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - No EAS account, API key, certificate or store credential is created, used or committed
-  - No paid cloud service
-  - No secret value in any generated file — credentials are referenced, never embedded
-  - The app must still bundle: every relative import resolves, babel helpers stay declared
+  - No credential value is ever generated, embedded or committed — templates carry placeholders only
+  - No paid cloud service, no account creation
+  - The app must still bundle; icons stay valid PNGs at the sizes Expo expects
   - task verify stays offline with 0 model calls
 required_gates:
-  - A generated project contains an eas.json with development, preview and production profiles
-  - app.json declares an icon and a splash image, and those files are actually generated
-  - iOS buildNumber and Android versionCode are present, so a second upload is not refused
-  - An iOS privacy manifest is generated, since Apple rejects submissions without one
-  - The bundle identifier is derived from the project, not from com.omnistackai
-  - Store metadata for eas submit is generated, with credentials referenced by name and never embedded
-  - The generated README documents the exact publish sequence and what the founder must supply
+  - A .env.example lists every variable eas.json references, each with a one-line note on what to paste
+  - Each entry says where the value is obtained, not just what it is called
+  - A credentials/ guide explains which file goes there and that the directory is git-ignored
+  - The default icon is unique per app name and visibly different between two projects
+  - Icons remain valid PNGs at 1024 and 48 and still carry the project's brand colour
+  - No template contains anything resembling a real credential
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -54,26 +45,14 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - "R-547: buying the Apple Developer ($99/yr), Google Play ($25) and EAS accounts, and pasting their credentials — the founder's decision, no code left to write"
+  - Final brand artwork is a design decision the app owner makes; the generated mark is a good default, not a logo
 evidence:
-  - "task verify: 4,122 tests OK, offline, 0 model calls"
-  - "scripts/test.sh green with a new R-546 block; lint and security:quick pass"
-  - "live: the generated app still bundles with the new configuration - iOS HTTP 200, 6,532,286 bytes"
-  - "icons verified as real PNGs by `file` and macOS `sips`: 1024x1024 icon, adaptive foreground and splash; 48x48 favicon"
-  - "23 new offline tests in tests/test_mobile_store_release.py, including a scan of every generated file for embedded credentials"
+  - "task verify passes offline with 0 model calls; scripts/test.sh, lint and security:quick green"
+  - "a test extracts every $VAR from eas.json and fails if one has no .env.example entry"
+  - "icons remain valid PNGs at 1024 and 48, confirmed by `file` and macOS `sips`"
+  - "10 new offline tests, 33 in tests/test_mobile_store_release.py"
 found_and_fixed:
-  - "no eas.json existed, so `eas build` had nothing to read"
-  - "app.json set splash and adaptive-icon background colours but referenced no icon or splash image, so a listing would carry Expo's default"
-  - "no iOS buildNumber and no Android versionCode, so the second upload to either store is refused"
-  - "no iOS privacy manifest, which Apple has required since spring 2024"
-  - "the bundle identifier was com.omnistackai.<slug> - our domain on a user's app, unregisterable by them and bound permanently by both stores on first upload"
-  - "GeneratedFile.content is text-only, so a PNG could not reach disk; added an opt-in base64_encoded flag decoded at the single writer"
-  - "my first contract guard grepped react_native.py for 'com.omnistackai.' and matched the docstring explaining the fix; narrowed to the f-string that would emit it"
-what_the_founder_must_supply:
-  - "Apple Developer Program, 99 USD/year"
-  - "Google Play Developer, 25 USD once"
-  - "an Expo account for EAS cloud builds (free tier available), as EXPO_TOKEN"
-  - "a Google Play service-account JSON at credentials/play-service-account.json"
-  - "EXPO_APPLE_ID, EXPO_ASC_APP_ID and EXPO_APPLE_TEAM_ID"
-  - "a bundle identifier on a domain they own, replacing the derived placeholder"
-  - "a privacy policy URL, store screenshots, and their own icon artwork"
+  - "R-546 named every credential but generated no template, so a publisher had nowhere to put them"
+  - "naming a variable is not enough: each entry now says where the value is obtained"
+  - "the default icon was a flat plate that read as unfinished"
+  - "the first density floor filled the centre column only, which left sparse names below the floor because cells there were already set"

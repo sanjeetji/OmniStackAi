@@ -2604,4 +2604,18 @@ if rg -qF 'f"com.omnistackai' \
   exit 1
 fi
 
+# R-547: a named credential with no template entry is one a publisher will not know to set, and a
+# flat placeholder icon reads as unfinished.
+for guard in test_every_variable_eas_json_references_is_in_it \
+  test_each_entry_says_where_the_value_comes_from \
+  test_the_template_holds_no_real_credential \
+  test_two_projects_get_different_marks \
+  test_the_mark_is_symmetric \
+  test_no_mark_is_too_sparse_to_read; do
+  if ! rg -qF "$guard" "$r546_tests"; then
+    printf 'R-547 the publish-ready gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

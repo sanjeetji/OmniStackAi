@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import base64
 import binascii  # noqa: F401 - imported for the error type GeneratedFile raises on bad base64
+import hashlib
 import json
 import struct
 import zlib
@@ -88,16 +89,87 @@ def _png_file(path: str, data: bytes) -> GeneratedFile:
     return GeneratedFile(path, base64.b64encode(data).decode("ascii"), base64_encoded=True)
 
 
-def icon_files(brand: BrandTokens) -> list[GeneratedFile]:
+def _mark_grid(seed: str, cells: int = 5) -> list[list[bool]]:
+    """A vertically-mirrored grid of filled cells, derived from the app's name.
+
+    R-547: the first default icon was a flat plate, which reads as unfinished. This is the approach
+    GitHub and GitLab use for default avatars, and for the same reason: it is deterministic, unique
+    per project, and looks deliberate rather than blank. Mirroring is what makes an arbitrary hash
+    look designed — symmetry reads as intent.
+    """
+    digest = hashlib.sha256(seed.encode("utf-8")).digest()
+    half = cells // 2 + cells % 2
+    grid = [[False] * cells for _ in range(cells)]
+    bit = 0
+    for row in range(cells):
+        for col in range(half):
+            filled = bool(digest[bit % len(digest)] & (1 << (bit // len(digest) % 8)))
+            bit += 1
+            grid[row][col] = filled
+            grid[row][cells - 1 - col] = filled
+    # A sparse hash renders a thin, weak mark. Raise it to a floor that reads as a shape, adding
+    # mirrored pairs in a fixed order so symmetry — and determinism — survive. Filling the centre
+    # column alone was not enough: cells already set there left the total short of the floor.
+    floor = cells * 2
+    for row in range(cells):
+        if sum(sum(r) for r in grid) >= floor:
+            break
+        grid[row][half - 1] = True
+    for col in range(half - 1, -1, -1):
+        for row in range(cells):
+            if sum(sum(r) for r in grid) >= floor:
+                break
+            if not grid[row][col]:
+                grid[row][col] = True
+                grid[row][cells - 1 - col] = True
+    return grid
+
+
+def _mark_png(size: int, background: str, ink: str, seed: str, *, cells: int = 5, margin_ratio: float = 0.18) -> bytes:
+    """Render the mark: rounded cells in `ink` on a solid `background`."""
+    bg = _rgb(background)
+    fg = _rgb(ink)
+    grid = _mark_grid(seed, cells)
+
+    margin = int(size * margin_ratio)
+    span = size - 2 * margin
+    cell = span / cells
+    # Half a cell makes each mark a circle. At icon scale a dot grid reads as a designed mark;
+    # square blocks read as pixels, which is exactly the "unfinished" look this replaces.
+    radius = cell * 0.5
+
+    rows: list[bytes] = []
+    for y in range(size):
+        row = bytearray()
+        for x in range(size):
+            colour = bg
+            gx = (x - margin) / cell
+            gy = (y - margin) / cell
+            if 0 <= gx < cells and 0 <= gy < cells and grid[int(gy)][int(gx)]:
+                # Inscribe a circle in the cell (see `radius`).
+                fx = (gx - int(gx)) * cell
+                fy = (gy - int(gy)) * cell
+                cx = radius if fx < radius else (cell - radius if fx > cell - radius else fx)
+                cy = radius if fy < radius else (cell - radius if fy > cell - radius else fy)
+                if (fx - cx) ** 2 + (fy - cy) ** 2 <= radius ** 2:
+                    colour = fg
+            row += bytes(colour)
+        rows.append(bytes(row))
+    return png_bytes(size, size, rows)
+
+
+def icon_files(brand: BrandTokens, name: str = "") -> list[GeneratedFile]:
     """The icon set Expo references. Sized as Expo documents: 1024 square for the store icon."""
     background = brand.primary_color
-    plate = "#ffffff"
+    ink = "#ffffff"
+    seed = name or "app"
     return [
-        _png_file("assets/icon.png", _solid_with_plate(1024, background, plate, 0.22, 0.18)),
-        # The adaptive foreground is masked by Android, so it keeps a wider safe margin.
-        _png_file("assets/adaptive-icon.png", _solid_with_plate(1024, background, plate, 0.30, 0.22)),
-        _png_file("assets/splash.png", _solid_with_plate(1024, background, plate, 0.34, 0.20)),
-        _png_file("assets/favicon.png", _solid_with_plate(48, background, plate, 0.20, 0.18)),
+        _png_file("assets/icon.png", _mark_png(1024, background, ink, seed, margin_ratio=0.18)),
+        # Android masks the adaptive foreground to a circle or squircle, so the art has to sit
+        # inside the middle ~66%: a wider margin keeps the mark from being clipped.
+        _png_file("assets/adaptive-icon.png", _mark_png(1024, background, ink, seed, margin_ratio=0.28)),
+        _png_file("assets/splash.png", _mark_png(1024, background, ink, seed, margin_ratio=0.34)),
+        _png_file("assets/favicon.png", _mark_png(48, background, ink, seed, margin_ratio=0.16)),
     ]
 
 
@@ -212,6 +284,97 @@ def store_config(ir: ApplicationIR) -> GeneratedFile:
         ),
     }
     return GeneratedFile("store.config.json", json.dumps(config, indent=2) + "\n")
+
+
+def env_example() -> GeneratedFile:
+    """R-547: every variable `eas.json` references, with what to paste and where it comes from.
+
+    R-546 named these and stopped there, which left a founder holding an Apple Team ID with nowhere
+    obvious to put it. Values are placeholders shaped like the real thing so a wrong paste is
+    obvious; none of them is a credential.
+    """
+    return GeneratedFile(
+        ".env.example",
+        """# Copy to .env.local and fill in. .env* is git-ignored — never commit real values.
+# Only EXPO_PUBLIC_* reaches the app bundle; everything else is used by eas build/submit.
+
+# ---------------------------------------------------------------------------
+# The app itself
+# ---------------------------------------------------------------------------
+
+# Where the built app calls your API. Must be a public HTTPS URL for a store build —
+# a released app cannot reach localhost. Example: https://api.yourcompany.com
+EXPO_PUBLIC_API_URL=https://api.example.com
+
+# ---------------------------------------------------------------------------
+# Expo (needed for `eas build`; free account at https://expo.dev)
+# ---------------------------------------------------------------------------
+
+# A personal access token. expo.dev -> account settings -> Access tokens -> Create.
+# Looks like a long opaque string. Used by CI; locally `eas login` is enough instead.
+EXPO_TOKEN=
+
+# ---------------------------------------------------------------------------
+# Apple (needed for `eas submit --platform ios`; Apple Developer Program, 99 USD/year)
+# ---------------------------------------------------------------------------
+
+# The Apple ID email you sign in to developer.apple.com with. Example: you@yourcompany.com
+EXPO_APPLE_ID=
+
+# Your 10-character Team ID. developer.apple.com -> Membership details -> Team ID.
+# Ten letters and digits, e.g. A1B2C3D4E5
+EXPO_APPLE_TEAM_ID=
+
+# The App Store Connect app ID — the numeric id of the listing, NOT the bundle identifier.
+# Create the app in App Store Connect first; the id is in the URL and in App Information.
+# All digits, e.g. 6478123456
+EXPO_ASC_APP_ID=
+
+# ---------------------------------------------------------------------------
+# Google Play (needed for `eas submit --platform android`; Play Console, 25 USD once)
+# ---------------------------------------------------------------------------
+
+# No variable to set: the Play service-account JSON is a *file*.
+# Put it at credentials/play-service-account.json — see credentials/README.md.
+""",
+    )
+
+
+def credentials_readme() -> GeneratedFile:
+    """R-547: `eas.json` points at a service-account file; say where it comes from."""
+    return GeneratedFile(
+        "credentials/README.md",
+        """# Credentials
+
+**This directory is git-ignored. Nothing in it should ever be committed.**
+
+## `play-service-account.json`
+
+`eas.json` reads this path when submitting to Google Play. To create it:
+
+1. Google Play Console -> **Setup** -> **API access**.
+2. Create or link a Google Cloud project, then **Create new service account**.
+3. In Google Cloud, give that account a key: **Keys** -> **Add key** -> **JSON**. The file
+   downloads once and cannot be downloaded again.
+4. Back in Play Console, grant the account the **Release manager** role (it needs permission to
+   upload and to release to a track).
+5. Save the downloaded file here as `play-service-account.json`.
+
+It is a JSON object containing `"type": "service_account"`, a `client_email` and a `private_key`.
+The private key is a real secret: anyone holding it can publish to your listing.
+
+## Apple
+
+Nothing is stored here. EAS manages iOS signing certificates and provisioning profiles for you the
+first time you run `eas build --platform ios`; answer yes when it offers to handle them. Your Apple
+identifiers go in `.env.local` — see `.env.example`.
+
+## If a credential leaks
+
+Revoke it before anything else: delete the service-account key in Google Cloud, or revoke the
+token at expo.dev. Rotating is cheap; a compromised publishing key is not.
+""",
+    )
 
 
 def assets_readme() -> GeneratedFile:
@@ -363,7 +526,9 @@ def gitignore() -> GeneratedFile:
     return GeneratedFile(
         ".gitignore",
         "node_modules/\n.expo/\ndist/\n*.tsbuildinfo\n"
-        "# Store credentials never belong in a repository.\ncredentials/\n*.keystore\n*.p8\n*.p12\n*.mobileprovision\n",
+        "# Store credentials never belong in a repository.\n"
+        "credentials/\n*.keystore\n*.p8\n*.p12\n*.mobileprovision\n"
+        ".env\n.env.local\n.env.*.local\n",
     )
 
 
@@ -371,11 +536,13 @@ def release_files(ir: ApplicationIR, slug: str, identifier: str) -> list[Generat
     """Every file the app needs to be built and submitted, none of them holding a secret."""
     return [
         eas_json(),
+        env_example(),
+        credentials_readme(),
         privacy_manifest(),
         store_config(ir),
         assets_readme(),
         release_readme(ir, identifier),
         ci_workflow(),
         gitignore(),
-        *icon_files(ir.brand),
+        *icon_files(ir.brand, ir.name),
     ]
