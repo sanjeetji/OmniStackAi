@@ -10,7 +10,7 @@ repository. Pure and deterministic — nothing is installed, built, run, or writ
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from ..application_ir import ApplicationIR, BackendStrategy, BrandTokens, MobileProfile, WebStrategy
 from ..model_gateway import ModelProvider
@@ -28,6 +28,29 @@ from .react_native import ReactNativeAdapter
 # ---------------------------------------------------------------------------
 
 _HEX_RE = re.compile(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
+
+# R-544: colour *names*, because almost nobody types a hex code. "a red shop" and "green brand"
+# were both read as "no colour mentioned", so the app came out the default blue either way.
+# Values are the Tailwind 600 weight, which reads as the colour on white without glaring.
+_COLOR_WORDS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\b(crimson|scarlet|red)\b", re.I), "#dc2626"),
+    (re.compile(r"\b(orange|amber)\b", re.I), "#ea580c"),
+    (re.compile(r"\b(yellow|gold(en)?)\b", re.I), "#ca8a04"),
+    (re.compile(r"\b(lime)\b", re.I), "#65a30d"),
+    (re.compile(r"\b(emerald|green)\b", re.I), "#16a34a"),
+    (re.compile(r"\b(teal|aqua)\b", re.I), "#0d9488"),
+    (re.compile(r"\b(cyan|sky)\b", re.I), "#0891b2"),
+    (re.compile(r"\b(navy|indigo)\b", re.I), "#4338ca"),
+    (re.compile(r"\b(violet|purple)\b", re.I), "#7c3aed"),
+    (re.compile(r"\b(magenta|fuchsia)\b", re.I), "#c026d3"),
+    (re.compile(r"\b(pink|rose)\b", re.I), "#e11d48"),
+    (re.compile(r"\b(brown|chocolate)\b", re.I), "#92400e"),
+    (re.compile(r"\b(slate|grey|gray|monochrome)\b", re.I), "#475569"),
+    (re.compile(r"\b(black|midnight|dark)\b", re.I), "#1e293b"),
+    # "blue" last: it is the default, so an explicit mention changes nothing but costs no harm,
+    # and putting it first would let the word "blueprint" beat a real colour later in the sentence.
+    (re.compile(r"\bblue\b", re.I), "#2563eb"),
+]
 
 # Common web-safe font family names we recognise by keyword
 _KNOWN_FONTS: list[tuple[re.Pattern[str], str]] = [
@@ -70,21 +93,33 @@ def extract_brand_tokens(user_prompt: str, *, ir_name: str = "") -> BrandTokens:
     Falls back silently to BrandTokens defaults when nothing is found.
     No model calls — zero credits.
     """
+    # R-544: `BrandTokens.font_family` on the class returns the slot descriptor, not the default —
+    # a slotted dataclass has no class-level values. This function was never called from anywhere
+    # in src or the tests, so it raised on every invocation without anyone noticing. Read the
+    # defaults off an instance.
+    defaults = BrandTokens()
     text = f"{user_prompt} {ir_name}"
 
-    # -- primary_color: first hex color found in the prompt ------------------
+    # -- primary_color: an explicit hex wins, else a colour word ---------------
     hex_match = _HEX_RE.search(text)
-    primary_color = hex_match.group(0) if hex_match else BrandTokens.primary_color  # type: ignore[attr-defined]
+    if hex_match is not None:
+        primary_color = hex_match.group(0)
+    else:
+        primary_color = defaults.primary_color
+        for pattern, value in _COLOR_WORDS:
+            if pattern.search(text):
+                primary_color = value
+                break
 
     # -- font_family: first known font keyword --------------------------------
-    font_family = BrandTokens.font_family  # type: ignore[attr-defined]
+    font_family = defaults.font_family
     for pattern, font_name in _KNOWN_FONTS:
         if pattern.search(text):
             font_family = font_name
             break
 
     # -- border_radius: first radius keyword ----------------------------------
-    border_radius = BrandTokens.border_radius  # type: ignore[attr-defined]
+    border_radius = defaults.border_radius
     for pattern, alias in _RADIUS_MAP:
         if pattern.search(text):
             border_radius = alias
@@ -231,6 +266,15 @@ def assemble_project(
     if not isinstance(ir, ApplicationIR):
         raise TypeError("assemble_project expects an ApplicationIR")
     registry = registry if registry is not None else default_registry()
+
+    # R-544: `nl_to_ir` never asks the model for a brand, so a prompt-built IR always arrives with
+    # the defaults and the user's "red shop" was lost before codegen ever saw it. Read the cues
+    # from the prompt here — deterministically, no model call — and only when the IR has not set a
+    # brand of its own, so an explicit brand always wins.
+    if prompt and ir.brand == BrandTokens():
+        derived = extract_brand_tokens(prompt, ir_name=ir.name)
+        if derived != BrandTokens():
+            ir = replace(ir, brand=derived)
 
     apps, skipped = _plan_assembly(ir)
     files: list[GeneratedFile] = []

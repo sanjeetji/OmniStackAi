@@ -4,6 +4,12 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-544 (2026-09-24): the brand a user asks for now reaches the app they get.**
+> Asking for a red shop produced the same blue app as everything else, because the pipeline was broken in three places at once: `nl_to_ir` never asks the model for a brand; `extract_brand_tokens` was **called from nowhere** and would have **raised** if it had been (a slotted dataclass has no class-level defaults); and `styles/tokens.css` was a **static string** that never read `ir.brand`. A requested colour surfaced only in a `color-picker` swatch.
+> New `codegen/brand.py` derives a full palette from one colour in plain Python — mixing toward black/white so shades keep the hue, deriving the dark theme from the same brand, carrying the focus ring, and picking button text by WCAG luminance so a yellow brand is still readable. The extractor now reads **colour names**, not only hex.
+> Evidence: "a red shop" → `#dc2626`; "a green booking site with rounded corners" → `#16a34a` + `0.5rem`; no cue → the default palette byte for byte; no default blue survives a rebrand. 20 new tests; `task verify` 4,081 OK offline, 0 model calls.
+> **Next:** the generated Expo mobile app still cannot be run or previewed — `APP_KINDS` has no mobile kind and `plan.py` has no `apps/mobile`, so a user who asks for an app gets code the platform can never start.
+
 > **R-543 (2026-09-24): a real archetype family, so different products get different pages.**
 > There were two archetypes and eight prompt keywords **defaulting to `admin_panel`** — which is why "a website to sell my product" generated an internal dashboard for a shop, and why every recognised public site got one identical landing page. The detector also lived only in `llm_ui.py`, so the deterministic generator had no archetype awareness at all.
 > `codegen/archetype.py` scores seven archetypes (storefront, publication, booking, directory, saas, marketing, admin_panel) from the **IR and the prompt together**, weighting entity names above wording because they survive paraphrasing. `admin_panel` is never inferred. With no evidence the answer is `marketing`, not a dashboard.

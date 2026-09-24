@@ -2524,4 +2524,30 @@ if rg -q 'model_gateway|ModelProvider' \
   exit 1
 fi
 
+# R-544: the brand a user asks for must reach the app they get. The pipeline was broken in three
+# places at once — the extractor was never called (and raised when it was), and tokens.css was a
+# static string — so every generated app came out the same blue whatever the prompt said.
+r544_tests="$repo_root/services/agent-engine/tests/test_brand_tokens.py"
+if [[ ! -f "$r544_tests" ]]; then
+  printf 'R-544 the brand-token gate is required.\n'
+  exit 1
+fi
+for guard in test_colour_names_are_read_not_only_hex \
+  test_a_red_prompt_produces_a_red_app \
+  test_no_default_blue_survives_anywhere \
+  test_a_default_brand_changes_nothing \
+  test_text_on_the_brand_stays_readable \
+  test_the_admin_console_follows_the_same_brand; do
+  if ! rg -qF "$guard" "$r544_tests"; then
+    printf 'R-544 the brand gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# tokens.css must stay brand-driven: a raw static emit is the regression this closes.
+if rg -qF 'GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS)' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"; then
+  printf 'R-544 styles/tokens.css must be rendered through apply_brand, not emitted raw.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

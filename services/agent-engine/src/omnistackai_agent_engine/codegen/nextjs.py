@@ -18,6 +18,7 @@ if TYPE_CHECKING:  # annotation-only; keeps the generator free of a runtime mode
     from ..model_gateway.contracts import ModelProvider
 from .adapter import GenerationTarget
 from .auth_guard import needs_auth
+from .brand import apply_brand
 from .errors import GenerationError
 from .field_validation import parse_field_rules
 from .files import GeneratedFile, GeneratedProject
@@ -74264,7 +74265,11 @@ class NextjsWebAdapter:
             *_component_files(ir),
             *_ui_component_files(),
             GeneratedFile("lib/utils.ts", _LIB_UTILS),
-            GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
+            # R-544: the brand reaches the app through this one file. Tailwind maps `primary` to
+            # var(--color-primary) and every generated component styles with var(--color-*), so
+            # substituting here is what makes a red brand actually produce a red app. A default
+            # brand returns the stylesheet byte for byte unchanged.
+            GeneratedFile("styles/tokens.css", apply_brand(_DESIGN_TOKENS_CSS, ir.brand)),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
             GeneratedFile("app/global-error.tsx", _GLOBAL_ERROR_PAGE),

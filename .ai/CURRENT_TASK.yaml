@@ -1,20 +1,21 @@
-task_id: R-543
+task_id: R-544
 status: completed
 phase: MVP
-tracker_row: 10
+tracker_row: 11
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-543-archetype-family
+branch: ai/R-544-brand-tokens
 objective: >-
-  There are only two archetypes, `public_website` and `admin_panel`, so a storefront, a blog and a
-  booking site all get the same landing page — the repetitiveness the founder keeps asking about.
-  Detection is eight prompt keywords defaulting to `admin_panel`, which is why "a website to sell
-  my product" was classified as a console; it reads only the prompt, never the IR, although the
-  IR's entity names are the strongest available signal. And it lives entirely in `llm_ui.py`, so
-  the deterministic path — everything a user sees when no model is available, or when the model
-  fails validation — has no archetype awareness at all beyond web-vs-admin.
-  Give the platform a real archetype family, detected deterministically from prompt *and* IR, and
-  honoured by both the deterministic generator and the model prompt.
+  A user can ask for a red shop or a rounded, serif brand and the generated app comes out the same
+  blue as every other one. The brand pipeline is disconnected in three separate places:
+  `nl_to_ir` never asks the model for a brand, so a prompt-built IR always carries the defaults;
+  `extract_brand_tokens` (R-514) exists but is called from nowhere in src or tests, so the
+  deterministic cues in the prompt are never read; and `styles/tokens.css` is emitted as a static
+  string that never consults `ir.brand`, so even a brand that *is* set is ignored. The only place a
+  requested colour surfaces today is a swatch inside `components/color-picker.tsx`.
+  Connect it end to end, deterministically, so the colour, font and corner style a user asks for
+  actually reach the app they get. Tailwind already maps `primary` to `var(--color-primary)`, so
+  the token CSS is the single seam that makes every component follow.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/tests/
@@ -24,41 +25,41 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - No new runtime dependency in the agent-engine (stdlib only)
+  - No new runtime dependency in the agent-engine (stdlib only; colour maths is pure Python)
   - No new dependency in generated projects beyond the pinned Next.js stack
   - task verify stays offline with 0 model calls
-  - The admin console keeps its dashboard home and R-275's diff invariance
-  - Deterministic output stays byte-stable for a given IR
+  - Dark mode must keep working — the dark theme's primary has to be derived, not left behind
+  - Deterministic output stays byte-stable for a given IR and prompt
+  - A project with no brand cue keeps exactly today's default palette, byte for byte
 required_gates:
-  - Archetype detection is deterministic, reads the IR as well as the prompt, and is unit-tested per archetype
-  - A storefront, a publication and a booking IR each produce a visibly different deterministic home page
-  - Every archetype's deterministic page passes the engine's own JSX validator
-  - The model prompt carries archetype-specific instructions for each archetype
-  - "a website to sell my product" resolves to the storefront archetype, not an admin panel
-  - Generated output stays byte-stable across two runs of the same IR
+  - A prompt naming a colour produces a generated app whose tokens.css carries that colour
+  - Colour names work, not only hex; the extractor reads "a red shop" as well as "#ff0000"
+  - The derived hover, focus and subtle shades are valid hex and visibly distinct from the base
+  - The dark theme's primary is derived from the same brand, so dark mode is not left blue
+  - font_family and border_radius from the prompt reach the CSS too
+  - An IR with default brand emits byte-identical CSS to today's static string
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-evidence:
-  - "task verify: 4,061 tests OK, offline, 0 model calls"
-  - "scripts/test.sh green with a new R-543 contract block; lint and security:quick pass"
-  - "four prompts with matching IRs give four archetypes and four distinct pages"
-  - "all six public archetypes render distinct pages passing clean_and_validate_jsx, including against an IR with no entities or screens"
-  - "16 new offline tests in tests/test_archetype_family.py"
-  - "the same page is byte-identical across two generations of the same IR and prompt"
 deferred:
-  - Layout variants within one archetype, so two storefronts also differ from each other
-  - Making BrandTokens drive styles/tokens.css (today the requested brand colour reaches only components/color-picker.tsx)
-  - A configured interpreter for the run plan instead of bare `python3`
+  - The generated Expo mobile app still cannot be run or previewed (APP_KINDS has no mobile kind, and plan.py has no apps/mobile) — needs its own task
+  - Layout variants within one archetype, so two storefronts also differ
+  - Wiring plan_ecosystem_from_prompt so one prompt can produce four apps
+evidence:
+  - "task verify: 4,081 tests OK, offline, 0 model calls"
+  - "scripts/test.sh green with a new R-544 block; lint and security:quick pass"
+  - "'a red shop for my bakery' -> --color-primary: #dc2626"
+  - "'a green booking site with rounded corners' -> #16a34a and --radius-md: 0.5rem"
+  - "'a plain internal tool' -> the default palette, byte for byte unchanged"
+  - "no #2563eb or #3b82f6 survives anywhere in a rebranded stylesheet, including the dark blocks and the focus ring"
+  - "20 new offline tests in tests/test_brand_tokens.py"
 found_and_fixed:
-  - "detection defaulted to admin_panel, so 'a website to sell my product' produced an internal dashboard for a shop"
-  - "one landing page served every public archetype, so a shop, a blog and a booking site looked identical"
-  - "the detector lived only in llm_ui.py, so the deterministic path had no archetype awareness at all"
-  - "the fallback tested resolved == 'public_website', so any archetype other than that would have fallen back to the staff dashboard on a model failure"
-  - "my own first contract block grepped archetype.py for 'provider' and matched the directory signal word; narrowed to model_gateway|ModelProvider"
-not_done:
-  - "two storefronts still look like each other: layout variants within an archetype are the next step"
-  - "BrandTokens never reaches styles/tokens.css — a requested brand colour lands only in components/color-picker.tsx, so every generated app is blue regardless"
+  - "extract_brand_tokens was called from nowhere in src or tests, so prompt brand cues were never read"
+  - "and it raised on every call: BrandTokens.font_family on a slotted dataclass returns the slot descriptor, not the default"
+  - "styles/tokens.css was emitted as a static string that never consulted ir.brand"
+  - "the extractor only matched hex codes, so 'a red shop' was read as 'no colour mentioned'"
+  - "the focus ring (--color-border-focus) kept the default blue on a rebranded app"
+  - "no foreground contrast rule existed, so a yellow brand would have had unreadable white button text"
