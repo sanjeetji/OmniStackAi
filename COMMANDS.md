@@ -191,6 +191,31 @@ ln -sf "$(uv python find 3.13)" ~/.local/bin/python3
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
+### `start` and `status` print every address you need
+
+Both print the same table, from one function, so they cannot drift apart:
+
+```
+  Open this
+    Console            http://127.0.0.1:4321
+    On this network    http://192.168.1.57:4321
+
+  APIs
+    Studio             http://127.0.0.1:4173            health http://127.0.0.1:4173/healthz
+    Control-plane      http://127.0.0.1:8080            health http://127.0.0.1:8080/healthz
+
+  Data and models
+    PostgreSQL         127.0.0.1:5432  db omnistackai  user omnistackai
+    Ollama (local)     http://127.0.0.1:11434  model qwen2.5-coder:7b
+
+  A generated project's apps
+    Preview            http://127.0.0.1:4321/preview/<project-id>/<app>
+    where <app> is one of: web, admin, api  (a mobile app is opened by QR, not in a frame)
+```
+
+`status` additionally reports each component's health, its pid and the Studio's mode
+(`preview` means generated apps can run; `build-only` means they cannot).
+
 ### `verify` runs the whole gate set
 
 ```bash

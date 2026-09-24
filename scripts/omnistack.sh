@@ -135,6 +135,46 @@ POSTGRES_PORT="$(env_value OMNISTACKAI_POSTGRES_PORT 5432)"
 OLLAMA_URL="$(env_value OMNISTACKAI_OLLAMA_BASE_URL http://127.0.0.1:11434)"
 
 console_url() { printf 'http://127.0.0.1:%s' "$CONSOLE_PORT"; }
+studio_url() { printf 'http://127.0.0.1:%s' "$STUDIO_PORT"; }
+control_plane_url() { printf 'http://127.0.0.1:%s' "$CONTROL_PLANE_PORT"; }
+
+# R-552: the local model actually loaded, for the endpoint table. Best effort: an unreachable or
+# model-less Ollama must not make a status command fail.
+ollama_model() {
+  # Pure shell on purpose: a status command must not depend on the interpreter whose brokenness
+  # `doctor` exists to report. Takes the first "name" field; empty when Ollama is unreachable.
+  curl -fsS --max-time 2 "$OLLAMA_URL/api/tags" 2>/dev/null \
+    | tr ',' '\n' \
+    | sed -n 's/.*"name" *: *"\([^"]*\)".*/\1/p' \
+    | head -1
+}
+
+# R-552: every address a person might need, printed the same way by `start` and by `status`.
+# Two copies of this drifted apart before; one function cannot.
+print_endpoints() {
+  local lan; lan="$(lan_address)"
+  log ""
+  log "  Open this"
+  log "    Console            $(console_url)"
+  [[ -n "$lan" ]] && log "    On this network    http://$lan:$CONSOLE_PORT"
+  log ""
+  log "  APIs"
+  log "    Studio             $(studio_url)            health $(studio_url)/healthz"
+  log "    Control-plane      $(control_plane_url)            health $(control_plane_url)/healthz"
+  log ""
+  log "  Data and models"
+  log "    PostgreSQL         127.0.0.1:$POSTGRES_PORT  db $(postgres_db)  user $(postgres_user)"
+  local model; model="$(ollama_model)"
+  if [[ -n "$model" ]]; then
+    log "    Ollama (local)     $OLLAMA_URL  model $model"
+  else
+    log "    Ollama (local)     $OLLAMA_URL  (not reachable - cloud providers will be used)"
+  fi
+  log ""
+  log "  A generated project's apps"
+  log "    Preview            $(console_url)/preview/<project-id>/<app>"
+  log "    where <app> is one of: web, admin, api  (a mobile app is opened by QR, not in a frame)"
+}
 
 lan_address() {
   # Best-effort LAN IPv4, for the "open it on your phone" hint. Never used for binding.
@@ -378,18 +418,12 @@ cmd_up() {
   fi
 
   step "Ready"
-  log "  Console        $(console_url)"
-  log "  Studio API     http://127.0.0.1:$STUDIO_PORT"
-  log "  Control-plane  http://127.0.0.1:$CONTROL_PLANE_PORT"
-  local lan; lan="$(lan_address)"
-  if [[ -n "$lan" ]]; then
-    log ""
-    log "  On this network the console also answers at http://$lan:$CONSOLE_PORT"
-    log "  Note: a generated app's live preview binds to 127.0.0.1, so its iframe only loads"
-    log "  on this machine until the preview-reachability task ships."
-  fi
+  print_endpoints
   log ""
-  log "  Logs: $0 logs studio -f    Stop: $0 down"
+  log "  Next"
+  log "    Check everything   $0 status"
+  log "    Follow a log       $0 logs studio -f"
+  log "    Stop               $0 stop"
 }
 
 cmd_down() {
@@ -521,13 +555,13 @@ cmd_status() {
   step "OmniStackAI"
   local code who pid
 
-  code="$(http_code "http://127.0.0.1:$CONTROL_PLANE_PORT/healthz")"
-  if [[ "$code" == "200" ]]; then ok "control-plane   :$CONTROL_PLANE_PORT  healthy (docker)"; else fail "control-plane   :$CONTROL_PLANE_PORT  not answering ($code)"; fi
+  code="$(http_code "$(control_plane_url)/healthz")"
+  if [[ "$code" == "200" ]]; then ok "control-plane   $(control_plane_url)  healthy (docker)"; else fail "control-plane   $(control_plane_url)  not answering ($code)  - start it with: $0 start"; fi
 
   if docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'postgres'; then
-    ok "postgres        :$POSTGRES_PORT  up (docker)"
+    ok "postgres        127.0.0.1:$POSTGRES_PORT  up (docker)  db $(postgres_db)"
   else
-    fail "postgres        :$POSTGRES_PORT  not running"
+    fail "postgres        127.0.0.1:$POSTGRES_PORT  not running  - start it with: $0 start"
   fi
 
   code="$(http_code "http://127.0.0.1:$STUDIO_PORT/healthz")"
@@ -537,25 +571,29 @@ cmd_status() {
     # Authoritative mode probe: /api/preview exists only when the preview manager is wired in.
     local mode="build-only (Preview tab disabled)"
     [[ "$(http_code "http://127.0.0.1:$STUDIO_PORT/api/preview")" == "200" ]] && mode="preview (generated apps can run)"
-    ok "studio          :$STUDIO_PORT  healthy  ${pid:+pid $pid }${who:+[$who]}  mode: $mode"
+    ok "studio          $(studio_url)  healthy  ${pid:+pid $pid }${who:+[$who]}  mode: $mode"
   else
-    fail "studio          :$STUDIO_PORT  not answering ($code)  - start it with: $0 up"
+    fail "studio          $(studio_url)  not answering ($code)  - start it with: $0 start"
   fi
 
   code="$(http_code "$(console_url)/login")"
   pid="$(service_pid console || true)"
   who="$(port_listener "$CONSOLE_PORT")"
   if [[ "$code" == 2* || "$code" == 3* ]]; then
-    ok "console         :$CONSOLE_PORT  healthy  ${pid:+pid $pid }${who:+[$who]}"
+    ok "console         $(console_url)  healthy  ${pid:+pid $pid }${who:+[$who]}"
   else
-    fail "console         :$CONSOLE_PORT  not answering ($code)  - start it with: $0 up"
+    fail "console         $(console_url)  not answering ($code)  - start it with: $0 start"
   fi
 
   code="$(http_code "$OLLAMA_URL/api/version")"
-  if [[ "$code" == "200" ]]; then ok "ollama (local)  $OLLAMA_URL  reachable"; else warn "ollama (local)  $OLLAMA_URL  not reachable (cloud providers will be used)"; fi
+  if [[ "$code" == "200" ]]; then
+    local model; model="$(ollama_model)"
+    ok "ollama (local)  $OLLAMA_URL  reachable${model:+  model $model}"
+  else
+    warn "ollama (local)  $OLLAMA_URL  not reachable (cloud providers will be used)"
+  fi
 
-  printf '\n'
-  log "  Open $(console_url)"
+  print_endpoints
 }
 
 cmd_logs() {

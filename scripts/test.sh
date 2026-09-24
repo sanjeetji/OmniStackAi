@@ -2715,4 +2715,27 @@ if [[ "$omnistack_doc_missing" -ne 0 ]]; then
   exit 1
 fi
 
+# R-552: `start` and `status` must print the same endpoints. Two copies of that table drifted
+# apart before, so there is one function and both call it.
+if ! rg -qF 'print_endpoints()' "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-552 scripts/omnistack.sh must define one shared endpoint table.\n'
+  exit 1
+fi
+if [[ "$(rg -c '^\s*print_endpoints$' "$repo_root/scripts/omnistack.sh" || echo 0)" -lt 2 ]]; then
+  printf 'R-552 both start and status must print the shared endpoint table.\n'
+  exit 1
+fi
+# Every address a person needs has to be in it.
+for endpoint in 'Console  ' 'Studio  ' 'Control-plane  ' 'PostgreSQL  ' 'Ollama (local)  ' 'Preview  '; do
+  if ! rg -qF -- "$endpoint" "$repo_root/scripts/omnistack.sh"; then
+    printf 'R-552 the endpoint table must include: %s\n' "$endpoint"
+    exit 1
+  fi
+done
+# A status command must not depend on the interpreter whose brokenness doctor exists to report.
+if rg -qF '/usr/bin/python3 -c' "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-552 omnistack.sh must not shell out to a hard-coded interpreter.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
