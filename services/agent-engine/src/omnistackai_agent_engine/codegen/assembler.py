@@ -15,11 +15,12 @@ from dataclasses import dataclass, replace
 from ..application_ir import ApplicationIR, BackendStrategy, BrandTokens, MobileProfile, WebStrategy
 from ..model_gateway import ModelProvider
 from .adapter import AdapterRegistry, GenerationTarget
+from .brand_project import brand_files
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
 from .backend_node import NodeBackendAdapter
 from .files import GeneratedFile, GeneratedProject
-from .nextjs import NextjsAdminAdapter, NextjsWebAdapter
+from .nextjs import NextjsAdminAdapter, NextjsWebAdapter, _slug
 from .openapi import render_openapi_json
 from .react_native import ReactNativeAdapter
 
@@ -295,6 +296,11 @@ def assemble_project(
 
     if ir.apis:
         files.append(GeneratedFile("contracts/openapi.json", render_openapi_json(ir)))
+
+    # R-548: one brand.json every surface derives from, at the monorepo root because it serves
+    # the web app, the admin console and the mobile app alike.
+    if any(app.target.startswith("nextjs") or app.target == "react-native" for app in apps):
+        files.extend(brand_files(ir, _slug(ir.name)))
 
     files.append(GeneratedFile("README.md", _root_readme(ir, apps, skipped)))
     files.append(GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv/\n__pycache__/\nbin/\n.env\n"))

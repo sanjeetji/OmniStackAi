@@ -31,6 +31,24 @@ def _files(brand: str = BRAND) -> dict:
     return {f.path: f for f in ReactNativeAdapter().generate(ir).files()}
 
 
+def _project(brand: str = BRAND) -> dict:
+    """R-548: brand.json lives at the monorepo root, so some values are only visible from a full
+    assembly rather than the mobile adapter alone."""
+    import dataclasses as _dc
+
+    from omnistackai_agent_engine.application_ir import AdminStrategy, MobileProfile
+    from omnistackai_agent_engine.codegen.assembler import assemble_project
+
+    ir = _dc.replace(example_ir("minimal-blog"), brand=BrandTokens(primary_color=brand))
+    ir = _dc.replace(ir, project_strategy=_dc.replace(
+        ir.project_strategy, mobile_profile=MobileProfile.REACT_NATIVE, admin_strategy=AdminStrategy.NEXTJS))
+    return {f.path: f for f in assemble_project(ir).files()}
+
+
+def _brand_doc(brand: str = BRAND) -> dict:
+    return json.loads(_project(brand)["brand.json"].content)
+
+
 class TheBuildConfigurationExists(TestCase):
     def setUp(self) -> None:
         self.files = _files()
@@ -89,13 +107,13 @@ class NoCredentialIsEverEmbedded(TestCase):
 class TheAppIsIdentifiedAsTheUsersOwn(TestCase):
     def test_the_bundle_identifier_is_not_ours(self) -> None:
         """`com.omnistackai.<slug>` put our domain on someone else's app."""
-        cfg = json.loads(_files()["app.json"].content)["expo"]
-        self.assertNotIn("omnistackai", cfg["ios"]["bundleIdentifier"])
-        self.assertNotIn("omnistackai", cfg["android"]["package"])
+        self.assertNotIn("omnistackai", _brand_doc()["identity"]["bundleId"])
 
     def test_ios_and_android_agree(self) -> None:
-        cfg = json.loads(_files()["app.json"].content)["expo"]
-        self.assertEqual(cfg["ios"]["bundleIdentifier"], cfg["android"]["package"])
+        """R-548: both now read one value from brand.json, so they cannot drift apart."""
+        config = _files()["app.config.js"].content
+        self.assertIn("bundleIdentifier: bundleId", config)
+        self.assertIn("package: bundleId", config)
 
     def test_it_is_a_valid_reverse_dns_identifier(self) -> None:
         for slug in ("minimal-blog", "shop", "9lives-app", "a-b-c"):
@@ -118,11 +136,11 @@ class TheAppIsIdentifiedAsTheUsersOwn(TestCase):
 class TheStoresWillAcceptTheBuild(TestCase):
     def setUp(self) -> None:
         self.files = _files()
-        self.cfg = json.loads(self.files["app.json"].content)["expo"]
+        self.config = self.files["app.config.js"].content
 
     def test_a_second_upload_is_possible(self) -> None:
-        self.assertIn("buildNumber", self.cfg["ios"])
-        self.assertIn("versionCode", self.cfg["android"])
+        self.assertIn("buildNumber", self.config)
+        self.assertIn("versionCode", self.config)
 
     def test_the_ios_privacy_manifest_exists(self) -> None:
         """Apple has rejected submissions without one since spring 2024."""
@@ -132,7 +150,7 @@ class TheStoresWillAcceptTheBuild(TestCase):
 
     def test_no_unjustified_permissions_are_requested(self) -> None:
         """Play rejects builds asking for permissions they cannot justify."""
-        self.assertEqual(self.cfg["android"]["permissions"], [])
+        self.assertIn("permissions: []", self.config)
 
     def test_listing_metadata_is_generated(self) -> None:
         store = json.loads(self.files["store.config.json"].content)
@@ -151,13 +169,11 @@ class TheIconsAreRealImages(TestCase):
         self.files = _files()
 
     def test_every_icon_expo_references_is_generated(self) -> None:
-        cfg = json.loads(self.files["app.json"].content)["expo"]
-        referenced = [
-            cfg["icon"],
-            cfg["splash"]["image"],
-            cfg["android"]["adaptiveIcon"]["foregroundImage"],
-            cfg["web"]["favicon"],
-        ]
+        import re
+
+        config = self.files["app.config.js"].content
+        referenced = set(re.findall(r"'(\./assets/[^']+\.png)'", config))
+        self.assertTrue(referenced, "expected app.config.js to reference icon files")
         for reference in referenced:
             with self.subTest(reference=reference):
                 # A referenced file that does not exist fails the build outright.
@@ -185,8 +201,9 @@ class TheIconsAreRealImages(TestCase):
         self.assertNotEqual(red, green)
 
     def test_the_splash_background_matches_the_brand(self) -> None:
-        cfg = json.loads(self.files["app.json"].content)["expo"]
-        self.assertEqual(cfg["splash"]["backgroundColor"], BRAND)
+        """R-548: it reads brand.primaryColor, so it follows a rebrand without regeneration."""
+        self.assertIn("backgroundColor: brand.primaryColor", self.files["app.config.js"].content)
+        self.assertEqual(_brand_doc()["primaryColor"], BRAND)
 
     def test_the_assets_guide_says_they_are_placeholders(self) -> None:
         self.assertIn("Replace", self.files["assets/README.md"].content)

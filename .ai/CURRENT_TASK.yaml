@@ -1,25 +1,29 @@
-task_id: R-547
+task_id: R-548
 status: completed
 phase: MVP
-tracker_row: 14
+tracker_row: 15
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-547-publish-ready
+branch: ai/R-548-brand-source-of-truth
 objective: >-
-  R-546 referenced the credentials a publisher needs by name but generated no template for them:
-  there is no `.env.example` and no `credentials/` guide, so a founder holding an Apple Team ID has
-  nowhere obvious to put it and no note saying what the value should look like. And the generated
-  app icon is a flat coloured plate — valid and store-acceptable, but it reads as unfinished, which
-  is not what a user should receive.
-  Close both. Every key gets a template entry with a one-line note saying exactly what to paste and
-  where the value comes from, and the default icon becomes a deterministic mark that is unique per
-  app and looks intentional rather than blank.
+  Branding is scattered across files that do not know about each other. Changing one colour means
+  editing `apps/web/styles/tokens.css`, the same eleven variables again in `apps/admin`,
+  `apps/mobile/app.json` twice, and `apps/mobile/src/design-system/tokens.ts` — then regenerating
+  four PNGs by hand, which a user cannot do at all because the generator is Python inside the
+  platform. Changing the app's *name* is worse: it appears in `app.json`, both `package.json`s, the
+  READMEs and the bundle identifier.
+  Give every generated project one `brand.json` that the apps derive from, using Expo's documented
+  dynamic-config pattern (`app.config.js`) rather than a static `app.json`. This is the foundation
+  the founder chose ("Option C"): R-549 regenerates icons from it, R-550 adds publish-state rules
+  and teaches the chat agent to edit it.
 founder_gate: >-
-  The founder's standing instruction on 2026-09-24: "we do not want to do any task/feature which is
-  incomplete and not good for a user, each should be complete with smoothness." This task exists
-  because R-546 shipped two things that met their gates but would not have felt finished.
+  Founder chose Option C on 2026-09-24 and asked that a user be able to change colour, icon and
+  name before publishing, by chat or by hand. Correction recorded during planning and agreed: only
+  the bundle identifier is permanent after publishing — icon, colours and display name can all
+  change in an update, so the later guard must refuse the identifier and warn on the rest rather
+  than blocking everything.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/mobile_release.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/tests/
   - scripts/test.sh
   - .ai/
@@ -27,17 +31,18 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - No credential value is ever generated, embedded or committed — templates carry placeholders only
-  - No paid cloud service, no account creation
-  - The app must still bundle; icons stay valid PNGs at the sizes Expo expects
+  - No new dependency in generated projects; app.config.js is plain Node
+  - No credential value in brand.json — it is branding, not configuration for secrets
+  - The app must still bundle, and icons stay valid PNGs at the sizes Expo expects
+  - Generated output stays byte-stable for a given IR and prompt
   - task verify stays offline with 0 model calls
 required_gates:
-  - A .env.example lists every variable eas.json references, each with a one-line note on what to paste
-  - Each entry says where the value is obtained, not just what it is called
-  - A credentials/ guide explains which file goes there and that the directory is git-ignored
-  - The default icon is unique per app name and visibly different between two projects
-  - Icons remain valid PNGs at 1024 and 48 and still carry the project's brand colour
-  - No template contains anything resembling a real credential
+  - A generated project contains one brand.json holding name, colour, font, radius and identifier
+  - apps/mobile reads it through app.config.js, and the static app.json no longer competes with it
+  - The web and admin token stylesheets carry the same colour brand.json declares
+  - The React Native design tokens carry it too, so all three surfaces agree
+  - brand.json documents that the identifier is permanent once published
+  - Editing brand.json alone changes what every surface renders
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -45,14 +50,15 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - Final brand artwork is a design decision the app owner makes; the generated mark is a good default, not a logo
+  - "R-549: `pnpm run brand` regenerates icons from brand.json, skipping any the user has replaced"
+  - "R-550: publish-state rules (identifier refused, the rest warned) and the chat agent editing brand.json"
 evidence:
-  - "task verify passes offline with 0 model calls; scripts/test.sh, lint and security:quick green"
-  - "a test extracts every $VAR from eas.json and fails if one has no .env.example entry"
-  - "icons remain valid PNGs at 1024 and 48, confirmed by `file` and macOS `sips`"
-  - "10 new offline tests, 33 in tests/test_mobile_store_release.py"
+  - "task verify: 4,143 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
+  - "live: Expo started against the generated monorepo and served a manifest carrying brand.json's values (splash bg #16a34a)"
+  - "live: hand-editing brand.json to 'Bakery Shop' / '#7c3aed' changed the manifest's name, slug and splash colour on reload"
+  - "live: bundleId stayed com.minimal.blog through that rename, which is the point of it being its own field"
+  - "a test executes the generated derive.mjs through Node and compares all palettes against the Python for eight colours"
+  - "11 new offline tests in tests/test_brand_source_of_truth.py"
 found_and_fixed:
-  - "R-546 named every credential but generated no template, so a publisher had nowhere to put them"
-  - "naming a variable is not enough: each entry now says where the value is obtained"
-  - "the default icon was a flat plate that read as unfinished"
-  - "the first density floor filled the centre column only, which left sparse names below the floor because cells there were already set"
+  - "the JS and Python palette derivations differed on five of seven colours: Python's round() is half-to-even, JavaScript's Math.round() is half-up. A rebranded project would have drifted by one channel from what the platform generates."
+  - "a static app.json alongside app.config.js would have let a user edit the losing file with no way to tell why nothing changed; only the dynamic config is generated now"

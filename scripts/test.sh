@@ -2618,4 +2618,30 @@ for guard in test_every_variable_eas_json_references_is_in_it \
   fi
 done
 
+# R-548: one brand.json every surface derives from. The rule that matters most is that the
+# generated JavaScript derivation and the platform's Python one agree exactly — they differed on
+# five of seven colours when first written, because Python rounds half-to-even and JS rounds
+# half-up, and a project rebranded by its owner must match what the platform would have generated.
+r548_tests="$repo_root/services/agent-engine/tests/test_brand_source_of_truth.py"
+if [[ ! -f "$r548_tests" ]]; then
+  printf 'R-548 the brand source-of-truth gate is required.\n'
+  exit 1
+fi
+for guard in test_the_palettes_match_exactly \
+  test_it_does_not_store_a_derived_palette \
+  test_a_static_app_json_no_longer_competes_with_it \
+  test_the_generated_config_parses_and_uses_brand_json \
+  test_the_identifier_is_marked_permanent; do
+  if ! rg -qF "$guard" "$r548_tests"; then
+    printf 'R-548 the brand gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# Two files configuring one Expo app means a user edits the losing one and cannot tell why.
+if rg -qF 'GeneratedFile("app.json"' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/react_native.py"; then
+  printf 'R-548 the mobile app must be configured by app.config.js alone, not a static app.json.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

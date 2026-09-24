@@ -42,6 +42,9 @@ class BuilderShowcaseTests(TestCase):
                 "apps/web/app/opengraph-image.tsx",
                 "apps/web/app/page.tsx",
                 "apps/web/public/llms.txt",
+                # R-548: renaming the product touches brand.json, because that is now the one
+                # place the name is declared and every surface derives from it.
+                "brand.json",
                 "contracts/openapi.json",
                 "services/api/README.md",
                 "services/api/openapi.json",

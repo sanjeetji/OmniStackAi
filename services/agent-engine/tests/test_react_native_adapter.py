@@ -93,7 +93,10 @@ class ReactNativeAdapterTests(TestCase):
     def test_project_config_files_emitted(self) -> None:
         expected = [
             "package.json",
-            "app.json",
+            # R-548: Expo's dynamic config, reading the repo's brand.json. The static app.json is
+            # gone on purpose — two files configuring one app means a user edits the losing one
+            # and has no way to tell why nothing changed.
+            "app.config.js",
             "tsconfig.json",
             "babel.config.js",
             "index.js",
@@ -108,9 +111,12 @@ class ReactNativeAdapterTests(TestCase):
         self.assertIn('"react-native":', pkg.content)
         self.assertIn('"@react-navigation/native":', pkg.content)
 
-        app_json = self.project.get("app.json")
-        self.assertIn('"name": "TaskFlow Mobile"', app_json.content)
-        self.assertIn('"slug": "taskflow-mobile"', app_json.content)
+        self.assertNotIn("app.json", self.project.paths())
+
+        config = self.project.get("app.config.js")
+        # The name and slug are read from brand.json rather than baked in, so a rename is one edit.
+        self.assertIn("brand.json", config.content)
+        self.assertIn("name: brand.name", config.content)
 
     def test_design_system_emitted(self) -> None:
         expected = [
@@ -189,9 +195,17 @@ class ReactNativeAdapterTests(TestCase):
         mobile_files = [f for f in monorepo.files() if f.path.startswith("apps/mobile/")]
         self.assertGreater(len(mobile_files), 15)
 
-        app_json = monorepo.get("apps/mobile/app.json")
-        self.assertIsNotNone(app_json)
-        self.assertIn('"slug": "taskflow-mobile"', app_json.content)
+        # R-548: the mobile app reads the repo's brand.json through Expo's dynamic config, so the
+        # name lives in one place shared with the web app and the admin console.
+        config = monorepo.get("apps/mobile/app.config.js")
+        self.assertIsNotNone(config)
+        self.assertIn("brand.json", config.content)
+
+        import json as _json
+
+        brand = _json.loads(monorepo.get("brand.json").content)
+        self.assertEqual(brand["name"], self.ir.name)
+        self.assertEqual(brand["primaryColor"], self.ir.brand.primary_color)
 
     def test_skip_mobile_when_mobile_profile_none(self) -> None:
         web_only_ir = _ir(mobile=MobileProfile.NONE)

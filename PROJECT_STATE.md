@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-548 (2026-09-24): one `brand.json` every surface derives from.**
+> Branding was scattered across eleven CSS variables in `apps/web`, the same eleven in `apps/admin`, two places in `apps/mobile/app.json` and the RN design tokens — plus four PNGs a user could not regenerate at all.
+> `brand.json` holds **inputs only**; the palette is derived by `brand/derive.mjs`, never stored, because a stored palette goes stale the moment someone edits the base colour by hand. The mobile app moves to Expo's dynamic `app.config.js`, and the static `app.json` is no longer generated — two files configuring one app means a user edits the losing one and cannot tell why.
+> **The gate that matters: the JS and Python derivations must agree.** They differed on five of seven colours at first — Python rounds half-to-even, JS half-up. A test now runs the generated JavaScript through Node and compares every value.
+> Evidence, live: hand-editing `brand.json` to `Bakery Shop` / `#7c3aed` changed the served Expo manifest's name, slug and splash colour on reload — while `bundleId` stayed put, which is the point. 11 new tests; `task verify` 4,143 OK offline, 0 model calls.
+> **Next:** R-549 `pnpm run brand` regenerates stylesheets and icons, skipping any the user replaced; R-550 publish-state rules and the chat agent.
+
 > **R-546 (2026-09-24): the generated Expo app can be built and submitted to the stores.**
 > R-545 made it run on a phone; it could not be *built*. No `eas.json`; no icon or splash **image**, only a background colour; no `buildNumber`/`versionCode`, so a second upload is refused; no iOS privacy manifest, required by Apple since 2024; and a bundle identifier under `com.omnistackai.*` — our domain on a user's app, bound permanently by both stores on first upload.
 > `codegen/mobile_release.py` generates all of it offline: EAS build and submit profiles, the privacy manifest, listing metadata, a manual-dispatch CI workflow, a credential-aware `.gitignore`, and a release guide whose first section is *change the bundle identifier*.
