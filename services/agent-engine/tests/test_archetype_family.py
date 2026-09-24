@@ -125,10 +125,14 @@ class EachArchetypeLooksDifferent(TestCase):
                 self.assertTrue(valid, f"{archetype.value}: {reason}")
 
     def test_each_archetype_speaks_its_own_language(self) -> None:
+        """R-556: asserted on the call to action and the section heading, which every layout
+        carries. The editorial variant deliberately drops the eyebrow — "typographic, no
+        ornament" is the whole point of it — so requiring one would force every arrangement to
+        look the same in the one place they are supposed to differ."""
         for archetype, page in self.pages.items():
             with self.subTest(archetype=archetype.value):
-                self.assertIn(HOME_COPY[archetype]["eyebrow"], page)
                 self.assertIn(HOME_COPY[archetype]["cta"], page)
+                self.assertIn(HOME_COPY[archetype]["section"], page)
 
     def test_a_shop_invites_you_to_shop_and_a_publication_to_read(self) -> None:
         self.assertIn("Start shopping", self.pages[Archetype.STOREFRONT])

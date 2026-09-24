@@ -1,25 +1,22 @@
-task_id: R-555
+task_id: R-556
 status: completed
 phase: MVP
-tracker_row: 21
+tracker_row: 22
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-555-ecosystem-from-prompt
+branch: ai/R-556-layout-variants
 objective: >-
-  R-554 assembles a planned ecosystem into one monorepo over one API and one database, and nothing
-  calls it: `build_app_from_prompt` still produces a single app. Wire it, and answer the question
-  that wiring forces — when should a prompt build four apps rather than one?
-  The planner is keyword-driven and confident: "a simple blog" plans three surfaces and
-  "a todo list app" plans two, so always building the `complete` option would hand someone four
-  directories they never asked for. The signal that actually distinguishes the two cases is
-  whether the prompt **names more than one kind of person**. "with customers, drivers and
-  restaurants" does; "a simple blog" does not. That is the rule, and it is deterministic.
+  R-543 gave the generator an archetype family, so a shop, a blog and a booking site no longer look
+  alike. Two shops still do. `_public_home_page` renders one fixed structure — centred hero, then
+  an offering grid, then a browse row, then a footer — and only the words change. Two people
+  building storefronts get the same page with different nouns, which is the repetitiveness the
+  founder keeps naming.
+  Give the deterministic generator real layout variants: genuinely different structures, chosen by
+  a seed derived from the product itself, so two projects differ while one project stays stable.
 founder_gate: >-
-  Founder's recurring requirement "single app to complete eco-system", and on 2026-09-24 they left
-  the choice of trigger to me. Recorded here so the decision is reviewable rather than implicit:
-  a prompt builds an ecosystem only when it names a second kind of user.
+  The founder's standing complaint since 2026-09-24: generated UIs should be "modern, cool,
+  non-repetitive". R-543 fixed across archetypes; this fixes within one.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/tests/
   - scripts/test.sh
@@ -28,42 +25,33 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - A prompt naming one kind of user keeps producing exactly what it does today
-  - The detector is deterministic and offline — no model call decides this
-  - build_ecosystem and assemble_project are untouched
+  - The admin console keeps its dashboard home and R-275's diff invariance
+  - Every variant must pass the engine's own JSX validator
+  - Deterministic — one project renders the same layout on every run
+  - No new dependency in generated projects
   - task verify stays offline with 0 model calls
 required_gates:
-  - A prompt naming several kinds of user builds the whole ecosystem, one repo, one API
-  - A prompt naming one kind of user builds the single app it does today, unchanged
-  - The decision is deterministic and explainable, and the reason is reported in the build result
-  - The assembled ecosystem is a valid git repo the preview can run
+  - Two different products in one archetype render structurally different pages, not just different words
+  - One product renders the same layout on every run
+  - Every variant passes clean_and_validate_jsx, including against an IR with no entities or screens
+  - Every variant still carries the archetype's own language and call to action
+  - Every variant still renders the brand colour from brand.json
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
+deferred:
+  - The console showing the ecosystem reason rather than only streaming it
 evidence:
-  - "task verify: 4,203 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
-  - "end to end: 'a food delivery app with customers, drivers and restaurants' materialises one git repo of 675 files in a single commit"
-  - "that repo holds apps/web, apps/merchant, apps/driver, apps/admin and exactly one services/api, with one brand.json and one contract"
-  - "the build reports: 'the request names courier and merchant alongside the people they serve, so each side gets its own app over one shared API and database'"
-  - "'a simple blog', 'a todo list app' and 'a website to sell my product' still build the single app they did before"
-  - "15 new offline tests in tests/test_ecosystem_from_prompt.py"
-decision_recorded:
-  - "an ecosystem is built when the prompt names a SECOND kind of person; a customer or an admin does not count on its own, because a single app is already both"
-  - "the planner is not the signal: it plans three surfaces for 'a simple blog', so always building `complete` would hand someone four directories they never asked for"
-live_verification:
-  - "18 checks passed, 0 failed, end to end through the console with Gemini configured"
-  - "one project holding apps/web, apps/admin, apps/driver, apps/merchant and exactly one services/api, with brand.json"
-  - "preview kind: multi with all five surfaces ready"
-  - "every surface HTTP 200 through the console proxy: web 49,838 / admin 51,798 / driver 43,339 / merchant 51,748 bytes"
-  - "the shared API answered at /preview/<id>/api/openapi.json"
-  - "all four pages distinct, so the role scoping did not collapse"
+  - "task verify: 4,207 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
+  - "four storefronts render four distinct pages across three different arrangements"
+  - "the same product renders identically twice"
+  - "every variant passes clean_and_validate_jsx, including against an IR with no entities or screens"
+  - "no variant is a client component, and every one still renders var(--color-primary)"
+  - "13 new offline tests in tests/test_layout_variants.py"
 found_and_fixed:
-  - "the console streams its builds and calls build_app_from_prompt_stream, which R-555 never wired - every offline test passed against the twin that had been wired rather than the one the product uses"
-  - "'an online store to sell my products' matched merchant on the word 'store', which names the product rather than a person; shop/store/business removed from that group"
-  - "'a dashboard for admins' counted admin as a second party although a single app already ships an admin console"
-  - "the reason text pluralised backwards ('each side get its own app')"
-  - "a circular import: intake/ecosystem.py already imports AppBuildResult from build_app.py, so the new import is local to the one call site"
+  - "R-543's test required every archetype to show an eyebrow, but the editorial variant drops it by design; requiring it would force every arrangement to look the same in the one place they should differ, so the test moved to the call to action and section heading"
+  - "a nested-quote f-string for the centring margins was a syntax error; precomputed instead"
 

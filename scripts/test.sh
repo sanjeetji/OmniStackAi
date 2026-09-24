@@ -2822,4 +2822,31 @@ if [[ "$(rg -c 'detect_ecosystem_intent\(prompt\)' "$repo_root/services/agent-en
   exit 1
 fi
 
+# R-556: archetypes stopped a shop and a blog looking alike; two shops still did, because one
+# structure was rendered with different nouns. Two properties, in tension, and both required:
+# different products differ, and one product is stable.
+r556_tests="$repo_root/services/agent-engine/tests/test_layout_variants.py"
+if [[ ! -f "$r556_tests" ]]; then
+  printf 'R-556 the layout-variant gate is required.\n'
+  exit 1
+fi
+for guard in test_storefronts_do_not_all_render_the_same_page \
+  test_they_differ_structurally_not_just_in_wording \
+  test_one_product_is_stable_across_runs \
+  test_each_one_is_valid_jsx \
+  test_each_one_survives_an_ir_with_nothing_in_it \
+  test_every_archetype_keeps_its_own_call_to_action \
+  test_an_archetype_only_gets_arrangements_that_suit_it; do
+  if ! rg -qF "$guard" "$r556_tests"; then
+    printf 'R-556 the layout gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# The layout must never be random: one project has to render the same page on every run.
+if rg -qE '\b(random|randint|choice|shuffle|uuid4|time\(\))' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/layout.py"; then
+  printf 'R-556 the layout choice must be seeded, never random.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

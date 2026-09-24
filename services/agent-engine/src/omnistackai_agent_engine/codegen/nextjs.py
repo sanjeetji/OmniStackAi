@@ -5608,43 +5608,37 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
     return "\n".join(lines)
 
 
-def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -> str:  # noqa: PLR0912
+def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -> str:  # noqa: PLR0912, PLR0915
     """Generate the public-facing home page (app/page.tsx) for the customer-facing web app.
 
-    R-543: the page is shaped by its archetype, so a storefront invites you to shop, a publication
-    to read and a booking site to pick a time — instead of every public app getting one generic
-    landing page. The structure is shared on purpose (hero, what this offers, where to go, footer);
-    what differs is what it says and what it asks the visitor to do.
+    R-543 shaped this by archetype, so a storefront invites you to shop and a publication to read.
+    R-556 adds the arrangement: two storefronts used to render one structure with different nouns,
+    which is the repetitiveness archetypes alone did not fix. The layout is chosen from the product
+    name, so two products differ while one product stays stable across runs.
 
-    R-541: `_overview_page` renders an entity dashboard, which is the right home for the admin
-    console and the wrong one for a public site — "a website to sell my product" was returning an
-    internal console. This renders what a visitor expects instead: a hero, what the product
-    offers, and where to go next.
-
-    A server component with no hooks, so it stays byte-stable for a given IR and ships no client
-    JavaScript. Every colour comes from `styles/tokens.css`, so it themes with the rest of the app.
+    A server component with no hooks in every variant: byte-stable for a given IR, and no client
+    JavaScript for a page that needs none.
     """
     from .archetype import HOME_COPY, Archetype, detect_archetype
+    from .layout import Layout, layout_for
 
     resolved = archetype or detect_archetype(ir)
     copy = HOME_COPY.get(resolved, HOME_COPY[Archetype.MARKETING])
+    layout = layout_for(ir.name, resolved.value).layout
     escaped_name = _escape_ts(ir.name)
     escaped_desc = _escape_ts(ir.description) or _escape_ts(copy["lede"])
     auth = needs_auth(ir)
     ops_by_entity = _get_ops_by_entity(ir)
 
-    # Where a visitor can actually go: the collection screens are the browsable pages.
     browse: list[tuple[str, str]] = []
     for s in ir.screens:
         if _screen_intent(s) == "collection":
             browse.append((f"/{s.id}", _title_case(s.id)))
 
-    # What the product is made of, for the feature grid — entities the API will actually list.
     highlights = [e for e in ir.entities if Op.LIST in ops_by_entity.get(e.name, set())][:6]
 
     if browse:
-        primary_href = browse[0][0]
-        primary_label = copy["cta"]
+        primary_href, primary_label = browse[0][0], copy["cta"]
     elif auth:
         primary_href, primary_label = "/register", copy["cta"]
     else:
@@ -5655,134 +5649,260 @@ def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -
         lines.append('import Link from "next/link";')
         lines.append("")
 
-    lines.extend([
+    def cta_buttons(indent: str, align: str) -> list[str]:
+        if not (browse or auth):
+            return []
+        out = [
+            f'{indent}<div style={{{{ display: "flex", gap: 12, justifyContent: "{align}", flexWrap: "wrap" }}}}>',
+            f'{indent}  <Link href="{primary_href}" style={{{{',
+            f'{indent}    padding: "13px 28px", borderRadius: "var(--radius-md, 8px)",',
+            f'{indent}    background: "var(--color-primary)", color: "var(--color-primary-foreground)",',
+            f'{indent}    fontWeight: 600, fontSize: 15, textDecoration: "none",',
+            f"{indent}  }}}}>",
+            f'{indent}    {_escape_ts(primary_label)}',
+            f"{indent}  </Link>",
+        ]
+        if auth:
+            out += [
+                f'{indent}  <Link href="/login" style={{{{',
+                f'{indent}    padding: "13px 28px", borderRadius: "var(--radius-md, 8px)",',
+                f'{indent}    background: "var(--color-surface)", color: "var(--color-text)",',
+                f'{indent}    border: "1px solid var(--color-neutral-200)",',
+                f'{indent}    fontWeight: 600, fontSize: 15, textDecoration: "none",',
+                f"{indent}  }}}}>",
+                f"{indent}    Sign in",
+                f"{indent}  </Link>",
+            ]
+        out.append(f"{indent}</div>")
+        return out
+
+    lines += [
         "export default function HomePage() {",
         "  return (",
         '    <main style={{ background: "var(--color-background)", color: "var(--color-text)" }}>',
         "",
-        "      {/* Hero */}",
-        '      <section style={{',
-        '        padding: "96px 24px 80px",',
-        '        background: "linear-gradient(180deg, var(--color-primary-subtle) 0%, var(--color-background) 100%)",',
-        '        textAlign: "center",',
-        "      }}>",
-        '        <div style={{ maxWidth: 820, margin: "0 auto" }}>',
-        '          <span style={{',
-        '            display: "inline-block", marginBottom: 20, padding: "6px 14px",',
-        '            borderRadius: 999, background: "var(--color-surface)",',
-        '            border: "1px solid var(--color-primary-subtle)",',
-        '            fontSize: 13, fontWeight: 600, color: "var(--color-primary)",',
-        "          }}>",
-        f'            {_escape_ts(copy["eyebrow"])}',
-        "          </span>",
-        '          <h1 style={{',
-        '            margin: "0 0 20px", fontSize: "clamp(2.25rem, 5vw, 3.75rem)",',
-        '            lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800,',
-        "          }}>",
-        f'            {escaped_name}',
-        "          </h1>",
-    ])
+    ]
 
-    if escaped_desc:
-        lines.extend([
-            '          <p style={{',
-            '            margin: "0 auto 36px", maxWidth: 620, fontSize: "1.175rem",',
-            '            lineHeight: 1.65, color: "var(--color-text-muted)",',
-            "          }}>",
-            f'            {escaped_desc}',
-            "          </p>",
-        ])
-
-    if browse or auth:
-        lines.extend([
-            '          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>',
-            f'            <Link href="{primary_href}" style={{{{',
-            '              padding: "13px 28px", borderRadius: "var(--radius-md, 8px)",',
-            '              background: "var(--color-primary)", color: "var(--color-primary-foreground)",',
-            '              fontWeight: 600, fontSize: 15, textDecoration: "none",',
-            "            }}>",
-            f'              {primary_label}',
-            "            </Link>",
-        ])
-        if auth:
-            lines.extend([
-                '            <Link href="/login" style={{',
-                '              padding: "13px 28px", borderRadius: "var(--radius-md, 8px)",',
-                '              background: "var(--color-surface)", color: "var(--color-text)",',
-                '              border: "1px solid var(--color-neutral-200)",',
-                '              fontWeight: 600, fontSize: 15, textDecoration: "none",',
-                "            }}>",
-                "              Sign in",
-                "            </Link>",
-            ])
-        lines.append("          </div>")
-
-    lines.extend([
-        "        </div>",
-        "      </section>",
-        "",
-    ])
-
-    # ── What this product offers ─────────────────────────────────────────────
-    if highlights:
-        lines.extend([
-            "      {/* What this product offers */}",
-            '      <section style={{ padding: "72px 24px", maxWidth: 1120, margin: "0 auto" }}>',
-            '        <h2 style={{',
-            '          margin: "0 0 8px", fontSize: "2rem", fontWeight: 700,',
-            '          letterSpacing: "-0.02em", textAlign: "center",',
-            "        }}>",
-            f'          {_escape_ts(copy["section"])}',
-            "        </h2>",
-            '        <p style={{',
-            '          margin: "0 auto 48px", maxWidth: 540, textAlign: "center",',
-            '          color: "var(--color-text-muted)", fontSize: "1.05rem",',
-            "        }}>",
-            f'          {_escape_ts(copy["section_lede"])}',
-            "        </p>",
-            '        <div style={{',
-            '          display: "grid", gap: 20,',
-            '          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",',
-            "        }}>",
-        ])
-        for entity in highlights:
-            label = _title_case(entity.name)
-            field_names = ", ".join(_title_case(f.name) for f in entity.fields[:3])
-            lines.extend([
-                '          <article style={{',
-                '            padding: 26, borderRadius: "var(--radius-lg, 12px)",',
-                '            background: "var(--color-surface)",',
-                '            border: "1px solid var(--color-neutral-200)",',
-                "          }}>",
-                '            <h3 style={{ margin: "0 0 10px", fontSize: "1.175rem", fontWeight: 650 }}>',
-                f"              {_escape_ts(label)}",
-                "            </h3>",
-                '            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14, lineHeight: 1.6 }}>',
-                f"              {_escape_ts(field_names) if field_names else 'Managed from your dashboard.'}",
+    # ── Hero ─────────────────────────────────────────────────────────────────
+    if layout is Layout.SPLIT:
+        lines += [
+            "      {/* Hero: text beside a panel */}",
+            '      <section style={{ padding: "88px 24px 72px", maxWidth: 1120, margin: "0 auto" }}>',
+            '        <div style={{ display: "grid", gap: 48, alignItems: "center",',
+            '          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>',
+            "          <div>",
+            f'            <span style={{{{ fontSize: 13, fontWeight: 600, letterSpacing: "0.08em",',
+            '              textTransform: "uppercase", color: "var(--color-primary)" }}>',
+            f'              {_escape_ts(copy["eyebrow"])}',
+            "            </span>",
+            '            <h1 style={{ margin: "14px 0 18px", fontSize: "clamp(2rem, 4vw, 3.25rem)",',
+            '              lineHeight: 1.12, letterSpacing: "-0.03em", fontWeight: 800 }}>',
+            f'              {escaped_name}',
+            "            </h1>",
+        ]
+        if escaped_desc:
+            lines += [
+                '            <p style={{ margin: "0 0 32px", maxWidth: 460, fontSize: "1.1rem",',
+                '              lineHeight: 1.65, color: "var(--color-text-muted)" }}>',
+                f'              {escaped_desc}',
                 "            </p>",
-                "          </article>",
-            ])
-        lines.extend([
+            ]
+        lines += cta_buttons("            ", "flex-start")
+        lines += [
+            "          </div>",
+            '          <div aria-hidden="true" style={{ minHeight: 280, borderRadius: "var(--radius-lg, 12px)",',
+            '            background: "linear-gradient(135deg, var(--color-primary-subtle) 0%, var(--color-surface) 100%)",',
+            '            border: "1px solid var(--color-neutral-200)" }} />',
             "        </div>",
             "      </section>",
             "",
-        ])
+        ]
+    elif layout is Layout.BANNER:
+        lines += [
+            "      {/* Hero: full-bleed brand band */}",
+            '      <section style={{ padding: "96px 24px", background: "var(--color-primary)",',
+            '        color: "var(--color-primary-foreground)" }}>',
+            '        <div style={{ maxWidth: 940, margin: "0 auto" }}>',
+            f'          <span style={{{{ fontSize: 13, fontWeight: 600, letterSpacing: "0.1em",',
+            '            textTransform: "uppercase", opacity: 0.85 }}>',
+            f'            {_escape_ts(copy["eyebrow"])}',
+            "          </span>",
+            '          <h1 style={{ margin: "16px 0 20px", fontSize: "clamp(2.25rem, 5vw, 3.75rem)",',
+            '            lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 800 }}>',
+            f'            {escaped_name}',
+            "          </h1>",
+        ]
+        if escaped_desc:
+            lines += [
+                '          <p style={{ margin: "0 0 34px", maxWidth: 620, fontSize: "1.175rem",',
+                '            lineHeight: 1.6, opacity: 0.92 }}>',
+                f'            {escaped_desc}',
+                "          </p>",
+            ]
+        lines += cta_buttons("          ", "flex-start")
+        lines += ["        </div>", "      </section>", ""]
+    elif layout is Layout.EDITORIAL:
+        lines += [
+            "      {/* Hero: typographic, no ornament */}",
+            '      <section style={{ padding: "104px 24px 64px", maxWidth: 780, margin: "0 auto" }}>',
+            '        <h1 style={{ margin: "0 0 24px", fontSize: "clamp(2.5rem, 6vw, 4rem)",',
+            '          lineHeight: 1.05, letterSpacing: "-0.04em", fontWeight: 800 }}>',
+            f'          {escaped_name}',
+            "        </h1>",
+        ]
+        if escaped_desc:
+            lines += [
+                '        <p style={{ margin: "0 0 32px", fontSize: "1.25rem", lineHeight: 1.7,',
+                '          color: "var(--color-text-muted)" }}>',
+                f'          {escaped_desc}',
+                "        </p>",
+            ]
+        lines += cta_buttons("        ", "flex-start")
+        lines += [
+            '        <hr style={{ margin: "48px 0 0", border: 0, borderTop: "1px solid var(--color-neutral-200)" }} />',
+            "      </section>",
+            "",
+        ]
+    else:  # Layout.CENTERED
+        lines += [
+            "      {/* Hero: centred over a soft wash */}",
+            '      <section style={{ padding: "96px 24px 80px", textAlign: "center",',
+            '        background: "linear-gradient(180deg, var(--color-primary-subtle) 0%, var(--color-background) 100%)" }}>',
+            '        <div style={{ maxWidth: 820, margin: "0 auto" }}>',
+            '          <span style={{ display: "inline-block", marginBottom: 20, padding: "6px 14px",',
+            '            borderRadius: 999, background: "var(--color-surface)",',
+            '            border: "1px solid var(--color-primary-subtle)",',
+            '            fontSize: 13, fontWeight: 600, color: "var(--color-primary)" }}>',
+            f'            {_escape_ts(copy["eyebrow"])}',
+            "          </span>",
+            '          <h1 style={{ margin: "0 0 20px", fontSize: "clamp(2.25rem, 5vw, 3.75rem)",',
+            '            lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>',
+            f'            {escaped_name}',
+            "          </h1>",
+        ]
+        if escaped_desc:
+            lines += [
+                '          <p style={{ margin: "0 auto 36px", maxWidth: 620, fontSize: "1.175rem",',
+                '            lineHeight: 1.65, color: "var(--color-text-muted)" }}>',
+                f'            {escaped_desc}',
+                "          </p>",
+            ]
+        lines += cta_buttons("          ", "center")
+        lines += ["        </div>", "      </section>", ""]
+
+    # ── What this offers ─────────────────────────────────────────────────────
+    if highlights:
+        centred = layout is Layout.CENTERED
+        heading_align = "center" if centred else "left"
+        # Precomputed: nesting these quotes inside the f-string below is unreadable and was a
+        # syntax error the first time round.
+        centre_margins = 'marginLeft: "auto", marginRight: "auto",' if centred else ""
+        lines += [
+            "      {/* What this product offers */}",
+            '      <section style={{ padding: "72px 24px", maxWidth: 1120, margin: "0 auto" }}>',
+            f'        <h2 style={{{{ margin: "0 0 8px", fontSize: "2rem", fontWeight: 700,',
+            f'          letterSpacing: "-0.02em", textAlign: "{heading_align}" }}}}>',
+            f'          {_escape_ts(copy["section"])}',
+            "        </h2>",
+            f'        <p style={{{{ margin: "0 0 44px", maxWidth: 540, textAlign: "{heading_align}",',
+            f'          {centre_margins}',
+            '          color: "var(--color-text-muted)", fontSize: "1.05rem" }}>',
+            f'          {_escape_ts(copy["section_lede"])}',
+            "        </p>",
+        ]
+        if layout is Layout.SPLIT:
+            lines.append('        <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 2 }}>')
+            for index, entity in enumerate(highlights, start=1):
+                label = _title_case(entity.name)
+                detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
+                lines += [
+                    '          <li style={{ display: "flex", gap: 20, padding: "22px 4px",',
+                    '            borderTop: "1px solid var(--color-neutral-200)" }}>',
+                    f'            <span aria-hidden="true" style={{{{ minWidth: 34, fontSize: 15,',
+                    '              fontWeight: 700, color: "var(--color-primary)" }}>',
+                    f"              {index:02d}",
+                    "            </span>",
+                    "            <span>",
+                    '              <strong style={{ display: "block", fontSize: "1.1rem", fontWeight: 650 }}>',
+                    f"                {_escape_ts(label)}",
+                    "              </strong>",
+                    '              <span style={{ color: "var(--color-text-muted)", fontSize: 14 }}>',
+                    f"                {_escape_ts(detail) if detail else 'Managed from your dashboard.'}",
+                    "              </span>",
+                    "            </span>",
+                    "          </li>",
+                ]
+            lines.append("        </ol>")
+        elif layout is Layout.BANNER:
+            lines.append('        <div style={{ display: "grid", gap: 14 }}>')
+            for entity in highlights:
+                label = _title_case(entity.name)
+                detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
+                lines += [
+                    '          <article style={{ display: "flex", justifyContent: "space-between",',
+                    '            alignItems: "center", gap: 24, padding: "24px 28px",',
+                    '            borderRadius: "var(--radius-lg, 12px)", background: "var(--color-surface)",',
+                    '            border: "1px solid var(--color-neutral-200)" }}>',
+                    '            <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 650 }}>',
+                    f"              {_escape_ts(label)}",
+                    "            </h3>",
+                    '            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14 }}>',
+                    f"              {_escape_ts(detail) if detail else 'Managed from your dashboard.'}",
+                    "            </p>",
+                    "          </article>",
+                ]
+            lines.append("        </div>")
+        elif layout is Layout.EDITORIAL:
+            lines.append('        <div style={{ display: "grid", gap: 28,')
+            lines.append('          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>')
+            for entity in highlights:
+                label = _title_case(entity.name)
+                detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
+                lines += [
+                    "          <article>",
+                    '            <h3 style={{ margin: "0 0 6px", fontSize: "1.05rem", fontWeight: 650,',
+                    '              borderTop: "2px solid var(--color-primary)", paddingTop: 12 }}>',
+                    f"              {_escape_ts(label)}",
+                    "            </h3>",
+                    '            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14, lineHeight: 1.6 }}>',
+                    f"              {_escape_ts(detail) if detail else 'Managed from your dashboard.'}",
+                    "            </p>",
+                    "          </article>",
+                ]
+            lines.append("        </div>")
+        else:  # CENTERED
+            lines.append('        <div style={{ display: "grid", gap: 20,')
+            lines.append('          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>')
+            for entity in highlights:
+                label = _title_case(entity.name)
+                detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
+                lines += [
+                    '          <article style={{ padding: 26, borderRadius: "var(--radius-lg, 12px)",',
+                    '            background: "var(--color-surface)", border: "1px solid var(--color-neutral-200)" }}>',
+                    '            <h3 style={{ margin: "0 0 10px", fontSize: "1.175rem", fontWeight: 650 }}>',
+                    f"              {_escape_ts(label)}",
+                    "            </h3>",
+                    '            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14, lineHeight: 1.6 }}>',
+                    f"              {_escape_ts(detail) if detail else 'Managed from your dashboard.'}",
+                    "            </p>",
+                    "          </article>",
+                ]
+            lines.append("        </div>")
+        lines += ["      </section>", ""]
 
     # ── Browse ───────────────────────────────────────────────────────────────
     if len(browse) > 1:
-        lines.extend([
+        lines += [
             "      {/* Browse */}",
-            '      <section style={{',
-            '        padding: "64px 24px", background: "var(--color-background-subtle)",',
-            "      }}>",
+            '      <section style={{ padding: "64px 24px", background: "var(--color-background-subtle)" }}>',
             '        <div style={{ maxWidth: 1120, margin: "0 auto" }}>',
             '          <h2 style={{ margin: "0 0 28px", fontSize: "1.5rem", fontWeight: 700 }}>',
             f'            {_escape_ts(copy["explore"])}',
             "          </h2>",
             '          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>',
-        ])
+        ]
         for href, label in browse:
-            lines.extend([
+            lines += [
                 f'            <Link href="{href}" style={{{{',
                 '              padding: "11px 20px", borderRadius: 999,',
                 '              background: "var(--color-surface)", color: "var(--color-text)",',
@@ -5791,21 +5911,14 @@ def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -
                 "            }}>",
                 f"              {_escape_ts(label)}",
                 "            </Link>",
-            ])
-        lines.extend([
-            "          </div>",
-            "        </div>",
-            "      </section>",
-            "",
-        ])
+            ]
+        lines += ["          </div>", "        </div>", "      </section>", ""]
 
     # ── Footer ───────────────────────────────────────────────────────────────
-    lines.extend([
+    lines += [
         "      {/* Footer */}",
-        '      <footer style={{',
-        '        padding: "40px 24px", borderTop: "1px solid var(--color-neutral-200)",',
-        '        color: "var(--color-text-subtle)", fontSize: 14, textAlign: "center",',
-        "      }}>",
+        '      <footer style={{ padding: "40px 24px", borderTop: "1px solid var(--color-neutral-200)",',
+        '        color: "var(--color-text-subtle)", fontSize: 14, textAlign: "center" }}>',
         f'        {escaped_name}',
         "      </footer>",
         "",
@@ -5813,7 +5926,7 @@ def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -
         "  );",
         "}",
         "",
-    ])
+    ]
 
     return "\n".join(lines)
 

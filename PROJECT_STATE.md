@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-556 (2026-09-24): two products in one archetype no longer render the same page.**
+> R-543 stopped a shop and a blog looking alike; two shops still did — one structure, different nouns.
+> Four genuinely different arrangements — **centred**, **split**, **banner**, **editorial** — seeded from the product name, which gives the two properties in tension: different products differ, one product stays stable. Hashed, not `len(name) % n`, so adjacent names do not collapse. A gate refuses `random` in that module.
+> An archetype only gets arrangements that suit it: a storefront is never editorial, a publication never a banner. Forcing variety at the cost of fit makes something different but worse.
+> **Recorded tension:** the editorial variant drops the eyebrow by design, and R-543's test required one. Requiring it would force every arrangement to look the same where they are meant to differ, so the test moved to the CTA and section heading.
+> Evidence: four storefronts → four distinct pages across three arrangements; same product identical twice; every variant valid JSX including an empty IR; none a client component; all keep the brand colour. 13 new tests; `task verify` 4,207 OK offline, 0 model calls.
+
 > **R-555b (2026-09-24): the console's own build path takes the ecosystem branch — proven end to end.**
 > R-555 wired `build_app_from_prompt`; **the console streams and calls `build_app_from_prompt_stream`**, which was not. Every offline test passed against the function that had been wired rather than the one the product uses — the same shape as R-549's `_prefixed` defect, and the second time this session that only a live run caught it.
 > Both entry points now branch, a contract test requires it, and the streaming path says what it is doing (a deterministic plan has no model output to relay, so the console would otherwise go silent).
