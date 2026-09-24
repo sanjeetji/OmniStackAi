@@ -1,24 +1,22 @@
-task_id: R-542
+task_id: R-543
 status: completed
 phase: MVP
-tracker_row: 9
+tracker_row: 10
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-542-admin-console-reachable
+branch: ai/R-543-archetype-family
 objective: >-
-  R-541 made every prompt assemble the admin console it had always been asking for, and the run
-  plan starts it — but the Studio still shows a single preview app, so the console runs and lands
-  in the user's repo while being unreachable in the product. Close that: a prompt-built project
-  that has an admin console reports as a multi-app preview, so the console's existing
-  MultiAppPreview switcher and proxy serve it with no console-web change. This follows the
-  mechanism template previews already use: each Next app runs under its own BASE_PATH at
-  /preview/<project>/<app>, and the generated next.config must honour it (today it does not, so
-  the app would render at the wrong base and never load its assets).
+  There are only two archetypes, `public_website` and `admin_panel`, so a storefront, a blog and a
+  booking site all get the same landing page — the repetitiveness the founder keeps asking about.
+  Detection is eight prompt keywords defaulting to `admin_panel`, which is why "a website to sell
+  my product" was classified as a console; it reads only the prompt, never the IR, although the
+  IR's entity names are the strongest available signal. And it lives entirely in `llm_ui.py`, so
+  the deterministic path — everything a user sees when no model is available, or when the model
+  fails validation — has no archetype awareness at all beyond web-vs-admin.
+  Give the platform a real archetype family, detected deterministically from prompt *and* IR, and
+  honoured by both the deterministic generator and the model prompt.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/plan.py
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/run.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/tests/
   - scripts/test.sh
   - .ai/
@@ -26,16 +24,17 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - No apps/console-web source changes — MultiAppPreview and the proxy already handle kind "multi"
-  - No change to the template multi-app runner (localrun/multiapp.py); templates keep their path
-  - A project with no admin console keeps exactly today's single-app preview behaviour
-  - No new runtime dependency; generated projects stay on the pinned Next.js stack
+  - No new runtime dependency in the agent-engine (stdlib only)
+  - No new dependency in generated projects beyond the pinned Next.js stack
   - task verify stays offline with 0 model calls
+  - The admin console keeps its dashboard home and R-275's diff invariance
+  - Deterministic output stays byte-stable for a given IR
 required_gates:
-  - The generated next.config honours BASE_PATH, as the template apps' configs do
-  - A project with an admin console reports kind "multi" with a web app, an admin app and its api
-  - Each Next app is started under its own BASE_PATH and its API base points at the proxied path
-  - A project without an admin console still reports a single-app preview, unchanged
+  - Archetype detection is deterministic, reads the IR as well as the prompt, and is unit-tested per archetype
+  - A storefront, a publication and a booking IR each produce a visibly different deterministic home page
+  - Every archetype's deterministic page passes the engine's own JSX validator
+  - The model prompt carries archetype-specific instructions for each archetype
+  - "a website to sell my product" resolves to the storefront archetype, not an admin panel
   - Generated output stays byte-stable across two runs of the same IR
   - task verify passes offline with 0 model calls
 model_tool_trace:
@@ -44,41 +43,22 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 evidence:
-  - "task verify: 4,041 tests OK, offline, 0 model calls"
-  - "scripts/test.sh: repository contract tests passed (new R-542 block)"
-  - "next build with BASE_PATH=/preview/proj-1/web: exit 0, routes-manifest.json records that basePath"
-  - "no config warnings from the pinned Next 15.5.4, so allowedDevOrigins is accepted there"
-  - "12 new offline tests in tests/test_admin_console_reachable.py, three asserting the unchanged single-app path"
-  - "lint and security:quick pass"
+  - "task verify: 4,061 tests OK, offline, 0 model calls"
+  - "scripts/test.sh green with a new R-543 contract block; lint and security:quick pass"
+  - "four prompts with matching IRs give four archetypes and four distinct pages"
+  - "all six public archetypes render distinct pages passing clean_and_validate_jsx, including against an IR with no entities or screens"
+  - "16 new offline tests in tests/test_archetype_family.py"
+  - "the same page is byte-identical across two generations of the same IR and prompt"
 deferred:
-  - R-543 the wider archetype family (storefront, blog, booking, directory) in both paths
-  - R-544 guaranteed local-model fallback so the deterministic template is rarely user-visible
+  - Layout variants within one archetype, so two storefronts also differ from each other
+  - Making BrandTokens drive styles/tokens.css (today the requested brand colour reaches only components/color-picker.tsx)
+  - A configured interpreter for the run plan instead of bare `python3`
 found_and_fixed:
-  - "the generated next.config.mjs had no basePath at all, so an app served under the console's proxy would have rendered at the wrong base and never loaded its assets"
-  - "the preview reported a single app even when the run plan had started two, leaving the admin console invisible in the Studio"
-live_verification:
-  - "ran the real journey: prompt -> build -> preview -> both apps through the console proxy"
-  - "the build produced apps/web (landing page) and apps/admin (use client dashboard) from one prompt"
-  - "preview reports status ready, kind multi, web and admin both ready on their own ports"
-  - "GET /preview/<id>/web -> 200, 45,474 bytes, <h1>OmniNews</h1> + 'What you can do here'"
-  - "GET /preview/<id>/admin -> 200, 52,275 bytes, 'System Operational' + 'Entities' + 'Screens'"
-  - "assets resolve per app: /preview/<id>/web/_next/... and /preview/<id>/admin/_next/..."
-  - "GET /preview/<id> -> 307 to /preview/<id>/web"
-found_by_the_live_check:
-  - "the readiness probe hit the origin, but an app under a base path answers 404 at '/', so the preview started both apps and then declared them dead. Every offline test passed while this was broken."
-  - "the admin console was never waited for and was reported ready=True unconditionally"
-  - "_should_skip only knew 'install web dependencies', so the console reinstalled its dependencies on every preview start"
-full_stack_verified:
-  - "after fixing the machine blocker, the same project ran web + admin + api together: status ready, kind multi, all three ready"
-  - "GET /preview/<id>/api/articles -> 200 with real seeded rows from PostgreSQL"
-  - "GET /preview/<id>/api/openapi.json -> 200, the generated OpenAPI 3.1 spec"
-  - "GET /preview/<id>/api/docs -> 200, Swagger UI"
-environment_blocker:
-  - "Homebrew python@3.13 and python@3.14 both have a broken pyexpat: dlopen fails on _XML_SetAllocTrackerActivationThreshold against /usr/lib/libexpat.1.dylib"
-  - "that breaks plistlib, so platform.mac_ver() returns ('', ('', '', ''), '')"
-  - "pip 26.2's vendored truststore then does int('') and raises, so ensurepip and every `python3 -m venv` fail"
-  - "consequence: no Python-backend preview could run on this machine. Pre-existing and unrelated to R-541/R-542."
-  - "FIXED on this machine: brew install uv; uv python install 3.13; ln -sf $(uv python find 3.13) ~/.local/bin/python3, with ~/.local/bin first on PATH. mac_ver() now returns 26.1, pyexpat imports, python3 -m venv creates a venv with pip, and the full stack previews."
-  - "STILL TO DO in the platform: the run plan hard-codes program=python3, so it inherits whatever interpreter is on PATH. It should take a configured interpreter (e.g. OMNISTACKAI_APP_PYTHON) so a broken system python cannot silently break every preview. Needs its own task."
-considered_and_rejected:
-  - "emitting omnistack.json and reusing the template multi-app runner: its validator requires a package.json for every listed app, which a Python or Go backend does not have"
+  - "detection defaulted to admin_panel, so 'a website to sell my product' produced an internal dashboard for a shop"
+  - "one landing page served every public archetype, so a shop, a blog and a booking site looked identical"
+  - "the detector lived only in llm_ui.py, so the deterministic path had no archetype awareness at all"
+  - "the fallback tested resolved == 'public_website', so any archetype other than that would have fallen back to the staff dashboard on a model failure"
+  - "my own first contract block grepped archetype.py for 'provider' and matched the directory signal word; narrowed to model_gateway|ModelProvider"
+not_done:
+  - "two storefronts still look like each other: layout variants within an archetype are the next step"
+  - "BrandTokens never reaches styles/tokens.css — a requested brand colour lands only in components/color-picker.tsx, so every generated app is blue regardless"

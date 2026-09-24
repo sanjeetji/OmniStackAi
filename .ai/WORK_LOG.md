@@ -1,5 +1,44 @@
 # Work Log
 
+## 2026-09-24 — R-543 (the archetype family)
+
+- **What was wrong.** Two archetypes, eight prompt keywords, and a default of `admin_panel`. The
+  founder's own example — "a website to sell my product" — matched none of the keywords and so
+  generated an internal dashboard for a shop. Everything that *was* recognised got one identical
+  landing page. And the whole detector lived in `llm_ui.py`, so the deterministic generator had no
+  archetype awareness at all: with no model, or on any validation failure, every public app fell
+  back to the same page.
+
+- **The design.** `codegen/archetype.py`, pure and offline. Seven archetypes. Three decisions worth
+  recording: it **scores** rather than first-match-wins, so contradictory evidence resolves by
+  weight instead of rule order; it reads the **IR as well as the prompt**, weighting entity names
+  above wording, because `Product`/`Order`/`Cart` identifies a shop however the request was
+  phrased — and those names are the model's own reading of the request, usually a better
+  description than the sentence; and `admin_panel` is **never inferred**, only requested, which is
+  what removes the old default that turned shops into consoles.
+
+- **No-evidence case.** `marketing` rather than a dashboard: a hero and a way in is the least wrong
+  thing to show a visitor to a product we know nothing else about.
+
+- **One fallback decision.** `_deterministic_page_for` centralises what an archetype falls back to.
+  The bug it prevents is concrete: the fallback used to test `resolved == "public_website"`, so the
+  moment the archetype became `storefront`, a model failure would have dropped the shop back to a
+  staff dashboard.
+
+- **Found while testing.** The contract block I first wrote grepped `archetype.py` for
+  `provider` to prove detection stays deterministic — and matched the word "provider" in the
+  directory signals. Narrowed to `model_gateway|ModelProvider`.
+
+- **Evidence.** Four prompts with matching IRs → four archetypes → four distinct pages. All six
+  public archetypes distinct and passing `clean_and_validate_jsx`, including against an IR with no
+  entities or screens. 16 new tests. `task verify` 4,061 OK offline, 0 model calls; test.sh, lint,
+  security:quick green.
+
+- **Found, not fixed.** Two storefronts still look like each other — layout variants within an
+  archetype are the next step. And `BrandTokens` never reaches `styles/tokens.css`: a requested
+  brand colour lands only in `components/color-picker.tsx`, so every generated app is blue
+  whatever the user asked for. That one is worth its own task.
+
 ## 2026-09-24 — R-542 (the admin console, reachable)
 
 - **The gap R-541 left.** The console was assembled and started, but `preview.py` reported one

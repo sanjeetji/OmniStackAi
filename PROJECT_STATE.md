@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-543 (2026-09-24): a real archetype family, so different products get different pages.**
+> There were two archetypes and eight prompt keywords **defaulting to `admin_panel`** — which is why "a website to sell my product" generated an internal dashboard for a shop, and why every recognised public site got one identical landing page. The detector also lived only in `llm_ui.py`, so the deterministic generator had no archetype awareness at all.
+> `codegen/archetype.py` scores seven archetypes (storefront, publication, booking, directory, saas, marketing, admin_panel) from the **IR and the prompt together**, weighting entity names above wording because they survive paraphrasing. `admin_panel` is never inferred. With no evidence the answer is `marketing`, not a dashboard.
+> Both paths agree: the deterministic page shapes its copy and CTA from the archetype, the model prompt carries a block per archetype, and `_deterministic_page_for` is the single place that decides the fallback.
+> Evidence: `sell my product` → storefront/"Start shopping", `publish articles` → publication/"Start reading", `book appointments` → booking/"Book now", `directory of local plumbers` → directory/"Start browsing"; all six public archetypes distinct and passing the JSX validator; 16 new tests; `task verify` 4,061 OK offline, 0 model calls.
+> **Known, not done:** two storefronts still look alike (layout variants are next), and `BrandTokens` still never reaches `styles/tokens.css` — a requested brand colour lands only in `components/color-picker.tsx`, so every app is blue regardless.
+
 > **R-542b (2026-09-24): the live journey, and the three defects it found.**
 > Running the real thing found what 4,029 offline tests had not. **The readiness probe hit the app's origin, and an app under a base path answers 404 at `/`** — so the preview started both apps and then declared them dead. The admin console was never waited for and was reported `ready: true` regardless; and `_should_skip` did not know about the console, so it reinstalled its dependencies on every preview start.
 > Verified after the fix: `status: ready`, `kind: multi`, both apps ready; `/preview/<id>/web` 200 with the landing page, `/preview/<id>/admin` 200 with the dashboard, assets resolving per app, root redirecting to `/web`.

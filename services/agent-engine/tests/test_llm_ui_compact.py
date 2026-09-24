@@ -27,6 +27,7 @@ from omnistackai_agent_engine.codegen import (
     summarize_design_tokens,
     synthesize_overview_page,
 )
+from omnistackai_agent_engine.codegen.archetype import detect_archetype
 from omnistackai_agent_engine.codegen.auth_guard import needs_auth
 from omnistackai_agent_engine.codegen.nextjs import _overview_page
 from omnistackai_agent_engine.model_gateway.contracts import ChatRole
@@ -202,8 +203,12 @@ class AdapterCompactTests(unittest.TestCase):
         self.assertTrue(page.startswith('"use client";\n' + MARKER_PREFIX))
         self.assertEqual(len(provider.requests), 2)
         # R-541: the web adapter states the archetype rather than leaving it to keyword inference.
+        # R-543: and that archetype is now a real one detected from the IR and the prompt together,
+        # so "a blog" over a blog IR resolves to `publication`, not a generic public website.
+        archetype = detect_archetype(ir, "a blog").value
+        self.assertEqual(archetype, "publication")
         expected = build_ui_synthesis_prompt(
-            ir, "a blog", archetype="public_website", **compact_grounding(ir)
+            ir, "a blog", archetype=archetype, **compact_grounding(ir)
         ).strip()
         self.assertEqual(provider.requests[1].messages[1].content, expected)
         self.assertEqual([o.mode for o in outcomes], ["llm"])

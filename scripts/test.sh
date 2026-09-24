@@ -2497,4 +2497,31 @@ if ! rg -qF 'process.env.BASE_PATH' \
   exit 1
 fi
 
+# R-543: different products must get different pages. Before the archetype family there were two
+# archetypes and eight prompt keywords defaulting to admin_panel, so "a website to sell my product"
+# generated an internal dashboard and every recognised public site got one identical landing page.
+r543_tests="$repo_root/services/agent-engine/tests/test_archetype_family.py"
+if [[ ! -f "$r543_tests" ]]; then
+  printf 'R-543 the archetype family gate is required.\n'
+  exit 1
+fi
+for guard in test_a_website_to_sell_my_product_is_a_shop_not_a_console \
+  test_it_is_never_an_admin_panel_by_default \
+  test_entities_decide_even_when_the_wording_does_not \
+  test_every_archetype_renders_a_distinct_page \
+  test_every_archetype_is_valid_jsx \
+  test_the_deterministic_page_and_the_model_prompt_agree; do
+  if ! rg -qF "$guard" "$r543_tests"; then
+    printf 'R-543 the archetype gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# Detection must stay deterministic: no model call may creep into it. (Matched on the import, not
+# the word "provider", which is a legitimate directory signal.)
+if rg -q 'model_gateway|ModelProvider' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/archetype.py"; then
+  printf 'R-543 archetype detection must stay deterministic (no model provider).\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

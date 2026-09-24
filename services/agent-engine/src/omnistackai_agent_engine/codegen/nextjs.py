@@ -5606,8 +5606,13 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
     return "\n".join(lines)
 
 
-def _public_home_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
+def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -> str:  # noqa: PLR0912
     """Generate the public-facing home page (app/page.tsx) for the customer-facing web app.
+
+    R-543: the page is shaped by its archetype, so a storefront invites you to shop, a publication
+    to read and a booking site to pick a time — instead of every public app getting one generic
+    landing page. The structure is shared on purpose (hero, what this offers, where to go, footer);
+    what differs is what it says and what it asks the visitor to do.
 
     R-541: `_overview_page` renders an entity dashboard, which is the right home for the admin
     console and the wrong one for a public site — "a website to sell my product" was returning an
@@ -5617,8 +5622,12 @@ def _public_home_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
     A server component with no hooks, so it stays byte-stable for a given IR and ships no client
     JavaScript. Every colour comes from `styles/tokens.css`, so it themes with the rest of the app.
     """
+    from .archetype import HOME_COPY, Archetype, detect_archetype
+
+    resolved = archetype or detect_archetype(ir)
+    copy = HOME_COPY.get(resolved, HOME_COPY[Archetype.MARKETING])
     escaped_name = _escape_ts(ir.name)
-    escaped_desc = _escape_ts(ir.description)
+    escaped_desc = _escape_ts(ir.description) or _escape_ts(copy["lede"])
     auth = needs_auth(ir)
     ops_by_entity = _get_ops_by_entity(ir)
 
@@ -5631,9 +5640,13 @@ def _public_home_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
     # What the product is made of, for the feature grid — entities the API will actually list.
     highlights = [e for e in ir.entities if Op.LIST in ops_by_entity.get(e.name, set())][:6]
 
-    primary_href, primary_label = (browse[0] if browse else (("/register", "Get started") if auth else ("/", "Explore")))
     if browse:
-        primary_label = f"Browse {primary_label.lower()}"
+        primary_href = browse[0][0]
+        primary_label = copy["cta"]
+    elif auth:
+        primary_href, primary_label = "/register", copy["cta"]
+    else:
+        primary_href, primary_label = "/", copy["cta"]
 
     lines: list[str] = []
     if browse or auth:
@@ -5658,7 +5671,7 @@ def _public_home_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
         '            border: "1px solid var(--color-primary-subtle)",',
         '            fontSize: 13, fontWeight: 600, color: "var(--color-primary)",',
         "          }}>",
-        f'            {escaped_name}',
+        f'            {_escape_ts(copy["eyebrow"])}',
         "          </span>",
         '          <h1 style={{',
         '            margin: "0 0 20px", fontSize: "clamp(2.25rem, 5vw, 3.75rem)",',
@@ -5717,13 +5730,13 @@ def _public_home_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
             '          margin: "0 0 8px", fontSize: "2rem", fontWeight: 700,',
             '          letterSpacing: "-0.02em", textAlign: "center",',
             "        }}>",
-            "          What you can do here",
+            f'          {_escape_ts(copy["section"])}',
             "        </h2>",
             '        <p style={{',
             '          margin: "0 auto 48px", maxWidth: 540, textAlign: "center",',
             '          color: "var(--color-text-muted)", fontSize: "1.05rem",',
             "        }}>",
-            f'          Everything {escaped_name} keeps track of, in one place.',
+            f'          {_escape_ts(copy["section_lede"])}',
             "        </p>",
             '        <div style={{',
             '          display: "grid", gap: 20,',
@@ -5762,7 +5775,7 @@ def _public_home_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
             "      }}>",
             '        <div style={{ maxWidth: 1120, margin: "0 auto" }}>',
             '          <h2 style={{ margin: "0 0 28px", fontSize: "1.5rem", fontWeight: 700 }}>',
-            "            Explore",
+            f'            {_escape_ts(copy["explore"])}',
             "          </h2>",
             '          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>',
         ])
@@ -74125,8 +74138,13 @@ def _synthesize_page_content(
     public landing page, because a visitor arriving at a storefront should not meet an internal
     console. The flavour is also passed to the model so it does not have to guess from the prompt.
     """
+    # R-543: the public app's archetype is detected from the IR and the prompt together, so the
+    # deterministic page and the model prompt agree on what is being built.
+    from .archetype import Archetype, detect_archetype
+
+    resolved = Archetype.ADMIN_PANEL if flavour != "web" else detect_archetype(ir, prompt)
     if provider is None:
-        return _public_home_page(ir) if flavour == "web" else _overview_page(ir)
+        return _overview_page(ir) if resolved is Archetype.ADMIN_PANEL else _public_home_page(ir, resolved)
     from .llm_ui import synthesize_overview_page_sync
     return synthesize_overview_page_sync(
         ir,
@@ -74134,7 +74152,7 @@ def _synthesize_page_content(
         provider=provider,
         model_id=model_id,
         outcomes=outcomes,
-        archetype="public_website" if flavour == "web" else "admin_panel",
+        archetype=resolved.value,
         **(grounding or {}),
     )
 

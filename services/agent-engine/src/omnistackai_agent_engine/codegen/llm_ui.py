@@ -100,6 +100,68 @@ Design a consumer web experience using shadcn ui/ components and Tailwind:
 4. Testimonials: shadcn <Card>s with <Avatar> and rating stars.
 5. Footer: Sitemap links and copyright."""
 
+_STOREFRONT_ARCHETYPE = """ARCHETYPE: ONLINE STORE / STOREFRONT
+Design a shop a customer would buy from, using shadcn ui/ components and Tailwind:
+1. Sticky Header: brand, category links, search <Input>, cart <Button> with an item-count badge.
+2. Hero: what is for sale and why, a primary "Shop now" <Button>, a trust strip (delivery, returns).
+3. Product Grid: responsive <Card>s with image area, title, price, and an "Add to cart" <Button>.
+4. Reassurance: shipping, returns and secure-payment <Card>s.
+5. Footer: categories, policies, copyright."""
+
+_PUBLICATION_ARCHETYPE = """ARCHETYPE: PUBLICATION / BLOG / NEWS
+Design something people come to read, using shadcn ui/ components and Tailwind:
+1. Masthead: publication name, section links, search <Input>, subscribe <Button>.
+2. Lead Story: large headline, standfirst, author and date, generous reading measure.
+3. Article Grid: <Card>s with category <Badge>, headline, excerpt and read time.
+4. Sections: the categories this publication covers, as pills or a list.
+5. Footer: sections, about, copyright. Typography carries this design — prefer it over ornament."""
+
+_BOOKING_ARCHETYPE = """ARCHETYPE: BOOKING / APPOINTMENTS
+Design a page whose job is to get someone booked in, using shadcn ui/ components and Tailwind:
+1. Header: name, services, "Book now" <Button>.
+2. Hero: what can be booked, how long it takes, a prominent booking <Button>.
+3. Services: <Card>s with name, duration, price and a "Book" <Button> each.
+4. How it works: three numbered steps (choose, pick a time, confirm).
+5. Practicalities: hours, location, contact. Footer with policies."""
+
+_DIRECTORY_ARCHETYPE = """ARCHETYPE: DIRECTORY / LISTINGS
+Design a page for finding the right listing, using shadcn ui/ components and Tailwind:
+1. Header: brand, "List with us" <Button>.
+2. Search Hero: a prominent search <Input> with filter <Select>s (category, location).
+3. Listing Grid: <Card>s with title, location, rating stars, and key attributes as <Badge>s.
+4. Browse by category: a pill row or grid.
+5. Footer: categories, help, copyright."""
+
+_SAAS_ARCHETYPE = """ARCHETYPE: SAAS PRODUCT SITE
+Design a product site that explains a tool and gets a signup, using shadcn ui/ components and Tailwind:
+1. Sticky Header: logo, product links, "Sign in" and "Get started" <Button>s.
+2. Hero: the outcome the product delivers, a primary CTA, and a product-surface mock or metric chips.
+3. Feature Grid: <Card>s with a Lucide icon, feature name and one-line benefit.
+4. Social proof: logos or testimonial <Card>s.
+5. Pricing teaser and Footer."""
+
+_MARKETING_ARCHETYPE = """ARCHETYPE: MARKETING SITE / LANDING PAGE
+Design a page that explains a product and invites one action, using shadcn ui/ components and Tailwind:
+1. Sticky Header: brand, section links, one primary <Button>.
+2. Hero: bold headline, supporting sentence, primary and secondary CTA <Button>s.
+3. Features: responsive grid of <Card>s with icons and short copy.
+4. Testimonials: <Card>s with <Avatar> and rating stars.
+5. Closing CTA band, then Footer with sitemap and copyright."""
+
+#: R-543: one block per archetype. The assembler states the archetype, so this is a lookup rather
+#: than a guess; `_detect_ui_archetype` remains only as the fallback for direct callers.
+_ARCHETYPE_INSTRUCTIONS: dict[str, str] = {
+    "storefront": _STOREFRONT_ARCHETYPE,
+    "publication": _PUBLICATION_ARCHETYPE,
+    "booking": _BOOKING_ARCHETYPE,
+    "directory": _DIRECTORY_ARCHETYPE,
+    "saas": _SAAS_ARCHETYPE,
+    "marketing": _MARKETING_ARCHETYPE,
+    "admin_panel": _ADMIN_ARCHETYPE,
+    # Accepted for compatibility with callers written before the family existed.
+    "public_website": _WEBSITE_ARCHETYPE,
+}
+
 _DYNAMIC_IMPORT_RE = re.compile(r"\b(?:require|import)\s*\(")
 _QUOTED_SOURCE_RE = re.compile(r"""['"]([^'"]+)['"]""")
 _FROM_SOURCE_RE = re.compile(r"""from\s+['"]([^'"]+)['"]""")
@@ -323,7 +385,7 @@ def build_ui_synthesis_prompt(
     single-app builds and direct callers.
     """
     archetype = archetype or _detect_ui_archetype(ir, user_prompt)
-    archetype_instructions = _ADMIN_ARCHETYPE if archetype == "admin_panel" else _WEBSITE_ARCHETYPE
+    archetype_instructions = _ARCHETYPE_INSTRUCTIONS.get(archetype, _WEBSITE_ARCHETYPE)
     return f"""You are a Lead UI/UX Engineer at a world-class software platform.
 Your mission is to write the main page (`app/page.tsx`) for a Next.js 15 application.
 
@@ -613,6 +675,24 @@ async def _synthesize_file(
 # ---------------------------------------------------------------------------
 
 
+def _deterministic_page_for(ir: ApplicationIR, archetype: str):
+    """The deterministic page this archetype falls back to, as a zero-argument callable.
+
+    R-543: one place decides, so the `provider is None` path, the repair-loop fallback and the
+    failover pass can never disagree about what a storefront looks like without a model.
+    """
+    from .archetype import Archetype
+    from .nextjs import _overview_page, _public_home_page
+
+    if archetype == Archetype.ADMIN_PANEL.value:
+        return lambda: _overview_page(ir)
+    try:
+        resolved = Archetype(archetype)
+    except ValueError:
+        resolved = None  # e.g. the legacy "public_website"
+    return lambda: _public_home_page(ir, resolved)
+
+
 async def synthesize_overview_page(
     ir: ApplicationIR,
     user_prompt: str,
@@ -640,7 +720,10 @@ async def synthesize_overview_page(
     from .nextjs import _overview_page, _public_home_page
 
     resolved = archetype or _detect_ui_archetype(ir, user_prompt)
-    deterministic = (lambda: _public_home_page(ir)) if resolved == "public_website" else (lambda: _overview_page(ir))
+    # R-543: every archetype except the staff console falls back to the public landing page, shaped
+    # for that archetype. Testing for one magic string here is what made a storefront fall back to
+    # a dashboard the moment the model failed validation.
+    deterministic = _deterministic_page_for(ir, resolved)
 
     if provider is None:
         return deterministic()
@@ -711,10 +794,8 @@ def synthesize_overview_page_sync(
 ) -> str:
     """Synchronous bridge for synthesize_overview_page (the repair loop lives inside the coroutine)."""
     if provider is None:
-        from .nextjs import _overview_page, _public_home_page
-
         resolved = archetype or _detect_ui_archetype(ir, user_prompt)
-        return _public_home_page(ir) if resolved == "public_website" else _overview_page(ir)
+        return _deterministic_page_for(ir, resolved)()
 
     coro_factory = lambda: synthesize_overview_page(  # noqa: E731 - a fresh coroutine per run
         ir,

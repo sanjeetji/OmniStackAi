@@ -1,5 +1,39 @@
 # Current Handoff
 
+## Resume here (2026-09-24, after R-543)
+
+> **R-543 Completed (2026-09-24): a real archetype family.**
+>
+> Two archetypes and eight prompt keywords defaulting to `admin_panel` meant "a website to sell my
+> product" generated a dashboard, and every recognised public site got one identical page.
+> `codegen/archetype.py` now scores seven archetypes from the **IR and the prompt together**,
+> weighting entity names above wording. `admin_panel` is never inferred. Both the deterministic
+> generator and the model prompt honour the result, and `_deterministic_page_for` is the single
+> place that decides the fallback.
+>
+> Evidence: `sell my product` → storefront/"Start shopping"; `publish articles` →
+> publication/"Start reading"; `book appointments` → booking/"Book now"; `directory of local
+> plumbers` → directory/"Start browsing". All six public archetypes distinct and passing the JSX
+> validator. 16 new tests. `task verify` 4,061 OK offline, 0 model calls.
+>
+> **Next, in the order I would take them:**
+>
+> 1. **Brand tokens are fake.** `BrandTokens` is extracted from the prompt but never reaches
+>    `styles/tokens.css`, which is a static string. A requested `#ff0000` lands only in
+>    `components/color-picker.tsx`. Every generated app is blue regardless of what was asked for.
+>    Cheapest remaining win for "the UI should match my prompt".
+> 2. **Layout variants within an archetype**, so two storefronts also differ from each other.
+> 3. **A configured interpreter for the run plan.** It hard-codes `program="python3"` and so
+>    inherits whatever is on PATH; a broken system python silently breaks every preview. This
+>    machine needed `brew install uv`, `uv python install 3.13` and a
+>    `~/.local/bin/python3` symlink before any Python-backend preview could run at all.
+> 4. **Wire `plan_ecosystem_from_prompt`** (in `intake/ecosystem.py`, tested, called only from
+>    tests) so one prompt can produce customer + driver + merchant + admin rather than web + admin.
+> 5. **IR v2.** The IR models entities, fields, relations, CRUD endpoints, screens, roles and
+>    fixtures — and nothing else. Ledgers, state machines, idempotency, payments and realtime
+>    cannot be expressed at all, at any model quality. This is the real ceiling on "maximum
+>    features per industry" and deserves its own design pass, not a drift.
+
 ## Resume here (2026-09-24, after R-542)
 
 > **R-542 Completed (2026-09-24): the admin console is reachable in the Studio.**
