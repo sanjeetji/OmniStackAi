@@ -68,12 +68,17 @@ found_by_the_live_check:
   - "the readiness probe hit the origin, but an app under a base path answers 404 at '/', so the preview started both apps and then declared them dead. Every offline test passed while this was broken."
   - "the admin console was never waited for and was reported ready=True unconditionally"
   - "_should_skip only knew 'install web dependencies', so the console reinstalled its dependencies on every preview start"
-not_done:
-  - "the API through the proxy is unverified: this machine cannot create a Python venv at all (see environment_blocker), so the live check ran with the backend parked"
+full_stack_verified:
+  - "after fixing the machine blocker, the same project ran web + admin + api together: status ready, kind multi, all three ready"
+  - "GET /preview/<id>/api/articles -> 200 with real seeded rows from PostgreSQL"
+  - "GET /preview/<id>/api/openapi.json -> 200, the generated OpenAPI 3.1 spec"
+  - "GET /preview/<id>/api/docs -> 200, Swagger UI"
 environment_blocker:
   - "Homebrew python@3.13 and python@3.14 both have a broken pyexpat: dlopen fails on _XML_SetAllocTrackerActivationThreshold against /usr/lib/libexpat.1.dylib"
   - "that breaks plistlib, so platform.mac_ver() returns ('', ('', '', ''), '')"
   - "pip 26.2's vendored truststore then does int('') and raises, so ensurepip and every `python3 -m venv` fail"
-  - "consequence: no Python-backend preview can run on this machine. Pre-existing, unrelated to R-541/R-542, and needs its own task"
+  - "consequence: no Python-backend preview could run on this machine. Pre-existing and unrelated to R-541/R-542."
+  - "FIXED on this machine: brew install uv; uv python install 3.13; ln -sf $(uv python find 3.13) ~/.local/bin/python3, with ~/.local/bin first on PATH. mac_ver() now returns 26.1, pyexpat imports, python3 -m venv creates a venv with pip, and the full stack previews."
+  - "STILL TO DO in the platform: the run plan hard-codes program=python3, so it inherits whatever interpreter is on PATH. It should take a configured interpreter (e.g. OMNISTACKAI_APP_PYTHON) so a broken system python cannot silently break every preview. Needs its own task."
 considered_and_rejected:
   - "emitting omnistack.json and reusing the template multi-app runner: its validator requires a package.json for every listed app, which a Python or Go backend does not have"
