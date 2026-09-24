@@ -366,10 +366,10 @@ def _sanitize_ir_dict(data: dict) -> dict:
         strat.setdefault("database_strategy", "postgres")
         strat.setdefault("repo_strategy", "customer_project_monorepo")
 
-        # If LLM set web_strategy to 'none' but set admin_strategy to 'nextjs',
-        # ensure web_strategy is 'nextjs' so the Admin Panel UI is assembled into apps/web.
-        if strat.get("web_strategy") == "none" and strat.get("admin_strategy") in ("nextjs", "react"):
-            strat["web_strategy"] = "nextjs"
+        # R-541: this used to force web_strategy back to 'nextjs' whenever an admin panel was
+        # asked for, because the assembler had no admin adapter and the console could only be
+        # smuggled into apps/web. Both apps are assembled properly now, so an admin-only request
+        # stays admin-only instead of gaining a public website nobody asked for.
 
     # Roles
     if "roles" not in data or not isinstance(data["roles"], list) or not data["roles"]:

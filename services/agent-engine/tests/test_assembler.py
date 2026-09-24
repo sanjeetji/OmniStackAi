@@ -1,3 +1,4 @@
+import json
 import subprocess
 import tempfile
 from pathlib import Path
@@ -28,11 +29,12 @@ from omnistackai_agent_engine.git_service import create_repository
 
 
 class DefaultRegistryTests(TestCase):
-    def test_has_five_adapters(self) -> None:
+    def test_has_six_adapters(self) -> None:
         self.assertEqual(
             set(default_registry().targets()),
             {
                 GenerationTarget.NEXTJS_WEB,
+                GenerationTarget.NEXTJS_ADMIN,
                 GenerationTarget.BACKEND_PYTHON,
                 GenerationTarget.BACKEND_GO,
                 GenerationTarget.REACT_NATIVE,
@@ -55,14 +57,24 @@ class AssembleTests(TestCase):
         self.assertIn("apps/web", readme)
         self.assertIn("services/api", readme)
 
-    def test_python_backend_and_admin_note(self) -> None:
+    def test_python_backend_web_and_admin_are_all_assembled(self) -> None:
+        """R-541: an IR asking for a web app and an admin panel gets both, plus the backend.
+
+        Until the NEXTJS_ADMIN adapter existed the console was recorded as "not assembled yet"
+        and silently dropped, so this IR produced a single app that served neither audience.
+        """
         project = assemble_project(example_ir("minimal-blog"))  # web nextjs + backend python + admin nextjs
         paths = set(project.paths())
         self.assertIn("services/api/requirements.txt", paths)
         self.assertIn("apps/web/package.json", paths)
-        # admin has no dedicated adapter yet -> documented, not assembled.
-        self.assertNotIn("apps/admin/package.json", paths)
-        self.assertIn("admin_strategy", project.get("README.md").content)
+        self.assertIn("apps/admin/package.json", paths)
+        # Two Next.js apps in one monorepo need distinct package names or pnpm refuses the workspace.
+        self.assertNotEqual(
+            json.loads(project.get("apps/web/package.json").content)["name"],
+            json.loads(project.get("apps/admin/package.json").content)["name"],
+        )
+        # Nothing is skipped any more, so the README carries no "not assembled" note for admin.
+        self.assertNotIn("admin_strategy", project.get("README.md").content)
 
     def test_node_backend_is_assembled(self) -> None:
         ir = ApplicationIR(

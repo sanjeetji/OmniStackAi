@@ -19,7 +19,7 @@ from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
 from .backend_node import NodeBackendAdapter
 from .files import GeneratedFile, GeneratedProject
-from .nextjs import NextjsWebAdapter
+from .nextjs import NextjsAdminAdapter, NextjsWebAdapter
 from .openapi import render_openapi_json
 from .react_native import ReactNativeAdapter
 
@@ -114,6 +114,7 @@ def default_registry() -> AdapterRegistry:
 
     registry = AdapterRegistry()
     registry.register(NextjsWebAdapter())
+    registry.register(NextjsAdminAdapter())
     registry.register(PythonBackendAdapter())
     registry.register(GoBackendAdapter())
     registry.register(ReactNativeAdapter())
@@ -167,10 +168,18 @@ def _plan_assembly(ir: ApplicationIR) -> tuple[list[AssembledApp], list[str]]:
     skipped: list[str] = []
     strategy = ir.project_strategy
 
+    wants_admin = strategy.admin_strategy.value == "nextjs"
+
     if strategy.web_strategy is WebStrategy.NEXTJS:
         apps.append(AssembledApp("web (Next.js)", "apps/web", GenerationTarget.NEXTJS_WEB.value))
-    elif strategy.web_strategy is WebStrategy.NONE and strategy.admin_strategy.value == "nextjs":
-        apps.append(AssembledApp("admin (Next.js)", "apps/web", GenerationTarget.NEXTJS_WEB.value))
+        # R-541: a public app and a staff console are two apps. Until now the console was recorded
+        # as "not assembled yet" and silently dropped, so a prompt asking for a site *and* a panel
+        # produced one app that was neither.
+        if wants_admin:
+            apps.append(AssembledApp("admin (Next.js)", "apps/admin", GenerationTarget.NEXTJS_ADMIN.value))
+    elif strategy.web_strategy is WebStrategy.NONE and wants_admin:
+        # Admin-only project: it is the only app, so it keeps the single-app layout.
+        apps.append(AssembledApp("admin (Next.js)", "apps/web", GenerationTarget.NEXTJS_ADMIN.value))
     elif strategy.web_strategy is not WebStrategy.NONE:
         skipped.append(f"web_strategy {strategy.web_strategy.value!r} has no adapter yet")
 
@@ -180,8 +189,8 @@ def _plan_assembly(ir: ApplicationIR) -> tuple[list[AssembledApp], list[str]]:
     else:
         skipped.append(f"backend_strategy {strategy.backend_strategy.value!r} has no adapter yet")
 
-    if strategy.admin_strategy.value != "none":
-        skipped.append(f"admin_strategy {strategy.admin_strategy.value!r} is not assembled yet")
+    if strategy.admin_strategy.value not in ("none", "nextjs"):
+        skipped.append(f"admin_strategy {strategy.admin_strategy.value!r} has no adapter yet")
     if strategy.mobile_profile is MobileProfile.REACT_NATIVE:
         apps.append(AssembledApp("mobile (React Native)", "apps/mobile", GenerationTarget.REACT_NATIVE.value))
     elif strategy.mobile_profile.value != "none":

@@ -5606,6 +5606,203 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
     return "\n".join(lines)
 
 
+def _public_home_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
+    """Generate the public-facing home page (app/page.tsx) for the customer-facing web app.
+
+    R-541: `_overview_page` renders an entity dashboard, which is the right home for the admin
+    console and the wrong one for a public site — "a website to sell my product" was returning an
+    internal console. This renders what a visitor expects instead: a hero, what the product
+    offers, and where to go next.
+
+    A server component with no hooks, so it stays byte-stable for a given IR and ships no client
+    JavaScript. Every colour comes from `styles/tokens.css`, so it themes with the rest of the app.
+    """
+    escaped_name = _escape_ts(ir.name)
+    escaped_desc = _escape_ts(ir.description)
+    auth = needs_auth(ir)
+    ops_by_entity = _get_ops_by_entity(ir)
+
+    # Where a visitor can actually go: the collection screens are the browsable pages.
+    browse: list[tuple[str, str]] = []
+    for s in ir.screens:
+        if _screen_intent(s) == "collection":
+            browse.append((f"/{s.id}", _title_case(s.id)))
+
+    # What the product is made of, for the feature grid — entities the API will actually list.
+    highlights = [e for e in ir.entities if Op.LIST in ops_by_entity.get(e.name, set())][:6]
+
+    primary_href, primary_label = (browse[0] if browse else (("/register", "Get started") if auth else ("/", "Explore")))
+    if browse:
+        primary_label = f"Browse {primary_label.lower()}"
+
+    lines: list[str] = []
+    if browse or auth:
+        lines.append('import Link from "next/link";')
+        lines.append("")
+
+    lines.extend([
+        "export default function HomePage() {",
+        "  return (",
+        '    <main style={{ background: "var(--color-background)", color: "var(--color-text)" }}>',
+        "",
+        "      {/* Hero */}",
+        '      <section style={{',
+        '        padding: "96px 24px 80px",',
+        '        background: "linear-gradient(180deg, var(--color-primary-subtle) 0%, var(--color-background) 100%)",',
+        '        textAlign: "center",',
+        "      }}>",
+        '        <div style={{ maxWidth: 820, margin: "0 auto" }}>',
+        '          <span style={{',
+        '            display: "inline-block", marginBottom: 20, padding: "6px 14px",',
+        '            borderRadius: 999, background: "var(--color-surface)",',
+        '            border: "1px solid var(--color-primary-subtle)",',
+        '            fontSize: 13, fontWeight: 600, color: "var(--color-primary)",',
+        "          }}>",
+        f'            {escaped_name}',
+        "          </span>",
+        '          <h1 style={{',
+        '            margin: "0 0 20px", fontSize: "clamp(2.25rem, 5vw, 3.75rem)",',
+        '            lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800,',
+        "          }}>",
+        f'            {escaped_name}',
+        "          </h1>",
+    ])
+
+    if escaped_desc:
+        lines.extend([
+            '          <p style={{',
+            '            margin: "0 auto 36px", maxWidth: 620, fontSize: "1.175rem",',
+            '            lineHeight: 1.65, color: "var(--color-text-muted)",',
+            "          }}>",
+            f'            {escaped_desc}',
+            "          </p>",
+        ])
+
+    if browse or auth:
+        lines.extend([
+            '          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>',
+            f'            <Link href="{primary_href}" style={{{{',
+            '              padding: "13px 28px", borderRadius: "var(--radius-md, 8px)",',
+            '              background: "var(--color-primary)", color: "var(--color-primary-foreground)",',
+            '              fontWeight: 600, fontSize: 15, textDecoration: "none",',
+            "            }}>",
+            f'              {primary_label}',
+            "            </Link>",
+        ])
+        if auth:
+            lines.extend([
+                '            <Link href="/login" style={{',
+                '              padding: "13px 28px", borderRadius: "var(--radius-md, 8px)",',
+                '              background: "var(--color-surface)", color: "var(--color-text)",',
+                '              border: "1px solid var(--color-neutral-200)",',
+                '              fontWeight: 600, fontSize: 15, textDecoration: "none",',
+                "            }}>",
+                "              Sign in",
+                "            </Link>",
+            ])
+        lines.append("          </div>")
+
+    lines.extend([
+        "        </div>",
+        "      </section>",
+        "",
+    ])
+
+    # ── What this product offers ─────────────────────────────────────────────
+    if highlights:
+        lines.extend([
+            "      {/* What this product offers */}",
+            '      <section style={{ padding: "72px 24px", maxWidth: 1120, margin: "0 auto" }}>',
+            '        <h2 style={{',
+            '          margin: "0 0 8px", fontSize: "2rem", fontWeight: 700,',
+            '          letterSpacing: "-0.02em", textAlign: "center",',
+            "        }}>",
+            "          What you can do here",
+            "        </h2>",
+            '        <p style={{',
+            '          margin: "0 auto 48px", maxWidth: 540, textAlign: "center",',
+            '          color: "var(--color-text-muted)", fontSize: "1.05rem",',
+            "        }}>",
+            f'          Everything {escaped_name} keeps track of, in one place.',
+            "        </p>",
+            '        <div style={{',
+            '          display: "grid", gap: 20,',
+            '          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",',
+            "        }}>",
+        ])
+        for entity in highlights:
+            label = _title_case(entity.name)
+            field_names = ", ".join(_title_case(f.name) for f in entity.fields[:3])
+            lines.extend([
+                '          <article style={{',
+                '            padding: 26, borderRadius: "var(--radius-lg, 12px)",',
+                '            background: "var(--color-surface)",',
+                '            border: "1px solid var(--color-neutral-200)",',
+                "          }}>",
+                '            <h3 style={{ margin: "0 0 10px", fontSize: "1.175rem", fontWeight: 650 }}>',
+                f"              {_escape_ts(label)}",
+                "            </h3>",
+                '            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14, lineHeight: 1.6 }}>',
+                f"              {_escape_ts(field_names) if field_names else 'Managed from your dashboard.'}",
+                "            </p>",
+                "          </article>",
+            ])
+        lines.extend([
+            "        </div>",
+            "      </section>",
+            "",
+        ])
+
+    # ── Browse ───────────────────────────────────────────────────────────────
+    if len(browse) > 1:
+        lines.extend([
+            "      {/* Browse */}",
+            '      <section style={{',
+            '        padding: "64px 24px", background: "var(--color-background-subtle)",',
+            "      }}>",
+            '        <div style={{ maxWidth: 1120, margin: "0 auto" }}>',
+            '          <h2 style={{ margin: "0 0 28px", fontSize: "1.5rem", fontWeight: 700 }}>',
+            "            Explore",
+            "          </h2>",
+            '          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>',
+        ])
+        for href, label in browse:
+            lines.extend([
+                f'            <Link href="{href}" style={{{{',
+                '              padding: "11px 20px", borderRadius: 999,',
+                '              background: "var(--color-surface)", color: "var(--color-text)",',
+                '              border: "1px solid var(--color-neutral-200)",',
+                '              fontSize: 14, fontWeight: 550, textDecoration: "none",',
+                "            }}>",
+                f"              {_escape_ts(label)}",
+                "            </Link>",
+            ])
+        lines.extend([
+            "          </div>",
+            "        </div>",
+            "      </section>",
+            "",
+        ])
+
+    # ── Footer ───────────────────────────────────────────────────────────────
+    lines.extend([
+        "      {/* Footer */}",
+        '      <footer style={{',
+        '        padding: "40px 24px", borderTop: "1px solid var(--color-neutral-200)",',
+        '        color: "var(--color-text-subtle)", fontSize: 14, textAlign: "center",',
+        "      }}>",
+        f'        {escaped_name}',
+        "      </footer>",
+        "",
+        "    </main>",
+        "  );",
+        "}",
+        "",
+    ])
+
+    return "\n".join(lines)
+
+
 def _navbar_component(ir: ApplicationIR) -> str:
     """Generate a responsive application navigation header shell (components/navbar.tsx)."""
     brand_initial = ir.name[:1].upper() if ir.name else "O"
@@ -73909,9 +74106,16 @@ def _synthesize_page_content(
     model_id: str | None = None,
     outcomes: list | None = None,
     grounding: dict | None = None,
+    flavour: str = "admin",
 ) -> str:
+    """The home page for one app. `flavour` decides whose home it is.
+
+    R-541: "admin" keeps the entity dashboard — the right landing for staff. "web" renders the
+    public landing page, because a visitor arriving at a storefront should not meet an internal
+    console. The flavour is also passed to the model so it does not have to guess from the prompt.
+    """
     if provider is None:
-        return _overview_page(ir)
+        return _public_home_page(ir) if flavour == "web" else _overview_page(ir)
     from .llm_ui import synthesize_overview_page_sync
     return synthesize_overview_page_sync(
         ir,
@@ -73919,6 +74123,7 @@ def _synthesize_page_content(
         provider=provider,
         model_id=model_id,
         outcomes=outcomes,
+        archetype="public_website" if flavour == "web" else "admin_panel",
         **(grounding or {}),
     )
 
@@ -73952,6 +74157,11 @@ def _synthesize_screen_content(
 class NextjsWebAdapter:
     """Generates a Next.js App Router TypeScript project from an Application IR."""
 
+    #: Which app this adapter is building. "web" is the public, visitor-facing app; "admin" is the
+    #: staff console. R-541: both are Next.js and share every generator below — only the home page,
+    #: the package name and the app title differ, so one adapter serves both.
+    _flavour = "web"
+
     @property
     def target(self) -> GenerationTarget:
         return GenerationTarget.NEXTJS_WEB
@@ -73981,7 +74191,10 @@ class NextjsWebAdapter:
                 "compact_grounding": compact_grounding(ir),
             }
 
-        slug = _slug(ir.name)
+        # R-541: a monorepo can hold both apps, and pnpm refuses two workspace packages with the
+        # same name, so the admin build takes a distinct one.
+        slug = _slug(ir.name) if self._flavour == "web" else f"{_slug(ir.name)}-admin"
+        app_title = ir.name if self._flavour == "web" else f"{ir.name} Admin"
         package_json = {
             "name": slug,
             "version": "0.1.0",
@@ -74016,8 +74229,8 @@ class NextjsWebAdapter:
             GeneratedFile("tailwind.config.ts", _TAILWIND_CONFIG),
             GeneratedFile("postcss.config.mjs", _POSTCSS_CONFIG),
             GeneratedFile(".gitignore", "node_modules/\n.next/\nout/\nnext-env.d.ts\n.env*.local\n"),
-            GeneratedFile(".env.example", "# Public env vars only. Never commit secrets.\nNEXT_PUBLIC_APP_NAME=" + ir.name + "\nNEXT_PUBLIC_API_URL=http://localhost:8080\nSTORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\n"),
-            GeneratedFile("README.md", f"# {ir.name}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
+            GeneratedFile(".env.example", "# Public env vars only. Never commit secrets.\nNEXT_PUBLIC_APP_NAME=" + app_title + "\nNEXT_PUBLIC_API_URL=http://localhost:8080\nSTORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\n"),
+            GeneratedFile("README.md", f"# {app_title}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
             GeneratedFile("app/layout.tsx", _layout_file(ir)),
             *_component_files(ir),
             *_ui_component_files(),
@@ -74031,7 +74244,13 @@ class NextjsWebAdapter:
             GeneratedFile(
                 "app/page.tsx",
                 _synthesize_page_content(
-                    ir, provider=provider, prompt=prompt, model_id=model_id, outcomes=ui_outcomes, grounding=grounding
+                    ir,
+                    provider=provider,
+                    prompt=prompt,
+                    model_id=model_id,
+                    outcomes=ui_outcomes,
+                    grounding=grounding,
+                    flavour=self._flavour,
                 ),
             ),
             GeneratedFile("lib/types.ts", _types_file(ir)),
@@ -74075,6 +74294,26 @@ class NextjsWebAdapter:
             files.append(GeneratedFile(f"app/{route_dir}/route.ts", _route_file(apis)))
 
         return GeneratedProject(self.target.value, tuple(files))
+
+
+class NextjsAdminAdapter(NextjsWebAdapter):
+    """Generates the staff-facing admin console (``apps/admin``) from the same Application IR.
+
+    R-541: ``GenerationTarget.NEXTJS_ADMIN`` had been declared since the adapter contract was
+    written but never implemented, so ``_plan_assembly`` recorded every admin panel as
+    "not assembled yet" and dropped it — even though ``nl_to_ir`` defaults ``admin_strategy`` to
+    "nextjs", meaning every prompt-built project had been asking for one.
+
+    The console shares the public app's data layer, component library, design tokens, auth and
+    routes; what differs is the home page (the entity dashboard rather than a landing page) and
+    its identity as a separate workspace package.
+    """
+
+    _flavour = "admin"
+
+    @property
+    def target(self) -> GenerationTarget:
+        return GenerationTarget.NEXTJS_ADMIN
 
 
 def _escape_ts(value: str) -> str:

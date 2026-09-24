@@ -201,7 +201,10 @@ class AdapterCompactTests(unittest.TestCase):
         page = {f.path: f.content for f in project.files()}["app/page.tsx"]
         self.assertTrue(page.startswith('"use client";\n' + MARKER_PREFIX))
         self.assertEqual(len(provider.requests), 2)
-        expected = build_ui_synthesis_prompt(ir, "a blog", **compact_grounding(ir)).strip()
+        # R-541: the web adapter states the archetype rather than leaving it to keyword inference.
+        expected = build_ui_synthesis_prompt(
+            ir, "a blog", archetype="public_website", **compact_grounding(ir)
+        ).strip()
         self.assertEqual(provider.requests[1].messages[1].content, expected)
         self.assertEqual([o.mode for o in outcomes], ["llm"])
 

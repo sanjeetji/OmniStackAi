@@ -40,7 +40,7 @@ from omnistackai_agent_engine.application_ir import (
     WebStrategy,
     example_ir,
 )
-from omnistackai_agent_engine.codegen import NextjsWebAdapter
+from omnistackai_agent_engine.codegen import NextjsAdminAdapter, NextjsWebAdapter
 
 
 _STRATEGY = ProjectStrategy(
@@ -116,8 +116,13 @@ def _dashboard_ir(description: str = "A test platform.") -> ApplicationIR:
 
 
 def _get_overview_page(ir: ApplicationIR) -> str:
-    """Generate the full Next.js project and return the content of app/page.tsx."""
-    adapter = NextjsWebAdapter()
+    """Generate the admin console and return the content of app/page.tsx.
+
+    R-541: the entity dashboard these tests describe is the *admin* home. The public web app now
+    renders a landing page instead, so the assertions below follow the dashboard to the console
+    that owns it rather than being relaxed.
+    """
+    adapter = NextjsAdminAdapter()
     project = adapter.generate(ir)
     return project.get("app/page.tsx").content
 

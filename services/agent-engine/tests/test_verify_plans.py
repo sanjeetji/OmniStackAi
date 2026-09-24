@@ -62,10 +62,13 @@ class IrMappingTests(TestCase):
         self.assertEqual(by_dir, {"apps/web": "nextjs-web", "services/api": "backend-go"})
 
     def test_blog_maps_web_and_python(self) -> None:
-        ir = example_ir("minimal-blog")  # nextjs web + python backend (+ admin, not assembled)
+        ir = example_ir("minimal-blog")  # nextjs web + python backend + admin console (R-541)
         plans = verify_plans_for_ir(ir)
         by_dir = {plan.app_dir: plan.target for plan in plans}
-        self.assertEqual(by_dir, {"apps/web": "nextjs-web", "services/api": "backend-python"})
+        self.assertEqual(
+            by_dir,
+            {"apps/web": "nextjs-web", "apps/admin": "nextjs-admin", "services/api": "backend-python"},
+        )
 
     def test_mapping_matches_assembled_targets(self) -> None:
         ir = example_ir("rideshare-favourites")

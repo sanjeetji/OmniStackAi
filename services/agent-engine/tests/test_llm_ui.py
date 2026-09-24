@@ -41,8 +41,10 @@ from omnistackai_agent_engine.codegen.llm_ui import (
     synthesize_screen_page_sync,
 )
 from omnistackai_agent_engine.codegen.nextjs import (
+    NextjsAdminAdapter,
     NextjsWebAdapter,
     _overview_page,
+    _public_home_page,
 )
 from omnistackai_agent_engine.model_gateway.contracts import (
     ChatRole,
@@ -273,7 +275,9 @@ class TestNextjsAdapterIntegration(unittest.TestCase):
         page_default = project_default.get("app/page.tsx").content
         page_none = project_explicit_none.get("app/page.tsx").content
         self.assertEqual(page_default, page_none)
-        self.assertEqual(page_default, _overview_page(ir))
+        # R-541: the public app renders the landing page; the dashboard moved to the admin console.
+        self.assertEqual(page_default, _public_home_page(ir))
+        self.assertEqual(NextjsAdminAdapter().generate(ir).get("app/page.tsx").content, _overview_page(ir))
 
     def test_assemble_project_with_provider(self) -> None:
         ir = _make_test_ir()

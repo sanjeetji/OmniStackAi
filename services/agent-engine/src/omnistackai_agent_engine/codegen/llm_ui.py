@@ -313,9 +313,16 @@ def build_ui_synthesis_prompt(
     data_layer: str | None = None,
     components: str | None = None,
     design_tokens: str | None = None,
+    archetype: str | None = None,
 ) -> str:
-    """Build the grounded prompt for LLM-powered overview page synthesis (``app/page.tsx``)."""
-    archetype = _detect_ui_archetype(ir, user_prompt)
+    """Build the grounded prompt for LLM-powered overview page synthesis (``app/page.tsx``).
+
+    R-541: ``archetype`` lets the caller state which app this page belongs to. The assembler knows
+    — it decided to build a public app and an admin app — so it says so rather than leaving
+    ``_detect_ui_archetype`` to infer it from wording. Keyword inference remains the fallback for
+    single-app builds and direct callers.
+    """
+    archetype = archetype or _detect_ui_archetype(ir, user_prompt)
     archetype_instructions = _ADMIN_ARCHETYPE if archetype == "admin_panel" else _WEBSITE_ARCHETYPE
     return f"""You are a Lead UI/UX Engineer at a world-class software platform.
 Your mission is to write the main page (`app/page.tsx`) for a Next.js 15 application.
@@ -621,28 +628,42 @@ async def synthesize_overview_page(
     components: str | None = None,
     design_tokens: str | None = None,
     compact_grounding: dict | None = None,
+    archetype: str | None = None,
 ) -> str:
     """Synthesize the bespoke overview page (``app/page.tsx``) or fall back to the deterministic template.
 
-    Never raises: any failure returns ``_overview_page(ir)``. ``compact_grounding`` (R-466) supplies the
-    smaller data-layer/components/tokens blocks the engine switches to when a provider rejects the full
-    request as too large.
+    Never raises: any failure returns the deterministic template for this archetype.
+    ``compact_grounding`` (R-466) supplies the smaller data-layer/components/tokens blocks the engine
+    switches to when a provider rejects the full request as too large. ``archetype`` (R-541) states
+    whose page this is, so the fallback matches the app rather than always rendering a dashboard.
     """
-    from .nextjs import _overview_page
+    from .nextjs import _overview_page, _public_home_page
+
+    resolved = archetype or _detect_ui_archetype(ir, user_prompt)
+    deterministic = (lambda: _public_home_page(ir)) if resolved == "public_website" else (lambda: _overview_page(ir))
 
     if provider is None:
-        return _overview_page(ir)
+        return deterministic()
 
     prompt = build_ui_synthesis_prompt(
-        ir, user_prompt, data_layer=data_layer, components=components, design_tokens=design_tokens
+        ir,
+        user_prompt,
+        data_layer=data_layer,
+        components=components,
+        design_tokens=design_tokens,
+        archetype=resolved,
     )
-    compact_prompt = build_ui_synthesis_prompt(ir, user_prompt, **compact_grounding) if compact_grounding else None
+    compact_prompt = (
+        build_ui_synthesis_prompt(ir, user_prompt, archetype=resolved, **compact_grounding)
+        if compact_grounding
+        else None
+    )
     path = "app/page.tsx"
     primary: list[UiSynthesisOutcome] = []
     result = await _synthesize_file(
         path=path,
         prompt=prompt,
-        fallback=lambda: _overview_page(ir),
+        fallback=deterministic,
         provider=provider,
         model_id=model_id,
         timeout_seconds=timeout_seconds,
@@ -658,7 +679,7 @@ async def synthesize_overview_page(
         result = await _synthesize_file(
             path=path,
             prompt=prompt,
-            fallback=lambda: _overview_page(ir),
+            fallback=deterministic,
             provider=failover_provider,
             model_id=failover_model_id,
             timeout_seconds=min(timeout_seconds, 60.0),
@@ -686,12 +707,14 @@ def synthesize_overview_page_sync(
     components: str | None = None,
     design_tokens: str | None = None,
     compact_grounding: dict | None = None,
+    archetype: str | None = None,
 ) -> str:
     """Synchronous bridge for synthesize_overview_page (the repair loop lives inside the coroutine)."""
     if provider is None:
-        from .nextjs import _overview_page
+        from .nextjs import _overview_page, _public_home_page
 
-        return _overview_page(ir)
+        resolved = archetype or _detect_ui_archetype(ir, user_prompt)
+        return _public_home_page(ir) if resolved == "public_website" else _overview_page(ir)
 
     coro_factory = lambda: synthesize_overview_page(  # noqa: E731 - a fresh coroutine per run
         ir,
@@ -705,6 +728,7 @@ def synthesize_overview_page_sync(
         components=components,
         design_tokens=design_tokens,
         compact_grounding=compact_grounding,
+        archetype=archetype,
     )
     return _run_sync(coro_factory)
 

@@ -1,5 +1,41 @@
 # Current Handoff
 
+## Resume here (2026-09-24, after R-541)
+
+> **R-541 Completed (2026-09-24): one prompt delivers every app it asked for, and each app looks
+> like itself.**
+>
+> **What was wrong.** `nl_to_ir` has always defaulted `admin_strategy` to `"nextjs"`, so every
+> prompt-built project was asking for an admin panel — and `_plan_assembly` recorded it as
+> "not assembled yet" and dropped it, because `GenerationTarget.NEXTJS_ADMIN` was declared in the
+> adapter contract with nothing behind it. `nl_to_ir` then forced `web_strategy` back on so the
+> console could hide in `apps/web`, which also gave admin-only requests a public website nobody
+> asked for. Separately, `_overview_page` (an entity dashboard) was the home page of *every*
+> generated app, so "a website to sell my product" returned an internal console.
+>
+> **What shipped.** `NextjsAdminAdapter` as a flavour of the web adapter — the console inherits
+> the data layer, components, tokens, auth and routes instead of duplicating them. `apps/web` and
+> `apps/admin` assemble side by side with distinct package names; an admin-only request stays
+> admin-only. `_public_home_page` gives the visitor-facing app a landing page (hero, offering,
+> browse, footer) as a hook-free server component. The archetype is stated by the assembler rather
+> than inferred from wording; inference remains the fallback. `build_run_plan` starts `apps/admin`
+> on its own port and the preview payload carries `admin_url`.
+>
+> **Evidence.** Both apps built with `next build` from one IR (exit 0 each; public `/` static at
+> 165 B, admin `/` a 4.97 kB client dashboard); both pass the engine's own `clean_and_validate_jsx`;
+> 14 new offline tests; byte-identical across two assembly runs. `task verify` 4,029 OK offline
+> with 0 model calls, `scripts/test.sh` green with a new R-541 block, `go test ./...` 22 packages.
+>
+> **Known, not done — pick this up first.** The console UI still shows a single preview app, so
+> the admin console runs and lands in the user's repo but is not clickable in the Studio. That is
+> **R-542**, together with the wider archetype family (storefront, blog, booking, directory) in
+> both `nextjs.py` and `llm_ui.py` — today there are two archetypes and the deterministic path
+> has no archetype awareness beyond the home page.
+>
+> **Then R-543:** make a local model the guaranteed fallback (Ollama is installed and
+> `model_gateway/ollama.py` exists), so the deterministic string template — which is byte-identical
+> for every project by design — is rarely what a user actually sees.
+
 ## Resume here (2026-09-24, after R-540)
 
 > **R-540 Completed (2026-09-24): the whole catalogue audited, and Bazaar rebuilt against its own

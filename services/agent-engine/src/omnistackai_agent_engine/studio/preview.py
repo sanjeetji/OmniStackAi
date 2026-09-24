@@ -257,6 +257,9 @@ class StudioPreviewManager:
             }
             if session.plan.backend_kind != "none" and session.api_ready:
                 payload["api_url"] = session.plan.api_url
+            # R-541: a prompt-built project can carry a staff console beside the public app.
+            if getattr(session.plan, "has_admin", False):
+                payload["admin_url"] = session.plan.admin_url
             return self._set_state(payload)
 
     def replace_ecosystem(
@@ -604,6 +607,7 @@ class StudioPreviewManager:
                 "is_active": is_active,
                 "web_url": sess.plan.web_url if is_ready else None,
                 "api_url": sess.plan.api_url if (is_ready and sess.api_ready) else None,
+                "admin_url": sess.plan.admin_url if (is_ready and getattr(sess.plan, "has_admin", False)) else None,
             })
 
         active_surface_info = next(
@@ -766,6 +770,8 @@ class StudioPreviewManager:
             }
             if active_sess.plan.backend_kind != "none" and active_sess.api_ready:
                 payload["api_url"] = active_sess.plan.api_url
+            if getattr(active_sess.plan, "has_admin", False):
+                payload["admin_url"] = active_sess.plan.admin_url
         else:
             payload = {
                 "status": "stopped" if any(s["status"] == "ready" for s in surface_statuses) else (

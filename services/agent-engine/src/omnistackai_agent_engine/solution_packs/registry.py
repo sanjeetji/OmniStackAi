@@ -365,7 +365,10 @@ MINIMAL_BLOG_PACK = SolutionPack(
     ),
     example_ir_ref="minimal-blog",
     ir_sha256="85d1275232bef36601ed13ffd614f7a98c5ec13399824800f4bcad348c2bba67",
-    targets=("nextjs-web", "backend-python"),
+    # R-541: the IR has always declared admin_strategy "nextjs"; until the admin adapter existed
+    # the assembler dropped it, so the pin recorded two targets. The pack now assembles the
+    # console its own IR asks for. The IR itself is unchanged (ir_sha256 still matches).
+    targets=("nextjs-web", "nextjs-admin", "backend-python"),
 )
 
 RIDESHARE_FAVOURITES_PACK = SolutionPack(

@@ -1,8 +1,16 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-23
+Last updated: 2026-09-24
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
+
+> **R-541 (2026-09-24): one prompt now delivers every app it asked for, and each app looks like itself.**
+> `nl_to_ir` has always defaulted `admin_strategy` to `"nextjs"`, so **every prompt-built project was asking for an admin panel** — and the assembler recorded it as "not assembled yet" and dropped it, because `GenerationTarget.NEXTJS_ADMIN` was declared with no adapter behind it. It then forced `web_strategy` back on so the console could hide in `apps/web`, which also gave admin-only requests a public website nobody asked for.
+> `NextjsAdminAdapter` implements the declared target; `apps/web` and `apps/admin` are now assembled side by side with distinct package names, and an admin-only request stays admin-only.
+> The home page was the second half of the problem: `_overview_page` renders an entity dashboard and it was the home of *every* app, so "a website to sell my product" returned an internal console. `_public_home_page` gives the visitor-facing app a real landing page (hero, offering, browse, footer) as a hook-free server component. The archetype is now stated by the assembler instead of inferred — `_detect_ui_archetype` matched eight keywords and defaulted to `admin_panel`, and that phrase matches none of them.
+> The preview runs both apps: `build_run_plan` starts `apps/admin` on its own port and the payload carries `admin_url`.
+> Evidence: both apps build with `next build` from one IR (public `/` static at 165 B, admin `/` a 4.97 kB client dashboard), both pass the engine's own JSX validator, 14 new offline tests, byte-stable across runs. `task verify` 4,029 tests OK offline, 0 model calls.
+> **Known, not done:** the console still shows a single preview app, so the admin console runs but is not yet clickable in the Studio. **Next:** R-542 — surface the second app in the console, then the wider archetype family (storefront, blog, booking, directory) in both the deterministic and model paths.
 
 > **R-540 (2026-09-24): every published template audited; Bazaar rebuilt against its own API.**
 > One question of all three templates — does each page actually call the API? `ride-now` and `care-clinic` came back sound; **`bazaar` was 18 of 44 pages, with its operations console at 0 of 18**. Every console page rendered a fabricated array and sign-in wrote a demo token without calling the API. All 18 rewritten, plus the seller's listing editor, new-listing form, reviews and settings, and the buyer's reviews screen.

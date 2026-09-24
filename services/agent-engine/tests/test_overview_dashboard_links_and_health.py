@@ -8,7 +8,7 @@ Verifies:
 5. Screen nav cards render navigation arrow indicator.
 6. Empty state message rendered when both entities and screens are empty.
 7. Strict diff invariance across ir.description edits.
-8. Full project generation via NextjsWebAdapter succeeds with enhanced overview page.
+8. Full project generation via NextjsAdminAdapter succeeds with enhanced overview page.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ from omnistackai_agent_engine.application_ir import (
     WebStrategy,
     example_ir,
 )
-from omnistackai_agent_engine.codegen import NextjsWebAdapter
+from omnistackai_agent_engine.codegen import NextjsAdminAdapter
 from omnistackai_agent_engine.codegen.nextjs import _overview_page
 
 _STRATEGY = ProjectStrategy(
@@ -193,10 +193,10 @@ class OverviewDashboardLinksAndHealthTests(unittest.TestCase):
         self.assertEqual(page1, page2, "app/page.tsx must be 100% byte-identical regardless of ir.description")
 
     def test_full_project_generation_examples(self) -> None:
-        """Full project generation via NextjsWebAdapter includes enhanced overview page."""
+        """R-541: the entity dashboard is the admin console's home, so generate that app."""
         for slug in ("minimal-blog", "rideshare-favourites"):
             ir = example_ir(slug)
-            adapter = NextjsWebAdapter()
+            adapter = NextjsAdminAdapter()
             proj = adapter.generate(ir)
             f = next((file for file in proj.files() if file.path == "app/page.tsx"), None)
             self.assertIsNotNone(f, f"app/page.tsx missing for {slug}")

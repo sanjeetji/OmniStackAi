@@ -29,9 +29,18 @@ class BuilderShowcaseTests(TestCase):
             {change["path"] for change in edit["changes"]},
             {
                 "README.md",
+                # R-541: the project now carries a staff console beside the public app, so a
+                # rename reaches both. apps/web/app/page.tsx is here because the landing page
+                # names the product; the admin dashboard deliberately does not, which is why
+                # apps/admin/app/page.tsx stays out (its diff invariance is asserted elsewhere).
+                "apps/admin/README.md",
+                "apps/admin/app/layout.tsx",
+                "apps/admin/app/opengraph-image.tsx",
+                "apps/admin/public/llms.txt",
                 "apps/web/README.md",
                 "apps/web/app/layout.tsx",
                 "apps/web/app/opengraph-image.tsx",
+                "apps/web/app/page.tsx",
                 "apps/web/public/llms.txt",
                 "contracts/openapi.json",
                 "services/api/README.md",

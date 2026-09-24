@@ -2443,4 +2443,34 @@ if [[ -f "$bazaar_seed" ]]; then
   fi
 fi
 
+# R-541: one prompt must deliver every app it asked for, and each app must look like itself.
+# Two regressions this guards: the admin console being declared but never assembled, and the
+# entity dashboard being served as the home page of a public, visitor-facing website.
+r541_tests="$repo_root/services/agent-engine/tests/test_admin_app_and_archetypes.py"
+if [[ ! -f "$r541_tests" ]]; then
+  printf 'R-541 the admin-app and archetype gate is required.\n'
+  exit 1
+fi
+for guard in test_a_site_with_an_admin_panel_assembles_both_apps_and_the_api \
+  test_an_admin_only_request_does_not_gain_a_public_website \
+  test_the_public_home_is_a_landing_page test_the_admin_home_is_the_dashboard \
+  test_the_public_home_is_valid_jsx test_the_run_plan_starts_the_admin_console_on_its_own_port; do
+  if ! rg -qF "$guard" "$r541_tests"; then
+    printf 'R-541 the admin-app gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# The adapter must stay registered: without it _plan_assembly silently drops every admin panel.
+if ! rg -qF 'registry.register(NextjsAdminAdapter())' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/assembler.py"; then
+  printf 'R-541 NextjsAdminAdapter must be registered in default_registry().\n'
+  exit 1
+fi
+# nl_to_ir must not force a public website back on just because an admin panel was requested.
+if rg -qF 'strat["web_strategy"] = "nextjs"' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/intake/nl_to_ir.py"; then
+  printf 'R-541 an admin-only request must not be rewritten into a public website.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

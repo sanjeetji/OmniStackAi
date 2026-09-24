@@ -64,6 +64,10 @@ class RunPlan:
     api_url: str
     web_url: str
     db_password: str
+    # R-541: a prompt-built project can now carry a staff console at apps/admin beside the public
+    # app. Defaulted so every existing caller and recorded plan stays valid.
+    has_admin: bool = False
+    admin_url: str = ""
     steps: tuple[RunStep, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict:
@@ -74,8 +78,10 @@ class RunPlan:
             "db_name": self.db_name,
             "backend_kind": self.backend_kind,
             "has_web": self.has_web,
+            "has_admin": self.has_admin,
             "api_url": self.api_url,
             "web_url": self.web_url,
+            "admin_url": self.admin_url,
             "steps": [step.to_dict(mask=mask) for step in self.steps],
         }
 
@@ -100,6 +106,7 @@ def build_run_plan(
     db_name: str | None = None,
     api_port: int = 8000,
     web_port: int = 3000,
+    admin_port: int = 3100,
     jwt_secret: str = "local-dev-secret",
     extra_env: Mapping[str, str] | None = None,
 ) -> RunPlan:
@@ -107,13 +114,16 @@ def build_run_plan(
     root = Path(repo_dir)
     api_dir = root / "services" / "api"
     web_dir = root / "apps" / "web"
+    admin_dir = root / "apps" / "admin"
     app_slug = _slug(root.name)
     database = db_name or app_slug
     backend_kind = _backend_kind(api_dir)
     has_web = (web_dir / "package.json").is_file()
+    has_admin = (admin_dir / "package.json").is_file()
 
     api_url = f"http://{db_host}:{api_port}"
     web_url = f"http://127.0.0.1:{web_port}"
+    admin_url = f"http://127.0.0.1:{admin_port}" if has_admin else ""
     database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{database}"
 
     extra_tuples = tuple((k, str(v)) for k, v in sorted(extra_env.items())) if extra_env else ()
@@ -231,6 +241,27 @@ def build_run_plan(
             )
         )
 
+    # --- admin console (R-541) — same shape as the web app, its own port ---
+    if has_admin:
+        steps.append(
+            RunStep(
+                label="install admin dependencies (pnpm)",
+                program="pnpm",
+                args=("install", "--ignore-scripts", "--ignore-workspace"),
+                cwd=str(admin_dir),
+            )
+        )
+        steps.append(
+            RunStep(
+                label=f"start admin console (next dev) on {admin_url}",
+                program="./node_modules/.bin/next",
+                args=("dev", "-p", str(admin_port)),
+                cwd=str(admin_dir),
+                env=(("NEXT_PUBLIC_API_URL", api_url),) + extra_tuples,
+                background=True,
+            )
+        )
+
     return RunPlan(
         repo_dir=str(root),
         app_slug=app_slug,
@@ -240,5 +271,7 @@ def build_run_plan(
         api_url=api_url,
         web_url=web_url,
         db_password=db_password,
+        has_admin=has_admin,
+        admin_url=admin_url,
         steps=tuple(steps),
     )

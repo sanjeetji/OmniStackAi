@@ -1,5 +1,60 @@
 # Work Log
 
+## 2026-09-24 — R-541 (the admin app that was always requested, and a home page per audience)
+
+- **The question that started it.** "If a user prompts *create a website to sell my product*, do
+  they get a proper site plus an admin panel, or one simple page?" Reading the code rather than
+  the docs gave an uncomfortable answer: neither.
+
+- **Defect 1 — the console was requested and silently dropped.** `nl_to_ir` line 355 has always
+  set `admin_strategy` to `"nextjs"` by default, so *every* prompt-built IR asked for an admin
+  panel. `_plan_assembly` then appended
+  `f"admin_strategy {...!r} is not assembled yet"` to `skipped` and moved on, because
+  `GenerationTarget.NEXTJS_ADMIN` was declared in the adapter contract with no adapter registered
+  for it. The only trace was a line in the generated README.
+
+- **Defect 2 — an admin-only request grew a website.** Because the console had nowhere to live,
+  `nl_to_ir` forced `web_strategy` back to `"nextjs"` whenever a panel was asked for, so the admin
+  UI could be smuggled into `apps/web`. A user asking for just a back-office got a public site too.
+
+- **Defect 3 — every app had the same home page.** `_overview_page` renders an entity dashboard
+  with live count cards. It was the home of every generated app. A storefront prompt returned an
+  internal console. `_detect_ui_archetype` was supposed to catch this, but it matches eight
+  keywords (`landing page`, `marketing website`, `ecommerce`, `online store`, …) and defaults to
+  `admin_panel` — and "a website to sell my product" matches none of them. It also only ever ran
+  on the model path; `nextjs.py` had no archetype awareness at all.
+
+- **The fix.** `NextjsAdminAdapter` implements the declared target as a thin flavour of the web
+  adapter (one `_flavour` attribute), so the console inherits the data layer, component library,
+  design tokens, auth and routes rather than duplicating 74k lines. `_plan_assembly` assembles
+  both apps with distinct package names. `_public_home_page` gives the visitor-facing app a
+  landing page as a hook-free server component. The assembler now *states* the archetype instead
+  of leaving it to be inferred; inference stays as the fallback for single-app builds and direct
+  callers.
+
+- **Making it runnable.** `build_run_plan` hard-coded `apps/web` and `services/api`; it now
+  discovers `apps/admin`, installs it and starts it on its own port, and the preview payload
+  carries `admin_url`. The `omnistack.json` route was the wrong mechanism here — its validator
+  demands a `package.json` for every listed app, which a Python or Go backend does not have.
+
+- **What the tests were encoding.** 19 failures and 55 errors after the change. The errors were
+  all one root cause: `SolutionPackRegistry` pins each pack's assembled targets and validates at
+  import, so `minimal-blog` failed the whole module tree with "assembled targets drifted". Its IR
+  had always declared the console — only the assembler was dropping it — so the pin was corrected
+  to three targets. The failures were tests asserting the dashboard from the *web* adapter; they
+  follow the dashboard to the admin console that now owns it, rather than being relaxed.
+
+- **Evidence.** Both apps written to disk from one IR and built with `next build`: exit 0 each,
+  public `/` statically prerendered at 165 B, admin `/` a 4.97 kB client dashboard. Both home
+  pages pass `clean_and_validate_jsx`, the same validator the engine applies to model-written
+  pages. 14 new offline tests; the whole project byte-identical across two assembly runs; the
+  admin dashboard keeps R-275's diff invariance. `task verify` 4,029 OK offline, 0 model calls;
+  `scripts/test.sh` passes with a new R-541 contract block; `go test ./...` 22 packages ok.
+
+- **Found, not fixed.** The console UI still renders a single preview app, so the admin console
+  runs and is in the user's repo but is not clickable in the Studio. Recorded as R-542, together
+  with the wider archetype family (storefront, blog, booking, directory) for both paths.
+
 ## 2026-09-24 — R-540 (catalogue audit; Bazaar rebuilt against its own API)
 
 - **The audit.** A single question asked of all three published templates: does each page actually

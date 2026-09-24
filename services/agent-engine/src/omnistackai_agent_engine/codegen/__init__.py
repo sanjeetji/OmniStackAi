@@ -50,6 +50,7 @@ from .hybrid_repair import (
     repair_compiled_files,
 )
 from .nextjs import (
+    NextjsAdminAdapter,
     NextjsWebAdapter,
     render_accordion_component,
     render_alert_component,
@@ -191,6 +192,7 @@ __all__ = [
     "HonoBackendAdapter",
     "InvalidGeneratedFileError",
     "MONOREPO_TARGET",
+    "NextjsAdminAdapter",
     "NextjsWebAdapter",
     "NodeBackendAdapter",
     "ExpressBackendAdapter",
