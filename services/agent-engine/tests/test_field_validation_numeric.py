@@ -1,3 +1,4 @@
+import re
 import ast
 from unittest import TestCase
 
@@ -82,10 +83,14 @@ class GoTagTests(TestCase):
             ),
         )
         models = GoBackendAdapter().generate(_ir(entity, backend=BackendStrategy.GO)).get("internal/models/models.go").content
-        self.assertIn('Name string `json:"name" validate:"max=80"`', models)
-        self.assertIn('Rating *float64 `json:"rating,omitempty" validate:"gte=0,lte=5"`', models)
+        # R-587: compared with runs of spaces squashed. Struct fields are now padded into
+        # columns so the output is gofmt-clean, and these assertions are about *what* is
+        # declared, not how it is spaced.
+        squashed = re.sub(r" +", " ", models)
+        self.assertIn('Name string `json:"name" validate:"max=80"`', squashed)
+        self.assertIn('Rating *float64 `json:"rating,omitempty" validate:"gte=0,lte=5"`', squashed)
         # a rule-free field keeps a plain json tag (no validate)
-        self.assertIn('Id string `json:"id"`', models)
+        self.assertIn('Id string `json:"id"`', re.sub(r" +", " ", models))
 
 
 class UnchangedWhenNoRulesTests(TestCase):

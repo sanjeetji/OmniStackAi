@@ -1,3 +1,4 @@
+import re
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -82,8 +83,12 @@ class GoBackendAdapterTests(TestCase):
         models = self.project.get("internal/models/models.go").content
         self.assertIn("package models", models)
         self.assertIn("type Driver struct {", models)
-        self.assertIn('Name string `json:"name"`', models)                         # required value type
-        self.assertIn('CreatedAt *time.Time `json:"created_at,omitempty"`', models)  # optional pointer
+        # R-587: compared with runs of spaces squashed. Struct fields are now padded into
+        # columns so the output is gofmt-clean, and these assertions are about *what* is
+        # declared, not how it is spaced.
+        squashed = re.sub(r" +", " ", models)
+        self.assertIn('Name string `json:"name"`', squashed)                         # required value type
+        self.assertIn('CreatedAt *time.Time `json:"created_at,omitempty"`', squashed)  # optional pointer
         self.assertIn('"time"', models)                                             # import when used
 
     def test_routes_grouped_and_registered(self) -> None:

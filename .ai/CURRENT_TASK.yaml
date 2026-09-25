@@ -1,44 +1,34 @@
-task_id: R-561
+task_id: R-587
 status: complete
 phase: MVP
-tracker_row: 28
+tracker_row: 29
 started_at: "2026-09-25"
 completed_at: "2026-09-25"
-branch: ai/R-561-verify-every-surface
+branch: ai/R-587-gofmt-clean
 objective: >-
-  R-560 type-checks `apps/web` and nothing else. A generated project also ships an admin console, a
-  React Native app and a backend, and none of them is ever compiled — by us or by any test.
-  Measured on a freshly generated project: `apps/admin` compiles cleanly, the Python backend parses,
-  and **the Go backend does not run at all**. It ships `go.mod` with no `go.sum`, its README tells
-  the user to run `go run .`, and that command fails immediately with "missing go.sum entry" for
-  every dependency. The preview does the same thing, so a Go backend is broken end to end — while
-  the Python path gets a virtualenv and a `pip install` step the Go path was never given.
-  Fix the Go backend, and extend verification to every surface so the next one cannot break in
-  silence. Nothing but `apps/web` has a model-written file, so a failure anywhere else is a fault in
-  our generator and is reported as one.
+  Generated Go is not gofmt-clean. `gofmt -l` names four files in a generated backend: struct fields
+  in `internal/models/models.go` are emitted with single spaces where gofmt aligns names, types and
+  tags into columns (18 lines), and three more files carry a stray blank line — one doubled between
+  functions and two at end of file (1 line each). 21 changed lines in all.
+  Nothing is broken: the backend compiles and vets clean. The cost is the first impression. Go
+  developers treat gofmt as the format, and an editor set to format on save rewrites a file they
+  never touched the moment they open the repository.
 founder_gate: >-
-  Founder on 2026-09-25: continue the roadmap in order; R-561 follows R-560.
+  Founder on 2026-09-25: finish R-587 first, then continue with R-562.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/
-  - services/agent-engine/src/omnistackai_agent_engine/verify/
   - services/agent-engine/tests/
-  - scripts/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - task verify stays offline with 0 model calls
-  - A build is never failed because a surface could not be verified
-  - Every skip states its reason, as in R-559 and R-560
-  - A surface with no model-written file is never rewritten; its failures are reported as ours
-  - No new dependency in a generated project
+  - The generated backend must still build and vet cleanly
+  - Output stays deterministic — one IR produces the same bytes twice
+  - No change to what the code does; this is formatting only
 required_gates:
-  - A generated Go backend starts from a clean checkout following its own README
-  - The admin console, the mobile app and the backend are each compiled when the toolchain allows
-  - A failure in any of them is attributed to the generator, not to the user
-  - Each surface reports its own outcome rather than one combined verdict
+  - "`gofmt -l` reports nothing for a generated Go backend"
+  - The backend still passes go build ./... and go vet ./...
+  - A gate keeps it that way, skipped rather than failed where Go is absent
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -48,19 +38,7 @@ blockers: []
 deferred: []
 found_and_fixed:
   - >-
-    Every generated Go backend was unable to start. It ships `go.mod` with no `go.sum`, and both
-    its README and the preview ran `go run .`, which fails immediately with "missing go.sum entry"
-    for every dependency. The Python branch of the run plan had created a virtualenv and installed
-    requirements since it was written; the Go branch never got an equivalent step.
-  - >-
-    `go mod download` is not enough and was the first fix attempted: the generated go.mod lists
-    direct requires only, so downloading the build list leaves the transitive ones missing and the
-    build fails with the same error. `go mod tidy` resolves them from the imports and writes
-    go.sum. Caught by running the README's own instructions against a real toolchain rather than
-    reasoning about them.
-deferred:
-  - >-
-    R-587: four generated Go files are not gofmt-clean (struct fields are emitted with single
-    spaces where gofmt aligns them in columns; 66 lines of diff across 4 files). Cosmetic, but a Go
-    developer's editor reformats on save and produces a diff on first open. Detected and reported
-    by this task's backend check as `unformatted`; fixing the generator is its own small task.
+    Three existing tests pinned the unaligned spacing (`'Name string `json:\"name\"`'`). They are
+    about *what* a struct declares, not how it is spaced, so they now compare with runs of spaces
+    squashed rather than being re-pinned to the new column widths — otherwise the next change to a
+    field name would break them again for no reason.

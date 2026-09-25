@@ -69,6 +69,26 @@ def _validated_entities(ir: ApplicationIR) -> frozenset[str]:
     )
 
 
+def _gofmt_tidy(generated: GeneratedFile) -> GeneratedFile:
+    """Apply the whitespace rules gofmt enforces, to a generated Go file.
+
+    Only two of them, because they are the two our emitters broke: a file ends with exactly one
+    newline after its last statement, and consecutive blank lines collapse to one. This is not a
+    formatter — the alignment gofmt does inside a struct is produced by the emitter that knows the
+    columns. It is the part that is purely about how lines were joined together.
+    """
+    if not generated.path.endswith(".go") or generated.base64_encoded:
+        return generated
+    out: list[str] = []
+    for line in generated.content.splitlines():
+        if not line.strip() and out and not out[-1].strip():
+            continue  # a second blank line in a row
+        out.append(line)
+    while out and not out[-1].strip():
+        out.pop()
+    return GeneratedFile(generated.path, "\n".join(out) + "\n")
+
+
 def _models_file(ir: ApplicationIR) -> str:
     needs_json = any(f.type is FieldType.JSON for e in ir.entities for f in e.fields)
     # R-502: audit timestamps always use time.Time, so always import "time" when entities exist.
@@ -90,20 +110,29 @@ def _models_file(ir: ApplicationIR) -> str:
     for entity in ir.entities:
         declared_names = {field.name for field in entity.fields}
         lines.append(f"type {entity.name} struct {{")
+        # R-587: collected first so the columns can be padded. gofmt aligns the names, types and
+        # tags of a contiguous run of fields, and emitting single spaces meant every generated
+        # backend arrived unformatted — an editor set to format on save rewrites the file the
+        # first time a Go developer opens it.
+        rows: list[tuple[str, str, str]] = []
         for field in entity.fields:
             go = _GO_TYPE[field.type]
             go_name = _pascal(field.name)
             tag = go_validate_tag(field, parse_field_rules(field))
             validate = f' validate:"{tag}"' if tag else ""
             if field.required:
-                lines.append(f'\t{go_name} {go} `json:"{field.name}"{validate}`')
+                rows.append((go_name, go, f'`json:"{field.name}"{validate}`'))
             else:
-                lines.append(f'\t{go_name} *{go} `json:"{field.name},omitempty"{validate}`')
+                rows.append((go_name, f"*{go}", f'`json:"{field.name},omitempty"{validate}`'))
         # R-502: audit timestamp fields — omitted if the IR already declares them.
         if "created_at" not in declared_names:
-            lines.append(f'\tCreatedAt time.Time `json:"created_at"`')
+            rows.append(("CreatedAt", "time.Time", '`json:"created_at"`'))
         if "updated_at" not in declared_names:
-            lines.append(f'\tUpdatedAt time.Time `json:"updated_at"`')
+            rows.append(("UpdatedAt", "time.Time", '`json:"updated_at"`'))
+        name_width = max((len(name) for name, _, _ in rows), default=0)
+        type_width = max((len(kind) for _, kind, _ in rows), default=0)
+        for name, kind, tag in rows:
+            lines.append(f"\t{name.ljust(name_width)} {kind.ljust(type_width)} {tag}")
         lines.append("}")
         lines.append("")
     return "\n".join(lines) + "\n"
@@ -472,4 +501,8 @@ class GoBackendAdapter:
         if ir.apis:
             files.append(GeneratedFile("openapi.json", render_openapi_json(ir)))
 
-        return GeneratedProject(self.target.value, tuple(files))
+        # R-587: normalise every .go file in one place rather than trusting each emitter to end
+        # cleanly. Four of them did not, and a Go developer's editor rewrites an unformatted file
+        # the first time they open it — on code they never touched. Doing it here means a future
+        # emitter cannot reintroduce the problem by forgetting.
+        return GeneratedProject(self.target.value, tuple(_gofmt_tidy(f) for f in files))

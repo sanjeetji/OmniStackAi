@@ -5,6 +5,8 @@
 - Phase 4: S3-Compatible File Uploads with FieldType.ATTACHMENT and storage env contracts.
 """
 
+import re
+
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -135,8 +137,12 @@ class TestPlatformFeatureCompletenessPhase2(TestCase):
         ir = _make_ir()
         proj = GoBackendAdapter().generate(ir)
         models_content = proj.get("internal/models/models.go").content
-        self.assertIn('CreatedAt time.Time `json:"created_at"`', models_content)
-        self.assertIn('UpdatedAt time.Time `json:"updated_at"`', models_content)
+        # R-587: compared with runs of spaces squashed. Struct fields are now padded into
+        # columns so the output is gofmt-clean, and these assertions are about *what* is
+        # declared, not how it is spaced.
+        squashed = re.sub(r" +", " ", models_content)
+        self.assertIn('CreatedAt time.Time `json:"created_at"`', squashed)
+        self.assertIn('UpdatedAt time.Time `json:"updated_at"`', squashed)
 
     def test_typescript_types_have_audit_timestamps(self) -> None:
         ir = _make_ir()
@@ -215,7 +221,8 @@ class TestPlatformFeatureCompletenessPhase4(TestCase):
         # Go maps to string
         go_proj = GoBackendAdapter().generate(ir)
         models_go = go_proj.get("internal/models/models.go").content
-        self.assertIn("Document *string `json:\"document,omitempty\"`", models_go)
+        # R-587: spaces squashed — the struct is padded into gofmt-clean columns now.
+        self.assertIn("Document *string `json:\"document,omitempty\"`", re.sub(r" +", " ", models_go))
 
     def test_storage_env_vars_in_all_templates(self) -> None:
         ir = _make_ir()

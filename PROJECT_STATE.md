@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-587 (2026-09-25): generated Go is gofmt-clean.**
+> `gofmt -l` named four files in every generated backend. Nothing was broken — it compiled and vetted cleanly — but a Go developer's editor rewrites an unformatted file on save, on code they never touched.
+> Struct fields are padded into columns by the emitter, which is the only thing that knows the widths; the stray blank lines are fixed centrally, so a future emitter cannot reintroduce them by forgetting.
+> **Correcting R-561's note:** "66 lines of diff" counted `gofmt -d` headers and context. The real change is 21 lines.
+> Two gates of different kinds: the real `gofmt`, skipped where Go is absent; and a text check of the columns so `task verify` still catches it without a toolchain. Both mutation-tested. A third asserts the code itself did not change — a formatting task that alters a declaration is not a formatting task.
+> Evidence: `gofmt -l` silent including on assorted field widths; `go build` and `go vet` clean; byte-identical across runs. 6 new tests; `task verify` 4,280 OK.
+
 > **R-561 (2026-09-25): every surface is compiled, not just the web app.**
 > R-560 checked `apps/web` alone, so the admin console, the mobile app and the backend were never built by anyone. The first measurement found that **a generated Go backend cannot start**: `go.mod` with no `go.sum`, and a README telling the user to run `go run .`, which fails on every dependency. The preview did the same; the Python branch had installed dependencies since it was written.
 > The first fix was wrong and running it said so — `go mod download` leaves the transitive requires missing. `go mod tidy` writes `go.sum`, and the backend now builds and vets clean from its own README.

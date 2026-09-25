@@ -183,7 +183,7 @@ after the first numbering and belong to Phase 2.
 | — | **React / Vite web adapter** | Not planned. Next.js is the one web stack; revisit only on real customer demand |
 | — | **Flutter adapter** | Not planned. Requests fall back to React Native with a stated reason (R-559) |
 | R-586 ✅ | **Make the CareClinic seed deterministic.** Its generator builds timestamps from `new Date()`, so the committed seed goes stale when the date rolls over and `task verify` fails every day. Found during R-559; confirmed on a clean checkout. | S | Do this next — it breaks the gate daily |
-| R-587 | **Make generated Go gofmt-clean.** Struct fields are emitted with single spaces where gofmt aligns them in columns — 66 lines of diff across 4 files. A Go developer's editor reformats on save. Found and reported by R-561's backend check. | S | Cosmetic, but it is a first impression |
+| R-587 ✅ | **Make generated Go gofmt-clean.** Struct fields are emitted with single spaces where gofmt aligns them in columns — 66 lines of diff across 4 files. A Go developer's editor reformats on save. Found and reported by R-561's backend check. | S | Cosmetic, but it is a first impression |
 | R-583 | Next.js **static export mode** — the cheap answer to "I don't want SSR or Vercel" | Optional; do this before ever considering a React adapter |
 | — | Multi-repo output, plan limits, `super_admin` area (Phase E) | After Phase 2 |
 
