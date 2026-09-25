@@ -848,6 +848,7 @@ export default function StudioChat({
         // R-557: only set when several apps were built, so an ordinary build renders nothing.
         ecosystemApps: finalResult.ecosystem_apps,
         ecosystemReason: finalResult.ecosystem_reason,
+        substitutions: finalResult.substitutions,
       });
       setPreviewVersion((v) => v + 1);
     } catch (err: unknown) {
@@ -931,6 +932,7 @@ export default function StudioChat({
         // rather than reading fields an edit response has no reason to hold.
         ecosystemApps: prev?.ecosystemApps,
         ecosystemReason: prev?.ecosystemReason,
+        substitutions: prev?.substitutions,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);
@@ -990,6 +992,7 @@ export default function StudioChat({
         // rather than reading fields an edit response has no reason to hold.
         ecosystemApps: prev?.ecosystemApps,
         ecosystemReason: prev?.ecosystemReason,
+        substitutions: prev?.substitutions,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);

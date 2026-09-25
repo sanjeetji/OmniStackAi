@@ -50,6 +50,10 @@ class AppBuildResult:
     #: `ecosystem_reason` is shown to the user, because "you got four apps" needs a because.
     ecosystem_apps: tuple[str, ...] = ()
     ecosystem_reason: str = ""
+    #: R-559: set when the requested stack had no adapter and the nearest supported one was built
+    #: instead. Carried to the console because "you asked for Flutter and this is React Native"
+    #: has to reach the person who asked, not only the generated README.
+    substitutions: tuple[dict, ...] = ()
 
 
 def build_app_from_ir(
@@ -98,7 +102,19 @@ def build_app_from_ir(
         context_truncated=context_truncated,
         active_skills=active_skills,
         truncated_skills=truncated_skills,
+        substitutions=_substitutions_for(ir),
     )
+
+
+def _substitutions_for(ir: ApplicationIR) -> tuple[dict, ...]:
+    """What the assembler substituted, from the same function the assembler used to decide it.
+
+    Deliberately not recomputed with its own rules: the console reporting one stack while the
+    repository on disk holds another is the failure mode this task exists to remove.
+    """
+    from ..codegen.capabilities import resolve_stack
+
+    return tuple(s.as_dict() for s in resolve_stack(ir.project_strategy).substitutions)
 
 
 def app_build_result_to_dict(
@@ -144,6 +160,8 @@ def app_build_result_to_dict(
             if result.ecosystem_apps
             else {}
         ),
+        # R-559: absent when nothing was substituted, so an ordinary build renders nothing extra.
+        **({"substitutions": [dict(s) for s in result.substitutions]} if result.substitutions else {}),
     }
     if ui_outcomes:
         payload["ui_outcomes"] = [outcome.to_dict() for outcome in ui_outcomes]
@@ -201,6 +219,7 @@ def build_ecosystem_from_plan(
         truncated_skills=truncated_skills,
         ecosystem_apps=tuple(directories),
         ecosystem_reason=reason,
+        substitutions=_substitutions_for(shared),
     )
 
 

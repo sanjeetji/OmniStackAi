@@ -160,6 +160,9 @@ export interface BuildJobResponse {
    * Absent for an ordinary single-app build, which is how the console knows to render nothing. */
   ecosystem_apps?: string[];
   ecosystem_reason?: string;
+  /** R-559: present only when the requested stack had no adapter and the nearest supported one was
+   * built instead. Absent on an ordinary build, so the console renders nothing extra. */
+  substitutions?: { layer: string; asked: string; built: string; reason: string }[];
   usage?: BuildJobUsage;
   credits_spent: number;
   credit_balance: number;

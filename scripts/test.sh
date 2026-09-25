@@ -2898,4 +2898,40 @@ if ! rg -qF '"allowJs": True' "$repo_root/services/agent-engine/src/omnistackai_
   exit 1
 fi
 
+# R-559: asking for a stack we cannot build used to return a different one in silence. Three of
+# four mobile profiles produced no app at all, and nl_to_ir told the model to pick one of them.
+r559_caps="$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/capabilities.py"
+if [[ ! -f "$r559_caps" ]]; then
+  printf 'R-559 the capability registry is required.\n'
+  exit 1
+fi
+r559_tests="$repo_root/services/agent-engine/tests/test_stack_substitution.py"
+for guard in test_every_mobile_profile_that_wants_an_app_builds_one \
+  test_supported_mobile_profiles_all_assemble \
+  test_supported_web_strategies_all_assemble \
+  test_flutter_stops_being_substituted_once_an_adapter_exists \
+  test_the_ir_still_records_the_original_request; do
+  if ! rg -qF "$guard" "$r559_tests"; then
+    printf 'R-559 the substitution gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# Support must be read from the registry. A literal list of unsupported stacks is the thing this
+# task exists to remove: it has to be found and corrected by whoever remembers it exists.
+if ! rg -qF 'registry.targets()' "$r559_caps"; then
+  printf 'R-559 support must be derived from the adapter registry, not declared.\n'
+  exit 1
+fi
+# Intake must not recommend a target with no adapter behind it.
+if rg -q "choose 'react_native' or 'flutter'" \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/intake/nl_to_ir.py"; then
+  printf 'R-559 intake must not offer a mobile framework that has no adapter.\n'
+  exit 1
+fi
+# Generated copy must never be able to inject markup into the console.
+if rg -qF 'dangerouslySetInnerHTML' "$repo_root/apps/console-web/app/studio/studio-workspace.tsx"; then
+  printf 'R-559 the substitution reason must be rendered as text, never as HTML.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

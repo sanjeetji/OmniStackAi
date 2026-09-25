@@ -76,7 +76,13 @@ class IntakeResult:
 def _system_instruction(example_name: str) -> str:
     template = json.dumps(example_ir(example_name).to_dict(), indent=2, sort_keys=True)
     field_types = ", ".join(t.value for t in FieldType)
-    mobile_profiles = ", ".join(m.value for m in MobileProfile)
+    # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming
+    # `flutter` here told the model to choose a profile the assembler then discarded, which is how
+    # the silent drop began. The enum keeps every value so an explicit request can still be
+    # recorded; the instruction below is what stops us recommending one.
+    from ..codegen.capabilities import offerable_mobile_profiles
+
+    mobile_profiles = ", ".join(offerable_mobile_profiles())
     web_strategies = ", ".join(w.value for w in WebStrategy)
     admin_strategies = ", ".join(a.value for a in AdminStrategy)
     backend_strategies = ", ".join(b.value for b in BackendStrategy)
@@ -121,7 +127,11 @@ def _system_instruction(example_name: str) -> str:
         "\n"
         "Project Strategy Rules:\n"
         "- In 'project_strategy', use only allowed canonical values:\n"
-        f"  * 'mobile_profile': {mobile_profiles} (choose 'react_native' or 'flutter' if the user requested a mobile app)\n"
+        f"  * 'mobile_profile': {mobile_profiles} (choose 'react_native' if the user requested a mobile\n"
+        "    app; it is the only mobile framework this platform generates today. If the user\n"
+        "    explicitly named a framework we do not generate, such as Flutter or native\n"
+        "    Swift/Kotlin, record what they asked for anyway — the build substitutes React Native\n"
+        "    and explains why, and keeping the request lets us rebuild it when that stack ships.)\n"
         f"  * 'web_strategy': {web_strategies}\n"
         f"  * 'admin_strategy': {admin_strategies} (choose 'nextjs' if the user requested an admin dashboard/panel)\n"
         f"  * 'backend_strategy': {backend_strategies} (choose 'go' if the user requested Go/golang; default to 'python')\n"

@@ -4,6 +4,15 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-559 (2026-09-25): ask for something we cannot build and get the nearest thing we can, with a reason.**
+> A Flutter, native or React-Native-for-Web request returned a Next.js site and an admin panel, silently. Of four mobile profiles only `react_native` emitted an app; **`flutter`, `native` and `auto` dropped it with no error** — and `nl_to_ir` told the model to pick `flutter`, so the likeliest path was a guaranteed silent drop.
+> The reasons already existed and were thrown away: `_plan_assembly` computed them and only the generated README ever read them.
+> `codegen/capabilities.py` substitutes instead of dropping, keeps the original request in the IR, and states in one plain sentence what was asked, what was built and that it still reaches both stores.
+> **Support is derived from the adapter registry, never declared.** Registering a Flutter adapter is the only change needed to make it real — asserted by a test that registers a stand-in adapter and watches the substitution stop.
+> **A bug in this task's own first draft, caught by its own gate:** mapping `rn_web` to the registered React Native target reported it as supported, no substitution fired, and the build produced **zero apps** — worse than the drop being fixed. Anything reported as supported must now survive a real assembly.
+> Evidence: all four app-wanting profiles assemble a real Expo app on disk; the reason reaches payload, console and README; a supported stack produces no note; `tsc --noEmit` clean; 15 new offline tests.
+> **Found, not fixed (outside path scope):** the CareClinic seed generator uses `new Date()`, so `task verify` fails every day once the date rolls over. Recorded as R-586.
+
 > **R-558 (2026-09-24): the deterministic pages use the design system they ship with.**
 > The project carried 59 colour tokens, a type scale, six shadows and seven motion tokens, and the pages used almost none of them: `--shadow-*` 0, `--transition-*` 0, `--font-size-*` 0, `--space-*` 0, 26 hardcoded pixels, **zero hover or focus states**.
 > Part of that was structural, not taste: **inline React styles cannot express `:hover`, `:focus-visible` or a media query at all**, so tuning inline values could never have produced an interface that responds to a cursor. A real scoped stylesheet is emitted with the page, built from the shipped tokens so a rebrand moves the shadows and motion too.

@@ -43,6 +43,18 @@ export interface WorkspaceSnapshot {
    * single-app build — a user who received four directories should not have to guess. */
   ecosystemApps?: string[];
   ecosystemReason?: string;
+  /** R-559: what was asked for, what was built instead, and why. Present only when the requested
+   * stack had no adapter — a user who asked for a Flutter app and received React Native should
+   * read the reason here rather than discover it in the repository. */
+  substitutions?: StackSubstitution[];
+}
+
+/** R-559: one substituted layer of the stack. Mirrors the agent-engine's `Substitution`. */
+export interface StackSubstitution {
+  layer: string;
+  asked: string;
+  built: string;
+  reason: string;
 }
 
 const MAX_ENTITY_BADGES = 8;
@@ -198,6 +210,22 @@ export function StudioWorkspace({
                 {snapshot.ecosystemReason}
               </p>
             ) : null}
+          </div>
+        ) : null}
+        {snapshot.substitutions && snapshot.substitutions.length > 0 ? (
+          <div className="mt-3 rounded-lg border border-border/60 bg-muted/40 p-3">
+            <p className="text-xs font-medium text-foreground">
+              Built with a different stack than you asked for
+            </p>
+            <ul aria-label="Stack substitutions" className="mt-1.5 space-y-1.5">
+              {snapshot.substitutions.map((substitution) => (
+                // Keyed by layer: one substitution per layer of the stack, so it is unique.
+                <li key={substitution.layer} className="text-pretty text-xs text-muted-foreground">
+                  {/* Text, never HTML — same rule as the ecosystem reason above. */}
+                  {substitution.reason}
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
       </div>

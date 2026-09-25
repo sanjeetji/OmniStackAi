@@ -1,9 +1,9 @@
 task_id: R-559
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 25
 started_at: "2026-09-25"
-completed_at: null
+completed_at: "2026-09-25"
 branch: ai/R-559-substitute-and-explain
 objective: >-
   Asking for something we cannot build returns something else, silently. A prompt for a Flutter app,
@@ -52,7 +52,24 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-blockers: []
+blockers:
+  - >-
+    Not caused by this task and not fixed in it (templates/ is outside this task's path scope):
+    `test_the_committed_seed_came_from_this_generator` fails on any day after the CareClinic seed
+    was committed. `templates/catalog/care-clinic/.../generate-seed.mjs` builds timestamps from
+    `new Date()`, so the regenerated seed stops matching the committed one when the date rolls
+    over. It passed on 2026-09-24 and fails on 2026-09-25 with no code change in between --
+    confirmed by running it on a clean checkout. This makes `task verify` fail every day until the
+    generator takes a fixed reference date. Recorded as R-586.
 deferred:
   - "R-562 (an app means an app): the ecosystem planner forces mobile_profile=none on every planned app, so a role that asked for an app still gets a website. Substitution cannot fix that; the planner has to ask for a mobile surface in the first place."
-found_and_fixed: []
+found_and_fixed:
+  - >-
+    Found in the first draft of this task's own capability table, by the gate written for it:
+    mapping `rn_web` onto the React Native target reported react-native-web as *supported*,
+    because that adapter is registered -- it just renders a phone app, not a web page. No
+    substitution fired, `_plan_assembly` lays out only Next.js, and the result was a project with
+    **zero apps** -- worse than the silent drop being fixed. Flutter-for-web carried the same trap
+    for the day a Flutter mobile adapter is registered. Both now map to an empty target set, and
+    `SupportedMeansItActuallyAssembles` asserts that anything reported as supported survives a
+    real assembly.

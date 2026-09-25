@@ -16,6 +16,7 @@ from dataclasses import dataclass, replace
 from ..application_ir import ApplicationIR, BackendStrategy, BrandTokens, MobileProfile, WebStrategy
 from ..model_gateway import ModelProvider
 from .adapter import AdapterRegistry, GenerationTarget
+from .capabilities import Substitution, resolve_stack
 from .brand_project import brand_files
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
@@ -181,7 +182,12 @@ def _prefixed(project: GeneratedProject, directory: str) -> list[GeneratedFile]:
     ]
 
 
-def _root_readme(ir: ApplicationIR, apps: list[AssembledApp], skipped: list[str]) -> str:
+def _root_readme(
+    ir: ApplicationIR,
+    apps: list[AssembledApp],
+    skipped: list[str],
+    substitutions: tuple[Substitution, ...] = (),
+) -> str:
     lines = [
         f"# {ir.name}",
         "",
@@ -199,6 +205,12 @@ def _root_readme(ir: ApplicationIR, apps: list[AssembledApp], skipped: list[str]
         lines.append("## API Contracts")
         lines.append("")
         lines.append("- **OpenAPI 3.1** — `contracts/openapi.json`")
+    if substitutions:
+        lines.append("")
+        lines.append("## What was built instead of what you asked for")
+        lines.append("")
+        for note in substitutions:
+            lines.append(f"- {note.reason}")
     if skipped:
         lines.append("")
         lines.append("## Not yet assembled")
@@ -209,12 +221,20 @@ def _root_readme(ir: ApplicationIR, apps: list[AssembledApp], skipped: list[str]
     return "\n".join(lines) + "\n"
 
 
-def _plan_assembly(ir: ApplicationIR) -> tuple[list[AssembledApp], list[str]]:
-    """Decide which apps the IR assembles and where — the single source of the monorepo layout."""
+def _plan_assembly(
+    ir: ApplicationIR, registry: AdapterRegistry | None = None
+) -> tuple[list[AssembledApp], list[str], tuple[Substitution, ...]]:
+    """Decide which apps the IR assembles and where — the single source of the monorepo layout.
+
+    R-559: the strategy is resolved through `capabilities.resolve_stack` first, so a request for a
+    stack with no adapter is *substituted* rather than dropped. `ir.project_strategy` keeps the
+    original request; only the layout decision below uses the resolved one.
+    """
 
     apps: list[AssembledApp] = []
     skipped: list[str] = []
-    strategy = ir.project_strategy
+    plan = resolve_stack(ir.project_strategy, registry)
+    strategy = plan.strategy
 
     wants_admin = strategy.admin_strategy.value == "nextjs"
 
@@ -243,7 +263,7 @@ def _plan_assembly(ir: ApplicationIR) -> tuple[list[AssembledApp], list[str]]:
         apps.append(AssembledApp("mobile (React Native)", "apps/mobile", GenerationTarget.REACT_NATIVE.value))
     elif strategy.mobile_profile.value != "none":
         skipped.append(f"mobile_profile {strategy.mobile_profile.value!r} is not assembled yet")
-    return apps, skipped
+    return apps, skipped, plan.substitutions
 
 
 def assembled_targets(ir: ApplicationIR, registry: AdapterRegistry | None = None) -> tuple[AssembledApp, ...]:
@@ -255,7 +275,7 @@ def assembled_targets(ir: ApplicationIR, registry: AdapterRegistry | None = None
 
     if not isinstance(ir, ApplicationIR):
         raise TypeError("assembled_targets expects an ApplicationIR")
-    apps, _ = _plan_assembly(ir)
+    apps, _, _ = _plan_assembly(ir, registry)
     return tuple(apps)
 
 
@@ -289,7 +309,7 @@ def assemble_project(
         if derived != BrandTokens():
             ir = replace(ir, brand=derived)
 
-    apps, skipped = _plan_assembly(ir)
+    apps, skipped, substitutions = _plan_assembly(ir, registry)
     files: list[GeneratedFile] = []
     for app in apps:
         adapter = registry.get(app.target)
@@ -314,7 +334,7 @@ def assemble_project(
     if any(app.target.startswith("nextjs") or app.target == "react-native" for app in apps):
         files.extend(brand_files(ir, _slug(ir.name)))
 
-    files.append(GeneratedFile("README.md", _root_readme(ir, apps, skipped)))
+    files.append(GeneratedFile("README.md", _root_readme(ir, apps, skipped, substitutions)))
     files.append(GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv/\n__pycache__/\nbin/\n.env\n"))
     # R-549: `pnpm run brand` regenerates what cannot be derived while a page renders — the icons.
     if any(app.target.startswith("nextjs") or app.target == "react-native" for app in apps):
