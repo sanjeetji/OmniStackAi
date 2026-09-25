@@ -2934,4 +2934,30 @@ if rg -qF 'dangerouslySetInnerHTML' "$repo_root/apps/console-web/app/studio/stud
   exit 1
 fi
 
+# R-560: nothing in the console's build path ever compiled what it generated, which is how R-549's
+# non-compiling lib/brand.ts shipped in every generated web app for nine tasks.
+r560_verify="$repo_root/services/agent-engine/src/omnistackai_agent_engine/intake/build_verify.py"
+if [[ ! -f "$r560_verify" ]]; then
+  printf 'R-560 build verification is required.\n'
+  exit 1
+fi
+r560_tests="$repo_root/services/agent-engine/tests/test_build_verification.py"
+for guard in test_every_build_entry_point_is_verified \
+  test_it_says_why_rather_than_saying_nothing \
+  test_a_misnamed_cache_is_refused_rather_than_trusted \
+  test_a_generator_failure_is_named_as_ours; do
+  if ! rg -qF "$guard" "$r560_tests"; then
+    printf 'R-560 the build-verification gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# Every path that builds a repository must be verified. The ecosystem builder does not go through
+# build_app_from_ir, and wiring only that seam left every multi-app project unchecked.
+for entry in build_app_from_ir build_ecosystem_from_plan; do
+  if ! rg -qF 'verify_and_repair_build' "$repo_root/services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py"; then
+    printf 'R-560 %s must verify what it built.\n' "$entry"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

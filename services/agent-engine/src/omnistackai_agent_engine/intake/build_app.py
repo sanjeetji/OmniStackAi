@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..application_ir import ApplicationIR
 from ..codegen import assemble_project
 from ..git_service import create_repository
 from ..model_gateway import ModelProvider
+from .build_verify import verify_and_repair_build
 from .ecosystem_intent import detect_ecosystem_intent
 from .nl_to_ir import (
     DEFAULT_MAX_OUTPUT_TOKENS,
@@ -54,6 +55,10 @@ class AppBuildResult:
     #: instead. Carried to the console because "you asked for Flutter and this is React Native"
     #: has to reach the person who asked, not only the generated README.
     substitutions: tuple[dict, ...] = ()
+    #: R-560: what happened when the generated web app was type-checked — clean, repaired, reverted
+    #: or skipped with a reason. Always present, because "we did not check this, and here is why" is
+    #: a different message from saying nothing.
+    verification: dict = field(default_factory=dict)
 
 
 def build_app_from_ir(
@@ -93,12 +98,27 @@ def build_app_from_ir(
         commit_message=f"Initial commit: {ir.name}",
         overwrite=overwrite,
     )
+    # R-560: the one seam. Both build twins and the ecosystem builder reach this function, so
+    # verification cannot be wired into the sibling the console does not call — which is exactly
+    # how R-555's ecosystem branch came to be live-broken while its tests passed.
+    verification = verify_and_repair_build(
+        target_dir=repo.target_dir,
+        ir=ir,
+        prompt=prompt,
+        provider=provider,
+        model_id=model_id,
+        synthesize_screens=synthesize_screens,
+        author_name=author_name,
+        author_email=author_email,
+        outcomes=ui_outcomes,
+    )
     return AppBuildResult(
         prompt=prompt,
         ir=ir,
         target_dir=repo.target_dir,
         file_count=repo.file_count,
         commit_sha=repo.commit_sha,
+        verification=verification,
         context_truncated=context_truncated,
         active_skills=active_skills,
         truncated_skills=truncated_skills,
@@ -162,6 +182,10 @@ def app_build_result_to_dict(
         ),
         # R-559: absent when nothing was substituted, so an ordinary build renders nothing extra.
         **({"substitutions": [dict(s) for s in result.substitutions]} if result.substitutions else {}),
+        # R-560: always present, unlike the two above. A build that was not type-checked has to say
+        # so; silence would read as "checked and fine", which is the impression that let a
+        # non-compiling app ship for nine tasks.
+        **({"verification": dict(result.verification)} if result.verification else {}),
     }
     if ui_outcomes:
         payload["ui_outcomes"] = [outcome.to_dict() for outcome in ui_outcomes]
@@ -208,12 +232,25 @@ def build_ecosystem_from_plan(
         directory = surface_directory(app.surface.kind, taken)
         taken.add(directory)
         directories.append(directory)
+    # R-560: an ecosystem build does not pass through `build_app_from_ir`, so wiring verification
+    # only there would have left every multi-app project unchecked — the same shape as R-555, where
+    # the branch was wired into the twin the console does not call. The gate in
+    # test_build_verification.py found this within a minute of being written.
+    verification = verify_and_repair_build(
+        target_dir=repo.target_dir,
+        ir=shared,
+        prompt=prompt,
+        provider=provider,
+        author_name=author_name,
+        author_email=author_email,
+    )
     return AppBuildResult(
         prompt=prompt,
         ir=shared,
         target_dir=repo.target_dir,
         file_count=repo.file_count,
         commit_sha=repo.commit_sha,
+        verification=verification,
         context_truncated=context_truncated,
         active_skills=active_skills,
         truncated_skills=truncated_skills,

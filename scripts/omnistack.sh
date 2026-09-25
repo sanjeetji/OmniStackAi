@@ -151,6 +151,42 @@ ollama_model() {
 
 # R-552: every address a person might need, printed the same way by `start` and by `status`.
 # Two copies of this drifted apart before; one function cannot.
+# Keep one installed node_modules for generated web apps, so build-time type-checking is free.
+# Exported for the studio through the environment, which is where verify_and_repair_build reads it.
+warm_web_modules() {
+  # The directory has to be *named* node_modules. TypeScript resolves through a symlink's real
+  # path, and nested lookups only recognise a directory by that name -- so a cache called anything
+  # else makes `next`'s own types unresolvable and reports invented errors in correct code. That is
+  # worse than not checking at all, and it took an A/B of two identical caches to see it.
+  local cache="${OMNISTACKAI_WEB_NODE_MODULES:-$HOME/.omnistackai/web-typecheck/node_modules}"
+  if [[ -x "$cache/.bin/tsc" ]]; then
+    export OMNISTACKAI_WEB_NODE_MODULES="$cache"
+    return 0
+  fi
+  if ! command -v pnpm >/dev/null 2>&1; then
+    warn "pnpm not found - generated code will not be type-checked at build time"
+    return 0
+  fi
+  step "Warming the type-checker (one install, shared by every generated project)"
+  local work
+  work="$(mktemp -d)"
+  if ! bash "$repo_root/scripts/agent-engine.sh" emit-web-package "$work" >/dev/null 2>&1; then
+    warn "could not prepare the type-check cache - builds will report as not type-checked"
+    rm -rf "$work"
+    return 0
+  fi
+  if (cd "$work" && pnpm install --ignore-scripts --ignore-workspace >/dev/null 2>&1); then
+    mkdir -p "$(dirname "$cache")"
+    rm -rf "$cache"
+    mv "$work/node_modules" "$cache"
+    export OMNISTACKAI_WEB_NODE_MODULES="$cache"
+    ok "type-checker ready ($cache)"
+  else
+    warn "type-check cache install failed - builds will report as not type-checked"
+  fi
+  rm -rf "$work"
+}
+
 print_endpoints() {
   local lan; lan="$(lan_address)"
   log ""
@@ -371,6 +407,12 @@ cmd_up() {
   else
     die "control-plane did not become healthy on :$CONTROL_PLANE_PORT - see: docker compose logs control-plane"
   fi
+
+  # R-560: the build path type-checks generated code, which needs node_modules. Installing per
+  # build would add minutes to a path someone is watching, so one warm install is shared by every
+  # project and linked in instantly. Without this the platform runs, builds, and honestly reports
+  # every project as "not type-checked" -- correct, but not the point of having the check.
+  warm_web_modules
 
   step "Agent-engine Studio"
   if service_pid studio >/dev/null; then

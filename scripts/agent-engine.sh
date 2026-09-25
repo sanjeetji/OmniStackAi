@@ -213,6 +213,25 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     export OMNISTACKAI_POSTGRES_DB="$(config_value OMNISTACKAI_POSTGRES_DB omnistackai)"
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.localrun.run "${2:-}"
     ;;
+  emit-web-package)
+    # R-560: write just the generated web app's package.json into a directory, so one `pnpm install`
+    # can warm a node_modules that every generated project links to. The whole app is not needed --
+    # the dependency set is what an install reads, and emitting one file keeps the warm-up honest
+    # about what it is installing.
+    out="${2:?usage: agent-engine.sh emit-web-package <dir>}"
+    mkdir -p "$out"
+    PYTHONPATH="$source_root" python3 - "$out" <<'PYEOF'
+import json, sys, pathlib
+from omnistackai_agent_engine.application_ir import example_ir
+from omnistackai_agent_engine.codegen.assembler import assemble_project
+
+files = {f.path: f for f in assemble_project(example_ir("minimal-blog")).files()}
+package = files["apps/web/package.json"].content
+pathlib.Path(sys.argv[1], "package.json").write_text(package, encoding="utf-8")
+print(len(json.loads(package).get("dependencies", {})), "dependencies")
+PYEOF
+    ;;
+
   web-typecheck)
     # Opt-in/live gate: generate an example app and TypeScript-typecheck its web target.
     # Needs the toolchain (pnpm + tsc); never run by `task verify`.

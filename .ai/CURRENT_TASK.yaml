@@ -1,9 +1,9 @@
 task_id: R-560
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 27
 started_at: "2026-09-25"
-completed_at: null
+completed_at: "2026-09-25"
 branch: ai/R-560-verify-the-build
 objective: >-
   Nothing in the console's build path ever compiles what it generates. The compile-verify-repair
@@ -47,4 +47,17 @@ model_tool_trace:
 blockers: []
 deferred:
   - "R-561 extends verification beyond model-written files to deterministic files, the backend and the mobile app; this task keeps hybrid_repair's existing scope."
-found_and_fixed: []
+found_and_fixed:
+  - >-
+    `build_ecosystem_from_plan` assembles and commits by itself rather than going through
+    `build_app_from_ir`, so wiring verification into that seam alone would have left every
+    multi-app project unchecked -- the same shape as R-555, where the branch was wired into the
+    twin the console does not call. The gate written for this task found it within a minute.
+  - >-
+    The warm node_modules cache must be a directory *named* `node_modules`. TypeScript resolves
+    through a symlink's real path and nested lookups only recognise that name, so a cache called
+    anything else makes `next`'s own types unresolvable and tsc reports implicit-any errors in code
+    that compiles perfectly. This task's first cache was called `web-node-modules` and reported a
+    correct generated page as broken; an A/B of two byte-identical caches was the only way to see
+    it. Inventing errors in correct code is worse than checking nothing, so a misnamed source is
+    now refused with a reason rather than trusted.

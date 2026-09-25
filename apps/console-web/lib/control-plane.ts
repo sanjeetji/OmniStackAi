@@ -163,6 +163,13 @@ export interface BuildJobResponse {
   /** R-559: present only when the requested stack had no adapter and the nearest supported one was
    * built instead. Absent on an ordinary build, so the console renders nothing extra. */
   substitutions?: { layer: string; asked: string; built: string; reason: string }[];
+  /** R-560: present on every build — the outcome of type-checking the generated code. */
+  verification?: {
+    status: "clean" | "repaired" | "failing" | "skipped";
+    summary?: string;
+    reason?: string;
+    generator_failures?: string[];
+  };
   usage?: BuildJobUsage;
   credits_spent: number;
   credit_balance: number;

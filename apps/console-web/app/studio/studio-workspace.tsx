@@ -47,6 +47,18 @@ export interface WorkspaceSnapshot {
    * stack had no adapter — a user who asked for a Flutter app and received React Native should
    * read the reason here rather than discover it in the repository. */
   substitutions?: StackSubstitution[];
+  /** R-560: what happened when the generated code was type-checked. Unlike the fields above this
+   * is present on every build, because "we did not check this, and here is why" is a different
+   * message from saying nothing. */
+  verification?: BuildVerification;
+}
+
+/** R-560: the outcome of compiling the generated web app. Mirrors the agent-engine's record. */
+export interface BuildVerification {
+  status: "clean" | "repaired" | "failing" | "skipped";
+  summary?: string;
+  reason?: string;
+  generator_failures?: string[];
 }
 
 /** R-559: one substituted layer of the stack. Mirrors the agent-engine's `Substitution`. */
@@ -210,6 +222,23 @@ export function StudioWorkspace({
                 {snapshot.ecosystemReason}
               </p>
             ) : null}
+          </div>
+        ) : null}
+        {snapshot.verification ? (
+          <div className="mt-3 rounded-lg border border-border/60 bg-muted/40 p-3">
+            <p className="text-xs font-medium text-foreground">
+              {snapshot.verification.status === "clean"
+                ? "Type-checked"
+                : snapshot.verification.status === "repaired"
+                  ? "Type-checked and repaired"
+                  : snapshot.verification.status === "failing"
+                    ? "Type-check found problems"
+                    : "Not type-checked"}
+            </p>
+            {/* Text, never HTML: generated copy has no reason to inject markup into the console. */}
+            <p className="mt-1 text-pretty text-xs text-muted-foreground">
+              {snapshot.verification.summary || snapshot.verification.reason}
+            </p>
           </div>
         ) : null}
         {snapshot.substitutions && snapshot.substitutions.length > 0 ? (

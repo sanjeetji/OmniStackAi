@@ -849,6 +849,7 @@ export default function StudioChat({
         ecosystemApps: finalResult.ecosystem_apps,
         ecosystemReason: finalResult.ecosystem_reason,
         substitutions: finalResult.substitutions,
+        verification: finalResult.verification,
       });
       setPreviewVersion((v) => v + 1);
     } catch (err: unknown) {
@@ -933,6 +934,7 @@ export default function StudioChat({
         ecosystemApps: prev?.ecosystemApps,
         ecosystemReason: prev?.ecosystemReason,
         substitutions: prev?.substitutions,
+        verification: prev?.verification,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);
@@ -993,6 +995,7 @@ export default function StudioChat({
         ecosystemApps: prev?.ecosystemApps,
         ecosystemReason: prev?.ecosystemReason,
         substitutions: prev?.substitutions,
+        verification: prev?.verification,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);

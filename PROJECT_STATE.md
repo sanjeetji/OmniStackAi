@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-560 (2026-09-25): the build path compiles what it generated.**
+> The compile-verify-repair loop has worked since R-466; its only caller was an opt-in CLI, so a console build reached none of it — which is how R-549's non-compiling `lib/brand.ts` shipped in **every generated web app for nine tasks**.
+> It now runs on the path every build shares. A build is never *failed* by verification, skipping is never silent, and dependencies are warmed once by `omnistack.sh` rather than installed per build.
+> Whose fault it is comes first: the loop only rewrites what a model wrote, so a failing deterministic file is reported as a **generator failure** — our bug in every project from that template. Reintroducing R-549's directive returns exactly that, naming `lib/brand.ts`.
+> **Two defects found by this task's own gates:** `build_ecosystem_from_plan` bypasses `build_app_from_ir`, so every multi-app project would have gone unverified (the R-555 shape again); and the warm cache must be a directory *named* `node_modules` — TypeScript resolves through the symlink's real path, so a cache named anything else made `next`'s types unresolvable and reported `TS7006` in code that compiles. A misnamed cache is now refused, because inventing errors is worse than checking nothing.
+> Evidence: a warm cache links instantly and reports clean; R-549's defect reproduces as a named generator failure; builds without a provider or toolchain still succeed and say why. 13 new offline tests, 0 model calls; `task verify` 4,268 OK.
+
 > **R-586 (2026-09-25): the CareClinic seed generator stops reading the clock.**
 > It called itself deterministic and was not. Every date came from `new Date()`, so the committed seed stopped matching a fresh run once the date rolled over — the same test passed on the 24th and failed on the 25th with no code change — and **`task verify` failed every day**, making every later task's evidence unreliable.
 > Dates are now anchored to a fixed Monday, so the file is byte-identical on every run and in every timezone, and the seed moves the whole demo onto today when it loads. The stale-seed test is an exact hash again.
