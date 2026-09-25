@@ -1,63 +1,49 @@
-task_id: R-560
-status: complete
+task_id: R-561
+status: in_progress
 phase: MVP
-tracker_row: 27
+tracker_row: 28
 started_at: "2026-09-25"
-completed_at: "2026-09-25"
-branch: ai/R-560-verify-the-build
+completed_at: null
+branch: ai/R-561-verify-every-surface
 objective: >-
-  Nothing in the console's build path ever compiles what it generates. The compile-verify-repair
-  loop exists and works — `codegen/hybrid_repair.compile_and_repair` runs `tsc`, feeds each
-  model-written file's own errors back to the model, recompiles, and reverts what still fails — but
-  its only caller is an opt-in CLI (`task agent-engine:ui:synthesize`). A user building through the
-  console gets none of it.
-  That is why R-549's `@ts-expect-error` shipped in every generated web app for nine tasks: the
-  product never built what it wrote. Run the same sequence the CLI already proves, on the path both
-  build twins share, and report the outcome to the user instead of printing it to a terminal
-  nobody is watching.
+  R-560 type-checks `apps/web` and nothing else. A generated project also ships an admin console, a
+  React Native app and a backend, and none of them is ever compiled — by us or by any test.
+  Measured on a freshly generated project: `apps/admin` compiles cleanly, the Python backend parses,
+  and **the Go backend does not run at all**. It ships `go.mod` with no `go.sum`, its README tells
+  the user to run `go run .`, and that command fails immediately with "missing go.sum entry" for
+  every dependency. The preview does the same thing, so a Go backend is broken end to end — while
+  the Python path gets a virtualenv and a `pip install` step the Go path was never given.
+  Fix the Go backend, and extend verification to every surface so the next one cannot break in
+  silence. Nothing but `apps/web` has a model-written file, so a failure anywhere else is a fault in
+  our generator and is reported as one.
 founder_gate: >-
-  Founder on 2026-09-25: continue the roadmap in order; R-560 is next after R-586.
+  Founder on 2026-09-25: continue the roadmap in order; R-561 follows R-560.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/intake/
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/
   - services/agent-engine/src/omnistackai_agent_engine/verify/
   - services/agent-engine/tests/
-  - apps/console-web/
   - scripts/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - task verify stays offline with 0 model calls; these tests use injected fake runners only
-  - A build must never be blocked or failed by verification being unavailable
-  - Skipping is never silent: the reason reaches the user, as with R-559's substitutions
-  - One seam only; both build twins and the ecosystem builder must go through the same function
-  - Deterministic files are never rewritten by the repair loop
-  - No secrets in the reported output
+  - task verify stays offline with 0 model calls
+  - A build is never failed because a surface could not be verified
+  - Every skip states its reason, as in R-559 and R-560
+  - A surface with no model-written file is never rewritten; its failures are reported as ours
+  - No new dependency in a generated project
 required_gates:
-  - The console's build path verifies the generated project when it can
-  - A build with no toolchain still succeeds and says why it was not verified
-  - The outcome (clean, repaired, reverted, skipped) reaches the build payload and the console
-  - Repairs land in the repository as their own commit
-  - The streaming twin the console actually calls is covered, not only its sibling
+  - A generated Go backend starts from a clean checkout following its own README
+  - The admin console, the mobile app and the backend are each compiled when the toolchain allows
+  - A failure in any of them is attributed to the generator, not to the user
+  - Each surface reports its own outcome rather than one combined verdict
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "R-561 extends verification beyond model-written files to deterministic files, the backend and the mobile app; this task keeps hybrid_repair's existing scope."
-found_and_fixed:
-  - >-
-    `build_ecosystem_from_plan` assembles and commits by itself rather than going through
-    `build_app_from_ir`, so wiring verification into that seam alone would have left every
-    multi-app project unchecked -- the same shape as R-555, where the branch was wired into the
-    twin the console does not call. The gate written for this task found it within a minute.
-  - >-
-    The warm node_modules cache must be a directory *named* `node_modules`. TypeScript resolves
-    through a symlink's real path and nested lookups only recognise that name, so a cache called
-    anything else makes `next`'s own types unresolvable and tsc reports implicit-any errors in code
-    that compiles perfectly. This task's first cache was called `web-node-modules` and reported a
-    correct generated page as broken; an A/B of two byte-identical caches was the only way to see
-    it. Inventing errors in correct code is worse than checking nothing, so a misnamed source is
-    now refused with a reason rather than trusted.
+deferred: []
+found_and_fixed: []
