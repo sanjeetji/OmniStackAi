@@ -396,7 +396,7 @@ def _go_sort_whitelist_block(cols: list[str]) -> str:
     )
 
 
-def _go_entity_store(entity: Entity, slug: str) -> str:
+def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
     pascal = entity.name
@@ -537,6 +537,7 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "\treturn id, err\n"
         "}\n\n"
         + _go_update(entity, table, pascal, col_list, scan_targets)
+        + _go_set_field(table, pascal, col_list, scan_targets, workflow)
         + f"func Delete{pascal}(ctx context.Context, db *sql.DB, id string) (bool, error) {{\n"
         f"\tres, err := db.ExecContext(ctx, `DELETE FROM {sql_table} WHERE {sql_identifier('id')} = $1`, id)\n"
         "\tif err != nil {\n\t\treturn false, err\n\t}\n"
@@ -548,6 +549,32 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "\treturn count, err\n"
         "}\n\n"
         + _go_filtered_lists(entity, table, col_list, scan_targets, cols)
+    )
+
+
+def _go_set_field(table: str, pascal: str, col_list: str, scan_targets: str, workflow) -> str:
+    """R-589: a transition writes one column.
+
+    `Update<Entity>` writes every column from a full model, so a transition passing only the new
+    state would blank the rest of the row — the same reason the Python backend got `set_<table>_<field>`
+    in R-566. Returns the row so a caller can see the result.
+    """
+    if workflow is None:
+        return ""
+    field_pascal = _pascal(workflow.field)
+    sql = (
+        f"`UPDATE {sql_identifier(table)} SET {sql_identifier(workflow.field)} = $1 "
+        f"WHERE {sql_identifier('id')} = $2 RETURNING {col_list}`"
+    )
+    return (
+        f"func Set{pascal}{field_pascal}(ctx context.Context, db *sql.DB, id string, value string) (*models.{pascal}, error) {{\n"
+        # `m`, because the shared scan targets name `m` — the mismatch that broke Update above.
+        f"\tvar m models.{pascal}\n"
+        f"\terr := db.QueryRowContext(ctx, {sql}, value, id).Scan({scan_targets})\n"
+        "\tif err == sql.ErrNoRows {\n\t\treturn nil, nil\n\t}\n"
+        "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
+        "\treturn &m, nil\n"
+        "}\n\n"
     )
 
 
@@ -571,12 +598,15 @@ def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targ
             f"id).Scan({scan_targets})"
         )
     return (
+        # R-589: this returned `&out`, a struct declared and never written — the RETURNING row is
+        # scanned into `m` — so every PATCH/PUT in every generated Go backend answered with a
+        # blank record while the database held the right one. Found by compiling a sibling
+        # function built on the same scaffold.
         f"func Update{pascal}(ctx context.Context, db *sql.DB, id string, m models.{pascal}) (*models.{pascal}, error) {{\n"
-        f"\tvar out models.{pascal}\n"
         f"\terr := {scan_call}\n"
         "\tif err == sql.ErrNoRows {\n\t\treturn nil, nil\n\t}\n"
         "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
-        "\treturn &out, nil\n"
+        "\treturn &m, nil\n"
         "}\n\n"
     )
 
@@ -700,5 +730,10 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
 def go_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, str]]:
     files: list[tuple[str, str]] = [("internal/store/store.go", _go_store(slug))]
     for entity in ir.entities:
-        files.append((f"internal/store/{table_name(entity.name)}.go", _go_entity_store(entity, slug)))
+        files.append(
+            (
+                f"internal/store/{table_name(entity.name)}.go",
+                _go_entity_store(entity, slug, _workflows_by_entity(ir).get(entity.name)),
+            )
+        )
     return files

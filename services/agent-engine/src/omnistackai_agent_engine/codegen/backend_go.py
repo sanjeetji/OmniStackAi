@@ -18,6 +18,7 @@ from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
 from .openapi import render_openapi_json
+from .workflow_routes import transition_routes
 from .route_wiring import Op, fk_relations, wire_endpoint
 from .schema_sql import render_postgres_schema
 from .seed_sql import render_postgres_seed
@@ -48,6 +49,11 @@ def _segment(path: str) -> str:
 def _pascal(value: str) -> str:
     # Uppercase the first letter of each part but preserve internal casing (driverId -> DriverId).
     return "".join(part[:1].upper() + part[1:] for part in re.split(r"[^A-Za-z0-9]+", value) if part)
+
+
+def _transition_handler_name(route) -> str:
+    """`PublishPost`: the transition then the entity, matching how CRUD handlers are named."""
+    return f"{_pascal(route.transition.name)}{route.workflow.entity}"
 
 
 def _handler_name(method: str, path: str) -> str:
@@ -229,11 +235,12 @@ def _handlers_file_wired(
     fk_by_entity: dict[str, tuple[str, ...]] | None = None,
     validated_entities: frozenset[str] = frozenset(),
     filtered_entities: frozenset[str] = frozenset(),
+    transitions: tuple = (),
 ) -> str:
     """Handlers as methods on *Handlers; unambiguous CRUD calls the store, the rest stay 501."""
 
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
-    uses_store = any(w is not None for _, w in wirings)
+    uses_store = any(w is not None for _, w in wirings) or bool(transitions)
     uses_models = any(w is not None and w.op in (Op.CREATE, Op.UPDATE) for _, w in wirings)
     uses_lists = any(w is not None and w.op in (Op.LIST, Op.LIST_BY) for _, w in wirings)
 
@@ -331,10 +338,31 @@ def _handlers_file_wired(
             lines.append("\tw.WriteHeader(http.StatusNoContent)")
         lines.append("}")
         lines.append("")
+
+    # R-589: the lifecycle transitions, refused here rather than merely hidden in the interface —
+    # the same rule the Python backend applies. Go's guard is middleware at the route (see main.go),
+    # so this handler enforces the from-state and leaves the role to RequireRoles.
+    for route in transitions:
+        allowed = route.transition.sources or route.workflow.states
+        field_pascal = _pascal(route.workflow.field)
+        allowed_go = ", ".join(f'"{state}"' for state in allowed)
+        lines.append(f"func (h *Handlers) {_transition_handler_name(route)}(w http.ResponseWriter, r *http.Request) {{")
+        lines.append(f'\titem, err := store.Get{route.workflow.entity}(r.Context(), h.DB, r.PathValue("{route.id_param}"))')
+        lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+        lines.append("\tif item == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
+        lines.append(f"\tallowed := map[string]bool{{{', '.join(f'{s}: true' for s in allowed_go.split(', '))}}}")
+        lines.append(f"\tif !allowed[item.{field_pascal}] {{")
+        lines.append(f'\t\thttp.Error(w, "cannot {route.transition.name} from "+item.{field_pascal}+"; allowed from: {", ".join(allowed)}", http.StatusConflict)')
+        lines.append("\t\treturn\n\t}")
+        lines.append(f'\tupdated, err := store.Set{route.workflow.entity}{field_pascal}(r.Context(), h.DB, r.PathValue("{route.id_param}"), "{route.transition.to}")')
+        lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+        lines.append("\twriteJSON(w, http.StatusOK, updated)")
+        lines.append("}")
+        lines.append("")
     return "\n".join(lines) + "\n"
 
 
-def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False) -> str:
+def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = ()) -> str:
     lines = ["package main", "", "import ("]
     lines.append('\t"log"')
     lines.append('\t"net/http"')
@@ -387,6 +415,13 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False) -> s
         elif api.auth:
             target = f"handlers.RequireAuth({target})"
         lines.append(f'\tmux.HandleFunc("{api.method.value} {api.path}", {target})')
+    # R-589: transition routes, role-guarded at the route like every other handler.
+    for route in transitions:
+        target = f"h.{_transition_handler_name(route)}"
+        if route.roles:
+            role_args = ", ".join(f'"{role}"' for role in route.roles)
+            target = f"handlers.RequireRoles({target}, {role_args})"
+        lines.append(f'\tmux.HandleFunc("POST {route.path}", {target})')
     lines.append('\tport := os.Getenv("PORT")')
     lines.append('\tif port == "" {')
     lines.append('\t\tport = "8080"')
@@ -452,7 +487,7 @@ class GoBackendAdapter:
         env_example += "STORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\nSTORAGE_ACCESS_KEY=minioadmin\nSTORAGE_SECRET_KEY=minioadmin\n"
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
-            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db)),
+            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else ())),
             GeneratedFile("internal/models/models.go", _models_file(ir)),
             GeneratedFile(".gitignore", "/bin/\n*.exe\n.env\n"),
             GeneratedFile(".env.example", env_example),
@@ -484,7 +519,10 @@ class GoBackendAdapter:
             files.append(GeneratedFile("internal/handlers/handlers.go", _handlers_shared_file(has_filters)))
         for segment in sorted(by_segment):
             content = (
-                _handlers_file_wired(by_segment[segment], repo_entities, slug, fk_by_entity, validated_entities, filtered_entities)
+                _handlers_file_wired(
+                    by_segment[segment], repo_entities, slug, fk_by_entity, validated_entities, filtered_entities,
+                    tuple(r for r in transition_routes(ir) if r.path.strip('/').split('/')[0] == segment),
+                )
                 if has_db
                 else _handlers_file(by_segment[segment])
             )

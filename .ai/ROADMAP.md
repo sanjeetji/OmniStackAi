@@ -143,7 +143,8 @@ after the first numbering and belong to Phase 2.
 | R-565 ✅ | **Stack selection as first-class IR**: the chosen web/admin/mobile/backend stack is carried, honoured, or refused with a reason | M | Makes §3 real instead of advisory |
 | R-566 ✅ | **Workflows and state machines** — order lifecycle, dispatch, approval chains | L | The single biggest unlock for delivery/logistics/commerce |
 | R-588 ✅ | **Transitions in the contract and the typed client.** Derived from the same place as the handlers. | S | A capability half-reachable is half-delivered |
-| R-589 | **Transitions for the Go and Node backends.** They emit the 501 scaffold; a user who chose Go gets a lifecycle that does not run. | M | Stack parity |
+| R-589 ✅ | **Transitions for the Go and Node backends.** They emit the 501 scaffold; a user who chose Go gets a lifecycle that does not run. | M | Stack parity |
+| R-591 | **Login and register for the Go backend.** It verifies tokens and never issues one, so a Go app with auth has no way for a real user to sign in apart from a dev bypass. | M | A backend option you cannot log into is not an option |
 | R-590 | **Transitions as actions on the generated screens**, so a lifecycle is operable from a page rather than only from the API. The page generator is ~74k lines and intent-based. | M | The user-visible half |
 | R-567 | **Money** — ledgers, payments, payouts, refunds, commission | L | Templates already prove the shape (Bazaar's double-entry ledger) |
 | R-568 | **Background jobs and scheduling** | M | Settlements, reminders, cleanup |

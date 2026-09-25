@@ -123,7 +123,14 @@ class GoUpdateStoreTests(TestCase):
         project = GoBackendAdapter().generate(_ir_go(_RULE_FREE_LISTING, _PATCH))
         store = project.get("internal/store/listing.go").content
         self.assertIn("*models.Listing, error", store)
-        self.assertIn("return &out, nil", store)
+        # R-589: this used to assert `return &out, nil` — the exact line that returned a struct
+        # declared and never written, so every PATCH answered with a blank record. The test pinned
+        # the defect as the expected behaviour. It now asserts the row that was scanned is the row
+        # that is returned.
+        body = store[store.index("func UpdateListing("):]
+        body = body[: body.index("\n}\n")]
+        self.assertIn("return &m, nil", body)
+        self.assertNotIn("var out", body)
 
 
 class GoUpdateHandlerTests(TestCase):

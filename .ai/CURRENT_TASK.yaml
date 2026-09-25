@@ -1,23 +1,14 @@
-task_id: R-588
+task_id: R-589
 status: complete
 phase: MVP
-tracker_row: 36
+tracker_row: 37
 started_at: "2026-09-26"
 completed_at: "2026-09-26"
-branch: ai/R-588-workflow-surface
+branch: ai/R-589-go-node-transitions
 objective: >-
-  R-566 generated working transition handlers and stopped there. The OpenAPI contract described an
-  API without them, and the typed client had no function to call one, so a lifecycle existed in the
-  backend and nothing outside it could reach it. An endpoint nobody can call is not far from one
-  that does not exist.
-  The contract now documents every transition — the path, the states it is allowed from, the role
-  it requires, and a 409 for a legal request from an illegal state — and the typed client gains a
-  function per transition, exported beside the CRUD ones. All three come from the one derivation
-  the handlers already used, so they cannot describe different endpoints.
-  Scoped down while doing it, and recorded rather than implied: Go and Node still emit the 501
-  scaffold for transitions, and the deterministic screens do not yet offer them as actions. Each
-  is a careful job of its own — the page generator is ~74k lines and intent-based — and doing
-  three things half-way is the failure this repository keeps meeting.
+  R-566 implemented lifecycle transitions for the Python backend. Go and Node emitted the 501
+  scaffold for them, so a user who chose Go got a lifecycle that did not run. Each backend now
+  enforces the same two rules — the role and the from-state — and writes only the lifecycle column.
 founder_gate: >-
   Founder on 2026-09-26: do all of them, one by one.
 allowed_paths:
@@ -27,15 +18,14 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - The handler, the contract and the client name the same endpoint, from one derivation
-  - A project with no workflow gains nothing in its contract or its client
-  - The generated TypeScript still compiles
+  - Every backend refuses a transition for the wrong role and from the wrong state
+  - A transition writes only the lifecycle column
+  - Generated Go stays gofmt-clean and builds
+  - A project without a workflow is unchanged
   - task verify stays offline with 0 model calls
 required_gates:
-  - Every transition is in the OpenAPI contract with its allowed states, role and 409
-  - The typed client has a function per transition, exported on the api object
-  - The generated web app typechecks with the new functions in it
-  - A project with no workflow is unchanged
+  - Go and Node (both Express and Hono) generate working transitions
+  - Each is verified by running the generated server against PostgreSQL
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -43,6 +33,15 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - "R-589: transitions for the Go and Node backends. They emit the existing 501 scaffold, which is visible rather than silent, but a user who chose Go gets a lifecycle that does not run."
-  - "R-590: transitions as actions on the generated screens, so the lifecycle is operable from a page rather than only from the API."
-found_and_fixed: []
+  - "R-591: the generated Go backend verifies tokens but never issues one. There is no login or register endpoint, so a Go app with auth has no way for a real user to sign in apart from a dev bypass. Found while testing role guards; it is a feature of its own, not a fix to this task."
+found_and_fixed:
+  - >-
+    `Update<Entity>` in every generated Go backend returned a blank record. It declared `var out`,
+    scanned the RETURNING row into `m`, and returned `&out` — never written. So every PATCH/PUT
+    answered with empty fields while the database held the right row. Found because the new setter,
+    built on the same scaffold, hit the same mismatch the other way round and failed to compile.
+    Proven fixed over HTTP: a PATCH now returns the edited title and the real id.
+  - >-
+    An existing test pinned that bug as the expected behaviour — it asserted `return &out, nil`,
+    the exact line returning the blank struct. The R-549 pattern again: a test asserting on text
+    where the text was the defect. It now asserts the scanned row is the returned row.

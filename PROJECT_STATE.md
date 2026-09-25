@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-589 (2026-09-26): a lifecycle runs on every backend, not only the default one.**
+> Go and Node emitted a 501 for transitions, so choosing Go meant a lifecycle that did not run. Both now enforce role and from-state and write only the lifecycle column.
+> Proven by running each server against PostgreSQL with directly signed tokens: Go and Node each refuse a reader 403, refuse an author from draft 409 with the allowed states, and move the row to live from review.
+> **An older Go bug surfaced:** `Update<Entity>` returned `&out`, never written — every PATCH/PUT in every Go backend answered with a blank record. **An existing test pinned it as correct**, asserting the very line that returned the blank struct. Both fixed; a PATCH now returns the edited row.
+> Recorded (R-591): the Go backend verifies tokens but never issues one — no login or register — so a real user cannot sign in.
+> 10 new tests; `task verify` 4,421 OK.
+
 > **R-588 (2026-09-26): a transition is describable and callable, not only implemented.**
 > R-566 generated the handlers and stopped; the contract described an API without them and the client had no function to call one. An endpoint nobody can call is close to one that does not exist.
 > The contract now carries each transition with its allowed states, role and a 409; the client gains a function per transition, exported beside the CRUD ones. All three derive from one place, so they cannot name different endpoints.
