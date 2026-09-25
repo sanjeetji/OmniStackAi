@@ -101,7 +101,7 @@ class TestBuildIntakeMessages(unittest.TestCase):
         messages = build_intake_messages("Build a blog")
         system = messages[0].content
         # The template embeds a real example IR shape, incl. the pinned schema version.
-        self.assertIn('"schema_version": 1', system)
+        self.assertIn('"schema_version": 2', system)
         self.assertIn('"entities"', system)
         self.assertIn("JSON", system)
 
@@ -141,7 +141,7 @@ class TestParseIrResponse(unittest.TestCase):
     def test_schema_version_injected_when_missing(self) -> None:
         without_version = {k: v for k, v in VALID_IR_DICT.items() if k != "schema_version"}
         ir = parse_ir_response(json.dumps(without_version))
-        self.assertEqual(ir.schema_version, 1)
+        self.assertEqual(ir.schema_version, 2)
 
     def test_non_json_rejected(self) -> None:
         with self.assertRaises(IntakeResponseError):

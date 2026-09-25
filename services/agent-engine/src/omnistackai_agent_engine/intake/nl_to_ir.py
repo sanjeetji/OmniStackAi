@@ -74,7 +74,16 @@ class IntakeResult:
 
 
 def _system_instruction(example_name: str) -> str:
-    template = json.dumps(example_ir(example_name).to_dict(), indent=2, sort_keys=True)
+    # R-564: while no capability kind is implemented, the example does not show `capabilities` at
+    # all. Showing an empty list invites the model to fill it, and a capability nothing can build
+    # would be accepted and then quietly dropped — the failure R-559 removed for stacks. The key
+    # reappears here by itself the moment a kind is registered as implemented.
+    from ..application_ir.capability import CAPABILITY_KINDS
+
+    _template_ir = example_ir(example_name).to_dict()
+    if not CAPABILITY_KINDS.implemented():
+        _template_ir.pop("capabilities", None)
+    template = json.dumps(_template_ir, indent=2, sort_keys=True)
     field_types = ", ".join(t.value for t in FieldType)
     # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming
     # `flutter` here told the model to choose a profile the assembler then discarded, which is how

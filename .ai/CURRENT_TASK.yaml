@@ -1,9 +1,9 @@
 task_id: R-564
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 32
 started_at: "2026-09-25"
-completed_at: null
+completed_at: "2026-09-25"
 branch: ai/R-564-ir-v2-core
 objective: >-
   The IR models entities, fields, relations, CRUD, screens and roles, and nothing else. Workflows,
@@ -46,4 +46,15 @@ model_tool_trace:
 blockers: []
 deferred:
   - "The concrete kinds — workflows (R-565/566), money (R-567), jobs (R-568), realtime (R-569), permissions (R-570) and the escape hatch (R-571) — each register themselves and generate code. This task ships the frame and no implemented kind, so intake deliberately keeps quiet about capabilities until the first one lands."
-found_and_fixed: []
+found_and_fixed:
+  - >-
+    Solution Pack digests are SHA-256 over `ir.to_dict()`, so a schema change moves every one of
+    them at once and the registry refused to load with "IR digest drifted; create a new pack
+    version". That advice is for a pack author changing a pack, not for a platform migration every
+    pack goes through together, so the two pinned digests were re-pinned with the reason recorded
+    beside them.
+  - >-
+    The intake template showed the model `"capabilities": []`. An empty list is an invitation to
+    fill it, and a capability nothing can build would have been accepted and then dropped — the
+    failure R-559 removed for stacks. The key is now omitted while no kind is implemented, and it
+    returns on its own when one is registered, rather than depending on somebody remembering.

@@ -364,7 +364,11 @@ MINIMAL_BLOG_PACK = SolutionPack(
         "web",
     ),
     example_ir_ref="minimal-blog",
-    ir_sha256="85d1275232bef36601ed13ffd614f7a98c5ec13399824800f4bcad348c2bba67",
+    # R-564: re-pinned for IR schema version 2. The pack's content did not change — the IR
+    # serialises with a `capabilities` list and a new version number, so the digest moves. The
+    # registry's "create a new pack version" advice is for a pack author changing a pack, not
+    # for a platform schema migration that every pack goes through at once.
+    ir_sha256="5ddfe4139018ae580392e4e80174eaa12b0241ed7873f56939ab9ead46362402",
     # R-541: the IR has always declared admin_strategy "nextjs"; until the admin adapter existed
     # the assembler dropped it, so the pin recorded two targets. The pack now assembles the
     # console its own IR asks for. The IR itself is unchanged (ir_sha256 still matches).
@@ -385,7 +389,7 @@ RIDESHARE_FAVOURITES_PACK = SolutionPack(
         "web",
     ),
     example_ir_ref="rideshare-favourites",
-    ir_sha256="1693cb999955fa2ea8210e054b001982abc493e782ee7ac2f49aec8356f932ff",
+    ir_sha256="9507388e113d430e7cdb091e1484d718e8a9325d154fc77621f3849b83933198",  # R-564: see above
     targets=("nextjs-web", "backend-go"),
 )
 

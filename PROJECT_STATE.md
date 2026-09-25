@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-564 (2026-09-25): the IR can describe what a product does, and older projects still open.**
+> The IR was entities, fields, relations, CRUD, screens and roles — a database with pages over it. `wire_endpoint` matches six CRUD shapes and drops the rest, so an order lifecycle, a ledger, a nightly job and row-level permissions had nowhere to be written down. That is the "maximum features" ceiling, and it lived in the data model.
+> `capability.py` adds the frame Phase 2 fills: a record and a registry that keeps **declared** apart from **implemented** — because `GenerationTarget` declared FLUTTER with nothing behind it and produced a website in silence until R-559. A kind must be registered with the code that builds it, and this task ships the registry **empty**.
+> **The migration mattered more than the feature.** Every project since R-563 has an `ir.json`, and `from_dict` rejected anything but version 1. Version 1 is now upgraded on read — at read time, because a migration that only runs during an upgrade is one that did not happen for somebody. A future version is still refused with its reason.
+> Found: pack digests are SHA-256 over `to_dict()`, so a schema change moves all of them at once (re-pinned, content unchanged); and the intake template was showing the model an empty `capabilities` list, inviting it to fill a field nothing could build.
+> Evidence: a hand-written v1 workspace `ir.json` still loads and upgrades; capabilities round-trip; unregistered kinds, duplicate names and future versions are each refused. 14 new tests; `task verify` 4,328 OK.
+
 > **R-563 (2026-09-25): a multi-app project can be changed after it is built.**
 > An edit to a five-app platform reached the backend and **not one of the apps** — and reported success. The union IR *is* saved, so nothing errored; `plan_edit` assembles with `assemble_project`, and the union carries no screens by design, so all five changes landed under `services/api` and `contracts/`.
 > **The task's own premise was wrong and was corrected first:** the console already persists to the workspace store — verified by loading `ir.json` back from a fresh instance. The in-memory LRU serves only the standalone Studio's legacy build-id path.

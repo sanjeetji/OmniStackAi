@@ -13,9 +13,18 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from .capability import Capability, parse_capabilities
 from .errors import InvalidIRError, UnsupportedIRVersionError
 
-IR_SCHEMA_VERSION = 1
+#: R-564: version 2 adds `capabilities`. Version 1 documents are migrated on read rather than
+#: rejected — every project saved before this change has an `ir.json` on disk (R-563), and bumping
+#: the number without a migration would make every one of them unopenable.
+IR_SCHEMA_VERSION = 2
+
+#: Versions this build can read. Anything older is upgraded by `_migrate`; anything newer is
+#: refused, because a document written by a later engine may mean things this one would
+#: misinterpret, and guessing is worse than saying so.
+READABLE_IR_SCHEMA_VERSIONS = (1, 2)
 
 _IDENT = re.compile(r"^[a-z][a-z0-9_]*$")
 _ENTITY_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
@@ -629,6 +638,25 @@ class BrandTokens:
         )
 
 
+def _migrate(data: dict[str, Any], version: int) -> dict[str, Any]:
+    """Bring an older IR document up to the current schema.
+
+    Read-time rather than a one-off rewrite of everything on disk: a project may be opened by a
+    build that has not run since it was written, and a migration that only happens during an
+    upgrade script is a migration that did not happen for somebody.
+
+    Version 1 -> 2 adds `capabilities`, and every version 1 project has none by definition: the
+    concept did not exist when it was written.
+    """
+    if version >= IR_SCHEMA_VERSION:
+        return data
+    upgraded = dict(data)
+    if version < 2:
+        upgraded.setdefault("capabilities", [])
+    upgraded["schema_version"] = IR_SCHEMA_VERSION
+    return upgraded
+
+
 @dataclass(frozen=True, slots=True)
 class ApplicationIR:
     name: str
@@ -642,13 +670,20 @@ class ApplicationIR:
     acceptance_criteria: tuple[AcceptanceCriterion, ...] = ()
     fixtures: tuple[Fixture, ...] = ()
     brand: BrandTokens = field(default_factory=BrandTokens)
+    #: R-564: what this product does beyond storing rows. Empty for everything built so far, and
+    #: for every version 1 document read back.
+    capabilities: tuple[Capability, ...] = ()
     schema_version: int = IR_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         if self.schema_version != IR_SCHEMA_VERSION:
             raise UnsupportedIRVersionError(
-                f"unsupported IR schema version {self.schema_version}; expected {IR_SCHEMA_VERSION}"
+                f"unsupported IR schema version {self.schema_version}; expected {IR_SCHEMA_VERSION}. "
+                "Read the document through ApplicationIR.from_dict, which migrates older versions."
             )
+        if not isinstance(self.capabilities, tuple):
+            raise InvalidIRError("capabilities must be a tuple")
+        _require_unique((c.name for c in self.capabilities), "capability names")
         _text(self.name, "application name", 128)
         _text(self.description, "application description", 4000)
         if not isinstance(self.platforms, tuple) or not self.platforms:
@@ -691,6 +726,7 @@ class ApplicationIR:
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
             "schema_version": self.schema_version,
+            "capabilities": [c.to_dict() for c in self.capabilities],
             "name": self.name,
             "description": self.description,
             "platforms": [p.value for p in self.platforms],
@@ -711,10 +747,12 @@ class ApplicationIR:
         if not isinstance(data, dict):
             raise InvalidIRError("IR document must be a mapping")
         version = data.get("schema_version")
-        if version != IR_SCHEMA_VERSION:
+        if version not in READABLE_IR_SCHEMA_VERSIONS:
             raise UnsupportedIRVersionError(
-                f"unsupported IR schema version {version!r}; expected {IR_SCHEMA_VERSION}"
+                f"unsupported IR schema version {version!r}; this build reads "
+                f"{', '.join(str(v) for v in READABLE_IR_SCHEMA_VERSIONS)}"
             )
+        data = _migrate(data, int(version))
         try:
             return cls(
                 name=data["name"],
@@ -767,7 +805,8 @@ class ApplicationIR:
                     for fx in data.get("fixtures", ())
                 ),
                 brand=BrandTokens.from_dict(data["brand"]) if "brand" in data else BrandTokens(),
-                schema_version=version,
+                schema_version=IR_SCHEMA_VERSION,
+                capabilities=parse_capabilities(data.get("capabilities")),
             )
         except (KeyError, TypeError) as error:
             raise InvalidIRError(f"IR document is structurally invalid: {error}") from error
