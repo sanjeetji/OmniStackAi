@@ -1,60 +1,43 @@
-task_id: R-564
-status: complete
+task_id: R-565
+status: in_progress
 phase: MVP
-tracker_row: 32
+tracker_row: 33
 started_at: "2026-09-25"
-completed_at: "2026-09-25"
-branch: ai/R-564-ir-v2-core
+completed_at: null
+branch: ai/R-565-stack-in-ecosystems
 objective: >-
-  The IR models entities, fields, relations, CRUD, screens and roles, and nothing else. Workflows,
-  ledgers, scheduled jobs, realtime channels and row-level permissions cannot be written down at
-  all, so no model — however good — can produce them: `route_wiring.wire_endpoint` returns `None`
-  for anything that is not one of six CRUD shapes, and the endpoint is dropped. That is the
-  "maximum features" ceiling, and it is in the data model rather than in the prompt.
-  This task builds the frame the rest of Phase 2 fills: a capability layer on the IR, a registry of
-  kinds that distinguishes what is implemented from what is merely declared, schema version 2, and
-  a migration that keeps every existing project loadable.
-  The migration is the hard part. `from_dict` currently rejects any version that is not exactly 1,
-  and R-563 means every user's project has an `ir.json` on disk. Bumping the number without
-  migrating would make every existing project unopenable and uneditable.
+  An ecosystem build ignores the backend language the user asked for. `surface_to_ir` hardcodes
+  `BackendStrategy.PYTHON` for every surface, so "a logistics platform with drivers and dispatchers
+  and the backend should be in Go language" produces a Python backend and says nothing. The
+  single-app path honours it — `nl_to_ir` tells the model to choose Go when asked — so the same
+  sentence gets a different answer depending on how many apps the prompt implies.
+  Rescoped after checking: R-565's other claims are already true. R-559 made the stack carried in
+  the IR, honoured where implemented, and explained where not; verified for a round-trip, a Go
+  backend that really generates `go.mod`, and a Flutter request that returns React Native with a
+  reason. This task is the one part that was not: the ecosystem planner.
 founder_gate: >-
-  Founder on 2026-09-25: continue with Phase 2.
+  Founder on 2026-09-25: work through the tasks in the order that suits.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/
   - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/tests/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - A project saved before this change still loads, and stays editable
-  - No capability is silently dropped; intake does not offer what cannot be built
-  - A capability kind is registered, never hardcoded in the IR core
+  - The default stays Python when the prompt says nothing
+  - The decision is deterministic — the same prompt gives the same backend twice
+  - One backend per ecosystem; the surfaces do not each pick their own
   - task verify stays offline with 0 model calls
 required_gates:
-  - An ir.json written at schema version 1 loads and round-trips
-  - A workspace saved before this change is still editable afterwards
-  - Capabilities survive a save and load unchanged
-  - An unknown or future schema version is refused with a reason
-  - An unregistered capability kind is refused rather than accepted and ignored
-  - Intake does not offer capability kinds while none is implemented
+  - A prompt asking for Go produces a Go backend in an ecosystem build
+  - The same for Node, and Python remains the default
+  - The single-app path is unchanged
+  - A prompt mentioning a language in passing does not change the backend
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "The concrete kinds — workflows (R-565/566), money (R-567), jobs (R-568), realtime (R-569), permissions (R-570) and the escape hatch (R-571) — each register themselves and generate code. This task ships the frame and no implemented kind, so intake deliberately keeps quiet about capabilities until the first one lands."
-found_and_fixed:
-  - >-
-    Solution Pack digests are SHA-256 over `ir.to_dict()`, so a schema change moves every one of
-    them at once and the registry refused to load with "IR digest drifted; create a new pack
-    version". That advice is for a pack author changing a pack, not for a platform migration every
-    pack goes through together, so the two pinned digests were re-pinned with the reason recorded
-    beside them.
-  - >-
-    The intake template showed the model `"capabilities": []`. An empty list is an invitation to
-    fill it, and a capability nothing can build would have been accepted and then dropped — the
-    failure R-559 removed for stacks. The key is now omitted while no kind is implemented, and it
-    returns on its own when one is registered, rather than depending on somebody remembering.
+deferred: []
+found_and_fixed: []
