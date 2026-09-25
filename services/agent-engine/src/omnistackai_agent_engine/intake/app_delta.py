@@ -29,6 +29,7 @@ from ..application_ir import (
     validate_ir,
 )
 from ..application_ir.errors import ApplicationIRError
+from . import ir_changes
 from ..application_ir.validate import has_errors
 from ..model_gateway import ChatRole, GenerateRequest, Message, ModelProvider, ModelRef
 from .context import assemble_context
@@ -66,20 +67,62 @@ _SENSITIVE_FIELD_NAMES = frozenset({
 _ALLOWED_RELATIONS = frozenset(member.value for member in RelationKind)
 _ALLOWED_FIELD_TYPES = frozenset(member.value for member in FieldType)
 _ALLOWED_HTTP_METHODS = frozenset(member.value for member in HttpMethod)
-_VALID_PROPOSAL_KEYS = frozenset({"entities", "apis", "screens", "rationale"})
+_VALID_PROPOSAL_KEYS = frozenset({"entities", "apis", "screens", "rationale", "changes"})
 
 
 class AppDeltaError(Exception):
     """Raised when a follow-up delta proposal is malformed, invalid, or collides with the base IR."""
 
 
+#: R-584: how many things one edit may change. Bounded for the same reason the additions are —
+#: a follow-up that rewrites half an application is not an edit, and an unbounded list of removals
+#: is the shape of a very bad afternoon.
+MAX_DELTA_CHANGES = 12
+
+
+@dataclass(frozen=True, slots=True)
+class IrChange:
+    """One change to something that already exists (R-584).
+
+    `op` is the name of a function in `ir_changes`. Keeping the operation as data rather than as a
+    branch means the reply can say what an edit will do — including that it destroys data — before
+    anything is applied.
+    """
+
+    op: str
+    entity: str = ""
+    name: str = ""
+    new_name: str = ""
+    field_type: str = ""
+    required: bool = False
+    method: str = ""
+    path: str = ""
+
+    def __post_init__(self) -> None:
+        if self.op not in _CHANGE_OPS:
+            raise AppDeltaError(
+                f"unknown change operation {self.op!r}; allowed: {', '.join(sorted(_CHANGE_OPS))}"
+            )
+
+    @property
+    def is_destructive(self) -> bool:
+        return self.op in ir_changes.DESTRUCTIVE
+
+
 @dataclass(frozen=True, slots=True)
 class AppDeltaProposal:
-    """A strictly bounded, validated follow-up delta: net-new entities/apis/screens only."""
+    """A bounded, validated follow-up delta.
+
+    R-584: `changes` describes what happens to things that already exist. Before it, this carried
+    net-new entities, endpoints and screens only, and the parser raised on anything else — so
+    "rename Post to Article" and "remove the published field" had no way through, and "add a notes
+    field" either errored or proposed nothing and reported that no files needed changing.
+    """
 
     entities: tuple[Entity, ...] = ()
     apis: tuple[ApiEndpoint, ...] = ()
     screens: tuple[Screen, ...] = ()
+    changes: tuple[IrChange, ...] = ()
     rationale: str = ""
     context_truncated: bool = False
     active_skills: tuple[str, ...] = ()
@@ -161,10 +204,24 @@ def build_app_delta_messages(
 
     system = (
         "You are OmniStackAI's bounded App Follow-Up Delta Proposer.\n"
-        "The user already has a working app; they want to ADD something to it. Propose ONLY the new "
-        "entities, APIs, and screens needed -- never restate or modify anything that already exists.\n"
-        "Return ONLY one JSON object with exactly these allowed keys: entities, apis, screens, rationale. "
-        "No markdown or prose.\n\n"
+        "The user already has a working app and wants to change it. Propose the new entities, APIs "
+        "and screens they need, and describe anything that happens to what already exists as a "
+        "`changes` entry -- never restate an existing entity in `entities` to modify it.\n"
+        "Return ONLY one JSON object with exactly these allowed keys: entities, apis, screens, "
+        "changes, rationale. No markdown or prose.\n\n"
+        # R-584: before this, the only way to say "add a notes field" was to restate the entity,
+        # which the parser rejected -- or to propose nothing, which reported that no files needed
+        # changing. Both looked like the platform ignoring the request.
+        f"- changes: 0 to {MAX_DELTA_CHANGES} objects describing what happens to existing things. "
+        "Each has an `op` and the fields that operation needs:\n"
+        "  * add_field: {op, entity, name, field_type, required} -- add a field to an existing entity\n"
+        "  * remove_field: {op, entity, name} -- removes the column and its data\n"
+        "  * rename_field: {op, entity, name, new_name}\n"
+        "  * rename_entity: {op, name, new_name} -- every endpoint, screen and relation follows it\n"
+        "  * remove_entity: {op, name} -- removes its endpoints, screens and fixtures too\n"
+        "  * remove_api: {op, method, path}\n"
+        "  * remove_screen: {op, name}\n"
+        "  Use add_field for \"add a notes field to X\"; do NOT put X in `entities`.\n\n"
         "Bounds and rules:\n"
         f"- entities: 0 to {MAX_DELTA_ENTITIES} objects {{name, fields, relations}}. Names must be PascalCase "
         "alphanumeric and MUST NOT collide with any existing entity listed below.\n"
@@ -398,9 +455,81 @@ def parse_app_delta_proposal(text: str, *, base_ir: ApplicationIR) -> AppDeltaPr
     if _CONTROL.search(rationale):
         raise AppDeltaError("rationale cannot contain control characters")
 
+    # R-584: what happens to things that already exist. Absent from a proposal that only adds,
+    # which is every proposal written before this existed.
+    raw_changes = data.get("changes", []) or []
+    if not isinstance(raw_changes, list):
+        raise AppDeltaError("changes must be a list")
+    if len(raw_changes) > MAX_DELTA_CHANGES:
+        raise AppDeltaError(f"changes count cannot exceed {MAX_DELTA_CHANGES}")
+    parsed_changes = []
+    for item in raw_changes:
+        if not isinstance(item, dict):
+            raise AppDeltaError("each change must be an object")
+        change = IrChange(
+            op=str(item.get("op", "")),
+            entity=str(item.get("entity", "") or ""),
+            name=str(item.get("name", "") or ""),
+            new_name=str(item.get("new_name", "") or ""),
+            field_type=str(item.get("field_type", "") or ""),
+            required=bool(item.get("required", False)),
+            method=str(item.get("method", "") or ""),
+            path=str(item.get("path", "") or ""),
+        )
+        if change.field_type and change.field_type not in _ALLOWED_FIELD_TYPES:
+            raise AppDeltaError(f"change field_type must be one of: {', '.join(sorted(_ALLOWED_FIELD_TYPES))}")
+        parsed_changes.append(change)
+
     return AppDeltaProposal(
-        entities=tuple(parsed_entities), apis=tuple(parsed_apis), screens=tuple(parsed_screens), rationale=rationale
+        entities=tuple(parsed_entities),
+        apis=tuple(parsed_apis),
+        screens=tuple(parsed_screens),
+        changes=tuple(parsed_changes),
+        rationale=rationale,
     )
+
+
+#: The operations a change may name, mapped to how each is applied. Registered here rather than
+#: branched inside the applier, so adding one is a line and not a new `elif`.
+_CHANGE_OPS: dict[str, str] = {
+    "add_field": "add a field to an existing entity",
+    "remove_field": "remove a field and the fixture values for it",
+    "rename_field": "rename a field, carrying its fixture values",
+    "rename_entity": "rename an entity and every reference to it",
+    "remove_entity": "remove an entity, its endpoints, screens and fixtures",
+    "remove_api": "remove one endpoint",
+    "remove_screen": "remove one screen",
+}
+
+
+def _apply_change(ir: ApplicationIR, change: IrChange) -> ApplicationIR:
+    """Apply one change, translating a bounded description into an `ir_changes` call."""
+    try:
+        if change.op == "add_field":
+            return ir_changes.add_field(
+                ir,
+                change.entity,
+                Field(
+                    name=change.name,
+                    type=FieldType(change.field_type or "string"),
+                    required=bool(change.required),
+                ),
+            )
+        if change.op == "remove_field":
+            return ir_changes.remove_field(ir, change.entity, change.name)
+        if change.op == "rename_field":
+            return ir_changes.rename_field(ir, change.entity, change.name, change.new_name)
+        if change.op == "rename_entity":
+            return ir_changes.rename_entity(ir, change.name, change.new_name)
+        if change.op == "remove_entity":
+            return ir_changes.remove_entity(ir, change.name)
+        if change.op == "remove_api":
+            return ir_changes.remove_api(ir, change.method, change.path)
+        if change.op == "remove_screen":
+            return ir_changes.remove_screen(ir, change.name)
+    except (ValueError, KeyError) as error:
+        raise AppDeltaError(f"{change.op} failed: {error}") from error
+    raise AppDeltaError(f"unknown change operation {change.op!r}")
 
 
 def apply_app_delta(base_ir: ApplicationIR, proposal: AppDeltaProposal) -> ApplicationIR:
@@ -415,18 +544,25 @@ def apply_app_delta(base_ir: ApplicationIR, proposal: AppDeltaProposal) -> Appli
     if not isinstance(proposal, AppDeltaProposal):
         raise AppDeltaError("proposal must be an AppDeltaProposal")
 
-    base_entity_names = {e.name for e in base_ir.entities}
+    # R-584: changes first, additions second. A rename has to land before a new endpoint that
+    # names the renamed entity, and a removal before an addition that reuses the freed name — the
+    # other order makes "rename Post to Article and add a Post draft" impossible to express.
+    working = base_ir
+    for change in proposal.changes:
+        working = _apply_change(working, change)
+
+    base_entity_names = {e.name for e in working.entities}
     for entity in proposal.entities:
         if entity.name in base_entity_names:
             raise AppDeltaError(f"proposed entity '{entity.name}' collides with an existing entity")
 
-    base_api_signatures = {(api.method, api.path) for api in base_ir.apis}
+    base_api_signatures = {(api.method, api.path) for api in working.apis}
     for api in proposal.apis:
         if (api.method, api.path) in base_api_signatures:
             raise AppDeltaError(f"proposed endpoint '{api.method.value} {api.path}' collides with an existing endpoint")
 
-    base_screen_ids = {s.id for s in base_ir.screens}
-    base_role_ids = {r.id for r in base_ir.roles}
+    base_screen_ids = {s.id for s in working.screens}
+    base_role_ids = {r.id for r in working.roles}
     for screen in proposal.screens:
         if screen.id in base_screen_ids:
             raise AppDeltaError(f"proposed screen '{screen.id}' collides with an existing screen")
@@ -443,10 +579,14 @@ def apply_app_delta(base_ir: ApplicationIR, proposal: AppDeltaProposal) -> Appli
 
     try:
         derived_ir = replace(
-            base_ir,
-            entities=base_ir.entities + proposal.entities,
-            apis=base_ir.apis + proposal.apis,
-            screens=base_ir.screens + proposal.screens,
+            # R-584: `working`, not `base_ir`. Rebuilding from the original keeps its fixtures and
+            # roles, so a rename produced an IR whose entities said Article while its fixtures
+            # still said Post — and validation rejected the edit for a reason the user could do
+            # nothing about.
+            working,
+            entities=working.entities + proposal.entities,
+            apis=working.apis + proposal.apis,
+            screens=working.screens + proposal.screens,
         )
     except ApplicationIRError as error:
         raise AppDeltaError(f"merged IR is invalid: {error}") from error

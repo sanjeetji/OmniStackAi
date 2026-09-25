@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-584 (2026-09-25): an edit can change a project, not only add to it.**
+> The delta merged net-new things by concatenation and *raised* on anything existing, so "rename Post to Article", "remove the published field" and "add a notes field" had no way through. Restating gave an error; giving up proposed nothing and reported that no files needed changing. The platform's own smoke test asks for one of these.
+> `intake/ir_changes.py` adds seven pure operations. **The work is not the change, it is everything pointing at it:** renaming `Post` to `Article` rewrites `/posts`, `{postId}`, `post_list`, the relation `Comment` declares, and the fixtures — otherwise a rename becomes a deletion nobody asked for. Removals cascade deliberately.
+> Changes land **before** additions, so a rename precedes an endpoint naming the renamed entity.
+> **A destructive edit says so.** It is the user's project, so removing a field removes it — and the reply names the data loss, present only when something was destroyed.
+> Found while building: `apply_app_delta` rebuilt from `base_ir`, so a rename gave entities called Article beside fixtures still calling them Post, and the edit was refused for a reason the user could not act on.
+> Evidence: all three requests work end to end; a rename leaves a valid IR with every reference moved; `id` and the last entity are refused; adding is unchanged. 28 new tests; `task verify` 4,367 OK.
+
 > **R-565 (2026-09-25): an ecosystem is built with the backend the user asked for.**
 > `surface_to_ir` hardcoded `BackendStrategy.PYTHON`, so "the backend should be in Go language" produced Python in silence — while the single-app path honoured it. The same sentence, two answers, depending on how many apps the prompt implied. It is reference prompt six.
 > **Most of this task was already delivered by R-559 and was checked rather than rebuilt:** the stack is carried in the IR, survives a round-trip, a Go build really emits `go.mod`, and a Flutter request returns React Native with a reason. Only the ecosystem planner was missing.

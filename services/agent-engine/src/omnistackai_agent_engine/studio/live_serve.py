@@ -37,6 +37,7 @@ from ..application_ir import ApplicationIR
 from ..codegen import assemble_project
 from ..edit.apply import commit_edit
 from ..codegen.ecosystem_assembler import assemble_ecosystem
+from ..intake import ir_changes
 from ..intake.ecosystem import plan_ecosystem_from_prompt
 from ..edit.diff import plan_edit, plan_ecosystem_edit
 from ..intake.app_delta import (
@@ -1075,7 +1076,14 @@ async def _workspace_edit(
         # user opening directories to find out whether their courier app got the feature.
         apps_changed = _apps_touched(diff)
         reach = f" Updated {', '.join(apps_changed)}." if apps_changed else ""
-        workspace_store.append_turn(ws_id, "assistant", f"{diff.summary()}{reach}{trunc_note}")
+        # R-584: an edit that removes a column removes the data in it. The user asked for it and it
+        # is their project, so this says what happened rather than refusing — but saying nothing
+        # would let a destructive edit read exactly like an ordinary one.
+        loss = ir_changes.describes_data_loss([c.op for c in proposal.changes])
+        loss_note = f" {loss}" if loss else ""
+        workspace_store.append_turn(
+            ws_id, "assistant", f"{diff.summary()}{reach}{loss_note}{trunc_note}"
+        )
 
         if state_before.get("ecosystem_apps"):
             # Counting a single-app assembly would under-report a monorepo by hundreds of files.
@@ -1098,6 +1106,9 @@ async def _workspace_edit(
             "file_count": file_count,
             # R-563: present whenever the edit reached an app, so the console can say which.
             **({"apps_changed": apps_changed} if apps_changed else {}),
+            # R-584: present only when the edit destroyed something, so an ordinary edit renders
+            # nothing extra and a destructive one cannot be mistaken for it.
+            **({"data_loss": loss} if loss else {}),
             "diff": {
                 "added": list(diff.added()),
                 "modified": list(diff.modified()),

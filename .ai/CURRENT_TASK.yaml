@@ -1,9 +1,9 @@
 task_id: R-584
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 34
 started_at: "2026-09-25"
-completed_at: null
+completed_at: "2026-09-25"
 branch: ai/R-584-edits-that-change
 objective: >-
   An edit can only add. `apply_app_delta` merges net-new entities, endpoints and screens by tuple
@@ -44,4 +44,9 @@ model_tool_trace:
 blockers: []
 deferred:
   - "R-585 (template customisation) builds on this: a template edit goes through the same delta, so changing a template substantially needs these operations first."
-found_and_fixed: []
+found_and_fixed:
+  - >-
+    `apply_app_delta` rebuilt its result from `base_ir` rather than from the changed IR, so a
+    rename produced entities called Article beside fixtures still calling them Post, and the edit
+    was rejected for a reason the user could do nothing about. Caught by running a rename rather
+    than by reading the merge.

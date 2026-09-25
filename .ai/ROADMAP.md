@@ -148,7 +148,7 @@ after the first numbering and belong to Phase 2.
 | R-570 | **Permissions beyond role-on-endpoint** — ownership and row-level rules | M | "A driver sees only their own orders" is unexpressible today |
 | R-571 | **Escape hatch**: behaviour the IR *declares* but the model *implements*, verified by the loop | L | Guarantees there is never again a hard ceiling — only a typed boundary |
 | R-572 | **Shared contract package** — one generated `packages/` for types, API client and validation instead of three copies | M | Web, admin and mobile currently each get their own |
-| R-584 | **Edits that change, not only add.** `apply_app_delta` is additive-only and *raises* on any existing entity, endpoint or screen, so "rename Post to Article", "remove the published field" or "change the order flow" returns an error rather than a change. | L | Directly blocks "customise my project" and "customise a template"; rename/remove needs migrations, so it is real work, not a flag |
+| R-584 ✅ | **Edits that change, not only add.** `apply_app_delta` is additive-only and *raises* on any existing entity, endpoint or screen, so "rename Post to Article", "remove the published field" or "change the order flow" returns an error rather than a change. | L | Directly blocks "customise my project" and "customise a template"; rename/remove needs migrations, so it is real work, not a flag |
 | R-585 | **Template customisation as a first-class flow** — start from a catalogue template and change it substantially, not just append to it | M | Depends on R-584 and R-564; today a template edit goes through the same additive-only delta |
 
 ### Phase 3 — Mobile reach
