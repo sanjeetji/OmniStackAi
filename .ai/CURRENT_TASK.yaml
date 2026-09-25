@@ -1,46 +1,57 @@
-task_id: R-562
-status: complete
+task_id: R-563
+status: in_progress
 phase: MVP
-tracker_row: 30
+tracker_row: 31
 started_at: "2026-09-25"
-completed_at: "2026-09-25"
-branch: ai/R-562-apps-are-apps
+completed_at: null
+branch: ai/R-563-one-persistence-path
 objective: >-
-  "A platform for food delivery with a marketing website, admin panel, customer + driver apps"
-  returns four Next.js websites. `ecosystem.py` builds every surface with `MobileProfile.NONE` and
-  `WebStrategy.NEXTJS` hardcoded, so the driver "app" is a web page, and `assemble_ecosystem` only
-  ever picks a Next.js adapter. A user who asked for an app is handed a website with no explanation.
-  This is the same silent downgrade R-559 removed for stacks, still present for surfaces: R-559
-  substitutes and explains when we cannot build what was asked for, but here we *can* build it and
-  simply do not.
-  Three parts: decide per surface whether it is an app or a site, assemble mobile surfaces with the
-  React Native adapter, and let the monorepo and the preview carry more than one mobile app — there
-  is exactly one `apps/mobile` today, and the run plan hardcodes it.
+  An ecosystem project cannot be edited after it is built. `live_serve.py:159` leaves ecosystem and
+  pack builds with `editable_ir = None`, so no IR is written to the workspace and a follow-up edit
+  answers "workspace has no IR; build first" — on a project the user just built, and on the one
+  capability that most distinguishes this platform.
+  Underneath it, `plan_edit` assembles both sides with `assemble_project`, which lays out a single
+  app. Pointed at an ecosystem repo it would diff a five-app monorepo against a one-app layout and
+  delete every surface app.
+  Rescoped on 2026-09-25: the original premise was wrong. The console is already on the disk-backed
+  workspace store — its edit path is `/projects/{id}/edit` -> `/api/workspaces/{id}/edit`, `ir.json`
+  is written on every build, and a fresh store instance loads it back. Verified before rewriting
+  this record. The in-memory LRU serves only the standalone Studio's build-id path.
 founder_gate: >-
-  Founder on 2026-09-25: do not silently hand back web when apps were asked for; generate apps in
-  React Native by default so the user is not frustrated.
+  Founder on 2026-09-25: decide the propagation rule first, then implement it.
+decision: >-
+  How an edit reaches scoped surfaces. Surfaces are scoped from a curated per-domain table, and
+  `_relation_closure` follows relations outward from a surface's entities — so an entity added by
+  an edit, which points *at* an existing entity rather than being pointed at, currently reaches no
+  surface at all. The rule: a new entity reaches every surface that already holds an entity it
+  points at; if it points at nothing any surface holds it stands alone and reaches every surface.
+  Curated scoping still governs what it already knows, so the courier still gets no menu editor.
+  The "reaches everything" fallback is not invented here — it is the rule this module already
+  states for ambiguity ("Ambiguous intent is not permission to fabricate a partition"), and
+  showing an entity too widely is recoverable where hiding it everywhere means the edit silently
+  did nothing. Every edit reports which apps it changed.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/intake/
+  - services/agent-engine/src/omnistackai_agent_engine/studio/
+  - services/agent-engine/src/omnistackai_agent_engine/edit/
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/
   - services/agent-engine/tests/
   - apps/console-web/
-  - scripts/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - A surface the prompt called an app is never assembled as a website
-  - One shared API and one database; the apps do not each get a backend
-  - The decision is deterministic — the same prompt gives the same surfaces twice
-  - Existing single-app builds with one apps/mobile keep working unchanged
+  - An ecosystem edit never diffs against a single-app layout; the surface apps are not deleted
+  - Scoping survives an edit — a courier still has no menu editor
+  - A single-app project's edit path is unchanged
+  - The user is told which apps an edit changed, never left to guess
   - task verify stays offline with 0 model calls
 required_gates:
-  - "\"customer + driver apps\" produces React Native apps for those roles, not web pages"
-  - An admin panel or a marketing site stays a web app
-  - The monorepo carries more than one mobile app, each buildable
-  - The preview offers a QR for each mobile app rather than assuming one
-  - The reason each surface is an app or a site is recorded, not implicit
+  - An ecosystem project has an IR saved and is editable after the build
+  - An edit that adds a related entity reaches the surfaces holding what it points at
+  - An unrelated addition reaches every surface rather than none
+  - The courier app still ships no menu editor after an edit
+  - The diff touches the surface apps rather than replacing the layout
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -48,20 +59,4 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed:
-  - >-
-    The first implementation flipped the customer surface to mobile and so **deleted the only
-    public website** — from a prompt that asked for a marketing website in the same sentence.
-    Answering one request by dropping another is the failure this task exists to end. An operator's
-    app now replaces their portal (a courier has no use for a website) and a customer's app is
-    built beside theirs, which also matches the standing default of a web app plus an app when one
-    is asked for.
-  - >-
-    The customer's companion app was derived from a renamed surface, and entity scoping is keyed by
-    surface kind, so it fell through to a word match and lost `MenuItem` — a food-delivery customer
-    app that cannot show a menu. It is now scoped from the original surface, so the app sees
-    exactly what the website sees.
-  - >-
-    Detecting Expo apps purely by an `app.config.js` marker broke every existing fixture and would
-    have broken projects generated before this change. `apps/mobile` has been the reserved Expo
-    directory since R-545, so the name counts as a marker too.
+found_and_fixed: []
