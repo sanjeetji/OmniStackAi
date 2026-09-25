@@ -4,6 +4,12 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-565 (2026-09-25): an ecosystem is built with the backend the user asked for.**
+> `surface_to_ir` hardcoded `BackendStrategy.PYTHON`, so "the backend should be in Go language" produced Python in silence — while the single-app path honoured it. The same sentence, two answers, depending on how many apps the prompt implied. It is reference prompt six.
+> **Most of this task was already delivered by R-559 and was checked rather than rebuilt:** the stack is carried in the IR, survives a round-trip, a Go build really emits `go.mod`, and a Flutter request returns React Native with a reason. Only the ecosystem planner was missing.
+> `intake/backend_choice.py` reads the language deterministically, because the planner runs without a model. The behaviour worth naming is the **non**-match: "customers go to collect their order" keeps Python; "API written in go" does not. Eagerness here would be worse than not reading the prompt at all.
+> Evidence: Go, Node and the Python default all correct from an ecosystem prompt; `services/api/go.mod` in the repo with no Python beside it; still exactly one backend. 11 new tests; `task verify` 4,339 OK.
+
 > **R-564 (2026-09-25): the IR can describe what a product does, and older projects still open.**
 > The IR was entities, fields, relations, CRUD, screens and roles — a database with pages over it. `wire_endpoint` matches six CRUD shapes and drops the rest, so an order lifecycle, a ledger, a nightly job and row-level permissions had nowhere to be written down. That is the "maximum features" ceiling, and it lived in the data model.
 > `capability.py` adds the frame Phase 2 fills: a record and a registry that keeps **declared** apart from **implemented** — because `GenerationTarget` declared FLUTTER with nothing behind it and produced a website in silence until R-559. A kind must be registered with the code that builds it, and this task ships the registry **empty**.

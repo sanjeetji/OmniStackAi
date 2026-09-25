@@ -1,9 +1,9 @@
 task_id: R-565
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 33
 started_at: "2026-09-25"
-completed_at: null
+completed_at: "2026-09-25"
 branch: ai/R-565-stack-in-ecosystems
 objective: >-
   An ecosystem build ignores the backend language the user asked for. `surface_to_ir` hardcodes
@@ -40,4 +40,9 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed: []
+found_and_fixed:
+  - >-
+    Most of R-565 was already delivered by R-559 and was verified rather than rebuilt: the stack is
+    carried in the IR and survives a round-trip, a Go backend really generates `go.mod`, and a
+    Flutter request returns React Native with a reason. Only the ecosystem planner was missing,
+    which is what this task did.

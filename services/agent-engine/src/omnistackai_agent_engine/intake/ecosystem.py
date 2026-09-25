@@ -54,6 +54,7 @@ from ..solution_packs import (
 )
 from ..verify import verify_plans_for_ir
 from .build_app import AppBuildResult, build_app_from_ir
+from .backend_choice import backend_for_prompt
 from .surface_form import app_replaces_web, form_for_surface
 from .scope_compiler import AppSurface, ScopeProposal, propose_ecosystem
 
@@ -662,7 +663,10 @@ def surface_to_ir(
             MobileProfile.REACT_NATIVE if as_mobile else MobileProfile.NONE,
             WebStrategy.NONE if as_mobile else WebStrategy.NEXTJS,
             AdminStrategy.NONE,
-            BackendStrategy.PYTHON,
+            # R-565: this was `BackendStrategy.PYTHON` for every surface, so an ecosystem ignored
+            # the language the user named while the single-app path honoured it — the same
+            # sentence answered differently depending on how many apps the prompt implied.
+            backend_for_prompt(proposal.prompt),
             DatabaseStrategy.POSTGRES,
             RepoStrategy.CUSTOMER_PROJECT_MONOREPO,
         ),
