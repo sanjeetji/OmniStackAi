@@ -876,6 +876,34 @@ def _api_client_file(ir: ApplicationIR) -> str:
             lines.append("}")
             lines.append("")
 
+    # R-588: the lifecycle transitions. R-566 generated the handlers and left the client with no
+    # way to call them, so a page had nothing to put behind a button. Derived from the same place
+    # the handlers and the contract are.
+    from .workflow_routes import transition_routes
+
+    for route in transition_routes(ir):
+        # `publish_post` -> `publishPost`, matching the CRUD function names beside it.
+        parts = route.function.split("_")
+        fn_name = parts[0] + "".join(w.capitalize() for w in parts[1:])
+        fn_names.append(fn_name)
+        allowed = route.transition.sources or route.workflow.states
+        lines.append(
+            f"/** Moves a {route.workflow.entity} to '{route.transition.to}'. "
+            f"Allowed from: {', '.join(allowed)}."
+            + (f" Requires role: {', '.join(route.roles)}." if route.roles else "")
+            + " Throws on 409 when the record is in another state. */"
+        )
+        lines.append(
+            f"export async function {fn_name}(id: string, options: ApiOptions = {{}}): "
+            f"Promise<{route.workflow.entity}> {{"
+        )
+        lines.append(
+            f"  return request<{route.workflow.entity}>(`/{route.table}s/${{encodeURIComponent(id)}}"
+            f'/{route.transition.name}`, {{ method: "POST", ...options }});'
+        )
+        lines.append("}")
+        lines.append("")
+
     lines.append("export const api = {")
     for name in fn_names:
         lines.append(f"  {name},")

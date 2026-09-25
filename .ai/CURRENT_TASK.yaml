@@ -1,41 +1,41 @@
-task_id: R-566
+task_id: R-588
 status: complete
 phase: MVP
-tracker_row: 35
+tracker_row: 36
 started_at: "2026-09-26"
 completed_at: "2026-09-26"
-branch: ai/R-566-workflows
+branch: ai/R-588-workflow-surface
 objective: >-
-  A product's lifecycle cannot be written down. An order that goes placed -> accepted -> picked_up
-  -> delivered, who is allowed to move it, and what a courier may not do, have nowhere to live in
-  the IR. `route_wiring.wire_endpoint` matches six CRUD shapes, so `POST /orders/{orderId}/accept`
-  wires to nothing and the Python backend emits a 501 stub for it — visible, but not a product.
-  R-564 built the capability frame and deliberately shipped the registry empty: nothing may be
-  declared until something can build it. This task registers the first kind with real code
-  generation behind it, which is what proves the frame and sets the pattern for money, jobs,
-  realtime and permissions after it.
+  R-566 generated working transition handlers and stopped there. The OpenAPI contract described an
+  API without them, and the typed client had no function to call one, so a lifecycle existed in the
+  backend and nothing outside it could reach it. An endpoint nobody can call is not far from one
+  that does not exist.
+  The contract now documents every transition — the path, the states it is allowed from, the role
+  it requires, and a 409 for a legal request from an illegal state — and the typed client gains a
+  function per transition, exported beside the CRUD ones. All three come from the one derivation
+  the handlers already used, so they cannot describe different endpoints.
+  Scoped down while doing it, and recorded rather than implied: Go and Node still emit the 501
+  scaffold for transitions, and the deterministic screens do not yet offer them as actions. Each
+  is a careful job of its own — the page generator is ~74k lines and intent-based — and doing
+  three things half-way is the failure this repository keeps meeting.
 founder_gate: >-
-  Founder on 2026-09-26: continue with Phase 2 in the order that suits.
+  Founder on 2026-09-26: do all of them, one by one.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
-  - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/tests/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - A workflow that names an unknown entity, field, state or role is refused, not accepted and ignored
-  - The generated schema constrains the state column; an illegal value cannot be stored
-  - A transition a role may not make is refused by the backend, not only hidden in the UI
-  - A project with no workflow generates exactly what it did before
+  - The handler, the contract and the client name the same endpoint, from one derivation
+  - A project with no workflow gains nothing in its contract or its client
+  - The generated TypeScript still compiles
   - task verify stays offline with 0 model calls
 required_gates:
-  - A workflow declares states and transitions, and round-trips through the IR
-  - A transition that names an unknown state, entity, field or role is refused with a reason
-  - The generated database constrains the state column and gives it the initial state
-  - Transition endpoints are generated and enforce both the from-state and the role
-  - An entity with no workflow is generated exactly as before
+  - Every transition is in the OpenAPI contract with its allowed states, role and 409
+  - The typed client has a function per transition, exported on the api object
+  - The generated web app typechecks with the new functions in it
+  - A project with no workflow is unchanged
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -43,14 +43,6 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - "A workflow cannot yet be edited: R-584 made entities and fields changeable, but adding a state or a transition is a capability-level change the delta does not cover. Flagged before R-566 started and confirmed by it."
-  - "Transitions are implemented for the Python backend. Go and Node emit the existing 501 scaffold for them, which is visible rather than silent, but is not the whole feature."
-  - "The contract and the screens do not yet carry the transitions, so the actions exist in the API and not on a page." 
-found_and_fixed:
-  - >-
-    Role-based access control was **entirely non-functional in every generated project**. The
-    generated login issued a token carrying `"role": "author"` — a single string — while the
-    generated guard read `claims.get("roles")` and required a list, so every role-guarded endpoint
-    answered 403 to everyone. Each half was correct on its own terms and no test called one, so
-    nothing caught it. Found by calling a role-guarded transition against a running generated
-    backend; both token-creation sites now issue `roles` as a list beside `role`.
+  - "R-589: transitions for the Go and Node backends. They emit the existing 501 scaffold, which is visible rather than silent, but a user who chose Go gets a lifecycle that does not run."
+  - "R-590: transitions as actions on the generated screens, so the lifecycle is operable from a page rather than only from the API."
+found_and_fixed: []

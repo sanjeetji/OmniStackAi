@@ -4,6 +4,12 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-588 (2026-09-26): a transition is describable and callable, not only implemented.**
+> R-566 generated the handlers and stopped; the contract described an API without them and the client had no function to call one. An endpoint nobody can call is close to one that does not exist.
+> The contract now carries each transition with its allowed states, role and a 409; the client gains a function per transition, exported beside the CRUD ones. All three derive from one place, so they cannot name different endpoints.
+> **Scoped down and recorded rather than implied:** Go/Node keep the 501 scaffold (R-589) and screens do not yet offer the actions (R-590). The page generator is ~74k lines; three things half-done is the failure this repo keeps meeting. The default stack has a complete verified path from lifecycle to client.
+> Evidence: contract, client and handler name one path; a project with no workflow is unchanged; the web app typechecks against real `tsc`. 13 new tests; `task verify` 4,411 OK.
+
 > **R-566 (2026-09-26): an entity's lifecycle, and who may move it.**
 > An order that goes placed -> accepted -> delivered, and a courier who may not accept one, could not be written down. A status column was a string anybody could set to anything, and `POST /orders/{id}/accept` wired to nothing — a 501 stub.
 > The first capability kind with code generation behind it. R-564's mechanism worked by itself: registering `workflow` made intake's `capabilities` key reappear with no string edited.

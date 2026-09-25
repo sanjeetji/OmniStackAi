@@ -363,6 +363,51 @@ def render_openapi(ir: ApplicationIR) -> dict[str, Any]:
 
         paths[path][method] = operation
 
+    # R-588: the lifecycle transitions. R-566 generated handlers for them and left the contract
+    # describing an API that was missing them, so a typed client had no way to call a transition
+    # and nothing on a page could offer it. Derived from the same place the handlers are, so the
+    # contract and the implementation cannot describe different endpoints.
+    from .workflow_routes import transition_routes
+
+    for route in transition_routes(ir):
+        transition_path = route.path
+        paths.setdefault(transition_path, {})
+        allowed = route.transition.sources or route.workflow.states
+        paths[transition_path]["post"] = {
+            "summary": f"{route.transition.name.replace('_', ' ').capitalize()} a {route.workflow.entity}",
+            "description": (
+                f"Moves the {route.workflow.entity}'s {route.workflow.field} to "
+                f"'{route.transition.to}'. Allowed from: {', '.join(allowed)}."
+                + (f" Requires role: {', '.join(route.roles)}." if route.roles else "")
+            ),
+            "operationId": route.function,
+            "tags": [route.table],
+            "parameters": [
+                {
+                    "name": route.id_param,
+                    "in": "path",
+                    "required": True,
+                    "schema": {"type": "string"},
+                    "description": f"Unique identifier for {route.id_param}",
+                }
+            ],
+            **({"security": [{"bearerAuth": []}]} if route.roles else {}),
+            "responses": {
+                "200": {
+                    "description": f"The {route.workflow.entity} after the transition",
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": f"#/components/schemas/{route.workflow.entity}"}
+                        }
+                    },
+                },
+                "404": {"description": "not found"},
+                # The state guard: a legal request from an illegal state is a conflict, not a
+                # bad request — the payload is fine, the row simply is not where it needs to be.
+                "409": {"description": f"not allowed from the current {route.workflow.field}"},
+            },
+        }
+
     doc: dict[str, Any] = {
         "openapi": "3.1.0",
         "info": {
