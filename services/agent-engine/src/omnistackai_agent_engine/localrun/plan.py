@@ -367,6 +367,21 @@ def build_run_plan(
             )
         )
     elif backend_kind == "go":
+        # R-561: the Python branch above creates a virtualenv and installs before starting; the Go
+        # branch went straight to `go run`, which fails on a generated project because it ships
+        # go.mod with no go.sum. Every Go backend was therefore broken end to end, in the preview
+        # and for anyone following the generated README.
+        steps.append(
+            RunStep(
+                label="resolve backend dependencies (go mod tidy)",
+                program="go",
+                # tidy, not download: the generated go.mod lists direct requires only, so
+                # downloading the build list leaves the transitive ones missing and the build
+                # still fails. Verified against a real toolchain.
+                args=("mod", "tidy"),
+                cwd=str(api_dir),
+            )
+        )
         steps.append(
             RunStep(
                 label=f"start backend API (go run) on {api_url}",

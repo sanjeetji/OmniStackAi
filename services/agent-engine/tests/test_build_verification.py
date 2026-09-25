@@ -177,3 +177,73 @@ class BothBuildTwinsGoThroughOneSeam(TestCase):
         from omnistackai_agent_engine.intake import build_app
 
         self.assertIn("verify_and_repair_build", inspect.getsource(build_app.build_app_from_ir))
+
+
+class EverySurfaceIsCheckedNotJustTheWebApp(TestCase):
+    """R-561: a generated project is four things, and R-560 compiled one of them.
+
+    The cost showed up immediately. The Go backend ships `go.mod` with no `go.sum` and its own
+    README told the user to run `go run .`, which fails on every dependency — so the Go backend
+    option was broken end to end, in the preview and for anyone who cloned their repository. The
+    Python branch of the run plan had installed dependencies before starting since it was written;
+    the Go branch never got that step.
+    """
+
+    def test_the_go_backend_is_runnable_from_its_own_readme(self) -> None:
+        # The README is the only instruction a user has. It has to work.
+        import dataclasses
+
+        from omnistackai_agent_engine.application_ir import BackendStrategy
+        from omnistackai_agent_engine.codegen.assembler import assemble_project
+
+        ir = example_ir("minimal-blog")
+        ir = dataclasses.replace(
+            ir, project_strategy=dataclasses.replace(ir.project_strategy, backend_strategy=BackendStrategy.GO)
+        )
+        files = {f.path: f.content for f in assemble_project(ir).files()}
+        readme = files["services/api/README.md"]
+        self.assertIn("go mod tidy", readme, "a generated Go backend cannot build without resolving modules first")
+        self.assertIn("go run .", readme)
+
+    def test_the_preview_resolves_go_modules_before_starting(self) -> None:
+        # `go run .` as the first step is what made every Go preview fail.
+        import inspect
+
+        from omnistackai_agent_engine.localrun import plan
+
+        source = inspect.getsource(plan)
+        tidy = source.index('args=("mod", "tidy")')
+        run = source.index('args=("run", ".")')
+        self.assertLess(tidy, run, "modules must be resolved before the server is started")
+
+    def test_a_surface_reports_for_itself(self) -> None:
+        # One combined verdict hides which of four things is broken.
+        record = build_verify._with_surfaces(
+            {"status": "clean", "repaired": [], "reverted": [], "generator_failures": []},
+            {"apps/admin": {"status": "failing", "errors": ["x"]}, "apps/mobile": {"status": "clean"}},
+        )
+        self.assertEqual(record["failing_surfaces"], ["apps/admin"])
+        self.assertEqual(record["surfaces"]["apps/mobile"]["status"], "clean")
+
+    def test_a_broken_surface_fails_the_whole_verdict(self) -> None:
+        record = build_verify._with_surfaces(
+            {"status": "clean", "repaired": [], "reverted": [], "generator_failures": []},
+            {"services/api": {"status": "failing", "errors": ["boom"]}},
+        )
+        self.assertEqual(record["status"], "failing")
+        self.assertIn("fault in the generator", record["summary"])
+
+    def test_surfaces_are_checked_even_without_a_model(self) -> None:
+        """A missing provider says nothing about whether the backend compiles."""
+        import inspect
+
+        source = inspect.getsource(build_verify.verify_and_repair_build)
+        provider_check = source.index("if provider is None")
+        surfaces_call = source.index("verify_other_surfaces(target_dir)")
+        self.assertLess(surfaces_call, provider_check, "the other surfaces need no model provider")
+
+    def test_a_cache_is_only_shared_where_dependencies_match(self) -> None:
+        """Linking a cache built from a different dependency set is how correct code gets
+        reported as broken — the defect R-560 shipped and caught in review."""
+        source = __import__("inspect").getsource(build_verify.verify_other_surfaces)
+        self.assertIn("_dependency_set(app_dir", source)

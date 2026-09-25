@@ -1,9 +1,9 @@
 task_id: R-561
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 28
 started_at: "2026-09-25"
-completed_at: null
+completed_at: "2026-09-25"
 branch: ai/R-561-verify-every-surface
 objective: >-
   R-560 type-checks `apps/web` and nothing else. A generated project also ships an admin console, a
@@ -46,4 +46,21 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed: []
+found_and_fixed:
+  - >-
+    Every generated Go backend was unable to start. It ships `go.mod` with no `go.sum`, and both
+    its README and the preview ran `go run .`, which fails immediately with "missing go.sum entry"
+    for every dependency. The Python branch of the run plan had created a virtualenv and installed
+    requirements since it was written; the Go branch never got an equivalent step.
+  - >-
+    `go mod download` is not enough and was the first fix attempted: the generated go.mod lists
+    direct requires only, so downloading the build list leaves the transitive ones missing and the
+    build fails with the same error. `go mod tidy` resolves them from the imports and writes
+    go.sum. Caught by running the README's own instructions against a real toolchain rather than
+    reasoning about them.
+deferred:
+  - >-
+    R-587: four generated Go files are not gofmt-clean (struct fields are emitted with single
+    spaces where gofmt aligns them in columns; 66 lines of diff across 4 files). Cosmetic, but a Go
+    developer's editor reformats on save and produces a diff on first open. Detected and reported
+    by this task's backend check as `unformatted`; fixing the generator is its own small task.

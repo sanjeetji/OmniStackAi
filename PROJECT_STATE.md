@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-561 (2026-09-25): every surface is compiled, not just the web app.**
+> R-560 checked `apps/web` alone, so the admin console, the mobile app and the backend were never built by anyone. The first measurement found that **a generated Go backend cannot start**: `go.mod` with no `go.sum`, and a README telling the user to run `go run .`, which fails on every dependency. The preview did the same; the Python branch had installed dependencies since it was written.
+> The first fix was wrong and running it said so — `go mod download` leaves the transitive requires missing. `go mod tidy` writes `go.sum`, and the backend now builds and vets clean from its own README.
+> Each surface reports for itself: one verdict hides which of four things broke. None of them holds a model-written file, so failures are attributed to our generator, never to the user.
+> Honest about what each check proves: admin fully type-checked (its dependency set is *verified* identical to the web app's before sharing the cache); mobile only when really installed; Go parsed with `gofmt` and compiled on request; Python parsed with `compileall`.
+> Evidence: Go backend `go build`/`go vet` clean from a clean checkout; corrupting an admin file names the file and line and flips the verdict. 6 new tests; `task verify` 4,274 OK, 0 model calls.
+> **Found, deferred (R-587):** four generated Go files are not gofmt-clean — struct fields unaligned, 66 lines of diff.
+
 > **R-560 (2026-09-25): the build path compiles what it generated.**
 > The compile-verify-repair loop has worked since R-466; its only caller was an opt-in CLI, so a console build reached none of it — which is how R-549's non-compiling `lib/brand.ts` shipped in **every generated web app for nine tasks**.
 > It now runs on the path every build shares. A build is never *failed* by verification, skipping is never silent, and dependencies are warmed once by `omnistack.sh` rather than installed per build.

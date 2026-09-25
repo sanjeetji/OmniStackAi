@@ -131,7 +131,7 @@ after the first numbering and belong to Phase 2.
 |---|---|---|---|
 | R-559 ✅ | **Substitute and explain, never drop.** Flutter/React/native requests build the nearest supported target (RN, Next.js) and state the reason. Driven by a **capability registry**, so a later adapter turns the substitution off by itself. | S | Converts the worst failure mode (silently wrong) into an honest one, and is the seam every later stack plugs into |
 | R-560 ✅ | **Wire the compile-verify-repair loop into the real build path.** It exists and has zero callers. | M | Everything below generates more code that nothing checks |
-| R-561 | **Extend verification beyond model-written files** — deterministic files, the backend, and the mobile app, not just `app/*.tsx`. | M | R-549's bug was in a deterministic file, which the current loop refuses to touch |
+| R-561 ✅ | **Extend verification beyond model-written files** — deterministic files, the backend, and the mobile app, not just `app/*.tsx`. | M | R-549's bug was in a deterministic file, which the current loop refuses to touch |
 | R-562 | **An app means an app, not a website.** The ecosystem planner forces `mobile=none`, so "customer + driver apps" returns four Next.js sites. Every named role that asked for an app gets a React Native surface; the monorepo carries more than one mobile app and the preview gives each its own QR. | M | Asking for an app and being handed a website is the most frustrating silent downgrade we have |
 | R-563 | **One persistence path.** Move the console onto workspaces so an IR survives a restart and a project is editable days later. | M | "Come back in a week" depends entirely on this |
 
@@ -183,6 +183,7 @@ after the first numbering and belong to Phase 2.
 | — | **React / Vite web adapter** | Not planned. Next.js is the one web stack; revisit only on real customer demand |
 | — | **Flutter adapter** | Not planned. Requests fall back to React Native with a stated reason (R-559) |
 | R-586 ✅ | **Make the CareClinic seed deterministic.** Its generator builds timestamps from `new Date()`, so the committed seed goes stale when the date rolls over and `task verify` fails every day. Found during R-559; confirmed on a clean checkout. | S | Do this next — it breaks the gate daily |
+| R-587 | **Make generated Go gofmt-clean.** Struct fields are emitted with single spaces where gofmt aligns them in columns — 66 lines of diff across 4 files. A Go developer's editor reformats on save. Found and reported by R-561's backend check. | S | Cosmetic, but it is a first impression |
 | R-583 | Next.js **static export mode** — the cheap answer to "I don't want SSR or Vercel" | Optional; do this before ever considering a React adapter |
 | — | Multi-repo output, plan limits, `super_admin` area (Phase E) | After Phase 2 |
 
