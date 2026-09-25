@@ -1,48 +1,52 @@
-task_id: R-558
-status: complete
+task_id: R-559
+status: in_progress
 phase: MVP
-tracker_row: 24
-started_at: "2026-09-24"
-completed_at: "2026-09-24"
-branch: ai/R-558-designed-ui
+tracker_row: 25
+started_at: "2026-09-25"
+completed_at: null
+branch: ai/R-559-substitute-and-explain
 objective: >-
-  The generated project ships a real design system — 59 colour tokens, a type scale, a space scale,
-  six shadows, seven motion tokens — and the pages ignore almost all of it. Measured on a generated
-  storefront home page: `--shadow-*` used 0 times, `--transition-*` 0, `--font-size-*` 0,
-  `--space-*` 0, against 26 hardcoded pixel values and **zero hover or focus states**. The result
-  looks flat and static because it is flat and static.
-  Part of that is structural: inline React styles cannot express `:hover` or `:focus-visible` at
-  all, so no amount of tuning inline values would have produced an interface that responds to a
-  cursor. The page needs a real stylesheet.
-  Make the deterministic pages use the system they ship with, and give them the depth, motion and
-  interaction feedback that separates a designed interface from a tidy one. This is what a user
-  sees whenever no model is available or a model's output fails validation, so it is not a
-  fallback in any sense that permits it to look like one.
+  Asking for something we cannot build returns something else, silently. A prompt for a Flutter app,
+  a native iOS/Android app, or a React-Native-for-Web site produces a Next.js website and an admin
+  panel, with no error, no warning and nothing in the console saying why. Verified across all four
+  mobile profiles: only `react_native` emits `apps/mobile`; `flutter`, `native` and `auto` drop it
+  in silence. `nl_to_ir` actively instructs the model to choose `flutter`, which is a guaranteed
+  silent drop.
+  The information already exists and is thrown away: `_plan_assembly` computes a `skipped` list of
+  reasons, and the only consumer is the generated README.
+  Replace dropping with substituting: build the nearest supported target, record what was asked
+  beside what was built, and say why in one plain sentence that reaches the user. Decide it from a
+  capability registry derived from the registered adapters, so that registering a Flutter or native
+  adapter later turns the substitution off by itself with no other code change.
 founder_gate: >-
-  Founder on 2026-09-24: make the deterministic template "just like a modern, cool and latest UI
-  not a simple UI", and asked for this before Phase E.
+  Founder on 2026-09-25: Next.js is the one web stack and React Native the one mobile stack for now;
+  a Flutter request should build in React Native and state the reason, and the platform must be able
+  to adopt Flutter, React and native later without rework. Also: never hand back a website when an
+  app was asked for.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/tests/
+  - apps/console-web/
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
-  - apps/console-web/data/overview.json
 forbidden_changes:
-  - No new dependency in generated projects; a stylesheet is emitted, not a CSS-in-JS library
-  - Every page stays a server component with no client JavaScript
-  - Every variant keeps passing the engine's own JSX validator
-  - Deterministic output — one project renders identically twice
-  - The archetype's language and the brand colour survive
+  - No silent behaviour: every substitution carries a reason that reaches the user
+  - The IR keeps recording what the user asked for; substitution never rewrites the request
+  - Support is read from the adapter registry, never from a hardcoded list of unsupported stacks
+  - One decision function; the assembler and the build result must not compute it separately
+  - Generated copy is rendered as text in the console, never as HTML
   - task verify stays offline with 0 model calls
 required_gates:
-  - The page uses the shipped type, space, shadow and motion tokens rather than hardcoded values
-  - Interactive elements have hover and focus-visible states, which inline styles cannot express
-  - Focus states are visible for keyboard users, not removed
-  - Motion is suppressed under prefers-reduced-motion
-  - Every layout variant still passes clean_and_validate_jsx, including against an empty IR
-  - Output stays byte-stable and the brand colour still drives it
+  - flutter, native and auto mobile requests assemble a real React Native app
+  - Unsupported web strategies assemble a real Next.js app
+  - Each substitution states what was asked, what was built and why, in plain words
+  - The reason reaches AppBuildResult and the console, not only the generated README
+  - Registering an adapter for a substituted target stops the substitution with no other change
+  - nl_to_ir no longer offers the model a target that has no adapter
+  - A supported stack produces no substitution and no note
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -50,20 +54,5 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - "IR v2 (maximum features): the IR models entities, fields, relations, CRUD, screens and roles and nothing else, so workflows, ledgers, state machines, payments and realtime cannot be expressed at any model quality. Designed as its own sequence after this."
-found_and_fixed:
-  - >-
-    R-549 shipped `lib/brand.ts` with two `@ts-expect-error` directives over imports TypeScript
-    resolves on its own. An unused suppression is itself an error, so `next build` has failed on
-    every generated web app since that task. Nothing caught it because the tests of that change
-    asserted on the file's text, and the text was the defect. Found by building a generated
-    project rather than reading one.
-  - >-
-    The generated `tsconfig.json` never set `allowJs`, so `lib/brand.ts` could not import the
-    shared `brand/derive.mjs` and a fresh clone showed TS7016 in the editor and on `tsc`. This
-    stayed invisible because `next build` writes `allowJs` into tsconfig.json itself on first
-    run: the build repaired the file it was about to read, so only someone typechecking before
-    their first build ever saw it. Found by the new gate, within a minute of it existing.
-  - >-
-    The same defect also made `RADIUS_VALUES[radius]` an implicit-any index under `strict`, which
-    surfaced only once the suppressions above were removed.
+  - "R-562 (an app means an app): the ecosystem planner forces mobile_profile=none on every planned app, so a role that asked for an app still gets a website. Substitution cannot fix that; the planner has to ask for a mobile surface in the first place."
+found_and_fixed: []
