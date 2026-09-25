@@ -53,6 +53,13 @@ def _go_string_fragment(value: str) -> str:
 
 # --------------------------------------------------------------------------- Python (FastAPI)
 
+def _workflows_by_entity(ir) -> dict:
+    """R-566: the lifecycle an entity has, if any."""
+    from ..application_ir.workflow import workflows_of
+
+    return {w.entity: w for w in workflows_of(ir)}
+
+
 def _python_db(slug: str) -> str:
     return (
         "from __future__ import annotations\n\n"
@@ -68,7 +75,7 @@ def _python_db(slug: str) -> str:
     )
 
 
-def _python_repository(entity: Entity) -> str:
+def _python_repository(entity: Entity, workflow=None) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
     insert_cols = _insert_columns(entity)
@@ -199,7 +206,28 @@ def _python_repository(entity: Entity) -> str:
         "        row = await cur.fetchone()\n"
         "        return int(row[\"count\"]) if row else 0\n"
         + _python_update(entity, table)
+        + _python_state_setter(table, workflow)
         + _python_filtered_lists(entity, table, cols)
+    )
+
+
+def _python_state_setter(table: str, workflow) -> str:
+    """R-566: a transition writes one column.
+
+    The generated `update_<table>` writes every column from a full payload, so a transition passing
+    only the new state would blank the rest of the row. This writes the lifecycle column and
+    nothing else, and returns the row so a caller can see the result.
+    """
+    if workflow is None:
+        return ""
+    return (
+        "\n\n"
+        f"async def set_{table}_{workflow.field}(id: str, value: str) -> dict | None:\n"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        f"        sql = f'UPDATE {{TABLE}} SET {sql_identifier(workflow.field)} = %s "
+        f"WHERE {sql_identifier('id')} = %s RETURNING *'\n"
+        "        await cur.execute(sql, (value, id))\n"
+        "        return await cur.fetchone()\n"
     )
 
 
@@ -321,7 +349,12 @@ def python_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, st
         ("app/repositories/__init__.py", ""),
     ]
     for entity in ir.entities:
-        files.append((f"app/repositories/{table_name(entity.name)}.py", _python_repository(entity)))
+        files.append(
+            (
+                f"app/repositories/{table_name(entity.name)}.py",
+                _python_repository(entity, _workflows_by_entity(ir).get(entity.name)),
+            )
+        )
     return files
 
 

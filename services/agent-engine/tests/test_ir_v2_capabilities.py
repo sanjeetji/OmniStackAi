@@ -128,9 +128,17 @@ class AKindMustExistBeforeAnIrMayUseIt(TestCase):
             Capability("ledger", "payouts")
         self.assertIn("registered", str(caught.exception))
 
-    def test_nothing_is_registered_yet(self) -> None:
-        """R-564 ships the frame and no kind, so nothing can be declared before it can be built."""
-        self.assertEqual(CAPABILITY_KINDS.implemented(), ())
+    def test_only_kinds_with_code_behind_them_are_implemented(self) -> None:
+        """R-564 shipped the frame and no kind; R-566 registered the first one that generates code.
+
+        The assertion changed from "nothing is registered" to "everything registered is real",
+        which is the property that actually matters — the empty registry was only how R-564 could
+        guarantee it before anything existed.
+        """
+        for kind in CAPABILITY_KINDS.implemented():
+            with self.subTest(kind=kind):
+                self.assertIsNotNone(CAPABILITY_KINDS.get(kind))
+        self.assertIn("workflow", CAPABILITY_KINDS.implemented())
 
     def test_declared_and_implemented_are_kept_apart(self) -> None:
         registry = CapabilityRegistry()
@@ -159,16 +167,22 @@ class AKindMustExistBeforeAnIrMayUseIt(TestCase):
         self.assertTrue(Capability("strict", "thing", {"ok": True}))
 
 
-class IntakeDoesNotOfferWhatCannotBeBuilt(TestCase):
-    def test_the_model_is_not_shown_a_capabilities_field(self) -> None:
-        """Showing an empty list invites the model to fill it, and nothing could build the result.
-
-        The key returns on its own the moment a kind is registered as implemented, so this is a
-        consequence of the registry rather than a string somebody has to remember to change.
-        """
+class IntakeOffersExactlyWhatCanBeBuilt(TestCase):
+    def test_the_capabilities_field_returned_by_itself(self) -> None:
+        """R-564 hid the key while nothing could build a capability, and said it would come back
+        on its own once a kind was registered. R-566 registered one, and it did — no string
+        anywhere had to be remembered."""
         from omnistackai_agent_engine.intake.nl_to_ir import _system_instruction
 
-        self.assertNotIn('"capabilities"', _system_instruction("minimal-blog"))
+        self.assertIn('"capabilities"', _system_instruction("minimal-blog"))
+
+    def test_the_model_is_told_how_to_write_the_kind_that_exists(self) -> None:
+        # An empty list with no schema beside it is an invitation to invent one.
+        from omnistackai_agent_engine.intake.nl_to_ir import _system_instruction
+
+        instruction = _system_instruction("minimal-blog")
+        self.assertIn("workflow", instruction)
+        self.assertIn("transitions", instruction)
 
     def test_the_template_still_states_the_current_version(self) -> None:
         from omnistackai_agent_engine.intake.nl_to_ir import _system_instruction

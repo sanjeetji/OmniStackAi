@@ -84,6 +84,26 @@ def _system_instruction(example_name: str) -> str:
     if not CAPABILITY_KINDS.implemented():
         _template_ir.pop("capabilities", None)
     template = json.dumps(_template_ir, indent=2, sort_keys=True)
+
+    # R-566: an empty `capabilities` list with no schema beside it is an invitation to invent one.
+    # Built from the registry, so a kind that is not implemented is never described to the model.
+    capability_rules = ""
+    if "workflow" in CAPABILITY_KINDS.implemented():
+        capability_rules = (
+            "\nLifecycles (optional, use only when the product really has one):\n"
+            "- A 'capabilities' entry of kind 'workflow' describes the states an entity moves "
+            "through and who may move it. Use it for an order that is placed then accepted then "
+            "delivered, a document that is drafted then approved, a ticket that is opened then "
+            "closed. Do NOT use it for a plain boolean like 'published'.\n"
+            '- Shape: {"kind": "workflow", "name": "order_lifecycle", "config": {"entity": '
+            '"Order", "field": "status", "states": ["placed", "accepted", "delivered"], '
+            '"initial": "placed", "transitions": [{"name": "accept", "from": ["placed"], '
+            '"to": "accepted", "roles": ["merchant"]}]}}\n'
+            "- The entity MUST have the named field, as a string field, in its 'fields'.\n"
+            "- State and transition names are lower_snake_case. Every 'to' and 'from' must be one "
+            "of the declared states, and every role must be one of the app's roles.\n"
+            "- Leave 'capabilities' as [] when the product has no lifecycle.\n"
+        )
     field_types = ", ".join(t.value for t in FieldType)
     # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming
     # `flutter` here told the model to choose a profile the assembler then discarded, which is how
@@ -146,6 +166,7 @@ def _system_instruction(example_name: str) -> str:
         f"  * 'backend_strategy': {backend_strategies} (choose 'go' if the user requested Go/golang; default to 'python')\n"
         f"  * 'database_strategy': {database_strategies}\n"
         f"  * 'repo_strategy': {repo_strategies}\n"
+        f"{capability_rules}"
         "\n"
         "Template Schema Reference (copy this JSON shape; replace the content with the expanded domain):\n"
         f"{template}\n"

@@ -275,10 +275,30 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         blocks.append(_SET_UPDATED_AT_FUNCTION)
         blocks.append("")
 
+    # R-566: a lifecycle belongs in the database, not only in the application. A workflow's states
+    # become a CHECK constraint and a default, so a row cannot hold a state nobody declared — not
+    # even through a hand-written UPDATE. A lifecycle enforced only in application code lasts
+    # exactly as long as every writer remembers it.
+    from ..application_ir.workflow import workflows_of
+
+    workflows_by_entity = {w.entity: w for w in workflows_of(ir)}
+
     for entity in ordered_entities(ir):
         table = _table(entity.name)
         columns = ",\n".join(_column_lines(entity, has_auth=auth))
+        workflow = workflows_by_entity.get(entity.name)
+        if workflow is not None:
+            allowed = ", ".join(f"'{state}'" for state in workflow.states)
+            columns += (
+                f",\n  CONSTRAINT {sql_identifier(f'chk_{table}_{workflow.field}')}"
+                f" CHECK ({sql_identifier(workflow.field)} IN ({allowed}))"
+            )
         blocks.append(f"CREATE TABLE {sql_identifier(table)} (\n{columns}\n);")
+        if workflow is not None:
+            blocks.append(
+                f"ALTER TABLE {sql_identifier(table)} ALTER COLUMN {sql_identifier(workflow.field)}"
+                f" SET DEFAULT '{workflow.initial}';"
+            )
         # R-502: BEFORE UPDATE trigger keeps updated_at current.
         blocks.append(
             f"CREATE TRIGGER {sql_identifier(f'trg_{table}_updated_at')}\n"

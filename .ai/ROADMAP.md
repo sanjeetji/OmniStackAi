@@ -141,7 +141,8 @@ after the first numbering and belong to Phase 2.
 |---|---|---|---|
 | R-564 ✅ | **IR v2 core**: capability layer, schema versioning, migration of existing v1 IRs | L | Backward compatibility is a hard requirement — projects exist |
 | R-565 ✅ | **Stack selection as first-class IR**: the chosen web/admin/mobile/backend stack is carried, honoured, or refused with a reason | M | Makes §3 real instead of advisory |
-| R-566 | **Workflows and state machines** — order lifecycle, dispatch, approval chains | L | The single biggest unlock for delivery/logistics/commerce |
+| R-566 ✅ | **Workflows and state machines** — order lifecycle, dispatch, approval chains | L | The single biggest unlock for delivery/logistics/commerce |
+| R-588 | **Workflows for the Go and Node backends, plus transitions in the contract and on screens.** R-566 implemented them for Python; the others emit a 501 scaffold, and the actions exist in the API rather than on a page. | M | A capability half-reachable is half-delivered |
 | R-567 | **Money** — ledgers, payments, payouts, refunds, commission | L | Templates already prove the shape (Bazaar's double-entry ledger) |
 | R-568 | **Background jobs and scheduling** | M | Settlements, reminders, cleanup |
 | R-569 | **Realtime channels** — tracking, notifications, live status | M | Required by every delivery-style product |

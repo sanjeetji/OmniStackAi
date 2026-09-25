@@ -74,8 +74,9 @@ class CapabilityRegistry:
         return len(self._kinds)
 
 
-#: The kinds this build of the platform knows about. Phase 2 fills it; R-564 ships it empty on
-#: purpose, so that nothing can declare a capability before anything can build one.
+#: The kinds this build of the platform knows about. R-564 shipped it empty on purpose, so that
+#: nothing could declare a capability before anything could build one. R-566 adds the first kind
+#: that generates code; registration lives at the bottom of this module, after `Capability`.
 CAPABILITY_KINDS = CapabilityRegistry()
 
 
@@ -148,3 +149,21 @@ def parse_capabilities(raw: Any) -> tuple[Capability, ...]:
     if duplicates:
         raise InvalidIRError(f"duplicate capability names: {', '.join(sorted(duplicates))}")
     return parsed
+
+
+# --- The registered kinds ---------------------------------------------------------------------
+#
+# Registered here, at the bottom, so `Capability` above is defined before anything validates
+# against it. Each entry names a kind and the module that generates it; `implemented=True` is a
+# claim that something really builds it, and R-564's registry exists to keep that claim honest.
+
+from .workflow import validate_workflow_config  # noqa: E402  (after Capability, on purpose)
+
+CAPABILITY_KINDS.register(
+    CapabilityKind(
+        name="workflow",
+        summary="an entity's lifecycle: the states it moves through and who may move it",
+        implemented=True,
+        validator=validate_workflow_config,
+    )
+)

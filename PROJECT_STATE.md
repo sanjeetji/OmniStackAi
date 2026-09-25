@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-566 (2026-09-26): an entity's lifecycle, and who may move it.**
+> An order that goes placed -> accepted -> delivered, and a courier who may not accept one, could not be written down. A status column was a string anybody could set to anything, and `POST /orders/{id}/accept` wired to nothing — a 501 stub.
+> The first capability kind with code generation behind it. R-564's mechanism worked by itself: registering `workflow` made intake's `capabilities` key reappear with no string edited.
+> **States live in the database** (a check constraint, so no `UPDATE` can write an undeclared one) and **transitions are refused by the backend**, not merely hidden in the UI.
+> Proven by running it: against live PostgreSQL an undeclared state is rejected; against the started FastAPI backend, publish from draft is **409** naming the legal state, from review is **200** and the row becomes live, and without a token it is 401.
+> **That run found something far larger:** role-based access control was non-functional in *every* generated project — login issued `"role": "author"` as a string while the guard read `claims.get("roles")` as a list, so every role-guarded endpoint answered **403 to everyone**. No test had ever called one.
+> Recorded, not implied: Python only for now (Go/Node keep the 501 scaffold); the contract and screens do not yet carry transitions; and a workflow cannot yet be edited. 30 new tests; `task verify` 4,398 OK.
+
 > **R-584 (2026-09-25): an edit can change a project, not only add to it.**
 > The delta merged net-new things by concatenation and *raised* on anything existing, so "rename Post to Article", "remove the published field" and "add a notes field" had no way through. Restating gave an error; giving up proposed nothing and reported that no files needed changing. The platform's own smoke test asks for one of these.
 > `intake/ir_changes.py` adds seven pure operations. **The work is not the change, it is everything pointing at it:** renaming `Post` to `Article` rewrites `/posts`, `{postId}`, `post_list`, the relation `Comment` declares, and the fixtures — otherwise a rename becomes a deletion nobody asked for. Removals cascade deliberately.

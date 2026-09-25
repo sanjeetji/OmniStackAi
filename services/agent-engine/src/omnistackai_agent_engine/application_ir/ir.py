@@ -722,6 +722,40 @@ class ApplicationIR:
         for screen in self.screens:
             if screen.role not in role_ids:
                 raise InvalidIRError(f"screen {screen.id!r} references unknown role {screen.role!r}")
+        self._validate_workflows()
+
+    def _validate_workflows(self) -> None:
+        """Check every workflow against the rest of the IR (R-566).
+
+        `validate_workflow_config` can only judge a workflow against itself — that a transition
+        does not move to a state nobody declared. Whether the entity exists, whether it has the
+        field the lifecycle lives in, and whether the roles allowed to make a transition are roles
+        this application has, are questions about the rest of the IR, and belong where the rest of
+        the IR is in scope. A workflow naming a field that does not exist would otherwise generate
+        a constraint on a column the schema never creates.
+        """
+        from .workflow import workflows_of
+
+        entities_by_name = {entity.name: entity for entity in self.entities}
+        role_ids = {role.id for role in self.roles}
+        for workflow in workflows_of(self):
+            entity = entities_by_name.get(workflow.entity)
+            if entity is None:
+                raise InvalidIRError(
+                    f"workflow names unknown entity {workflow.entity!r}"
+                )
+            field_names = {f.name for f in entity.fields}
+            if workflow.field not in field_names:
+                raise InvalidIRError(
+                    f"workflow on {workflow.entity} needs a field named {workflow.field!r}; "
+                    f"{workflow.entity} has: {', '.join(sorted(field_names))}"
+                )
+            for transition in workflow.transitions:
+                for role in transition.roles:
+                    if role not in role_ids:
+                        raise InvalidIRError(
+                            f"transition {transition.name!r} allows unknown role {role!r}"
+                        )
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {

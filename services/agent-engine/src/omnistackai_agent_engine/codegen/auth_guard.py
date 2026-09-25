@@ -306,7 +306,11 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
         '        id=row["id"], email=row["email"],\n'
         '        full_name=row["full_name"], role=row["role"],\n'
         "    )\n"
-        '    token = _create_token({"sub": user.id, "email": user.email, "role": user.role})\n'
+        # R-566: `roles` as a list, beside `role`. The guard reads `claims.get("roles")` and
+        # requires a list, while login issued only the singular string — so every role-guarded
+        # endpoint answered 403 for everyone, in every generated project. Found by calling one.
+        # Both keys are emitted: the guard needs the list, and anything reading `role` still works.
+        '    token = _create_token({"sub": user.id, "email": user.email, "role": user.role, "roles": [user.role]})\n'
         "    return TokenResponse(access_token=token, user=user)\n\n\n"
         '@router.post("/login", response_model=TokenResponse)\n'
         "async def login(body: LoginRequest) -> TokenResponse:\n"
@@ -328,7 +332,11 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
         '        id=row["id"], email=row["email"],\n'
         '        full_name=row["full_name"], role=row["role"],\n'
         "    )\n"
-        '    token = _create_token({"sub": user.id, "email": user.email, "role": user.role})\n'
+        # R-566: `roles` as a list, beside `role`. The guard reads `claims.get("roles")` and
+        # requires a list, while login issued only the singular string — so every role-guarded
+        # endpoint answered 403 for everyone, in every generated project. Found by calling one.
+        # Both keys are emitted: the guard needs the list, and anything reading `role` still works.
+        '    token = _create_token({"sub": user.id, "email": user.email, "role": user.role, "roles": [user.role]})\n'
         "    return TokenResponse(access_token=token, user=user)\n\n\n"
         '@router.get("/me", response_model=UserOut)\n'
         "async def me(authorization: str | None = None) -> UserOut:\n"

@@ -19,6 +19,7 @@ from .field_validation import filter_fields, parse_field_rules
 from .files import GeneratedFile, GeneratedProject
 from .openapi import render_openapi_json
 from .route_wiring import Op, fk_relations, wire_endpoint
+from .workflow_routes import transition_routes
 from .schema_sql import render_postgres_schema
 from .seed_sql import render_postgres_seed
 
@@ -118,13 +119,14 @@ def _router_file(
     repo_entities: frozenset[str],
     fk_by_entity: dict[str, tuple[str, ...]] | None = None,
     entities_by_name: dict[str, Entity] | None = None,
+    transitions: tuple = (),
 ) -> str:
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     tables = sorted({w.table for _, w in wirings if w is not None})
     models_used = sorted({w.entity for _, w in wirings if w is not None and w.op in (Op.CREATE, Op.UPDATE)})
 
     seg_needs_auth = any(api.auth for api in apis)
-    uses_roles = any(api.required_roles for api in apis)
+    uses_roles = any(api.required_roles for api in apis) or any(r.roles for r in transitions)
     uses_auth_only = any(api.auth and not api.required_roles for api in apis)
     uses_list = any(w is not None and w.op in (Op.LIST, Op.LIST_BY) for _, w in wirings)
 
@@ -205,6 +207,32 @@ def _router_file(
             lines.append("    if not deleted:")
             lines.append('        raise HTTPException(status_code=404, detail="not_found")')
             lines.append('    return {"deleted": True}')
+
+    # R-566: the lifecycle transitions. Refused here rather than merely hidden in the interface —
+    # not showing a courier the "accept" button is presentation; refusing the request is the rule.
+    for route in transitions:
+        role_args = ", ".join(f'"{role}"' for role in route.roles)
+        guard = f", dependencies=[Depends(require_roles({role_args}))]" if role_args else ""
+        allowed = route.transition.sources or route.workflow.states
+        lines.append("")
+        lines.append(f'@router.post("{route.path}"{guard})')
+        lines.append(f"async def {route.function}({route.id_param}: str) -> dict:")
+        lines.append(f"    row = await {route.table}.get_{route.table}({route.id_param})")
+        lines.append("    if row is None:")
+        lines.append('        raise HTTPException(status_code=404, detail="not_found")')
+        lines.append(f"    allowed = {tuple(allowed)!r}")
+        lines.append(f'    if row.get("{route.workflow.field}") not in allowed:')
+        lines.append("        raise HTTPException(")
+        lines.append("            status_code=409,")
+        lines.append(
+            f'            detail=f"cannot {route.transition.name} from {{row.get(\'{route.workflow.field}\')}};'
+            f' allowed from: {{\', \'.join(allowed)}}",'
+        )
+        lines.append("        )")
+        lines.append(
+            f'    return await {route.table}.set_{route.table}_{route.workflow.field}'
+            f'({route.id_param}, "{route.transition.to}")'
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -293,7 +321,21 @@ class PythonBackendAdapter:
             files.append(
                 GeneratedFile(
                     f"app/routers/{segment}.py",
-                    _router_file(segment, by_segment[segment], repo_entities, fk_by_entity, entities_by_name),
+                    _router_file(
+                        segment,
+                        by_segment[segment],
+                        repo_entities,
+                        fk_by_entity,
+                        entities_by_name,
+                        # Matched on the path's first segment, which is what names the
+                        # router file — `posts.py` holds `/posts/...`, and the table is
+                        # the singular `post`.
+                        tuple(
+                            r
+                            for r in transition_routes(ir)
+                            if r.path.strip("/").split("/")[0] == segment
+                        ),
+                    ),
                 )
             )
 

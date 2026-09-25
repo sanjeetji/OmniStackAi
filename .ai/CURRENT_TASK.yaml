@@ -1,9 +1,9 @@
 task_id: R-566
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 35
 started_at: "2026-09-26"
-completed_at: null
+completed_at: "2026-09-26"
 branch: ai/R-566-workflows
 objective: >-
   A product's lifecycle cannot be written down. An order that goes placed -> accepted -> picked_up
@@ -42,5 +42,15 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "A workflow cannot yet be edited: R-584 made entities and fields changeable, but adding a state or a transition is a capability-level change the delta does not cover. Flagged before R-566 started and confirmed by it."
+  - "Transitions are implemented for the Python backend. Go and Node emit the existing 501 scaffold for them, which is visible rather than silent, but is not the whole feature."
+  - "The contract and the screens do not yet carry the transitions, so the actions exist in the API and not on a page." 
+found_and_fixed:
+  - >-
+    Role-based access control was **entirely non-functional in every generated project**. The
+    generated login issued a token carrying `"role": "author"` — a single string — while the
+    generated guard read `claims.get("roles")` and required a list, so every role-guarded endpoint
+    answered 403 to everyone. Each half was correct on its own terms and no test called one, so
+    nothing caught it. Found by calling a role-guarded transition against a running generated
+    backend; both token-creation sites now issue `roles` as a list beside `role`.
