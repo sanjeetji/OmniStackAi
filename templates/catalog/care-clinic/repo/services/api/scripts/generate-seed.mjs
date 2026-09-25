@@ -12,6 +12,44 @@ function escArray(arr) {
   return `ARRAY[${arr.map(esc).join(", ")}]::text[]`;
 }
 
+// R-586: this generator called itself deterministic and was not. Every date came from the current
+// clock, so the committed seed stopped matching a fresh run the moment the date rolled over: the
+// same test passed on 2026-09-24 and failed on 2026-09-25 with no code change in between, which
+// made `task verify` fail every day. The old code also mixed UTC `toISOString()` with local
+// `getDay()`, so the output depended on the timezone it ran in as well.
+//
+// Dates are now generated against a fixed Monday, which makes this file byte-identical on every run
+// and everywhere. The demo still has to look current, so the seed ends with a block that moves every
+// generated date forward into the present week.
+//
+// The shift is exact, so the generator's "today" lands on the real today. That matters more than it
+// sounds: `/api/admin/front-desk` and `/api/admin/queue-display` both filter on today's date
+// (src/routes/admin.ts), so a whole-week shift -- which would preserve weekdays -- leaves the front
+// desk and the waiting-room board **empty on six days out of seven**. An empty queue is the first
+// thing a person opening this demo would see.
+//
+// An exact shift moves every weekday by the same amount, so `doctor_availability.day_of_week` is
+// rotated by the same offset below. Without that the clinic would hold appointments on days no
+// doctor is rostered, and `day_of_week = EXTRACT(DOW FROM CURRENT_DATE)` would disagree with the
+// appointments table. The one cosmetic cost is that the clinic's closed day tracks the shift rather
+// than always being Sunday; a populated demo is worth that.
+const ANCHOR_MONDAY = "2026-09-21";
+const ANCHOR_UTC = Date.UTC(2026, 8, 21); // month is 0-based; 2026-09-21 is a Monday
+
+function anchorPlus(days) {
+  const d = new Date(ANCHOR_UTC);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+
+/** The generator's "today". The shift block below moves it to the Monday of the current week. */
+const TODAY = ANCHOR_MONDAY;
+
+/** A timestamp on the generator's today, for the rows that used to be written as the clock value. */
+function at(time) {
+  return TODAY + " " + time;
+}
+
 const HASH_PATIENT =
   "4580f7bd428f4850f60bec1504ab34de:20b0fa498343480052b457d34438d0a89fbac8dfaf77435f93fe5c6306a71b885bb6b0854a9965812ec9f5f43916013ed316bb04f2aaf10b61e323827045b7d7";
 const HASH_DOCTOR =
@@ -560,10 +598,9 @@ function getEndSlot(slotStr) {
 
 // Past appointments: 8 per weekday over the last 90 days (the clinic is closed on Sundays)
 for (let dayOffset = 90; dayOffset >= 1; dayOffset--) {
-  const d = new Date();
-  d.setDate(d.getDate() - dayOffset);
+  const d = anchorPlus(-dayOffset);
   const dateStr = d.toISOString().slice(0, 10);
-  const isWeekend = d.getDay() === 0;
+  const isWeekend = d.getUTCDay() === 0;
   if (isWeekend) continue; // Clinic OPD closed on Sundays
 
   // 8 appointments per weekday across doctors
@@ -668,9 +705,12 @@ out(`-- 6b. Ananya Deshmukh's own clinical history (the account the demo signs i
 // signed prescription, and two paediatric visits booked for her son Aarav. These use the :20 slots
 // the bulk loop never touches, so the doctor/date/time uniqueness rule still holds.
 function weekdayBefore(days) {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  while (d.getDay() === 0) d.setDate(d.getDate() - 1);
+  let offset = days;
+  let d = anchorPlus(-offset);
+  while (d.getUTCDay() === 0) {
+    offset += 1;
+    d = anchorPlus(-offset);
+  }
   return d.toISOString().slice(0, 10);
 }
 
@@ -772,7 +812,7 @@ for (const h of DEMO_HISTORY) {
 out(``);
 
 // Today's live OPD queue, then the next 14 days of bookings
-const todayStr = new Date().toISOString().slice(0, 10);
+const todayStr = TODAY;
 out(`-- Today's Active Clinic Queue & Upcoming Appointments`);
 
 // Today's appointments for Dr. Rajesh Varma (including demo patient Ananya)
@@ -811,8 +851,8 @@ for (const ta of TODAY_APPOINTMENTS) {
     amount: doctor.clinicFee,
     status: collected ? "paid" : "pending",
     method: collected ? "upi" : null,
-    paidAt: collected ? "NOW()" : "NULL",
-    createdAt: "NOW()",
+    paidAt: collected ? esc(at("09:30:00")) : "NULL",
+    createdAt: esc(at("09:00:00")),
     label: `OPD consultation — ${doctor.fullName}`,
     itemType: "consultation_fee",
   });
@@ -820,7 +860,7 @@ for (const ta of TODAY_APPOINTMENTS) {
   if (ta.status === "in_consult" || ta.status === "completed") {
     const consultId = `80000000-0000-0000-0000-${aptCounter.toString().padStart(12, "0")}`;
     out(
-      `INSERT INTO consultations (id, appointment_id, doctor_id, patient_id, started_at, subjective, objective, assessment, plan) VALUES (${esc(consultId)}, ${esc(aptId)}, ${esc(doctor.id)}, ${esc(ta.patient)}, NOW(), 'Routine quarterly blood pressure and cardiac review.', 'BP 128/82 mmHg, HR 74 bpm. Heart sounds S1 S2 normal.', 'Hypertension stage 1 - well controlled.', 'Continue low sodium diet and regular morning walk.');`
+      `INSERT INTO consultations (id, appointment_id, doctor_id, patient_id, started_at, subjective, objective, assessment, plan) VALUES (${esc(consultId)}, ${esc(aptId)}, ${esc(doctor.id)}, ${esc(ta.patient)}, ${esc(at("09:40:00"))}, 'Routine quarterly blood pressure and cardiac review.', 'BP 128/82 mmHg, HR 74 bpm. Heart sounds S1 S2 normal.', 'Hypertension stage 1 - well controlled.', 'Continue low sodium diet and regular morning walk.');`
     );
     out(
       `INSERT INTO diagnoses (consultation_id, icd10_code, condition_name, is_primary) VALUES (${esc(consultId)}, 'I10', 'Essential (primary) hypertension', TRUE);`
@@ -832,9 +872,7 @@ for (const ta of TODAY_APPOINTMENTS) {
 // Planned physician absences the rostering screen shows. No appointment is written against a
 // doctor on a day they are away, so the calendar and the bookings agree.
 function dateInDays(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return anchorPlus(days).toISOString().slice(0, 10);
 }
 
 const SCHEDULE_OVERRIDES = [
@@ -851,10 +889,9 @@ const LEAVE_DAYS = new Set(
 
 // Generate remaining upcoming appointments up to +14 days
 for (let day = 1; day <= 14; day++) {
-  const d = new Date();
-  d.setDate(d.getDate() + day);
+  const d = anchorPlus(day);
   const dateStr = d.toISOString().slice(0, 10);
-  if (d.getDay() === 0) continue;
+  if (d.getUTCDay() === 0) continue;
 
   for (let s = 0; s < 12; s++) {
     if (aptCounter >= 900) break;
@@ -888,8 +925,8 @@ for (let day = 1; day <= 14; day++) {
       amount: fee,
       status: isVideo ? "paid" : "pending",
       method: isVideo ? "card" : null,
-      paidAt: isVideo ? "NOW()" : "NULL",
-      createdAt: "NOW()",
+      paidAt: isVideo ? esc(at("08:00:00")) : "NULL",
+      createdAt: esc(at("09:00:00")),
       label: `${isVideo ? "Video consultation" : "OPD consultation"} — ${doctor.fullName}`,
       itemType: isVideo ? "video_fee" : "consultation_fee",
     });
@@ -1018,7 +1055,7 @@ for (const visit of TODAY_VISITS) {
   emitLabOrder({
     visit,
     status: LAB_IN_FLIGHT[visit.n % LAB_IN_FLIGHT.length],
-    createdAt: "NOW()",
+    createdAt: esc(at("09:00:00")),
     completedAt: "NULL",
     testCount: 2,
   });
@@ -1067,7 +1104,7 @@ for (const vv of VIDEO_VISITS) {
     );
   } else {
     out(
-      `INSERT INTO telehealth_sessions (appointment_id, room_token, status, connection_quality, created_at) VALUES (${esc(vv.aptId)}, ${esc(token)}, 'waiting', 'good', NOW());`
+      `INSERT INTO telehealth_sessions (appointment_id, room_token, status, connection_quality, created_at) VALUES (${esc(vv.aptId)}, ${esc(token)}, 'waiting', 'good', ${esc(at("09:00:00"))});`
     );
   }
 }
@@ -1091,9 +1128,67 @@ const NOTIFICATIONS = [
 
 for (const n of NOTIFICATIONS) {
   out(
-    `INSERT INTO notifications (user_id, title, message, type, is_read, link, created_at) VALUES (${esc(n.user)}, ${esc(n.title)}, ${esc(n.message)}, ${esc(n.type)}, ${esc(n.read)}, ${esc(n.link)}, ${n.ago === 0 ? "NOW()" : esc(dateInDays(-n.ago) + " 09:00:00")});`
+    `INSERT INTO notifications (user_id, title, message, type, is_read, link, created_at) VALUES (${esc(n.user)}, ${esc(n.title)}, ${esc(n.message)}, ${esc(n.type)}, ${esc(n.read)}, ${esc(n.link)}, ${esc(n.ago === 0 ? at("09:00:00") : dateInDays(-n.ago) + " 09:00:00")});`
   );
 }
+
+out(``);
+
+// R-586: every date above is anchored to a fixed Monday so this file is byte-identical on every
+// run. This block moves the whole demo forward into the current week when the seed is loaded, so
+// the clinic still looks live. The offset is whole weeks, so every appointment keeps the weekday
+// the generator gave it -- the application matches doctor availability on
+// `EXTRACT(DOW FROM CURRENT_DATE)` and the OPD is closed on Sundays, and both would break if the
+// data slid by an arbitrary number of days.
+//
+// Every column the seed writes a generated date into has to be listed here. `dob` is deliberately
+// absent: a date of birth is not part of the demo timeline and must not move. A test regenerates
+// this seed, finds every column that receives a date literal, and fails if one is missing from
+// this list -- so a column added later cannot be quietly left behind.
+const SHIFTED_DATE_COLUMNS = [
+  ["consultations", ["follow_up_date"]],
+  ["schedule_overrides", ["date"]],
+];
+const SHIFTED_TIMESTAMP_COLUMNS = [
+  ["appointments", ["cancelled_at"]],
+  ["chart_access_logs", ["accessed_at"]],
+  ["consultations", ["started_at", "completed_at"]],
+  ["invoices", ["paid_at", "created_at"]],
+  ["lab_orders", ["created_at", "completed_at"]],
+  ["notifications", ["created_at"]],
+  ["patient_reviews", ["created_at"]],
+  ["prescriptions", ["signed_at"]],
+  ["refunds", ["processed_at"]],
+  ["telehealth_sessions", ["created_at", "doctor_joined_at", "patient_joined_at", "ended_at"]],
+  ["vitals_records", ["recorded_at"]],
+];
+
+const SHIFT = `(CURRENT_DATE - DATE '${ANCHOR_MONDAY}')`;
+
+out(`-- ====================================================================`);
+out(`-- Move the demo onto today (see scripts/generate-seed.mjs for why exact`);
+out(`-- days rather than whole weeks). NULL stays NULL.`);
+out(`-- ====================================================================`);
+// `appointments.scheduled_date` cannot move in one statement: uq_doctor_slot (doctor, date, time)
+// is checked row by row, so a row that has already moved collides with one that has not, and the
+// whole seed fails to load. Parking the table centuries ahead first leaves the destination empty
+// for both passes. Found by loading the seed into Postgres -- an earlier version of this block
+// appeared to work only because that day's shift happened to be zero.
+out(`UPDATE appointments SET scheduled_date = scheduled_date + 100000;`);
+out(`UPDATE appointments SET scheduled_date = scheduled_date - 100000 + ${SHIFT};`);
+for (const [table, cols] of SHIFTED_DATE_COLUMNS) {
+  const sets = cols.map((c) => `${c} = ${c} + ${SHIFT}`).join(", ");
+  out(`UPDATE ${table} SET ${sets};`);
+}
+for (const [table, cols] of SHIFTED_TIMESTAMP_COLUMNS) {
+  const sets = cols.map((c) => `${c} = ${c} + (${SHIFT} || ' days')::interval`).join(", ");
+  out(`UPDATE ${table} SET ${sets};`);
+}
+
+// Every date moved by the same number of days, so each one changed weekday by the same amount.
+// The roster has to follow, or doctors are unavailable on the days they are booked. Wrapped twice
+// because SQL's % keeps the sign of its left operand and the offset is negative before the anchor.
+out(`UPDATE doctor_availability SET day_of_week = ((day_of_week + ${SHIFT}) % 7 + 7) % 7;`);
 
 out(``);
 out(`-- End of CareClinic Seed Data`);

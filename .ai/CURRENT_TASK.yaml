@@ -1,75 +1,59 @@
-task_id: R-559
+task_id: R-586
 status: complete
 phase: MVP
-tracker_row: 25
+tracker_row: 26
 started_at: "2026-09-25"
 completed_at: "2026-09-25"
 branch: ai/R-559-substitute-and-explain
 objective: >-
-  Asking for something we cannot build returns something else, silently. A prompt for a Flutter app,
-  a native iOS/Android app, or a React-Native-for-Web site produces a Next.js website and an admin
-  panel, with no error, no warning and nothing in the console saying why. Verified across all four
-  mobile profiles: only `react_native` emits `apps/mobile`; `flutter`, `native` and `auto` drop it
-  in silence. `nl_to_ir` actively instructs the model to choose `flutter`, which is a guaranteed
-  silent drop.
-  The information already exists and is thrown away: `_plan_assembly` computes a `skipped` list of
-  reasons, and the only consumer is the generated README.
-  Replace dropping with substituting: build the nearest supported target, record what was asked
-  beside what was built, and say why in one plain sentence that reaches the user. Decide it from a
-  capability registry derived from the registered adapters, so that registering a Flutter or native
-  adapter later turns the substitution off by itself with no other code change.
+  The CareClinic seed generator calls itself deterministic and is not. Every date came from the
+  current clock, so the committed seed stopped matching a fresh run the moment the date rolled over:
+  the same test passed on 2026-09-24 and failed on 2026-09-25 with no code change in between,
+  confirmed on a clean checkout. `task verify` therefore fails every day, which makes every later
+  task's evidence unreliable. The generator also mixed UTC `toISOString()` with local `getDay()`, so
+  its output depended on the timezone it ran in as well.
+  Anchor every date to a fixed Monday so the file is byte-identical everywhere, and move the whole
+  demo onto the current date when the seed loads so the clinic still looks live.
 founder_gate: >-
-  Founder on 2026-09-25: Next.js is the one web stack and React Native the one mobile stack for now;
-  a Flutter request should build in React Native and state the reason, and the platform must be able
-  to adopt Flutter, React and native later without rework. Also: never hand back a website when an
-  app was asked for.
+  Founder on 2026-09-25: fix R-586 first, then continue with R-560.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/
-  - services/agent-engine/src/omnistackai_agent_engine/intake/
+  - templates/catalog/care-clinic/
   - services/agent-engine/tests/
-  - apps/console-web/
-  - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - No silent behaviour: every substitution carries a reason that reaches the user
-  - The IR keeps recording what the user asked for; substitution never rewrites the request
-  - Support is read from the adapter registry, never from a hardcoded list of unsupported stacks
-  - One decision function; the assembler and the build result must not compute it separately
-  - Generated copy is rendered as text in the console, never as HTML
-  - task verify stays offline with 0 model calls
+  - The generator reads no clock; output is identical on every run and in every timezone
+  - The demo still looks current after the seed loads
+  - No appointment on a day its doctor is not rostered
+  - The seed loads into a real PostgreSQL with no error
+  - A date column added later cannot be silently left out of the shift
 required_gates:
-  - flutter, native and auto mobile requests assemble a real React Native app
-  - Unsupported web strategies assemble a real Next.js app
-  - Each substitution states what was asked, what was built and why, in plain words
-  - The reason reaches AppBuildResult and the console, not only the generated README
-  - Registering an adapter for a substituted target stops the substitution with no other change
-  - nl_to_ir no longer offers the model a target that has no adapter
-  - A supported stack produces no substitution and no note
-  - task verify passes offline with 0 model calls
+  - Two runs of the generator are byte-identical
+  - The generator contains no clock read and no NOW()
+  - The committed seed matches a fresh run byte for byte
+  - Every column that receives a date literal is covered by the shift block
+  - The seed loads into PostgreSQL cleanly and the data lands around today
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-blockers:
-  - >-
-    Not caused by this task and not fixed in it (templates/ is outside this task's path scope):
-    `test_the_committed_seed_came_from_this_generator` fails on any day after the CareClinic seed
-    was committed. `templates/catalog/care-clinic/.../generate-seed.mjs` builds timestamps from
-    `new Date()`, so the regenerated seed stops matching the committed one when the date rolls
-    over. It passed on 2026-09-24 and fails on 2026-09-25 with no code change in between --
-    confirmed by running it on a clean checkout. This makes `task verify` fail every day until the
-    generator takes a fixed reference date. Recorded as R-586.
-deferred:
-  - "R-562 (an app means an app): the ecosystem planner forces mobile_profile=none on every planned app, so a role that asked for an app still gets a website. Substitution cannot fix that; the planner has to ask for a mobile surface in the first place."
+blockers: []
+deferred: []
 found_and_fixed:
   - >-
-    Found in the first draft of this task's own capability table, by the gate written for it:
-    mapping `rn_web` onto the React Native target reported react-native-web as *supported*,
-    because that adapter is registered -- it just renders a phone app, not a web page. No
-    substitution fired, `_plan_assembly` lays out only Next.js, and the result was a project with
-    **zero apps** -- worse than the silent drop being fixed. Flutter-for-web carried the same trap
-    for the day a Flutter mobile adapter is registered. Both now map to an empty target set, and
-    `SupportedMeansItActuallyAssembles` asserts that anything reported as supported survives a
-    real assembly.
+    A single `UPDATE appointments SET scheduled_date = scheduled_date + shift` fails to load:
+    `uq_doctor_slot (doctor_id, scheduled_date, start_time)` is checked row by row, so a row that
+    has already moved collides with one that has not. The table is now parked 100000 days ahead
+    and brought back, which leaves the destination empty on both passes. Found only by loading the
+    seed into a real PostgreSQL -- an earlier version of the block appeared to work because that
+    day's whole-week shift happened to be exactly zero, so nothing moved at all.
+  - >-
+    A whole-week shift preserves weekdays but leaves `/api/admin/front-desk` and
+    `/api/admin/queue-display` empty on six days in seven, because both filter on today's date. The
+    shift is exact instead, and `doctor_availability.day_of_week` is rotated by the same offset so
+    no appointment lands on a day its doctor is not rostered. Verified in PostgreSQL: the closed day
+    moves with the data and holds zero appointments.
+  - >-
+    The generator mixed UTC `toISOString()` with local `getDay()`, so its output also depended on
+    the timezone it ran in. Now UTC throughout.

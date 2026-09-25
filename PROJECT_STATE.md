@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-586 (2026-09-25): the CareClinic seed generator stops reading the clock.**
+> It called itself deterministic and was not. Every date came from `new Date()`, so the committed seed stopped matching a fresh run once the date rolled over — the same test passed on the 24th and failed on the 25th with no code change — and **`task verify` failed every day**, making every later task's evidence unreliable.
+> Dates are now anchored to a fixed Monday, so the file is byte-identical on every run and in every timezone, and the seed moves the whole demo onto today when it loads. The stale-seed test is an exact hash again.
+> **Exact days, not whole weeks** — the opposite of the first attempt. Whole weeks preserve weekdays but leave the front desk and waiting-room board empty six days in seven, because both filter on today. The roster's `day_of_week` is rotated by the same offset so nothing is booked on an unrostered day.
+> **Two defects found only by loading into real PostgreSQL:** a single `UPDATE` of `scheduled_date` trips `uq_doctor_slot`, which is checked row by row — the table is parked 100000 days ahead and brought back. And an earlier version *appeared* to load cleanly only because that day's week-shift was exactly zero, so nothing moved.
+> A gate now reads the generated SQL, finds every column receiving a date literal and fails if it is not moved onto today; `dob` is excluded on purpose. Both new gates mutation-tested.
+> Evidence in PostgreSQL: −90..+14 days around today, 10 appointments on today's front desk, 0 booked without a roster, 0 stranded rows. `task verify` 4,255 OK — green for the first time since the rollover.
+
 > **R-559 (2026-09-25): ask for something we cannot build and get the nearest thing we can, with a reason.**
 > A Flutter, native or React-Native-for-Web request returned a Next.js site and an admin panel, silently. Of four mobile profiles only `react_native` emitted an app; **`flutter`, `native` and `auto` dropped it with no error** — and `nl_to_ir` told the model to pick `flutter`, so the likeliest path was a guaranteed silent drop.
 > The reasons already existed and were thrown away: `_plan_assembly` computed them and only the generated README ever read them.

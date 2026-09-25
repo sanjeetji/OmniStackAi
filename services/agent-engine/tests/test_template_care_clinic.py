@@ -77,21 +77,83 @@ class CareClinicApiTests(unittest.TestCase):
         )
 
     def test_the_committed_seed_came_from_this_generator(self) -> None:
-        """A hand-edited or stale seed is caught by comparing what each one writes, table by table.
+        """R-586: byte for byte, because the generator no longer reads a clock.
 
-        The clinic's dates are relative to today, and a weekday shift changes how many appointments
-        land in the window, so the seed is not byte-stable across days. What must hold is that the
-        committed file writes the same tables, in the same order, as a fresh run.
+        This used to compare only the sequence of tables written, because every date came from
+        `new Date()` and a weekday shift changed how many appointments landed in the window. That
+        was not weak enough to survive: the comparison still failed the day after the seed was
+        committed, so `task verify` broke every day. Dates are now anchored to a fixed Monday and
+        moved onto today by the seed itself, which makes the file identical on every run and lets
+        this gate be exact.
         """
         result = subprocess.run(
             ["node", "scripts/generate-seed.mjs"], cwd=str(API), capture_output=True, timeout=180, check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr.decode()[-2000:])
-        committed = (API / "seed" / "001_demo.sql").read_text(encoding="utf-8")
+        committed = (API / "seed" / "001_demo.sql").read_bytes()
         self.assertEqual(
-            _tables_written(result.stdout.decode("utf-8")),
-            _tables_written(committed),
+            hashlib.sha256(result.stdout).hexdigest(),
+            hashlib.sha256(committed).hexdigest(),
             "seed/001_demo.sql is stale: run `node scripts/generate-seed.mjs > seed/001_demo.sql`",
+        )
+
+    def test_the_generator_reads_no_clock(self) -> None:
+        """The property that makes the gate above possible, asserted at the source.
+
+        A single reintroduced `new Date()` or `NOW()` would put the seed back to failing daily, and
+        it would look like an unrelated template test breaking for no reason -- which is exactly how
+        this cost a morning to diagnose.
+        """
+        source = (API / "scripts" / "generate-seed.mjs").read_text(encoding="utf-8")
+        self.assertNotRegex(source, r"new Date\(\s*\)", "the generator must not read the clock")
+        self.assertNotIn("NOW()", source, "emit an anchored timestamp instead of NOW()")
+        self.assertNotRegex(
+            source, r"\bd\.getDay\(\)", "use getUTCDay: mixing local and UTC made output timezone-dependent"
+        )
+
+    def test_every_generated_date_column_is_moved_onto_today(self) -> None:
+        """A date column added later cannot be quietly left behind in 2026.
+
+        The seed writes anchored literals and then shifts them onto the current date. Any column
+        that receives a literal and is not in that shift block would stay frozen at the anchor while
+        everything around it moved -- an invoice dated months before the appointment it belongs to.
+        This reads the generated SQL rather than the generator, so it sees what is really written.
+        """
+        sql = (API / "seed" / "001_demo.sql").read_text(encoding="utf-8")
+        shifted = set(re.findall(r"UPDATE (\w+) SET (.+?);", sql))
+        moved: set[tuple[str, str]] = set()
+        for table, sets in shifted:
+            for column in re.findall(r"(\w+) = \1 ", sets):
+                moved.add((table, column))
+
+        written: set[tuple[str, str]] = set()
+        for match in re.finditer(r"INSERT INTO (\w+) \(([^)]*)\) VALUES \((.*?)\);", sql, re.S):
+            table, columns = match.group(1), [c.strip() for c in match.group(2).split(",")]
+            values, depth, current = [], 0, ""
+            for char in match.group(3):
+                if char == "," and depth == 0:
+                    values.append(current.strip())
+                    current = ""
+                    continue
+                if char in "([":
+                    depth += 1
+                if char in ")]":
+                    depth -= 1
+                current += char
+            values.append(current.strip())
+            if len(values) != len(columns):
+                continue
+            for column, value in zip(columns, values):
+                if re.match(r"'20\d\d-\d\d-\d\d", value):
+                    written.add((table, column))
+
+        # A date of birth is not part of the demo's timeline and must never move.
+        written -= {("patient_profiles", "dob"), ("family_members", "dob")}
+        self.assertEqual(
+            written - moved,
+            set(),
+            "these columns receive a date but are never moved onto today; add them to the shift "
+            "block in scripts/generate-seed.mjs",
         )
 
     def test_the_generator_is_deterministic(self) -> None:

@@ -129,7 +129,7 @@ after the first numbering and belong to Phase 2.
 
 | ID | Task | Size | Why it comes first |
 |---|---|---|---|
-| R-559 | **Substitute and explain, never drop.** Flutter/React/native requests build the nearest supported target (RN, Next.js) and state the reason. Driven by a **capability registry**, so a later adapter turns the substitution off by itself. | S | Converts the worst failure mode (silently wrong) into an honest one, and is the seam every later stack plugs into |
+| R-559 ✅ | **Substitute and explain, never drop.** Flutter/React/native requests build the nearest supported target (RN, Next.js) and state the reason. Driven by a **capability registry**, so a later adapter turns the substitution off by itself. | S | Converts the worst failure mode (silently wrong) into an honest one, and is the seam every later stack plugs into |
 | R-560 | **Wire the compile-verify-repair loop into the real build path.** It exists and has zero callers. | M | Everything below generates more code that nothing checks |
 | R-561 | **Extend verification beyond model-written files** — deterministic files, the backend, and the mobile app, not just `app/*.tsx`. | M | R-549's bug was in a deterministic file, which the current loop refuses to touch |
 | R-562 | **An app means an app, not a website.** The ecosystem planner forces `mobile=none`, so "customer + driver apps" returns four Next.js sites. Every named role that asked for an app gets a React Native surface; the monorepo carries more than one mobile app and the preview gives each its own QR. | M | Asking for an app and being handed a website is the most frustrating silent downgrade we have |
@@ -182,7 +182,7 @@ after the first numbering and belong to Phase 2.
 |---|---|---|
 | — | **React / Vite web adapter** | Not planned. Next.js is the one web stack; revisit only on real customer demand |
 | — | **Flutter adapter** | Not planned. Requests fall back to React Native with a stated reason (R-559) |
-| R-586 | **Make the CareClinic seed deterministic.** Its generator builds timestamps from `new Date()`, so the committed seed goes stale when the date rolls over and `task verify` fails every day. Found during R-559; confirmed on a clean checkout. | S | Do this next — it breaks the gate daily |
+| R-586 ✅ | **Make the CareClinic seed deterministic.** Its generator builds timestamps from `new Date()`, so the committed seed goes stale when the date rolls over and `task verify` fails every day. Found during R-559; confirmed on a clean checkout. | S | Do this next — it breaks the gate daily |
 | R-583 | Next.js **static export mode** — the cheap answer to "I don't want SSR or Vercel" | Optional; do this before ever considering a React adapter |
 | — | Multi-repo output, plan limits, `super_admin` area (Phase E) | After Phase 2 |
 
