@@ -1,52 +1,46 @@
-task_id: R-584
-status: complete
+task_id: R-566
+status: in_progress
 phase: MVP
-tracker_row: 34
-started_at: "2026-09-25"
-completed_at: "2026-09-25"
-branch: ai/R-584-edits-that-change
+tracker_row: 35
+started_at: "2026-09-26"
+completed_at: null
+branch: ai/R-566-workflows
 objective: >-
-  An edit can only add. `apply_app_delta` merges net-new entities, endpoints and screens by tuple
-  concatenation, and the parser *raises* on anything that already exists, so "rename Post to
-  Article", "remove the published field" and "add a notes field to each check-in" cannot be done.
-  Both failure modes are bad: a model that restates the entity gets
-  `AppDeltaError: proposed entity 'Post' already exists`, and a model that gives up proposes
-  nothing, which parses cleanly and reports "no file changes were needed" — an edit that silently
-  did nothing.
-  The platform's own smoke test asks for one of these: `scripts/smoke-core.sh` uses "Add a notes
-  field to each check-in" as its edit prompt.
+  A product's lifecycle cannot be written down. An order that goes placed -> accepted -> picked_up
+  -> delivered, who is allowed to move it, and what a courier may not do, have nowhere to live in
+  the IR. `route_wiring.wire_endpoint` matches six CRUD shapes, so `POST /orders/{orderId}/accept`
+  wires to nothing and the Python backend emits a 501 stub for it — visible, but not a product.
+  R-564 built the capability frame and deliberately shipped the registry empty: nothing may be
+  declared until something can build it. This task registers the first kind with real code
+  generation behind it, which is what proves the frame and sets the pattern for money, jobs,
+  realtime and permissions after it.
 founder_gate: >-
-  Founder on 2026-09-25: complete R-584 first, then R-566.
+  Founder on 2026-09-26: continue with Phase 2 in the order that suits.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/tests/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - The IR stays valid after every change; no dangling relation, endpoint, screen or fixture
-  - A change that destroys data says so; a removal is never reported as an ordinary edit
-  - Adding remains possible and unchanged for prompts that only add
-  - Every change is deterministic — the same delta applied twice gives the same IR
+  - A workflow that names an unknown entity, field, state or role is refused, not accepted and ignored
+  - The generated schema constrains the state column; an illegal value cannot be stored
+  - A transition a role may not make is refused by the backend, not only hidden in the UI
+  - A project with no workflow generates exactly what it did before
   - task verify stays offline with 0 model calls
 required_gates:
-  - A field can be added to an existing entity
-  - An entity, field, endpoint or screen can be removed
-  - An entity or field can be renamed, with every reference to it updated
-  - Removing an entity removes its endpoints, screens and fixtures rather than leaving them dangling
-  - A destructive change is named as destructive in the reply
+  - A workflow declares states and transitions, and round-trips through the IR
+  - A transition that names an unknown state, entity, field or role is refused with a reason
+  - The generated database constrains the state column and gives it the initial state
+  - Transition endpoints are generated and enforce both the from-state and the role
+  - An entity with no workflow is generated exactly as before
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "R-585 (template customisation) builds on this: a template edit goes through the same delta, so changing a template substantially needs these operations first."
-found_and_fixed:
-  - >-
-    `apply_app_delta` rebuilt its result from `base_ir` rather than from the changed IR, so a
-    rename produced entities called Article beside fixtures still calling them Post, and the edit
-    was rejected for a reason the user could do nothing about. Caught by running a rename rather
-    than by reading the merge.
+deferred: []
+found_and_fixed: []
