@@ -1,59 +1,50 @@
-task_id: R-586
-status: complete
+task_id: R-560
+status: in_progress
 phase: MVP
-tracker_row: 26
+tracker_row: 27
 started_at: "2026-09-25"
-completed_at: "2026-09-25"
-branch: ai/R-559-substitute-and-explain
+completed_at: null
+branch: ai/R-560-verify-the-build
 objective: >-
-  The CareClinic seed generator calls itself deterministic and is not. Every date came from the
-  current clock, so the committed seed stopped matching a fresh run the moment the date rolled over:
-  the same test passed on 2026-09-24 and failed on 2026-09-25 with no code change in between,
-  confirmed on a clean checkout. `task verify` therefore fails every day, which makes every later
-  task's evidence unreliable. The generator also mixed UTC `toISOString()` with local `getDay()`, so
-  its output depended on the timezone it ran in as well.
-  Anchor every date to a fixed Monday so the file is byte-identical everywhere, and move the whole
-  demo onto the current date when the seed loads so the clinic still looks live.
+  Nothing in the console's build path ever compiles what it generates. The compile-verify-repair
+  loop exists and works — `codegen/hybrid_repair.compile_and_repair` runs `tsc`, feeds each
+  model-written file's own errors back to the model, recompiles, and reverts what still fails — but
+  its only caller is an opt-in CLI (`task agent-engine:ui:synthesize`). A user building through the
+  console gets none of it.
+  That is why R-549's `@ts-expect-error` shipped in every generated web app for nine tasks: the
+  product never built what it wrote. Run the same sequence the CLI already proves, on the path both
+  build twins share, and report the outcome to the user instead of printing it to a terminal
+  nobody is watching.
 founder_gate: >-
-  Founder on 2026-09-25: fix R-586 first, then continue with R-560.
+  Founder on 2026-09-25: continue the roadmap in order; R-560 is next after R-586.
 allowed_paths:
-  - templates/catalog/care-clinic/
+  - services/agent-engine/src/omnistackai_agent_engine/intake/
+  - services/agent-engine/src/omnistackai_agent_engine/verify/
   - services/agent-engine/tests/
+  - apps/console-web/
+  - scripts/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - The generator reads no clock; output is identical on every run and in every timezone
-  - The demo still looks current after the seed loads
-  - No appointment on a day its doctor is not rostered
-  - The seed loads into a real PostgreSQL with no error
-  - A date column added later cannot be silently left out of the shift
+  - task verify stays offline with 0 model calls; these tests use injected fake runners only
+  - A build must never be blocked or failed by verification being unavailable
+  - Skipping is never silent: the reason reaches the user, as with R-559's substitutions
+  - One seam only; both build twins and the ecosystem builder must go through the same function
+  - Deterministic files are never rewritten by the repair loop
+  - No secrets in the reported output
 required_gates:
-  - Two runs of the generator are byte-identical
-  - The generator contains no clock read and no NOW()
-  - The committed seed matches a fresh run byte for byte
-  - Every column that receives a date literal is covered by the shift block
-  - The seed loads into PostgreSQL cleanly and the data lands around today
+  - The console's build path verifies the generated project when it can
+  - A build with no toolchain still succeeds and says why it was not verified
+  - The outcome (clean, repaired, reverted, skipped) reaches the build payload and the console
+  - Repairs land in the repository as their own commit
+  - The streaming twin the console actually calls is covered, not only its sibling
+  - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed:
-  - >-
-    A single `UPDATE appointments SET scheduled_date = scheduled_date + shift` fails to load:
-    `uq_doctor_slot (doctor_id, scheduled_date, start_time)` is checked row by row, so a row that
-    has already moved collides with one that has not. The table is now parked 100000 days ahead
-    and brought back, which leaves the destination empty on both passes. Found only by loading the
-    seed into a real PostgreSQL -- an earlier version of the block appeared to work because that
-    day's whole-week shift happened to be exactly zero, so nothing moved at all.
-  - >-
-    A whole-week shift preserves weekdays but leaves `/api/admin/front-desk` and
-    `/api/admin/queue-display` empty on six days in seven, because both filter on today's date. The
-    shift is exact instead, and `doctor_availability.day_of_week` is rotated by the same offset so
-    no appointment lands on a day its doctor is not rostered. Verified in PostgreSQL: the closed day
-    moves with the data and holds zero appointments.
-  - >-
-    The generator mixed UTC `toISOString()` with local `getDay()`, so its output also depended on
-    the timezone it ran in. Now UTC throughout.
+deferred:
+  - "R-561 extends verification beyond model-written files to deterministic files, the backend and the mobile app; this task keeps hybrid_repair's existing scope."
+found_and_fixed: []
