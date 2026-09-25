@@ -1,75 +1,49 @@
-task_id: R-563
-status: complete
+task_id: R-564
+status: in_progress
 phase: MVP
-tracker_row: 31
+tracker_row: 32
 started_at: "2026-09-25"
-completed_at: "2026-09-25"
-branch: ai/R-563-one-persistence-path
+completed_at: null
+branch: ai/R-564-ir-v2-core
 objective: >-
-  An ecosystem project cannot be edited after it is built. `live_serve.py:159` leaves ecosystem and
-  pack builds with `editable_ir = None`, so no IR is written to the workspace and a follow-up edit
-  answers "workspace has no IR; build first" — on a project the user just built, and on the one
-  capability that most distinguishes this platform.
-  Underneath it, `plan_edit` assembles both sides with `assemble_project`, which lays out a single
-  app. Pointed at an ecosystem repo it would diff a five-app monorepo against a one-app layout and
-  delete every surface app.
-  Rescoped on 2026-09-25: the original premise was wrong. The console is already on the disk-backed
-  workspace store — its edit path is `/projects/{id}/edit` -> `/api/workspaces/{id}/edit`, `ir.json`
-  is written on every build, and a fresh store instance loads it back. Verified before rewriting
-  this record. The in-memory LRU serves only the standalone Studio's build-id path.
+  The IR models entities, fields, relations, CRUD, screens and roles, and nothing else. Workflows,
+  ledgers, scheduled jobs, realtime channels and row-level permissions cannot be written down at
+  all, so no model — however good — can produce them: `route_wiring.wire_endpoint` returns `None`
+  for anything that is not one of six CRUD shapes, and the endpoint is dropped. That is the
+  "maximum features" ceiling, and it is in the data model rather than in the prompt.
+  This task builds the frame the rest of Phase 2 fills: a capability layer on the IR, a registry of
+  kinds that distinguishes what is implemented from what is merely declared, schema version 2, and
+  a migration that keeps every existing project loadable.
+  The migration is the hard part. `from_dict` currently rejects any version that is not exactly 1,
+  and R-563 means every user's project has an `ir.json` on disk. Bumping the number without
+  migrating would make every existing project unopenable and uneditable.
 founder_gate: >-
-  Founder on 2026-09-25: decide the propagation rule first, then implement it.
-decision: >-
-  How an edit reaches scoped surfaces. Surfaces are scoped from a curated per-domain table, and
-  `_relation_closure` follows relations outward from a surface's entities — so an entity added by
-  an edit, which points *at* an existing entity rather than being pointed at, currently reaches no
-  surface at all. The rule: a new entity reaches every surface that already holds an entity it
-  points at; if it points at nothing any surface holds it stands alone and reaches every surface.
-  Curated scoping still governs what it already knows, so the courier still gets no menu editor.
-  The "reaches everything" fallback is not invented here — it is the rule this module already
-  states for ambiguity ("Ambiguous intent is not permission to fabricate a partition"), and
-  showing an entity too widely is recoverable where hiding it everywhere means the edit silently
-  did nothing. Every edit reports which apps it changed.
+  Founder on 2026-09-25: continue with Phase 2.
 allowed_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/
   - services/agent-engine/src/omnistackai_agent_engine/intake/
-  - services/agent-engine/src/omnistackai_agent_engine/studio/
-  - services/agent-engine/src/omnistackai_agent_engine/edit/
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/tests/
-  - apps/console-web/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - An ecosystem edit never diffs against a single-app layout; the surface apps are not deleted
-  - Scoping survives an edit — a courier still has no menu editor
-  - A single-app project's edit path is unchanged
-  - The user is told which apps an edit changed, never left to guess
+  - A project saved before this change still loads, and stays editable
+  - No capability is silently dropped; intake does not offer what cannot be built
+  - A capability kind is registered, never hardcoded in the IR core
   - task verify stays offline with 0 model calls
 required_gates:
-  - An ecosystem project has an IR saved and is editable after the build
-  - An edit that adds a related entity reaches the surfaces holding what it points at
-  - An unrelated addition reaches every surface rather than none
-  - The courier app still ships no menu editor after an edit
-  - The diff touches the surface apps rather than replacing the layout
+  - An ir.json written at schema version 1 loads and round-trips
+  - A workspace saved before this change is still editable afterwards
+  - Capabilities survive a save and load unchanged
+  - An unknown or future schema version is refused with a reason
+  - An unregistered capability kind is refused rather than accepted and ignored
+  - Intake does not offer capability kinds while none is implemented
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed:
-  - >-
-    The original premise of this task was wrong and was corrected before any code was written. The
-    console is already on the disk-backed workspace store; a fresh store instance loads `ir.json`
-    back with entities and turns intact. Verified directly rather than argued.
-  - >-
-    The real defect was narrower and quieter than "not editable": the union IR *is* saved, so
-    nothing errored. `plan_edit` assembles both sides with `assemble_project`, and the union
-    carries no screens by design, so an edit to a five-app platform produced five changes — every
-    one under `services/api` or `contracts/`. The database and API gained the feature, all five
-    apps were untouched, and the edit reported success.
-  - >-
-    `file_count` was computed with `assemble_project(new_ir)` after every edit, which under-reports
-    a monorepo by hundreds of files. Now assembled the way the project actually is.
+deferred:
+  - "The concrete kinds — workflows (R-565/566), money (R-567), jobs (R-568), realtime (R-569), permissions (R-570) and the escape hatch (R-571) — each register themselves and generate code. This task ships the frame and no implemented kind, so intake deliberately keeps quiet about capabilities until the first one lands."
+found_and_fixed: []
