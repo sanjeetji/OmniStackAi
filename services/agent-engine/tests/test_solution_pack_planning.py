@@ -105,7 +105,12 @@ class EcosystemRecommendationTests(TestCase):
     def test_rideshare_plan_reports_no_match_for_its_python_backend(self) -> None:
         plan = plan_ecosystem_from_prompt(_example_prompt("rideshare"))
         recommendation = plan.pack_recommendation
-        self.assertEqual(recommendation.required_targets, ("backend-python", "nextjs-web"))
+        # R-562: a rideshare platform has drivers, and a driver works from a phone, so the plan now
+        # genuinely requires a React Native target too. The point of this test is that no pack
+        # satisfies the set, which is still true — and more emphatically so.
+        self.assertEqual(
+            recommendation.required_targets, ("backend-python", "nextjs-web", "react-native")
+        )
         self.assertIsNone(recommendation.selection)
         self.assertEqual(recommendation.to_dict()["status"], "no-exact-match")
         self.assertIsNone(

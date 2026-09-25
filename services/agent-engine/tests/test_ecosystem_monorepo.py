@@ -11,6 +11,7 @@ generated from its own scoped IR — the courier app ships no menu editor — so
 everything, and if the union is wrong a surface calls a route that 404s or a role that 403s.
 """
 
+import re
 import hashlib
 from unittest import TestCase
 
@@ -125,12 +126,29 @@ class EachAppKeepsItsOwnScope(TestCase):
         self.paths = _paths(assemble_ecosystem(_plan()))
 
     def _screens(self, directory: str) -> set[str]:
+        """The screen ids an app ships, whichever kind of app it is.
+
+        R-562: a surface asked for as an app is now built in React Native, which lays its screens
+        out as `src/features/<entity>/ui/<Entity>ListScreen.tsx` rather than as Next.js route
+        folders. The scoping rules below are about *what* an app can reach, not how its files are
+        arranged, so this reads both shapes and the assertions are unchanged.
+        """
         prefix = f"apps/{directory}/app/"
-        return {
+        routes = {
             p[len(prefix):].split("/")[0]
             for p in self.paths
             if p.startswith(prefix) and "/" in p[len(prefix):]
         }
+        if routes:
+            return routes
+        native = re.compile(rf"^apps/{re.escape(directory)}/src/features/[^/]+/ui/(\w+?)(List|Detail|Editor)Screen\.tsx$")
+        screens = set()
+        for path in self.paths:
+            found = native.match(path)
+            if found:
+                entity = re.sub(r"(?<!^)(?=[A-Z])", "_", found.group(1)).lower()
+                screens.add(f"{entity}_{found.group(2).lower()}")
+        return screens
 
     def test_a_courier_app_does_not_ship_a_menu_editor(self) -> None:
         """The whole point of scoping: a courier never edits a menu."""

@@ -70,6 +70,9 @@ class EcosystemPlanTests(unittest.TestCase):
         # Each app carries its bounded surface model (normalize_ir may reorder entities).
         expected = {
             "customer_web": {"Restaurant", "MenuItem", "Order"},
+            # R-562: the customer's phone app is the same product on a different device, so it
+            # carries the same scope as their website rather than a reduced one.
+            "customer_app": {"Restaurant", "MenuItem", "Order"},
             "merchant_portal": {"Restaurant", "MenuItem", "Order"},
             "driver_portal": {"Restaurant", "Order"},
             "admin_dashboard": {"Restaurant", "Order"},
@@ -145,7 +148,15 @@ class EcosystemBuildTests(unittest.TestCase):
             self.assertEqual(len(slugs), len(set(slugs)), "app slugs must be unique")
             for built in result.apps:
                 repo = Path(built.target_dir)
-                self.assertTrue((repo / "apps" / "web" / "package.json").is_file(), f"{built.slug} web app missing")
+                # R-562: a surface asked for as an app is built in React Native, so "has a
+                # runnable app" is the invariant rather than "has a web app". Naming apps/web
+                # specifically would now fail for the courier app by design.
+                runnable = [
+                    directory
+                    for directory in ("web", "mobile")
+                    if (repo / "apps" / directory / "package.json").is_file()
+                ]
+                self.assertTrue(runnable, f"{built.slug} has no runnable app")
                 self.assertTrue((repo / ".git").is_dir(), f"{built.slug} is not a git repo")
                 self.assertGreater(built.file_count, 0)
                 self.assertTrue(built.commit_sha)

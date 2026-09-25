@@ -81,6 +81,9 @@ class RunPlan:
     admin_health_url: str = ""
     # R-545: the generated Expo app. `expo_url` is what the QR encodes — Expo Go opens exp:// URLs.
     has_mobile: bool = False
+    #: R-562: every Expo app in the project — id, port, url and the exp:// the phone scans. The
+    #: singular fields below describe the first of them, unchanged, for every existing reader.
+    mobile_surfaces: tuple[dict, ...] = ()
     mobile_url: str = ""
     expo_url: str = ""
     #: R-553: (id, url) per discovered web surface, in the order they are started. Empty for a
@@ -98,6 +101,7 @@ class RunPlan:
             "has_web": self.has_web,
             "has_admin": self.has_admin,
             "has_mobile": self.has_mobile,
+            "mobile_surfaces": [dict(s) for s in self.mobile_surfaces],
             "multi_app": self.multi_app,
             "api_url": self.api_url,
             "web_url": self.web_url,
@@ -143,18 +147,20 @@ class RunPlan:
                     "path": f"{base}/api",
                 }
             )
-        if self.has_mobile:
-            # R-545: not proxied. Expo Go talks to the dev server directly over the LAN, so the
-            # console shows the exp:// URL as a QR rather than an iframe — a native app cannot be
-            # rendered in one. `scan` is what the phone reads.
+        # R-545: not proxied. Expo Go talks to the dev server directly over the LAN, so the console
+        # shows the exp:// URL as a QR rather than an iframe — a native app cannot be rendered in
+        # one. `scan` is what the phone reads. R-562: one entry per app, because an ecosystem can
+        # have a courier app and a customer app and a single QR cannot stand for both.
+        for surface in self.mobile_surfaces:
+            label = "Mobile app" if surface["id"] == "mobile" else surface["id"].replace("-", " ").title()
             apps.append(
                 {
-                    "id": "mobile",
-                    "name": "Mobile app (Expo)",
+                    "id": surface["id"],
+                    "name": f"{label} (Expo)",
                     "kind": "mobile",
-                    "url": self.mobile_url,
+                    "url": surface["url"],
                     "path": "",
-                    "scan": self.expo_url,
+                    "scan": surface["scan"],
                 }
             )
         for app in apps:
@@ -190,6 +196,40 @@ def lan_address(fallback: str = "127.0.0.1") -> str:
 RESERVED_APP_IDS = ("web", "admin", "mobile")
 
 
+#: What makes a directory an Expo app. R-562: an ecosystem can contain several — a courier app and
+#: a customer app over one API — so they are found by what they are rather than by being the one
+#: directory called `mobile`.
+_EXPO_MARKERS = ("app.config.js", "app.json")
+
+
+def is_mobile_app(app_dir: Path) -> bool:
+    """Whether this app directory is an Expo app rather than a web one.
+
+    `apps/mobile` counts by name because it has been the reserved directory for the Expo app since
+    R-545, and a project generated before this change has no other marker to go by. Everything else
+    is judged by what it contains, which is what lets an ecosystem name its apps after their roles.
+    """
+    return app_dir.name == "mobile" or any((app_dir / marker).is_file() for marker in _EXPO_MARKERS)
+
+
+def discover_mobile_apps(root: Path) -> tuple[str, ...]:
+    """Every Expo app under apps/, in a stable order.
+
+    `mobile` first when present, so a single-app project keeps the id it has always had, then the
+    rest sorted — a plan that reorders between runs is one nobody can reason about.
+    """
+    apps_dir = root / "apps"
+    if not apps_dir.is_dir():
+        return ()
+    found = {
+        entry.name
+        for entry in apps_dir.iterdir()
+        if entry.is_dir() and (entry / "package.json").is_file() and is_mobile_app(entry)
+    }
+    ordered = [name for name in ("mobile",) if name in found]
+    return tuple(ordered + sorted(found - set(ordered)))
+
+
 def discover_web_apps(root: Path) -> tuple[str, ...]:
     """Every runnable web app under apps/, in a stable order: web, admin, then the rest sorted.
 
@@ -202,7 +242,7 @@ def discover_web_apps(root: Path) -> tuple[str, ...]:
     found = {
         entry.name
         for entry in apps_dir.iterdir()
-        if entry.is_dir() and (entry / "package.json").is_file() and entry.name != "mobile"
+        if entry.is_dir() and (entry / "package.json").is_file() and not is_mobile_app(entry)
     }
     ordered = [name for name in ("web", "admin") if name in found]
     ordered += sorted(found - set(ordered))
@@ -250,16 +290,28 @@ def build_run_plan(
     web_apps = discover_web_apps(root)
     has_web = "web" in web_apps
     has_admin = "admin" in web_apps
-    mobile_dir = root / "apps" / "mobile"
-    has_mobile = (mobile_dir / "package.json").is_file()
+    mobile_ids = discover_mobile_apps(root)
+    has_mobile = bool(mobile_ids)
 
     api_url = f"http://{db_host}:{api_port}"
     web_url = f"http://127.0.0.1:{web_port}"
     admin_url = f"http://127.0.0.1:{admin_port}" if has_admin else ""
     # R-545: Expo binds on the LAN so a phone can reach it; the QR encodes the exp:// form.
     lan = lan_address() if has_mobile else "127.0.0.1"
-    mobile_url = f"http://{lan}:{mobile_port}" if has_mobile else ""
-    expo_url = f"exp://{lan}:{mobile_port}" if has_mobile else ""
+    # One port per app, from `mobile_port` upward. The first keeps the original port and the
+    # original `mobile_url`/`expo_url`, so a single-app project and everything reading those two
+    # fields behaves exactly as before.
+    mobile_surfaces = tuple(
+        {
+            "id": app_id,
+            "port": mobile_port + offset,
+            "url": f"http://{lan}:{mobile_port + offset}",
+            "scan": f"exp://{lan}:{mobile_port + offset}",
+        }
+        for offset, app_id in enumerate(mobile_ids)
+    )
+    mobile_url = mobile_surfaces[0]["url"] if mobile_surfaces else ""
+    expo_url = mobile_surfaces[0]["scan"] if mobile_surfaces else ""
 
     # R-542: with two Next apps in one project the console serves each under its own base path,
     # exactly as template previews do. Only then — a single-app project keeps serving at the root,
@@ -434,21 +486,24 @@ def build_run_plan(
         )
 
     # --- mobile (R-545): Expo in LAN mode, so Expo Go on a real phone can open it ---
-    if has_mobile:
+    # R-562: one of these per Expo app. An ecosystem can hold a courier app and a customer app over
+    # one API, and this used to start whichever one happened to be called `mobile`.
+    for surface in mobile_surfaces:
+        surface_dir = root / "apps" / surface["id"]
         steps.append(
             RunStep(
-                label="install mobile dependencies (pnpm)",
+                label=f"install {surface['id']} dependencies (pnpm)",
                 program="pnpm",
                 args=("install", "--ignore-scripts", "--ignore-workspace"),
-                cwd=str(mobile_dir),
+                cwd=str(surface_dir),
             )
         )
         steps.append(
             RunStep(
-                label=f"start mobile app (expo) on {mobile_url}",
+                label=f"start {surface['id']} app (expo) on {surface['url']}",
                 program="./node_modules/.bin/expo",
-                args=("start", "--lan", "--port", str(mobile_port)),
-                cwd=str(mobile_dir),
+                args=("start", "--lan", "--port", str(surface["port"])),
+                cwd=str(surface_dir),
                 env=(
                     # The phone is a different device: a loopback API base fails every call.
                     ("EXPO_PUBLIC_API_URL", f"http://{lan}:{api_port}"),
@@ -473,6 +528,7 @@ def build_run_plan(
         multi_app=multi_app,
         public_base=base,
         has_mobile=has_mobile,
+        mobile_surfaces=mobile_surfaces,
         mobile_url=mobile_url,
         web_surfaces=tuple((app_id, f"http://127.0.0.1:{app_ports[app_id]}") for app_id in web_apps),
         expo_url=expo_url,

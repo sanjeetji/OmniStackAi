@@ -1,9 +1,9 @@
 task_id: R-562
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 30
 started_at: "2026-09-25"
-completed_at: null
+completed_at: "2026-09-25"
 branch: ai/R-562-apps-are-apps
 objective: >-
   "A platform for food delivery with a marketing website, admin panel, customer + driver apps"
@@ -48,4 +48,20 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed: []
+found_and_fixed:
+  - >-
+    The first implementation flipped the customer surface to mobile and so **deleted the only
+    public website** — from a prompt that asked for a marketing website in the same sentence.
+    Answering one request by dropping another is the failure this task exists to end. An operator's
+    app now replaces their portal (a courier has no use for a website) and a customer's app is
+    built beside theirs, which also matches the standing default of a web app plus an app when one
+    is asked for.
+  - >-
+    The customer's companion app was derived from a renamed surface, and entity scoping is keyed by
+    surface kind, so it fell through to a word match and lost `MenuItem` — a food-delivery customer
+    app that cannot show a menu. It is now scoped from the original surface, so the app sees
+    exactly what the website sees.
+  - >-
+    Detecting Expo apps purely by an `app.config.js` marker broke every existing fixture and would
+    have broken projects generated before this change. `apps/mobile` has been the reserved Expo
+    directory since R-545, so the name counts as a marker too.

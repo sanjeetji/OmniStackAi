@@ -28,6 +28,7 @@ from ..application_ir import (
     ApiEndpoint,
     ApplicationIR,
     Entity,
+    MobileProfile,
     Role,
     WebStrategy,
 )
@@ -35,6 +36,7 @@ from .assembler import _prefixed, _slug
 from .brand_project import brand_files
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import NextjsAdminAdapter, NextjsWebAdapter
+from .react_native import ReactNativeAdapter
 from .openapi import render_openapi_json
 
 #: Where each planned surface lands. `web` and `admin` are deliberate: R-553's runner gives them
@@ -164,12 +166,20 @@ def assemble_ecosystem(plan, *, provider=None, prompt: str = "") -> GeneratedPro
         directory = surface_directory(app.surface.kind, taken)
         taken.add(directory)
         app_dirs.append((directory, app.ir.name))
-        # The admin dashboard gets the console flavour — a dashboard home rather than a landing
-        # page — which is the same distinction R-541 drew for a single project.
-        adapter = NextjsAdminAdapter() if directory == "admin" else NextjsWebAdapter()
+        # R-562: a surface the planner marked mobile is built as a React Native app. Before this
+        # every surface took a Next.js adapter, so a prompt asking for a driver app produced a
+        # driver *website* — the request answered with something else, silently.
+        if app.ir.project_strategy.mobile_profile is MobileProfile.REACT_NATIVE:
+            adapter = ReactNativeAdapter()
+        elif directory == "admin":
+            # The admin dashboard gets the console flavour — a dashboard home rather than a
+            # landing page — which is the same distinction R-541 drew for a single project.
+            adapter = NextjsAdminAdapter()
+        else:
+            adapter = NextjsWebAdapter()
         generated = (
             adapter.generate(app.ir, provider=provider, prompt=prompt)
-            if provider is not None
+            if provider is not None and not isinstance(adapter, ReactNativeAdapter)
             else adapter.generate(app.ir)
         )
         files += _prefixed(generated, f"apps/{directory}")
@@ -196,14 +206,22 @@ def _ecosystem_readme(plan, shared: ApplicationIR, app_dirs: list[tuple[str, str
         "",
         "## Apps",
         "",
-        "| Directory | App | Role |",
-        "| --- | --- | --- |",
+        "| Directory | App | Built as | Role |",
+        "| --- | --- | --- | --- |",
     ]
     for (directory, name), app in zip(app_dirs, plan.apps):
         roles = ", ".join(role.id for role in app.ir.roles) or "-"
-        lines.append(f"| `apps/{directory}` | {name} | {roles} |")
+        # R-562: say which of these is a phone app and which is a website. A user who asked for
+        # "customer + driver apps" should be able to see that they got them, without opening four
+        # directories to find out.
+        built = (
+            "React Native app"
+            if app.ir.project_strategy.mobile_profile is MobileProfile.REACT_NATIVE
+            else "web app"
+        )
+        lines.append(f"| `apps/{directory}` | {name} | {built} | {roles} |")
     lines += [
-        "| `services/api` | Shared API | serves every app above |",
+        "| `services/api` | Shared API | backend | serves every app above |",
         "",
         "## Why one API",
         "",

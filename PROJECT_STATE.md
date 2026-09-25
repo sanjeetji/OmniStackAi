@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-562 (2026-09-25): a request for an app is answered with an app.**
+> "marketing website, admin-panel, customer + driver apps" returned four Next.js websites — every surface was built with `MobileProfile.NONE` hardcoded and only a Next.js adapter was ever reached for.
+> `intake/surface_form.py` decides from what the prompt asked for first, then from what the role does; anything unrecognised stays web, and the README records what each app was built as.
+> Written into the module: **"a delivery app" is a product noun, not a form-factor request** — only the word next to a role moves anything, or "a blog app" becomes React Native.
+> **Two defects caught before landing:** flipping the customer surface to mobile **deleted the only website**, in a prompt that asked for a marketing site in the same sentence — an operator's app replaces their portal, a customer's is built beside theirs. And the companion app, derived from a renamed surface, fell through kind-keyed scoping and lost `MenuItem`: a food app that could not show a menu.
+> The monorepo and preview carry several Expo apps, found by what they contain rather than by the name `mobile` (which still counts, for projects generated before this). Each gets its own port, start step and QR. Single-app projects unchanged.
+> Evidence: website + customer app + merchant portal + courier app + admin over **one** API; the courier app still ships no menu editor. 20 new tests; `task verify` 4,300 OK.
+
 > **R-587 (2026-09-25): generated Go is gofmt-clean.**
 > `gofmt -l` named four files in every generated backend. Nothing was broken — it compiled and vetted cleanly — but a Go developer's editor rewrites an unformatted file on save, on code they never touched.
 > Struct fields are padded into columns by the emitter, which is the only thing that knows the widths; the stray blank lines are fixed centrally, so a future emitter cannot reintroduce them by forgetting.
