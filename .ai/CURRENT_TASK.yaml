@@ -1,34 +1,46 @@
-task_id: R-587
-status: complete
+task_id: R-562
+status: in_progress
 phase: MVP
-tracker_row: 29
+tracker_row: 30
 started_at: "2026-09-25"
-completed_at: "2026-09-25"
-branch: ai/R-587-gofmt-clean
+completed_at: null
+branch: ai/R-562-apps-are-apps
 objective: >-
-  Generated Go is not gofmt-clean. `gofmt -l` names four files in a generated backend: struct fields
-  in `internal/models/models.go` are emitted with single spaces where gofmt aligns names, types and
-  tags into columns (18 lines), and three more files carry a stray blank line — one doubled between
-  functions and two at end of file (1 line each). 21 changed lines in all.
-  Nothing is broken: the backend compiles and vets clean. The cost is the first impression. Go
-  developers treat gofmt as the format, and an editor set to format on save rewrites a file they
-  never touched the moment they open the repository.
+  "A platform for food delivery with a marketing website, admin panel, customer + driver apps"
+  returns four Next.js websites. `ecosystem.py` builds every surface with `MobileProfile.NONE` and
+  `WebStrategy.NEXTJS` hardcoded, so the driver "app" is a web page, and `assemble_ecosystem` only
+  ever picks a Next.js adapter. A user who asked for an app is handed a website with no explanation.
+  This is the same silent downgrade R-559 removed for stacks, still present for surfaces: R-559
+  substitutes and explains when we cannot build what was asked for, but here we *can* build it and
+  simply do not.
+  Three parts: decide per surface whether it is an app or a site, assemble mobile surfaces with the
+  React Native adapter, and let the monorepo and the preview carry more than one mobile app — there
+  is exactly one `apps/mobile` today, and the run plan hardcodes it.
 founder_gate: >-
-  Founder on 2026-09-25: finish R-587 first, then continue with R-562.
+  Founder on 2026-09-25: do not silently hand back web when apps were asked for; generate apps in
+  React Native by default so the user is not frustrated.
 allowed_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/
   - services/agent-engine/tests/
+  - apps/console-web/
+  - scripts/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - The generated backend must still build and vet cleanly
-  - Output stays deterministic — one IR produces the same bytes twice
-  - No change to what the code does; this is formatting only
+  - A surface the prompt called an app is never assembled as a website
+  - One shared API and one database; the apps do not each get a backend
+  - The decision is deterministic — the same prompt gives the same surfaces twice
+  - Existing single-app builds with one apps/mobile keep working unchanged
+  - task verify stays offline with 0 model calls
 required_gates:
-  - "`gofmt -l` reports nothing for a generated Go backend"
-  - The backend still passes go build ./... and go vet ./...
-  - A gate keeps it that way, skipped rather than failed where Go is absent
+  - "\"customer + driver apps\" produces React Native apps for those roles, not web pages"
+  - An admin panel or a marketing site stays a web app
+  - The monorepo carries more than one mobile app, each buildable
+  - The preview offers a QR for each mobile app rather than assuming one
+  - The reason each surface is an app or a site is recorded, not implicit
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -36,9 +48,4 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed:
-  - >-
-    Three existing tests pinned the unaligned spacing (`'Name string `json:\"name\"`'`). They are
-    about *what* a struct declares, not how it is spaced, so they now compare with runs of spaces
-    squashed rather than being re-pinned to the new column widths — otherwise the next change to a
-    field name would break them again for no reason.
+found_and_fixed: []
