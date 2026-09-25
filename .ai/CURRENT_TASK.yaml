@@ -1,48 +1,47 @@
-task_id: R-565
-status: complete
+task_id: R-584
+status: in_progress
 phase: MVP
-tracker_row: 33
+tracker_row: 34
 started_at: "2026-09-25"
-completed_at: "2026-09-25"
-branch: ai/R-565-stack-in-ecosystems
+completed_at: null
+branch: ai/R-584-edits-that-change
 objective: >-
-  An ecosystem build ignores the backend language the user asked for. `surface_to_ir` hardcodes
-  `BackendStrategy.PYTHON` for every surface, so "a logistics platform with drivers and dispatchers
-  and the backend should be in Go language" produces a Python backend and says nothing. The
-  single-app path honours it — `nl_to_ir` tells the model to choose Go when asked — so the same
-  sentence gets a different answer depending on how many apps the prompt implies.
-  Rescoped after checking: R-565's other claims are already true. R-559 made the stack carried in
-  the IR, honoured where implemented, and explained where not; verified for a round-trip, a Go
-  backend that really generates `go.mod`, and a Flutter request that returns React Native with a
-  reason. This task is the one part that was not: the ecosystem planner.
+  An edit can only add. `apply_app_delta` merges net-new entities, endpoints and screens by tuple
+  concatenation, and the parser *raises* on anything that already exists, so "rename Post to
+  Article", "remove the published field" and "add a notes field to each check-in" cannot be done.
+  Both failure modes are bad: a model that restates the entity gets
+  `AppDeltaError: proposed entity 'Post' already exists`, and a model that gives up proposes
+  nothing, which parses cleanly and reports "no file changes were needed" — an edit that silently
+  did nothing.
+  The platform's own smoke test asks for one of these: `scripts/smoke-core.sh` uses "Add a notes
+  field to each check-in" as its edit prompt.
 founder_gate: >-
-  Founder on 2026-09-25: work through the tasks in the order that suits.
+  Founder on 2026-09-25: complete R-584 first, then R-566.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/intake/
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/
   - services/agent-engine/tests/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - The default stays Python when the prompt says nothing
-  - The decision is deterministic — the same prompt gives the same backend twice
-  - One backend per ecosystem; the surfaces do not each pick their own
+  - The IR stays valid after every change; no dangling relation, endpoint, screen or fixture
+  - A change that destroys data says so; a removal is never reported as an ordinary edit
+  - Adding remains possible and unchanged for prompts that only add
+  - Every change is deterministic — the same delta applied twice gives the same IR
   - task verify stays offline with 0 model calls
 required_gates:
-  - A prompt asking for Go produces a Go backend in an ecosystem build
-  - The same for Node, and Python remains the default
-  - The single-app path is unchanged
-  - A prompt mentioning a language in passing does not change the backend
+  - A field can be added to an existing entity
+  - An entity, field, endpoint or screen can be removed
+  - An entity or field can be renamed, with every reference to it updated
+  - Removing an entity removes its endpoints, screens and fixtures rather than leaving them dangling
+  - A destructive change is named as destructive in the reply
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed:
-  - >-
-    Most of R-565 was already delivered by R-559 and was verified rather than rebuilt: the stack is
-    carried in the IR and survives a round-trip, a Go backend really generates `go.mod`, and a
-    Flutter request returns React Native with a reason. Only the ecosystem planner was missing,
-    which is what this task did.
+deferred:
+  - "R-585 (template customisation) builds on this: a template edit goes through the same delta, so changing a template substantially needs these operations first."
+found_and_fixed: []
