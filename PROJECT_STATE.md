@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-563 (2026-09-25): a multi-app project can be changed after it is built.**
+> An edit to a five-app platform reached the backend and **not one of the apps** — and reported success. The union IR *is* saved, so nothing errored; `plan_edit` assembles with `assemble_project`, and the union carries no screens by design, so all five changes landed under `services/api` and `contracts/`.
+> **The task's own premise was wrong and was corrected first:** the console already persists to the workspace store — verified by loading `ir.json` back from a fresh instance. The in-memory LRU serves only the standalone Studio's legacy build-id path.
+> **Rule decided before implementing:** a new entity reaches every surface holding something it points at; pointing at nothing, it stands alone and reaches every surface. That fallback is the module's own existing rule for ambiguity, and it is the recoverable direction — an entity shown too widely is a reportable mistake, one hidden everywhere looks like an edit that did nothing.
+> Scoping survives: the courier still has no menu editor, and an entity pointing at `MenuItem` reaches the merchant and not the courier. Every edit now names the apps it reached.
+> Also fixed: `file_count` was computed from a single-app assembly, under-reporting a monorepo by hundreds of files.
+> Evidence: the edit reaches all five apps and the backend, deletes nothing, leaves every app present; the old path's no-op is kept as a test. 14 new tests; `task verify` 4,314 OK.
+
 > **R-562 (2026-09-25): a request for an app is answered with an app.**
 > "marketing website, admin-panel, customer + driver apps" returned four Next.js websites — every surface was built with `MobileProfile.NONE` hardcoded and only a Next.js adapter was ever reached for.
 > `intake/surface_form.py` decides from what the prompt asked for first, then from what the role does; anything unrecognised stays web, and the README records what each app was built as.

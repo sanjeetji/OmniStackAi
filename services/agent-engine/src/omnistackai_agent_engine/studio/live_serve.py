@@ -36,7 +36,9 @@ from decimal import ROUND_HALF_UP, Decimal
 from ..application_ir import ApplicationIR
 from ..codegen import assemble_project
 from ..edit.apply import commit_edit
-from ..edit.diff import plan_edit
+from ..codegen.ecosystem_assembler import assemble_ecosystem
+from ..intake.ecosystem import plan_ecosystem_from_prompt
+from ..edit.diff import plan_edit, plan_ecosystem_edit
 from ..intake.app_delta import (
     DEFAULT_APP_DELTA_MAX_OUTPUT_TOKENS,
     apply_app_delta,
@@ -979,6 +981,19 @@ async def _workspace_build_stream(
             yield event
 
 
+def _apps_touched(diff) -> list[str]:
+    """The app directories an edit changed, in a stable order.
+
+    Read from the diff rather than from the plan, so it reports what actually moved on disk.
+    """
+    touched = {
+        path.split("/")[1]
+        for path in list(diff.added()) + list(diff.modified()) + list(diff.deleted())
+        if path.startswith("apps/") and path.count("/") > 1
+    }
+    return sorted(touched)
+
+
 async def _workspace_edit(
     ws_id: str,
     prompt: str,
@@ -1017,7 +1032,17 @@ async def _workspace_edit(
             max_output_tokens=_edit_output_budget(_max_output),
         )
         new_ir = apply_app_delta(ir, proposal)
-        diff = plan_edit(ir, new_ir)
+        # R-563: a multi-app project must be diffed the way it was assembled. `plan_edit` builds
+        # both sides with `assemble_project`, and the union IR deliberately carries no screens —
+        # so an edit to a five-app platform changed the backend and **not one of the apps**. The
+        # database gained the feature, every app stayed as it was, and the edit reported success.
+        state_before = workspace_store.get_state(ws_id) or {}
+        if state_before.get("ecosystem_apps"):
+            diff = plan_ecosystem_edit(
+                ir, new_ir, prompt=str(state_before.get("prompt") or "")
+            )
+        else:
+            diff = plan_edit(ir, new_ir)
 
         trunc_note = " (Note: Context was truncated due to length limits.)" if proposal.context_truncated else ""
         if diff.is_empty():
@@ -1046,9 +1071,20 @@ async def _workspace_edit(
         )
         workspace_store.save_ir(ws_id, new_ir)
         workspace_store.append_turn(ws_id, "user", prompt)
-        workspace_store.append_turn(ws_id, "assistant", f"{diff.summary()}{trunc_note}")
+        # R-563: name the apps an edit reached. On a five-app platform "3 files changed" leaves a
+        # user opening directories to find out whether their courier app got the feature.
+        apps_changed = _apps_touched(diff)
+        reach = f" Updated {', '.join(apps_changed)}." if apps_changed else ""
+        workspace_store.append_turn(ws_id, "assistant", f"{diff.summary()}{reach}{trunc_note}")
 
-        file_count = len(assemble_project(new_ir).files())
+        if state_before.get("ecosystem_apps"):
+            # Counting a single-app assembly would under-report a monorepo by hundreds of files.
+            eco_plan = plan_ecosystem_from_prompt(
+                str(state_before.get("prompt") or ""), entities=new_ir.entities
+            )
+            file_count = len(assemble_ecosystem(eco_plan).files())
+        else:
+            file_count = len(assemble_project(new_ir).files())
         state = workspace_store.get_state(ws_id) or {}
         state["file_count"] = file_count
         state["commit_sha"] = result.commit_sha
@@ -1060,6 +1096,8 @@ async def _workspace_edit(
             "commit_sha": result.commit_sha,
             "entities": [entity.name for entity in new_ir.entities],
             "file_count": file_count,
+            # R-563: present whenever the edit reached an app, so the console can say which.
+            **({"apps_changed": apps_changed} if apps_changed else {}),
             "diff": {
                 "added": list(diff.added()),
                 "modified": list(diff.modified()),

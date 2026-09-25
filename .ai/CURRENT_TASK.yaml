@@ -1,9 +1,9 @@
 task_id: R-563
-status: in_progress
+status: complete
 phase: MVP
 tracker_row: 31
 started_at: "2026-09-25"
-completed_at: null
+completed_at: "2026-09-25"
 branch: ai/R-563-one-persistence-path
 objective: >-
   An ecosystem project cannot be edited after it is built. `live_serve.py:159` leaves ecosystem and
@@ -59,4 +59,17 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed: []
+found_and_fixed:
+  - >-
+    The original premise of this task was wrong and was corrected before any code was written. The
+    console is already on the disk-backed workspace store; a fresh store instance loads `ir.json`
+    back with entities and turns intact. Verified directly rather than argued.
+  - >-
+    The real defect was narrower and quieter than "not editable": the union IR *is* saved, so
+    nothing errored. `plan_edit` assembles both sides with `assemble_project`, and the union
+    carries no screens by design, so an edit to a five-app platform produced five changes — every
+    one under `services/api` or `contracts/`. The database and API gained the feature, all five
+    apps were untouched, and the edit reported success.
+  - >-
+    `file_count` was computed with `assemble_project(new_ir)` after every edit, which under-reports
+    a monorepo by hundreds of files. Now assembled the way the project actually is.

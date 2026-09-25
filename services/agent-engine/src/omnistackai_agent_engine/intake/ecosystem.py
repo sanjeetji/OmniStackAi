@@ -313,6 +313,44 @@ def _primary_entity_names(
     return matched or frozenset(available)
 
 
+def reach_of_new_entities(
+    *,
+    new_names: frozenset[str],
+    entities: tuple[Entity, ...],
+    surface_selected: frozenset[str],
+) -> frozenset[str]:
+    """Which entities added by an edit this surface should carry (R-563).
+
+    Surfaces are scoped from a curated per-domain table, and `_relation_closure` follows relations
+    *outward* from what a surface already holds. An entity introduced by an edit points **at** an
+    existing entity rather than being pointed at, so neither mechanism reaches it: before this, an
+    edit adding `LoyaltyPoint` put it in the database and in no app at all.
+
+    The rule: a new entity reaches every surface that already holds something it points at. If it
+    points at nothing any surface holds, it stands alone and reaches every surface.
+
+    That fallback is not invented here — it is what this module already does when scoping is
+    ambiguous ("Ambiguous intent is not permission to fabricate a partition"). It is also the
+    recoverable direction: an entity shown on one app too many is a visible mistake a user can
+    tell us about, while one hidden everywhere looks exactly like an edit that did nothing.
+    """
+    known = {entity.name for entity in entities}
+    by_name = {entity.name: entity for entity in entities}
+    reached: set[str] = set()
+    for name in new_names:
+        entity = by_name.get(name)
+        if entity is None:
+            continue
+        points_at = {relation.target_entity for relation in entity.relations}
+        if points_at & surface_selected:
+            reached.add(name)
+        elif not (points_at & known):
+            # Related to nothing we know: a standalone addition, and hiding it would make the
+            # edit look like it failed.
+            reached.add(name)
+    return frozenset(reached)
+
+
 def _relation_closure(
     entities: tuple[Entity, ...],
     primary_names: frozenset[str],
@@ -591,10 +629,18 @@ def surface_to_ir(
     surface: AppSurface,
     *,
     entities: tuple[Entity, ...] | None = None,
+    added: frozenset[str] = frozenset(),
 ) -> ApplicationIR:
     """Build a validate_ir-clean ApplicationIR for one surface of the proposed ecosystem."""
     source_entities = entities or DOMAIN_ENTITIES.get(proposal.domain, DOMAIN_ENTITIES["custom-application"])
     selected_names = _primary_entity_names(proposal, surface, source_entities)
+    if added:
+        # R-563: entities an edit introduced. Curated scoping cannot know about them — it is a
+        # fixed table of names written before the user asked — so their reach is decided by what
+        # they point at.
+        selected_names = selected_names | reach_of_new_entities(
+            new_names=added, entities=source_entities, surface_selected=selected_names
+        )
     writable_names = _writable_entity_names(proposal, surface, selected_names)
     entities = _relation_closure(source_entities, selected_names)
     role_id = _role_id(surface.actor) or "user"
@@ -653,6 +699,7 @@ def _mobile_companion(
     proposal: ScopeProposal,
     surface: AppSurface,
     entities: tuple[Entity, ...] | None,
+    added: frozenset[str] = frozenset(),
 ) -> "SurfaceApp | None":
     """A customer's mobile app, built beside their website rather than instead of it (R-562).
 
@@ -674,7 +721,7 @@ def _mobile_companion(
     # kind, so deriving from `customer_app` fell through to a word match and dropped MenuItem —
     # a food-delivery customer app that cannot show a menu. The app is the same product on a
     # different device and must see exactly what the website sees.
-    ir = surface_to_ir(proposal, surface, entities=entities)
+    ir = surface_to_ir(proposal, surface, entities=entities, added=added)
     ir = replace(
         ir,
         name=mobile_surface.name,
@@ -692,6 +739,7 @@ def plan_ecosystem(
     option_id: str = "complete",
     *,
     entities: tuple[Entity, ...] | None = None,
+    added: frozenset[str] = frozenset(),
     pack_result: SolutionPackApplicationResult | None = None,
     pack_manifest: SolutionPackManifest | None = None,
     pack_proposal: AIDeltaProposal | None = None,
@@ -733,8 +781,10 @@ def plan_ecosystem(
             synthesized_ir = synthesize_surface_ir(proposal, surface, pack_result.ir)
             apps_list.append(SurfaceApp(surface, synthesized_ir, pack_result=None, is_synthesized=True))
         else:
-            apps_list.append(SurfaceApp(surface, surface_to_ir(proposal, surface, entities=entities)))
-            companion = _mobile_companion(proposal, surface, entities)
+            apps_list.append(
+                SurfaceApp(surface, surface_to_ir(proposal, surface, entities=entities, added=added))
+            )
+            companion = _mobile_companion(proposal, surface, entities, added=added)
             if companion is not None:
                 apps_list.append(companion)
     apps = tuple(apps_list)
@@ -761,9 +811,20 @@ def plan_ecosystem(
     )
 
 
-def plan_ecosystem_from_prompt(prompt: str, option_id: str = "complete") -> EcosystemPlan:
-    """Convenience: classify the prompt (deterministically) and plan its ecosystem."""
-    return plan_ecosystem(propose_ecosystem(prompt), option_id)
+def plan_ecosystem_from_prompt(
+    prompt: str,
+    option_id: str = "complete",
+    *,
+    entities: tuple[Entity, ...] | None = None,
+    added: frozenset[str] = frozenset(),
+) -> EcosystemPlan:
+    """Convenience: classify the prompt (deterministically) and plan its ecosystem.
+
+    `entities` and `added` (R-563) let an edit re-plan the same ecosystem over a changed data
+    model: the proposal is derived from the prompt and is deterministic, so the surfaces come back
+    identical and only their contents move.
+    """
+    return plan_ecosystem(propose_ecosystem(prompt), option_id, entities=entities, added=added)
 
 
 @dataclass(frozen=True)

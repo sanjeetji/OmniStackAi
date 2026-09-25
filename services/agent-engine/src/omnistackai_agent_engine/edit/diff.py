@@ -105,3 +105,29 @@ def plan_edit(
     old_project = assemble_project(old_ir, registry)
     new_project = assemble_project(new_ir, registry)
     return diff_projects(old_project, new_project)
+
+
+def plan_ecosystem_edit(
+    old_ir: ApplicationIR,
+    new_ir: ApplicationIR,
+    *,
+    prompt: str,
+    option_id: str = "complete",
+) -> "ProjectDiff":
+    """The delta to apply for an edit to a **multi-app** project (R-563).
+
+    `plan_edit` assembles both sides with `assemble_project`, which lays out one app. Pointed at an
+    ecosystem repository it would diff a five-app monorepo against a single-app layout and delete
+    every surface — which is why ecosystem builds were left un-editable rather than edited wrongly.
+
+    Both sides are assembled the way the repository actually was. The surfaces come back identical
+    because `propose_ecosystem` is deterministic on the prompt, so the diff contains the change the
+    user asked for and nothing about the layout.
+    """
+    from ..intake.ecosystem import plan_ecosystem_from_prompt
+    from ..codegen.ecosystem_assembler import assemble_ecosystem
+
+    added = frozenset({e.name for e in new_ir.entities} - {e.name for e in old_ir.entities})
+    old_plan = plan_ecosystem_from_prompt(prompt, option_id, entities=old_ir.entities)
+    new_plan = plan_ecosystem_from_prompt(prompt, option_id, entities=new_ir.entities, added=added)
+    return diff_projects(assemble_ecosystem(old_plan), assemble_ecosystem(new_plan))
