@@ -143,7 +143,7 @@ def resolve_generation_provider_from_env(
                     model_id = profiles[0].descriptor.model.model_id
                     max_output = profiles[0].descriptor.max_output_tokens
                 else:
-                    model_id = os.environ.get("OMNISTACKAI_GROQ_MODEL", "llama-3.3-70b-versatile")
+                    model_id = os.environ.get("OMNISTACKAI_GROQ_MODEL", "openai/gpt-oss-120b")
                     max_output = int(os.environ.get("OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS", "4096"))
 
                 timeout = float(os.environ.get("OMNISTACKAI_CLOUD_TIMEOUT_SECONDS", "120.0"))

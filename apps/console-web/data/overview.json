@@ -74,7 +74,7 @@
       "providerId": "groq",
       "tier": "cloud",
       "kind": "openai",
-      "defaultModel": "llama-3.3-70b-versatile",
+      "defaultModel": "openai/gpt-oss-120b",
       "active": false,
       "keyEnv": "GROQ_API_KEY"
     },

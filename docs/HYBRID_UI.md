@@ -130,7 +130,7 @@ Nothing else is ever retried on an exception.
 ```bash
 # Paid, per-generation model calls (your Groq/Gemini key lives only in the gitignored .env):
 OMNISTACKAI_CLOUD_PROVIDER=groq task agent-engine:ui:synthesize -- "Create a food delivery app with restaurants and couriers"
-# Optional: OMNISTACKAI_APP_OUT_DIR=/path/to/repo  OMNISTACKAI_GROQ_MODEL=llama-3.3-70b-versatile
+# Optional: OMNISTACKAI_APP_OUT_DIR=/path/to/repo  OMNISTACKAI_GROQ_MODEL=openai/gpt-oss-120b
 #           OMNISTACKAI_WEB_NODE_MODULES=/path/to/an/existing/node_modules   (skips `pnpm install`)
 ```
 

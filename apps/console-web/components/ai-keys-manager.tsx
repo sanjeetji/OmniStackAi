@@ -53,8 +53,8 @@ const DEFAULT_PROVIDERS: { id: string; name: string; kind: string; defaultModel:
     id: "groq",
     name: "Groq",
     kind: "cloud",
-    defaultModel: "llama-3.3-70b-versatile",
-    supportedModels: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+    defaultModel: "openai/gpt-oss-120b",
+    supportedModels: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
   },
   {
     id: "openai",

@@ -26,7 +26,7 @@ class TestProviderResolution(unittest.TestCase):
         with patch.dict("os.environ", env, clear=True):
             provider, model_id, max_output, timeout = resolve_generation_provider_from_env(load_dotenv=False)
             self.assertEqual(getattr(provider, "provider_id", ""), "groq")
-            self.assertEqual(model_id, "llama-3.3-70b-versatile")
+            self.assertEqual(model_id, "openai/gpt-oss-120b")
             self.assertEqual(max_output, 4096)
             self.assertEqual(timeout, 120.0)
 
@@ -68,7 +68,7 @@ class TestProviderResolution(unittest.TestCase):
             )
             self.assertIsInstance(provider, RecordingProvider)
             self.assertEqual(provider.provider_id, "groq")
-            self.assertEqual(model_id, "llama-3.3-70b-versatile")
+            self.assertEqual(model_id, "openai/gpt-oss-120b")
 
 
 if __name__ == "__main__":

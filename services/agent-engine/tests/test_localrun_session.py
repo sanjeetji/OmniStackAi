@@ -241,3 +241,27 @@ class TestLocalAppSessionLiveness(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AWebAndMobileProjectPreviewsUnderBasePaths(unittest.TestCase):
+    """Found live (2026-09-26): a web + mobile project with no admin was reported as a multi-app
+    preview — so the console proxied /preview/<id>/web by base path — but the web app was started
+    without one, and the Studio showed 404. The plan and the preview payload must agree."""
+
+    def test_the_web_app_gets_its_base_path(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        from omnistackai_agent_engine.localrun.plan import build_run_plan
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "apps" / "web").mkdir(parents=True)
+            (root / "apps" / "web" / "package.json").write_text('{"dependencies": {"next": "15"}}')
+            (root / "apps" / "mobile").mkdir(parents=True)
+            (root / "apps" / "mobile" / "package.json").write_text('{"dependencies": {"expo": "~51.0.0"}}')
+            plan = build_run_plan(str(root), public_base="/preview/p1")
+            self.assertTrue(plan.multi_app)
+            self.assertTrue(plan.preview_apps())
+            web_step = next(s for s in plan.steps if s.label.startswith("start web app"))
+            self.assertIn(("BASE_PATH", "/preview/p1/web"), web_step.env)

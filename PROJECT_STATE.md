@@ -4,6 +4,8 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-084 follow-up (2026-09-26): Groq gpt-oss-120b is the build model (fallback Gemini, NVIDIA).** Prompt -> running app 18 s live; median 25.7 s. Fixed: web + mobile projects (no admin) previewed as 404 in the Studio.
+
 > **PC-084 (2026-09-26): speed measured on every build.** Stage timings in results and the Studio, speed report, 90 s smoke check, offline gate. **Found and fixed:** console builds were never type-checked (provider not passed); mobile apps never type-checked (now via a shared Expo cache). Plan 20-29 s, assemble ~1 s, checks ~6 s, preview ~14 s. Gemini free quota exhausted today.
 
 > **PC-005 (2026-09-26): Vibe / Engineering mode switch in the Studio.** Vibe = chat, running app, Publish, plain notes; Engineering = + Files, Code, Problems, entities, type-check, commit, usage, download. Remembered per project.

@@ -319,7 +319,11 @@ def build_run_plan(
     # so nothing about today's behaviour changes for it.
     # More than one UI means the console serves each under its own base path, as template previews
     # already do. One UI keeps serving at the root, so a single-app project is untouched.
-    multi_app = len(web_apps) > 1 and bool(public_base)
+    # Found live (2026-09-26): `preview_apps()` reports a multi-app preview when there is a mobile
+    # app too, and the console then proxies /preview/<id>/web by base path — but base paths were only
+    # set with two web apps, so a web + mobile project (no admin) answered 404 in the Studio. The two
+    # rules now agree.
+    multi_app = (len(web_apps) > 1 or has_mobile) and bool(public_base)
     base = public_base.rstrip("/")
 
     # `web` and `admin` keep the ports they were allocated; further surfaces take the extras, and

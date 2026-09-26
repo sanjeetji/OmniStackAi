@@ -323,7 +323,7 @@ type ModelInfo struct {
 func handleGetModels(deps Deps) http.HandlerFunc {
 	models := []ModelInfo{
 		{ProviderID: "ollama", ModelID: "qwen2.5-coder:14b", Name: "Qwen 2.5 Coder 14B (Local)", Tier: "local", CostPer1kInput: "$0.00", CostPer1kOutput: "$0.00"},
-		{ProviderID: "groq", ModelID: "llama-3.3-70b-versatile", Name: "Llama 3.3 70B Versatile", Tier: "cloud", CostPer1kInput: "$0.00059", CostPer1kOutput: "$0.00079"},
+		{ProviderID: "groq", ModelID: "openai/gpt-oss-120b", Name: "GPT-OSS 120B (Groq)", Tier: "cloud"},
 		{ProviderID: "openai", ModelID: "gpt-4o", Name: "GPT-4o", Tier: "cloud", CostPer1kInput: "$0.0025", CostPer1kOutput: "$0.0100"},
 		{ProviderID: "openai", ModelID: "gpt-4o-mini", Name: "GPT-4o Mini", Tier: "cloud", CostPer1kInput: "$0.00015", CostPer1kOutput: "$0.0006"},
 		{ProviderID: "anthropic", ModelID: "claude-3-5-sonnet-20241022", Name: "Claude 3.5 Sonnet", Tier: "cloud", CostPer1kInput: "$0.0030", CostPer1kOutput: "$0.0150"},

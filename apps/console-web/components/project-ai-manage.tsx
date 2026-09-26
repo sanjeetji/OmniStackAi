@@ -33,7 +33,7 @@ interface ProjectAIManageProps {
 
 const PROVIDER_OPTIONS = [
   { id: "", name: "Default (Account / Platform)", defaultModel: "" },
-  { id: "groq", name: "Groq", defaultModel: "llama-3.3-70b-versatile" },
+  { id: "groq", name: "Groq", defaultModel: "openai/gpt-oss-120b" },
   { id: "openai", name: "OpenAI", defaultModel: "gpt-4o" },
   { id: "anthropic", name: "Anthropic", defaultModel: "claude-3-5-sonnet-20241022" },
   { id: "nvidia", name: "NVIDIA", defaultModel: "nvidia/nemotron-3-ultra-550b-a55b" },
@@ -217,7 +217,7 @@ export function ProjectAIManage({ projectId }: ProjectAIManageProps) {
                 </Label>
                 <Input
                   id="model-id"
-                  placeholder="e.g. llama-3.3-70b-versatile or gpt-4o"
+                  placeholder="e.g. openai/gpt-oss-120b or gpt-4o"
                   value={modelId}
                   onChange={(e) => setModelId(e.target.value)}
                   disabled={loadingConfig || savingConfig}

@@ -171,7 +171,9 @@ PROVIDER_SPECS: dict[str, CloudProviderSpec] = {
     ),
     "groq": CloudProviderSpec(
         "groq", "openai", "https://api.groq.com/openai/v1",
-        "GROQ_API_KEY", "OMNISTACKAI_GROQ_MODEL", "llama-3.3-70b-versatile",
+        # 2026-09-26: llama-3.3-70b-versatile is no longer offered; gpt-oss-120b produced valid
+        # plans 3/3 in 7-9 s on the real intake step, against 0-1/3 for the other Groq models.
+        "GROQ_API_KEY", "OMNISTACKAI_GROQ_MODEL", "openai/gpt-oss-120b",
     ),
     "deepseek": CloudProviderSpec(
         "deepseek", "openai", "https://api.deepseek.com/v1",
