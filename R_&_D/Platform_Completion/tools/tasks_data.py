@@ -108,6 +108,14 @@ QUEUE = [
      "Both", "Not Started", "P1", "PC-047",
      "NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. "
      "Founder-approved 2026-09-26."),
+    ("PC-095", "Build fallback chain: Groq -> Gemini -> OpenRouter (free) -> NVIDIA -> local Ollama",
+     "1 Vibe Mode live", "Platform", "Not Started", "P1", "PC-085",
+     "Founder, 2026-09-26. A rate-limited or failing provider hands the build to the next one."),
+    ("PC-094", "Intake repairs, round 2: duplicate roles, a lifecycle for a missing entity, and a "
+     "clean error (not a crash) for malformed plan parts", "1 Vibe Mode live", "Both", "Not Started",
+     "P1", "PC-093", "Found testing weaker models on 2026-09-26: qwen3.8-27b crashed intake with an "
+     "AttributeError; nemotron named a lifecycle for an entity it did not declare; qwen2.5-coder:7b "
+     "declared the role 'user' twice. Each is repairable the way PC-093 repairs endpoints."),
     ("PC-007", "Instant in-browser preview (no local toolchain needed)", "1 Vibe Mode live",
      "Vibe", "Not Started", "P0", "",
      "From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with "

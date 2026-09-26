@@ -152,6 +152,7 @@ def resolve_generation_provider_from_env(
                     boot.cloud_tier_provider_id,
                     model_id,
                 )
+                provider = _with_fallbacks(provider, model_id, max_output, boot.cloud_tier_provider_id)
                 return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
         except Exception as err:
             logger.warning(
@@ -162,6 +163,45 @@ def resolve_generation_provider_from_env(
 
     provider, model_id, max_output, timeout = build_ollama_provider_from_env()
     return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
+
+
+def _with_fallbacks(primary: ModelProvider, model_id: str, max_output: int, primary_id: str | None) -> ModelProvider:
+    """Wrap the build provider in OMNISTACKAI_FALLBACK_PROVIDERS, in order (founder, 2026-09-26).
+
+    Only the tiered router read that setting before, so a rate-limited primary failed the build.
+    A named provider without a key is skipped with a log line rather than failing the build.
+    """
+    from ..model_gateway.fallback import ChainEntry, FallbackChainProvider
+
+    names = [n.strip().lower() for n in (os.environ.get("OMNISTACKAI_FALLBACK_PROVIDERS", "") or "").split(",") if n.strip()]
+    if not names:
+        return primary
+    entries = [ChainEntry(primary, model_id, max_output)]
+    specs = resolve_provider_specs()
+    for name in names:
+        name = "google" if name == "gemini" else name
+        if name == (primary_id or "") or (name == "google" and primary_id == "google-gemini"):
+            continue
+        try:
+            if name in ("ollama", "local"):
+                local, local_model, local_max, local_timeout = build_ollama_provider_from_env()
+                entries.append(ChainEntry(local, local_model, local_max, local_timeout))
+                continue
+            spec = specs.get(name)
+            key = os.environ.get(spec.key_env, "").strip() if spec else ""
+            if spec is None or not key:
+                logger.warning("fallback provider %r skipped: not configured", name)
+                continue
+            fallback_model = (os.environ.get(spec.model_env, "") or spec.default_model).strip()
+            descriptor = _cloud_descriptor(spec.provider_id, fallback_model)
+            entries.append(ChainEntry(
+                create_cloud_provider(spec, api_key=key, descriptor=descriptor,
+                                      rate_limit_retries=0, max_retry_after_seconds=1.0),
+                fallback_model, descriptor.max_output_tokens,
+            ))
+        except Exception as error:  # noqa: BLE001 - one bad fallback must not break the build
+            logger.warning("fallback provider %r skipped: %s", name, error)
+    return FallbackChainProvider(entries) if len(entries) > 1 else primary
 
 
 def _maybe_record(provider: ModelProvider, usage_ledger: UsageLedger | None) -> ModelProvider:

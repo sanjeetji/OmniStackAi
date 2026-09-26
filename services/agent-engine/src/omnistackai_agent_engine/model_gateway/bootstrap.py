@@ -9,6 +9,7 @@ constructs providers only; it makes no network call.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 
@@ -23,6 +24,8 @@ from .resilience import CircuitBreaker
 
 _LOCAL_ALIASES = frozenset({"ollama", "ollama-local", OLLAMA_PROVIDER_ID})
 
+
+logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class GatewayBootstrap:
@@ -196,9 +199,11 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
             descriptor = ollama_descriptor
         elif name in provider_specs:
             if name not in cloud_descriptors:
-                raise CloudProviderSelectionError(
-                    f"fallback provider {name!r} needs {provider_specs[name].key_env} to be set"
-                )
+                # A fallback without a key is skipped, not fatal (2026-09-26): raising here made the
+                # whole cloud setup fail, and builds then silently dropped to the local model — one
+                # missing *fallback* key made every build slow. A misspelled name still raises below.
+                logger.warning("fallback provider %r skipped: %s is not set", name, provider_specs[name].key_env)
+                continue
             descriptor = cloud_descriptors[name]
         else:
             raise CloudProviderSelectionError(

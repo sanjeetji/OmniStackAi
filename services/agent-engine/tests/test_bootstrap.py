@@ -108,10 +108,11 @@ class FallbackWiringTests(TestCase):
             with self.assertRaises(CloudProviderSelectionError):
                 build_gateway_from_env()
 
-    def test_fallback_provider_without_key_is_rejected(self) -> None:
-        with patch.dict("os.environ", _env(OMNISTACKAI_FALLBACK_PROVIDERS="anthropic"), clear=True):
-            with self.assertRaises(CloudProviderSelectionError):
-                build_gateway_from_env()
+    def test_fallback_provider_without_key_is_skipped(self) -> None:
+        # It used to raise, and the build path then fell all the way back to the local model.
+        with patch.dict("os.environ", _env(OMNISTACKAI_FALLBACK_PROVIDERS="anthropic, ollama"), clear=True):
+            boot = build_gateway_from_env()
+        self.assertEqual(boot.fallback_provider_ids, ("ollama-local",))
 
 
 class CloudTokenBudgetTests(TestCase):
