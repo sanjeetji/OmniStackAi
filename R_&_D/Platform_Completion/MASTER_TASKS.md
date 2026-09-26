@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 408 |
+| Completed | 409 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 100 |
-| Not Started | 520 |
+| Not Started | 519 |
 | Superseded | 12 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1114** |
 
-Open work queue: **110** tasks (P0: 16, P1: 49, P2: 31, P3: 14).
+Open work queue: **109** tasks (P0: 15, P1: 49, P2: 31, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -52,7 +52,7 @@ Open work queue: **110** tasks (P0: 16, P1: 49, P2: 31, P3: 14).
 | 5 | PC-093 | Intake repairs instead of rejecting: a model's status-change endpoint becomes a workflow transition, and an undeclared request-schema reference is fixed, not fatal | Completed | P0 | Both |  |  | Found by PC-047's comparison (2026-09-26): 3 of 6 real intake runs, on both NVIDIA and Gemini, were rejected for the same reason. Roughly half of real prompts fail at the first step whichever model runs, so this comes before everything else. |
 | 6 | PC-003 | Stack policy in code: an app request gets a store-ready React Native app AND an installable PWA with QR; Flutter and React.js refused with the reason | Completed | P0 | Both |  |  | R-562 already builds the React Native app; the PWA + QR half is R-573. Native Kotlin/Swift only after Phase 5. Uses the R-559 'nearest thing we can build, with a reason' path. |
 | | | **Phase 1 Vibe Mode live**: Prompt -> running app with real API + DB -> live URL, for real users. | | | | | | |
-| 7 | R-591 | Complete auth for the Go backend: register, login, logout, me, forgot password, reset password | Not Started | P0 | Both |  |  | A Go app with auth has no way for a real user to sign in. Parity with the Python backend's auth (R-461, R-463), companions included. |
+| 7 | R-591 | Complete auth for the Go backend: register, login, logout, me, forgot password, reset password | Completed | P0 | Both |  |  | A Go app with auth has no way for a real user to sign in. Parity with the Python backend's auth (R-461, R-463), companions included. |
 | 8 | R-590 | Workflow transitions as buttons on the generated screens | Not Started | P0 | Both | R-588 |  | The user-visible half of R-566. |
 | 9 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | Pending | P0 | Vibe | PC-003 | ARCH-PWA | Works for templates only today; generated projects must install on a real phone. |
 | 10 | PC-004 | Real API + DB for every feature: a Vibe build fails if any screen or action is not wired to a real endpoint and table | Not Started | P0 | Vibe | R-590 | ARCH-PIPELINE, SPEC-VIBE-01 | No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro. |
@@ -81,7 +81,7 @@ Open work queue: **110** tasks (P0: 16, P1: 49, P2: 31, P3: 14).
 | 32 | R-569 | Realtime channels: tracking, notifications, live status | Not Started | P1 | Both |  | ARCH-REALTIME |  |
 | 33 | R-571 | Escape hatch: behaviour the IR declares and the model implements, verified | Not Started | P1 | Both | R-560 |  | No hard ceiling, only a typed boundary. |
 | 34 | PC-016 | Edit a workflow by chat (add/rename states and transitions safely) | Not Started | P1 | Both | R-584, R-590 |  |  |
-| 35 | R-572 | Shared contract package: one generated packages/ for types, client, validation | Not Started | P1 | Both |  | R-116, R-127, R-137, R-143, R-152, SPEC-PACK-06D |  |
+| 35 | R-572 | Shared contract package: one generated packages/ for types, client, validation | Not Started | P1 | Both |  | R-116, R-127, R-137, R-143, R-152, SPEC-PACK-06D | Also puts the /auth routes (R-591) into the generated OpenAPI contract. |
 | 36 | R-585 | Template customisation as a first-class flow | Not Started | P1 | Both | R-584 |  |  |
 | 37 | PC-017 | Pack framework core: manifest v2 schema, registry/loader, composer (merge, wire, validate, conflict rules) | Pending | P1 | Both | R-572 | ARCH-GENERATORS, SPEC-PACK-01, SPEC-PACK-02 | Solution Pack manifests, registry and application exist (R-434..R-445); v2 adds ir_delta, state machines, page templates, dependencies. From specs/pack-framework 01, 02. |
 | 38 | PC-075 | Role-based app generator: a complete app per role (nav, pages, API scope, permissions) | Pending | P1 | Both | PC-017, R-570 | SPEC-PACK-06B | R-555/R-562 already build one app per role; the spec asks for role-scoped pages and APIs. From specs/pack-framework/06b. |
@@ -1273,6 +1273,7 @@ What each tracker phase asks for, and where it is covered:
 | R-587 | Generated Go is gofmt-clean. | Completed | 2026-09-25 |  |
 | R-588 | A transition is describable and callable, not only implemented. | Completed | 2026-09-26 |  |
 | R-589 | A lifecycle runs on every backend, not only the default one. | Completed | 2026-09-26 |  |
+| R-591 | Complete auth for the Go backend: register, login, logout, me, forgot password, reset password | Completed | 2026-09-26 | A Go app with auth has no way for a real user to sign in. Parity with the Python backend's auth (R-461, R-463), companions included. |
 
 ## Legend
 

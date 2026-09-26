@@ -13,6 +13,8 @@ import re
 from typing import TYPE_CHECKING
 
 from ..application_ir import ApplicationIR, Entity, FieldType, MobileProfile
+from .auth_guard import needs_auth
+from .auth_templates import RN_AUTH_CONTEXT, RN_AUTH_SCREENS
 from .adapter import GenerationTarget
 from .files import GeneratedFile, GeneratedProject
 from .brand_project import app_config_js
@@ -84,6 +86,8 @@ class ReactNativeAdapter:
         # 3. Shared API & Auth Layer
         files.append(self._generate_api_client())
         files.append(self._generate_auth_context(ir))
+        if needs_auth(ir):
+            files.append(GeneratedFile("src/app/screens/AuthScreens.tsx", RN_AUTH_SCREENS))
 
         # 4. Per-Entity Features (Model, API, Hook, Screens)
         for entity in ir.entities:
@@ -125,6 +129,9 @@ class ReactNativeAdapter:
                 "@react-navigation/native-stack": "^6.10.1",
                 "expo": "~51.0.0",
                 "expo-constants": "~16.0.2",
+                # R-591: the session token lives in the Keychain/Keystore. Pinned to the version
+                # Expo SDK 51 bundles (expo/packages/expo/bundledNativeModules.json).
+                "expo-secure-store": "~13.0.2",
                 "expo-status-bar": "~1.12.1",
                 "lucide-react-native": "^0.453.0",
                 "react": "18.2.0",
@@ -448,7 +455,7 @@ class ReactNativeAdapter:
             "    <View style={styles.container}>\n"
             "      {label && <Text style={styles.label}>{label}</Text>}\n"
             "      <TextInput\n"
-            "        style={[styles.input, error && styles.inputError, style]}\n"
+            "        style={[styles.input, !!error && styles.inputError, style]}\n"
             "        placeholderTextColor={tokens.colors.textMuted}\n"
             "        {...rest}\n"
             "      />\n"
@@ -640,52 +647,10 @@ class ReactNativeAdapter:
         )
         return GeneratedFile("src/shared/api/client.ts", content)
 
-    def _generate_auth_context(self, ir: ApplicationIR) -> GeneratedFile:
-        content = (
-            "import React, { createContext, useContext, useState, useEffect } from 'react';\n"
-            "import { setAuthToken } from '../api/client';\n\n"
-            "export interface UserProfile {\n"
-            "  id: string;\n"
-            "  email: string;\n"
-            "  name?: string;\n"
-            "  role?: string;\n"
-            "}\n\n"
-            "interface AuthContextValue {\n"
-            "  user: UserProfile | null;\n"
-            "  token: string | null;\n"
-            "  loading: boolean;\n"
-            "  login: (token: string, user: UserProfile) => void;\n"
-            "  logout: () => void;\n"
-            "}\n\n"
-            "const AuthContext = createContext<AuthContextValue>({\n"
-            "  user: null,\n"
-            "  token: null,\n"
-            "  loading: false,\n"
-            "  login: () => {},\n"
-            "  logout: () => {},\n"
-            "});\n\n"
-            "export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {\n"
-            "  const [user, setUser] = useState<UserProfile | null>(null);\n"
-            "  const [token, setToken] = useState<string | null>(null);\n"
-            "  const [loading, setLoading] = useState<boolean>(false);\n\n"
-            "  const login = (newToken: string, newUser: UserProfile) => {\n"
-            "    setToken(newToken);\n"
-            "    setUser(newUser);\n"
-            "    setAuthToken(newToken);\n"
-            "  };\n\n"
-            "  const logout = () => {\n"
-            "    setToken(null);\n"
-            "    setUser(null);\n"
-            "    setAuthToken(null);\n"
-            "  };\n\n"
-            "  return (\n"
-            "    <AuthContext.Provider value={{ user, token, loading, login, logout }}>\n"
-            "      {children}\n"
-            "    </AuthContext.Provider>\n"
-            "  );\n"
-            "};\n\n"
-            "export const useAuth = () => useContext(AuthContext);\n"
-        )
+    def _generate_auth_context(self, ir: ApplicationIR) -> GeneratedFile:  # noqa: ARG002
+        # R-591: a real session — sign-in, sign-up, recovery, and a token kept in secure storage.
+        # The previous context only held a token somebody else had to supply; no screen did.
+        content = RN_AUTH_CONTEXT
         return GeneratedFile("src/shared/auth/AuthContext.tsx", content)
 
     # ── Per-Entity Features ────────────────────────────────────────────────────
@@ -1175,13 +1140,26 @@ const styles = StyleSheet.create({
             "import React from 'react';",
             "import { createNativeStackNavigator } from '@react-navigation/native-stack';",
             "import { OverviewScreen } from '../screens/OverviewScreen';",
+            *(["import { AuthHeaderButton, ForgotPasswordScreen, LoginScreen, RegisterScreen } from '../screens/AuthScreens';"]
+              if needs_auth(ir) else []),
             "import { tokens } from '../../design-system/tokens';",
         ]
-        screens: list[str] = [
-            '      <Stack.Screen name="Overview" component={OverviewScreen} options={{ title: "'
-            + ir.name
-            + '" }} />'
-        ]
+        if needs_auth(ir):
+            # R-591: sign in / sign out from the home header, and the three account screens.
+            screens: list[str] = [
+                '      <Stack.Screen name="Overview" component={OverviewScreen} options={({ navigation }) => ({ title: "'
+                + ir.name
+                + '", headerRight: () => <AuthHeaderButton navigation={navigation} /> })} />',
+                '      <Stack.Screen name="Login" component={LoginScreen} options={{ title: "Sign in" }} />',
+                '      <Stack.Screen name="Register" component={RegisterScreen} options={{ title: "Create account" }} />',
+                '      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: "Reset password" }} />',
+            ]
+        else:
+            screens = [
+                '      <Stack.Screen name="Overview" component={OverviewScreen} options={{ title: "'
+                + ir.name
+                + '" }} />'
+            ]
 
         for entity in ir.entities:
             slug = _to_snake(entity.name)

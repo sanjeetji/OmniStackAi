@@ -13,6 +13,7 @@ import re
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType
 from .adapter import GenerationTarget
 from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file, python_auth_router_file
+from .auth_templates import EMAIL_ENV_EXAMPLE, is_account_route
 from .data_access import PSYCOPG_REQUIREMENT, python_data_access_files
 from .errors import GenerationError
 from .field_validation import filter_fields, parse_field_rules
@@ -281,13 +282,15 @@ class PythonBackendAdapter:
         if not isinstance(ir, ApplicationIR):
             raise GenerationError("ir must be an ApplicationIR")
 
-        by_segment: dict[str, list[ApiEndpoint]] = {}
-        for api in ir.apis:
-            by_segment.setdefault(_segment(api.path), []).append(api)
-        segments = sorted(by_segment)
-
         has_db = bool(ir.entities) and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES
         has_auth = needs_auth(ir)
+
+        by_segment: dict[str, list[ApiEndpoint]] = {}
+        for api in ir.apis:
+            if has_auth and is_account_route(api.path):
+                continue  # R-591: the generated account flow owns /auth/*
+            by_segment.setdefault(_segment(api.path), []).append(api)
+        segments = sorted(by_segment)
         requirements = "fastapi==0.115.0\nuvicorn[standard]==0.30.6\npydantic==2.9.2\n"
         if has_db:
             requirements += f"{PSYCOPG_REQUIREMENT}\n"
@@ -296,7 +299,7 @@ class PythonBackendAdapter:
 
         env_example = f"# Backend config placeholders only. Never commit secrets.\nAPP_NAME={ir.name}\nDATABASE_URL=postgresql://localhost:5432/{_slug(ir.name)}\nCORS_ALLOWED_ORIGIN=*\n"
         if has_auth:
-            env_example += "JWT_SECRET=\n"
+            env_example += "JWT_SECRET=\n" + EMAIL_ENV_EXAMPLE
         env_example += "STORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\nSTORAGE_ACCESS_KEY=minioadmin\nSTORAGE_SECRET_KEY=minioadmin\n"
 
         files: list[GeneratedFile] = [

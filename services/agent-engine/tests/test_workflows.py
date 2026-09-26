@@ -234,8 +234,10 @@ class RoleGuardsActuallyWork(TestCase):
 
     def test_both_login_and_register_issue_it(self) -> None:
         # Two token-creation sites; fixing one would leave half the product broken.
+        # R-591: both now go through one token builder, which is what makes them agree.
         router = self._auth_files()["services/api/app/routers/auth.py"]
-        self.assertEqual(router.count('"roles": [user.role]'), 2)
+        self.assertEqual(router.count('"roles": [user.role]'), 1)
+        self.assertEqual(router.count("access_token=_create_token(user)"), 2)
 
     def test_the_guard_still_reads_the_list(self) -> None:
         auth = self._auth_files()["services/api/app/auth.py"]

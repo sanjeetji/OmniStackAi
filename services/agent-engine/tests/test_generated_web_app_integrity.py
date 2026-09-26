@@ -162,10 +162,11 @@ class GeneratedPythonAuthRouterTests(unittest.TestCase):
         self.assertIn("DEFAULT_ROLE", register)
 
     def test_password_reset_by_email_alone_is_refused(self) -> None:
+        # R-521 refused every reset until emailed links existed; R-591 added them. The property is
+        # unchanged: a reset redeems the one-time token from the link and never trusts an email.
         reset = self.source[self.source.index("async def reset_password"):]
-        self.assertIn("status_code=501", reset)
-        self.assertNotIn("UPDATE", reset)
-        self.assertNotIn("password_hash", reset)
+        self.assertIn("WHERE reset_token_hash = %s AND reset_token_expires_at > NOW()", reset)
+        self.assertNotIn("email", reset)
 
 
 if __name__ == "__main__":

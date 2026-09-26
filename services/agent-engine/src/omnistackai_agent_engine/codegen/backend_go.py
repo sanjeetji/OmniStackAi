@@ -13,6 +13,7 @@ import re
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, FieldType
 from .adapter import GenerationTarget
 from .auth_guard import GOLANG_JWT_REQUIRE, go_auth_file, needs_auth
+from .auth_templates import AUTH_CONTRACT, EMAIL_ENV_EXAMPLE, GO_AUTH_HANDLERS, is_account_route
 from .field_validation import VALIDATOR_REQUIRE, filter_fields, go_validate_file, go_validate_tag, parse_field_rules
 from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
@@ -362,13 +363,13 @@ def _handlers_file_wired(
     return "\n".join(lines) + "\n"
 
 
-def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = ()) -> str:
+def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = (), has_auth: bool = False) -> str:
     lines = ["package main", "", "import ("]
     lines.append('\t"log"')
     lines.append('\t"net/http"')
     lines.append('\t"os"')
     module_imports = []
-    if apis:
+    if apis or (has_auth and has_db):
         module_imports.append(f'\t"{slug}/internal/handlers"')
     if has_db:
         module_imports.append(f'\t"{slug}/internal/store"')
@@ -422,6 +423,10 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
             role_args = ", ".join(f'"{role}"' for role in route.roles)
             target = f"handlers.RequireRoles({target}, {role_args})"
         lines.append(f'\tmux.HandleFunc("POST {route.path}", {target})')
+    # R-591: the account flow. It needs the users table, so it exists only with a database.
+    if has_auth and has_db:
+        for handler, (method, path) in _AUTH_ROUTES:
+            lines.append(f'\tmux.HandleFunc("{method} {path}", h.{handler})')
     lines.append('\tport := os.Getenv("PORT")')
     lines.append('\tif port == "" {')
     lines.append('\t\tport = "8080"')
@@ -436,6 +441,16 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
     return "\n".join(lines) + "\n"
 
 
+_AUTH_ROUTES = (
+    ("AuthRegister", AUTH_CONTRACT["register"]),
+    ("AuthLogin", AUTH_CONTRACT["login"]),
+    ("AuthMe", AUTH_CONTRACT["me"]),
+    ("AuthLogout", AUTH_CONTRACT["logout"]),
+    ("AuthForgotPassword", AUTH_CONTRACT["forgot"]),
+    ("AuthResetPassword", AUTH_CONTRACT["reset"]),
+)
+
+
 class GoBackendAdapter:
     """Generates a Go net/http backend from an Application IR."""
 
@@ -448,14 +463,15 @@ class GoBackendAdapter:
             raise GenerationError("ir must be an ApplicationIR")
 
         slug = _slug(ir.name)
-        apis = list(ir.apis)
+        has_db = bool(ir.entities) and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES
+        has_auth = needs_auth(ir)
+        # R-591: with the account flow generated, it owns /auth/*; a plan's own copy would register
+        # the same pattern twice, and Go's ServeMux panics on that at start-up.
+        apis = [api for api in ir.apis if not (has_auth and has_db and is_account_route(api.path))]
 
         by_segment: dict[str, list[ApiEndpoint]] = {}
         for api in apis:
             by_segment.setdefault(_segment(api.path), []).append(api)
-
-        has_db = bool(ir.entities) and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES
-        has_auth = needs_auth(ir)
 
         repo_entities = frozenset(entity.name for entity in ir.entities) if has_db else frozenset()
         fk_by_entity = fk_relations(ir) if has_db else None
@@ -484,10 +500,12 @@ class GoBackendAdapter:
         env_example = f"# Backend config placeholders only. Never commit secrets.\nAPP_NAME={ir.name}\nADDR=:8080\nDATABASE_URL=postgres://localhost:5432/{slug}\nCORS_ALLOWED_ORIGIN=*\n"
         if has_auth:
             env_example += "JWT_SECRET=\n"
+            if has_db:
+                env_example += EMAIL_ENV_EXAMPLE
         env_example += "STORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\nSTORAGE_ACCESS_KEY=minioadmin\nSTORAGE_SECRET_KEY=minioadmin\n"
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
-            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else ())),
+            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth)),
             GeneratedFile("internal/models/models.go", _models_file(ir)),
             GeneratedFile(".gitignore", "/bin/\n*.exe\n.env\n"),
             GeneratedFile(".env.example", env_example),
@@ -508,6 +526,8 @@ class GoBackendAdapter:
 
         if has_auth:
             files.append(GeneratedFile("internal/handlers/auth.go", go_auth_file(ir)))
+            if has_db:
+                files.append(GeneratedFile("internal/handlers/auth_routes.go", GO_AUTH_HANDLERS))
         if has_validation:
             files.append(GeneratedFile("internal/handlers/validate.go", go_validate_file()))
 

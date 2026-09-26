@@ -225,7 +225,7 @@ class TestNodeBackendAdapter(unittest.TestCase):
 
         app_ts = project.get("src/app.ts").content
         self.assertIn("export const app = new Hono();", app_ts)
-        self.assertIn("app.route('/api/tasks'", app_ts)
+        self.assertIn("app.route('/tasks'", app_ts)
 
         index_ts = project.get("src/index.ts").content
         self.assertIn("serve({", index_ts)

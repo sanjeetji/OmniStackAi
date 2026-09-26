@@ -27,7 +27,11 @@ CREATE TABLE IF NOT EXISTS "users" (
     "full_name"     VARCHAR,
     "role"          VARCHAR NOT NULL DEFAULT 'user',
     "created_at"    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);"""
+);
+-- R-591: one-time password-reset links. Only a SHA-256 of the token is stored, so a database
+-- leak does not hand out working reset links; the expiry makes an old email useless.
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "reset_token_hash" VARCHAR;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "reset_token_expires_at" TIMESTAMPTZ;"""
 
 # A deterministic dev-access seed row so developers can log in immediately.
 # The password hash encodes: salt=0000...00 (32 zero bytes) / plain='changeme'.

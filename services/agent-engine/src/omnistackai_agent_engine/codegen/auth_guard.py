@@ -15,6 +15,7 @@ for password hashing — zero external C dependencies beyond PyJWT.
 from __future__ import annotations
 
 from ..application_ir import ApplicationIR
+from .auth_templates import PYTHON_AUTH_ROUTER
 
 # Generated-project dependency pins (only added when an auth guard is emitted).
 PYJWT_REQUIREMENT = "PyJWT==2.9.0"
@@ -182,191 +183,13 @@ def go_auth_file(ir: ApplicationIR) -> str:
 
 
 def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
-    """Generate app/routers/auth.py — a production-ready FastAPI auth router.
+    """Generate app/routers/auth.py — the complete account flow for a FastAPI backend.
 
-    Endpoints emitted:
-      POST /register  — hash password with PBKDF2-SHA256, insert user row, return JWT.
-      POST /login     — verify password hash, return JWT + user claims.
-      GET  /me        — decode Bearer token, return current user profile.
-      POST /logout    — 204 No Content (client clears localStorage).
-
-    Security properties:
-      * Password hashing: stdlib hashlib.pbkdf2_hmac (SHA-256, 100 000 iterations,
-        32-byte cryptographically random salt via secrets.token_bytes).
-        Hash format: "<hex_salt>:<hex_digest>" stored in the `password_hash` column.
-      * JWT signing: HS256 with JWT_SECRET from env (same contract as require_auth).
-      * No external C extensions required; only PyJWT (already in requirements.txt).
-
-    The emitted file is pure Python and deterministic (no randomness at generation
-    time — randomness runs inside the generated project at runtime).
+    R-461 shipped register / login / me / logout. R-591 made it complete and correct: `/me` read
+    `authorization` without `Header()`, so FastAPI took it from the query string and every signed-in
+    user's profile call answered 401; `/forgot-password` said "Password reset link dispatched" and
+    dispatched nothing; `/reset-password` always answered 501. See `auth_templates` for the contract
+    all three backends share.
     """
 
-    return (
-        '"""Authentication router for the generated API (R-461).\n\n'
-        "Provides /auth/register, /auth/login, /auth/me, and /auth/logout endpoints.\n"
-        "Password hashing: PBKDF2-SHA256 via Python stdlib hashlib (no external C deps).\n"
-        'JWT signing: HS256 using JWT_SECRET from the environment.\n'
-        '"""\n'
-        "from __future__ import annotations\n\n"
-        "import hashlib\n"
-        "import os\n"
-        "import secrets\n"
-        "from datetime import datetime, timedelta, timezone\n"
-        "from typing import Any\n\n"
-        "import jwt\n"
-        "from fastapi import APIRouter, Depends, HTTPException, status\n"
-        "from fastapi.responses import Response\n"
-        "from pydantic import BaseModel\n\n"
-        "try:\n"
-        "    import asyncpg\n"
-        "except ImportError:  # pragma: no cover\n"
-        "    asyncpg = None  # type: ignore[assignment]\n\n"
-        'JWT_ALGORITHM = "HS256"\n'
-        'DEFAULT_ROLE = "user"  # every self-registered account starts with this role\n'
-        "TOKEN_EXPIRE_HOURS = 24\n\n"
-        "router = APIRouter(tags=[\"auth\"])\n\n\n"
-        "# ---------------------------------------------------------------------------\n"
-        "# Password helpers (stdlib only — PBKDF2-SHA256, 100 000 iterations)\n"
-        "# ---------------------------------------------------------------------------\n\n"
-        "def hash_password(plain: str) -> str:\n"
-        '    """Return "<hex_salt>:<hex_digest>" suitable for the password_hash column."""\n'
-        "    salt = secrets.token_bytes(32)\n"
-        "    digest = hashlib.pbkdf2_hmac(\"sha256\", plain.encode(), salt, 100_000)\n"
-        '    return salt.hex() + ":" + digest.hex()\n\n\n'
-        "def verify_password(plain: str, stored: str) -> bool:\n"
-        '    """Return True when `plain` matches the stored PBKDF2 hash."""\n'
-        "    try:\n"
-        '        salt_hex, digest_hex = stored.split(":", 1)\n'
-        "        salt = bytes.fromhex(salt_hex)\n"
-        "        expected = bytes.fromhex(digest_hex)\n"
-        "    except (ValueError, AttributeError):\n"
-        "        return False\n"
-        "    candidate = hashlib.pbkdf2_hmac(\"sha256\", plain.encode(), salt, 100_000)\n"
-        "    return secrets.compare_digest(candidate, expected)\n\n\n"
-        "# ---------------------------------------------------------------------------\n"
-        "# JWT helpers\n"
-        "# ---------------------------------------------------------------------------\n\n"
-        "def _jwt_secret() -> str:\n"
-        '    secret = os.environ.get("JWT_SECRET", "")\n'
-        "    if not secret:\n"
-        '        raise HTTPException(status_code=500, detail="auth_not_configured")\n'
-        "    return secret\n\n\n"
-        "def _create_token(payload: dict[str, Any]) -> str:\n"
-        "    data = dict(payload)\n"
-        "    expire = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRE_HOURS)\n"
-        '    data["exp"] = expire\n'
-        "    return jwt.encode(data, _jwt_secret(), algorithm=JWT_ALGORITHM)\n\n\n"
-        "# ---------------------------------------------------------------------------\n"
-        "# Request / response models\n"
-        "# ---------------------------------------------------------------------------\n\n"
-        "class RegisterRequest(BaseModel):\n"
-        "    email: str\n"
-        "    password: str\n"
-        "    full_name: str | None = None\n"
-        '    role: str = "user"\n\n\n'
-        "class LoginRequest(BaseModel):\n"
-        "    email: str\n"
-        "    password: str\n\n\n"
-        "class UserOut(BaseModel):\n"
-        "    id: str\n"
-        "    email: str\n"
-        "    full_name: str | None\n"
-        "    role: str\n\n\n"
-        "class TokenResponse(BaseModel):\n"
-        "    access_token: str\n"
-        '    token_type: str = "bearer"\n'
-        "    user: UserOut\n\n\n"
-        "class ResetPasswordRequest(BaseModel):\n"
-        "    email: str\n"
-        "    new_password: str\n\n\n"
-        "# ---------------------------------------------------------------------------\n"
-        "# Endpoints\n"
-        "# ---------------------------------------------------------------------------\n\n"
-        '@router.post("/register", response_model=TokenResponse, status_code=201)\n'
-        "async def register(body: RegisterRequest) -> TokenResponse:\n"
-        '    """Register a new account and return a signed JWT.\n\n'
-        "    Every self-registered account gets the default role. The role in the request is ignored,\n"
-        "    so nobody can sign themselves up as an admin; admins assign other roles.\n"
-        '    """\n'
-        "    from app.db import connect\n\n"
-        "    async with await connect() as conn, conn.cursor() as cur:\n"
-        '        await cur.execute("SELECT id FROM \\"users\\" WHERE email = %s", (body.email,))\n'
-        "        if await cur.fetchone():\n"
-        '            raise HTTPException(status_code=409, detail="email_already_registered")\n'
-        "        await cur.execute(\n"
-        "            \"\"\"\n"
-        "            INSERT INTO \\\"users\\\" (email, password_hash, full_name, role)\n"
-        "            VALUES (%s, %s, %s, %s)\n"
-        "            RETURNING id::text AS id, email, full_name, role\n"
-        "            \"\"\",\n"
-        "            (body.email, hash_password(body.password), body.full_name, DEFAULT_ROLE),\n"
-        "        )\n"
-        "        row = await cur.fetchone()\n"
-        "    user = UserOut(\n"
-        '        id=row["id"], email=row["email"],\n'
-        '        full_name=row["full_name"], role=row["role"],\n'
-        "    )\n"
-        # R-566: `roles` as a list, beside `role`. The guard reads `claims.get("roles")` and
-        # requires a list, while login issued only the singular string — so every role-guarded
-        # endpoint answered 403 for everyone, in every generated project. Found by calling one.
-        # Both keys are emitted: the guard needs the list, and anything reading `role` still works.
-        '    token = _create_token({"sub": user.id, "email": user.email, "role": user.role, "roles": [user.role]})\n'
-        "    return TokenResponse(access_token=token, user=user)\n\n\n"
-        '@router.post("/login", response_model=TokenResponse)\n'
-        "async def login(body: LoginRequest) -> TokenResponse:\n"
-        '    """Authenticate with email + password and return a signed JWT."""\n'
-        "    from app.db import connect\n\n"
-        "    async with await connect() as conn, conn.cursor() as cur:\n"
-        "        await cur.execute(\n"
-        '            "SELECT id::text AS id, email, password_hash, full_name, role FROM \\"users\\" WHERE email = %s",\n'
-        "            (body.email,),\n"
-        "        )\n"
-        "        row = await cur.fetchone()\n"
-        "    if not row or not verify_password(body.password, row[\"password_hash\"]):\n"
-        '        raise HTTPException(\n'
-        "            status_code=status.HTTP_401_UNAUTHORIZED,\n"
-        '            detail="invalid_credentials",\n'
-        '            headers={"WWW-Authenticate": "Bearer"},\n'
-        "        )\n"
-        "    user = UserOut(\n"
-        '        id=row["id"], email=row["email"],\n'
-        '        full_name=row["full_name"], role=row["role"],\n'
-        "    )\n"
-        # R-566: `roles` as a list, beside `role`. The guard reads `claims.get("roles")` and
-        # requires a list, while login issued only the singular string — so every role-guarded
-        # endpoint answered 403 for everyone, in every generated project. Found by calling one.
-        # Both keys are emitted: the guard needs the list, and anything reading `role` still works.
-        '    token = _create_token({"sub": user.id, "email": user.email, "role": user.role, "roles": [user.role]})\n'
-        "    return TokenResponse(access_token=token, user=user)\n\n\n"
-        '@router.get("/me", response_model=UserOut)\n'
-        "async def me(authorization: str | None = None) -> UserOut:\n"
-        '    """Return the profile of the currently authenticated user."""\n'
-        "    from fastapi import Header as _Header  # noqa: F401\n\n"
-        "    if not authorization or not authorization.startswith(\"Bearer \"):\n"
-        '        raise HTTPException(status_code=401, detail="unauthorized")\n'
-        '    token = authorization[len("Bearer "):]\n'
-        "    try:\n"
-        "        claims = jwt.decode(token, _jwt_secret(), algorithms=[JWT_ALGORITHM])\n"
-        "    except jwt.PyJWTError as exc:\n"
-        '        raise HTTPException(status_code=401, detail="invalid_token") from exc\n'
-        "    return UserOut(\n"
-        '        id=claims.get("sub", ""),\n'
-        '        email=claims.get("email", ""),\n'
-        '        full_name=claims.get("full_name"),\n'
-        '        role=claims.get("role", "user"),\n'
-        "    )\n\n\n"
-        '@router.post("/logout", status_code=204)\n'
-        "async def logout() -> Response:\n"
-        '    """Invalidate the session (client must clear localStorage token)."""\n'
-        "    return Response(status_code=204)\n\n\n"
-        '@router.post("/forgot-password")\n'
-        'async def forgot_password(body: dict[str, Any]) -> dict[str, str]:\n'
-        '    """Initiate password recovery."""\n'
-        '    return {"status": "ok", "message": "Password reset link dispatched"}\n\n\n'
-        '@router.post("/reset-password")\n'
-        'async def reset_password(body: ResetPasswordRequest) -> dict[str, str]:  # noqa: ARG001\n'
-        '    """Not available until reset links are signed and emailed.\n\n'
-        "    Setting a password from an email address alone would let anyone take over any account.\n"
-        '    """\n'
-        '    raise HTTPException(status_code=501, detail="password_reset_not_configured")\n'
-    )
+    return PYTHON_AUTH_ROUTER

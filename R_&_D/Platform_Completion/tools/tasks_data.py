@@ -166,7 +166,8 @@ QUEUE = [
      "2 Maximum features", "Both", "Not Started", "P1", "R-584, R-590", ""),
     ("R-572", "Shared contract package: one generated packages/ for types, client, validation",
      "2 Maximum features", "Both", "Not Started", "P1", "",
-     "Covers R-116, R-127, R-137, R-143, R-152 and pack-framework 06d."),
+     "Covers R-116, R-127, R-137, R-143, R-152 and pack-framework 06d. Also puts the "
+     "/auth routes (R-591) into the generated OpenAPI contract."),
     ("R-585", "Template customisation as a first-class flow", "2 Maximum features", "Both",
      "Not Started", "P1", "R-584", ""),
     ("PC-017", "Pack framework core: manifest v2 schema, registry/loader, composer (merge, "

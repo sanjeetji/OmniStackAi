@@ -123,13 +123,29 @@ def read_tracker_stdlib() -> dict[str, dict]:
     return out
 
 
+def current_task() -> tuple[str, str]:
+    """(task id, status) from .ai/CURRENT_TASK.yaml, read without a YAML dependency."""
+    path = REPO / ".ai" / "CURRENT_TASK.yaml"
+    if not path.exists():
+        return "", ""
+    text = path.read_text(encoding="utf-8")
+    tid = re.search(r"^task_id:\s*(\S+)", text, re.M)
+    status = re.search(r"^status:\s*(\S+)", text, re.M)
+    return (tid.group(1) if tid else "", status.group(1) if status else "")
+
+
 def build() -> tuple[list[Task], list[Task]]:
     changelog = read_changelog()
     tracker = read_tracker()
+    # Founder, 2026-09-26: every commit shows each task's real state. A CHANGELOG entry makes a task
+    # Completed; the task recorded as in progress in .ai/CURRENT_TASK.yaml shows In Progress.
+    active_id, active_status = current_task()
 
     queue: list[Task] = []
     for order, (tid, title, phase, mode, status, prio, depends, notes) in enumerate(data.QUEUE, 1):
         done = changelog.get(tid)
+        if not done and tid == active_id and active_status == "in_progress":
+            status = "In Progress"
         queue.append(Task(
             id=tid, title=title, source="Platform_Completion queue", area=mode, phase=phase,
             status="Completed" if done else status, priority=prio, done_on=done[0] if done else "",
@@ -530,6 +546,17 @@ def write_xlsx(queue: list[Task], everything: list[Task]) -> bool:
 
 
 def main() -> None:
+    if "--check" in sys.argv:
+        # Used by scripts/test.sh: the committed Markdown must match what the data says right now.
+        queue, everything = build()
+        before = OUT_MD.read_text(encoding="utf-8") if OUT_MD.exists() else ""
+        write_md(queue, everything)
+        after = OUT_MD.read_text(encoding="utf-8")
+        if before != after:
+            OUT_MD.write_text(before, encoding="utf-8")
+            raise SystemExit("MASTER_TASKS.md is out of date: run build_master_tasks.py and commit the result")
+        print("MASTER_TASKS.md is up to date")
+        return
     queue, everything = build()
     write_md(queue, everything)
     write_pack_catalog()

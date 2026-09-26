@@ -2110,12 +2110,18 @@ if [[ ! -f "$agent_engine_root/tests/test_generated_web_app_integrity.py" ]]; th
   printf 'R-521 the generated web app integrity tests must exist.\n'
   exit 1
 fi
-if rg -qF 'get_db_pool' "$codegen_dir/auth_guard.py" || rg -qF 'body.role' "$codegen_dir/auth_guard.py"; then
+if rg -qF 'get_db_pool' "$codegen_dir/auth_guard.py" "$codegen_dir/auth_templates.py" \
+  || rg -qF 'body.role' "$codegen_dir/auth_guard.py" "$codegen_dir/auth_templates.py" \
+  || rg -qF 'body?.role' "$codegen_dir/auth_templates.py"; then
   printf 'R-521 the generated auth router must use app.db.connect and never trust a client-sent role.\n'
   exit 1
 fi
-if ! rg -qF 'password_reset_not_configured' "$codegen_dir/auth_guard.py"; then
-  printf 'R-521 password reset by email alone must stay refused until emailed reset links exist.\n'
+# R-591 replaced R-521's "refuse reset until emailed links exist" now that they do: a reset must
+# redeem the emailed one-time token (stored only as a hash), never an email address alone.
+# (That the web forgot page sends no password is asserted in test_account_flow.py.)
+if ! rg -qF 'WHERE reset_token_hash = ' "$codegen_dir/auth_templates.py" \
+  || ! rg -qF 'reset_token_hash = NULL' "$codegen_dir/auth_templates.py"; then
+  printf 'R-591 password reset must redeem a hashed one-time token from the emailed link, never an email address alone.\n'
   exit 1
 fi
 if ! rg -qF 'def _uuid_for(' "$codegen_dir/seed_sql.py"; then
@@ -2126,8 +2132,18 @@ if ! rg -qF 'SMOKE_SKIP_PREVIEW' "$repo_root/scripts/smoke-core.sh"; then
   printf 'R-521 the core smoke must check that the generated app preview loads.\n'
   exit 1
 fi
-if [[ "$(rg -c '^def _forgot_password_page' "$codegen_dir/nextjs.py")" != "1" ]]; then
-  printf 'R-521 nextjs.py must define _forgot_password_page exactly once.\n'
+# R-591 moved the recovery pages to auth_pages.py (forgot + reset); each is defined once, and
+# nextjs.py must not grow a second copy of either.
+if [[ "$(rg -c '^def (forgot|reset)_password_page' "$codegen_dir/auth_pages.py")" != "2" ]] \
+  || rg -q '^def _?(forgot|reset)_password_page' "$codegen_dir/nextjs.py"; then
+  printf 'R-591 auth_pages.py must define forgot_password_page and reset_password_page exactly once each.\n'
+  exit 1
+fi
+
+# Founder, 2026-09-26: every commit carries the task list in its real state (Completed from
+# CHANGELOG, In Progress from .ai/CURRENT_TASK.yaml). A stale MASTER_TASKS.md fails the gate.
+if ! python3 "$repo_root/R_&_D/Platform_Completion/tools/build_master_tasks.py" --check >/dev/null; then
+  printf 'Platform_Completion/MASTER_TASKS.md is out of date: run tools/build_master_tasks.py and commit it.\n'
   exit 1
 fi
 

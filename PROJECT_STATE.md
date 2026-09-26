@@ -4,6 +4,9 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-591 (2026-09-26): complete account flow on every backend and surface.** Register/login/me/logout/forgot/reset identical on Python, Go, Node Express/Hono; one password format (accounts cross backends); safe one-time reset links (Resend when keyed, dev log otherwise); web forgot + reset pages; mobile sign-in/up/recovery screens with SecureStore. Live 84/84 on PostgreSQL.
+> **Found and fixed:** Python /me read the query string (401 for everyone); forgot-password lied; web forgot page set passwords from an email alone; Node admin-for-everyone without JWT_SECRET, tokens never expired, routes under /api/ unreachable; Go would panic on a plan's own /auth/login; mobile Input failed strict tsc.
+
 > **PC-003 (2026-09-26): named stacks we do not build get a reason.** React.js, Vue, Angular, Spring, Laravel, Rails, .NET, MySQL, MongoDB and others in the prompt now produce substitution notes naming what was built; no false alarms on ordinary words.
 
 > **PC-093 (2026-09-26): intake repairs instead of rejecting.** Bad schema names resolved or dropped; a status-change endpoint becomes a real lifecycle; repairs reported. Live on Gemini: 6/6 valid (was 1/3).
