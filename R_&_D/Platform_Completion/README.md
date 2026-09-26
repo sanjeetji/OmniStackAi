@@ -39,8 +39,11 @@ nemotron-3-ultra; its key lives only in `.env`.
 
 1. Take the first open task in the **Work Queue** whose dependencies are done. Do not skip ahead,
    and do not start anything outside the queue.
-2. Follow `AGENTS.md` as usual: task branch, `.ai/CURRENT_TASK.yaml`, gates, CHANGELOG and
-   PROJECT_STATE entries.
+2. Follow `AGENTS.md`: one branch, `platform-completion`, for every task (no branch per task;
+   merge into `main` only when the founder says so); commits as `sanjeetji
+   <sk698166@gmail.com>`; `.ai/CURRENT_TASK.yaml`, gates, CHANGELOG and PROJECT_STATE entries.
+   Build each feature's obvious companions without being asked (login brings register, logout,
+   forgot and reset password).
 3. A task is marked **Completed** by its CHANGELOG entry. Then re-run the generator; do not edit
    the status by hand.
 4. Any other change (a new task, a re-order, a founder decision) goes in `tools/tasks_data.py`,

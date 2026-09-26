@@ -36,7 +36,14 @@ Before changing code:
 
 ## Task and change rules
 
-- Work on one Tracker ID at a time using `ai/<task-id>-<slug>` branches.
+- Work on one task at a time, in the order of `R_&_D/Platform_Completion/` (the only queue),
+  on the single branch `platform-completion`. Do not create a branch per task. Merge into
+  `main` only when the founder says so. Commit as `sanjeetji <sk698166@gmail.com>`.
+  (Founder decision, 2026-09-26; replaces the earlier `ai/<task-id>-<slug>` branch rule.)
+- A feature includes its obvious companions without being asked: login brings register,
+  logout, forgot password and reset password; a list brings empty, loading and error states; a
+  form brings validation. Build them as part of the task — they are the feature, not unrelated
+  cleanup — and name them in the task record.
 - Record requirements, acceptance criteria, allowed paths, forbidden changes, and gates in
   `.ai/CURRENT_TASK.yaml` before implementation.
 - Make the smallest change that satisfies the task. Do not perform unrelated cleanup.

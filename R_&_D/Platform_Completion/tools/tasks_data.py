@@ -69,8 +69,10 @@ QUEUE = [
      "R-562 already builds the React Native app; the PWA + QR half is R-573. Native Kotlin/Swift "
      "only after Phase 5. Uses the R-559 'nearest thing we can build, with a reason' path."),
     # Phase 1 - Vibe Mode live
-    ("R-591", "Login and register for the Go backend", "1 Vibe Mode live", "Both", "Not Started",
-     "P0", "", "A Go app with auth has no way for a real user to sign in."),
+    ("R-591", "Complete auth for the Go backend: register, login, logout, me, forgot password, "
+     "reset password", "1 Vibe Mode live", "Both", "Not Started", "P0", "",
+     "A Go app with auth has no way for a real user to sign in. Parity with the Python "
+     "backend's auth (R-461, R-463), companions included."),
     ("R-590", "Workflow transitions as buttons on the generated screens", "1 Vibe Mode live",
      "Both", "Not Started", "P0", "R-588", "The user-visible half of R-566."),
     ("R-573", "PWA really by default: manifest, service worker, icons, install prompt, QR",
