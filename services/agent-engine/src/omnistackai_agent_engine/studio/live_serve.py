@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 import re
 import signal
 import subprocess
@@ -612,6 +613,7 @@ async def _build_stream(
             "streaming is only supported for a plain-prompt, non-hybrid_ui build today"
         )
 
+    stream_started = time.perf_counter()
     usage_ledger = UsageLedger()
     provider, eff_model_id, max_output, request_timeout = resolve_generation_provider_from_env(
         usage_ledger=usage_ledger,
@@ -697,7 +699,14 @@ async def _build_stream(
             "message": "Build-only mode: start the explicit Studio preview command to run generated code.",
         }
     else:
+        preview_started = time.perf_counter()
         payload["preview"] = preview_manager.replace(payload["target_dir"])
+        # PC-084: starting the preview happens before "done" is sent, so it is part of what the
+        # user waits for and is measured with the rest.
+        payload.setdefault("timings", {})["preview"] = round(time.perf_counter() - preview_started, 3)
+    payload.setdefault("timings", {})["total"] = round(time.perf_counter() - stream_started, 3)
+    if workspace_store is not None and workspace_id:
+        workspace_store.save_state(workspace_id, payload)
 
     if log_mgr is not None:
         log_mgr.append_build_log(workspace_id, "info", "done", f"Built {payload.get('name', 'the app')} ({payload.get('file_count', 0)} files)")

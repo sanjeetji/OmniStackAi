@@ -187,6 +187,42 @@ warm_web_modules() {
   rm -rf "$work"
 }
 
+# The same for the Expo apps (founder, 2026-09-26: "what about the app side?"): one install shared
+# by every generated mobile app, so builds type-check them instead of reporting "not installed".
+# Its package.json is kept beside it; when the generated dependencies change, it is rebuilt.
+warm_mobile_modules() {
+  local cache="${OMNISTACKAI_MOBILE_NODE_MODULES:-$HOME/.omnistackai/mobile-typecheck/node_modules}"
+  local work
+  work="$(mktemp -d)"
+  if ! bash "$repo_root/scripts/agent-engine.sh" emit-mobile-package "$work" >/dev/null 2>&1; then
+    warn "could not prepare the mobile type-check cache - mobile apps will report as not type-checked"
+    rm -rf "$work"
+    return 0
+  fi
+  if [[ -x "$cache/.bin/tsc" ]] && cmp -s "$work/package.json" "$(dirname "$cache")/package.json"; then
+    export OMNISTACKAI_MOBILE_NODE_MODULES="$cache"
+    rm -rf "$work"
+    return 0
+  fi
+  if ! command -v npm >/dev/null 2>&1; then
+    warn "npm not found - generated mobile apps will not be type-checked at build time"
+    rm -rf "$work"
+    return 0
+  fi
+  step "Warming the mobile type-checker (one Expo install, shared by every generated app)"
+  if (cd "$work" && npm install --no-audit --no-fund --legacy-peer-deps --ignore-scripts >/dev/null 2>&1); then
+    mkdir -p "$(dirname "$cache")"
+    rm -rf "$cache"
+    mv "$work/node_modules" "$cache"
+    cp "$work/package.json" "$(dirname "$cache")/package.json"
+    export OMNISTACKAI_MOBILE_NODE_MODULES="$cache"
+    ok "mobile type-checker ready ($cache)"
+  else
+    warn "mobile type-check cache install failed - mobile apps will report as not type-checked"
+  fi
+  rm -rf "$work"
+}
+
 print_endpoints() {
   local lan; lan="$(lan_address)"
   log ""
@@ -413,6 +449,7 @@ cmd_up() {
   # project and linked in instantly. Without this the platform runs, builds, and honestly reports
   # every project as "not type-checked" -- correct, but not the point of having the check.
   warm_web_modules
+  warm_mobile_modules
 
   step "Agent-engine Studio"
   if service_pid studio >/dev/null; then

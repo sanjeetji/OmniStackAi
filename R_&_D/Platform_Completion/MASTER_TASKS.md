@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 413 |
+| Completed | 414 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 99 |
-| Not Started | 516 |
+| Not Started | 515 |
 | Superseded | 12 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1114** |
 
-Open work queue: **105** tasks (P0: 11, P1: 49, P2: 31, P3: 14).
+Open work queue: **104** tasks (P0: 11, P1: 48, P2: 31, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -57,8 +57,8 @@ Open work queue: **105** tasks (P0: 11, P1: 49, P2: 31, P3: 14).
 | 9 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | Completed | P0 | Vibe | PC-003 | ARCH-PWA | Works for templates only today; generated projects must install on a real phone. |
 | 10 | PC-004 | Real API + DB for every feature: a Vibe build fails if any screen or action is not wired to a real endpoint and table | Completed | P0 | Vibe | R-590 | ARCH-PIPELINE, SPEC-VIBE-01 | No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro. Found in R-590: the Node repositories silently fall back to an in-memory map on any database error and report success; a malformed id answers 500 instead of 404 on the Python backend. |
 | 11 | PC-005 | Vibe / Engineering mode switch in the Studio | Completed | P0 | Both |  | ARCH-STUDIO-MODES, BP-INTENT, SPEC-STUDIO-01 | From specs/studio-ux/01. Vibe hides the machinery; Engineering shows plan, stack, diffs, report, PRs. |
-| 12 | PC-006 | 'Wow in 30 seconds': first screen streams fast, latest modern UI, maximum polish per page | Pending | P0 | Vibe |  | BP-SWITCHER, SPEC-TS-01 | R-558 fixed the design system; still needs speed-to-first-screen and visual quality. From specs/table-stakes/01 and the buildout 'intent card' idea. |
-| 13 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Not Started | P1 | Vibe | PC-006 |  | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
+| 12 | PC-006 | 'Wow in 30 seconds': first screen streams fast, latest modern UI, maximum polish per page | Pending | P0 | Vibe |  | BP-SWITCHER, SPEC-TS-01 | R-558 fixed the design system; still needs speed-to-first-screen and visual quality. From specs/table-stakes/01 and the buildout 'intent card' idea. Measured in PC-084: plan 20-29 s (model) and preview start ~14 s are the stages to cut; model-written pages cost ~80 s and their admin page failed to compile, so the repair loop must cover the admin app before model-written pages return to the default path. |
+| 13 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | P1 | Vibe | PC-006 |  | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
 | 14 | PC-085 | Model quality evals and best-model routing: score every provider (NVIDIA, cloud, local) per task type and route each job to the best one | Not Started | P1 | Both | PC-047 |  | NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. Founder-approved 2026-09-26. |
 | 15 | PC-007 | Instant in-browser preview (no local toolchain needed) | Not Started | P0 | Vibe |  | ARCH-WEBCONTAINER, BP-TURBO, R-174, SPEC-TS-02 | From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with an open-source engine first; a paid engine licence (D-6) is only a key at the end. |
 | 16 | PC-008 | One-click publish to a live URL: web, admin, API and database together, code complete and proven against local stand-ins | Pending | P0 | Vibe | PC-049 | BP-SHIPCHECK, R-048, R-509, R-510, SPEC-TS-03 | R-509/R-510 publish the web app only and were never run for real. From specs/table-stakes/03. Real accounts are plugged in at PC-070. |
@@ -67,7 +67,7 @@ Open work queue: **105** tasks (P0: 11, P1: 49, P2: 31, P3: 14).
 | 19 | PC-011 | Plans, entitlements, credit top-up and super_admin console (Phase E) | Not Started | P0 | Platform |  | PG-16, PHASE-E, R-109 | Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at PC-070. Found in R-590: self-registered users get role 'user', which is not one of the plan's roles, so role-guarded actions need an admin to assign roles — include a role manager in the generated admin console. |
 | 20 | PC-012 | Legal and account basics: ToS, privacy, retention, deletion/export, email verification | Not Started | P0 | Platform |  | GAP-LEGAL, PG-14, R-108, R-516 |  |
 | 21 | PC-013 | Verified integrations catalog with health tests | Pending | P1 | Vibe |  | R-055, R-056, R-511 | R-511 Connectors v1 exists. |
-| 22 | PC-014 | Local/offline models as a first-class path: build fully on Ollama, recommend a model per machine | Pending | P1 | Both |  | GA-03, GA-04, GA-05, GAP-EVALS, PG-18, PG-19, R-080, R-194 | Ollama adapter exists (R-003/R-006). |
+| 22 | PC-014 | Local/offline models as a first-class path: build fully on Ollama, recommend a model per machine | Pending | P1 | Both |  | GA-03, GA-04, GA-05, GAP-EVALS, PG-18, PG-19, R-080, R-194 | Ollama adapter exists (R-003/R-006). Found in PC-084: .env names qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not configured with — detect installed models instead of trusting the setting. |
 | 23 | R-574 | Store publishing for React Native apps: EAS build and submit to Play Store and App Store, proven with real accounts | Pending | P1 | Both | PC-003 | R-062, R-063, R-546 | R-546/R-547 generate the EAS config. Everything up to the upload is built and tested; the Apple and Google accounts (D-7) are plugged in at PC-070. |
 | 24 | PC-049 | Managed database for published apps: provision PostgreSQL (Neon, Supabase or self-hosted) and run migrations and seeds on publish | Not Started | P0 | Vibe |  | ARCH-SUPABASE | A live URL needs a live database. Provider interface with a local Docker implementation; MongoDB Atlas once PC-048 exists. From the architecture plan. |
 | 25 | PC-050 | Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, command menu, drawer, toasts, tables, forms, maps, uploads) | Not Started | P1 | Vibe |  | ARCH-ALLOWLIST | framer-motion, recharts, tiptap, cmdk, vaul, sonner, tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, repaired like today's allowlist. From the architecture plan. |
@@ -869,6 +869,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-005 | Vibe / Engineering mode switch in the Studio | Completed | 2026-09-26 | From specs/studio-ux/01. Vibe hides the machinery; Engineering shows plan, stack, diffs, report, PRs. |
 | PC-047 | NVIDIA model provider (nemotron-3-ultra) for builds, configured from .env | Completed | 2026-09-26 | Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only. Includes a first comparison against the providers we already support on the same build prompts. |
 | PC-062 | Native mobile preview: R&D and plan (open source first) | Completed | 2026-09-26 | NATIVE_MOBILE_PREVIEW_PLAN.md in this folder. |
+| PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | 2026-09-26 | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
 | PC-093 | Intake repairs instead of rejecting: a model's status-change endpoint becomes a workflow transition, and an undeclared request-schema reference is fixed, not fatal | Completed | 2026-09-26 | Found by PC-047's comparison (2026-09-26): 3 of 6 real intake runs, on both NVIDIA and Gemini, were rejected for the same reason. Roughly half of real prompts fail at the first step whichever model runs, so this comes before everything else. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |

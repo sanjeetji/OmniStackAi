@@ -232,6 +232,20 @@ print(len(json.loads(package).get("dependencies", {})), "dependencies")
 PYEOF
     ;;
 
+  emit-mobile-package)
+    # The generated Expo app's package.json, so one install warms the mobile type-check cache.
+    out="${2:?usage: agent-engine.sh emit-mobile-package <dir>}"
+    mkdir -p "$out"
+    PYTHONPATH="$source_root" python3 - "$out" <<'PYEOF2'
+import pathlib, sys
+from omnistackai_agent_engine.application_ir import example_ir
+from omnistackai_agent_engine.codegen.react_native import ReactNativeAdapter
+
+files = {f.path: f for f in ReactNativeAdapter().generate(example_ir("minimal-blog")).files()}
+pathlib.Path(sys.argv[1], "package.json").write_text(files["package.json"].content, encoding="utf-8")
+PYEOF2
+    ;;
+
   web-typecheck)
     # Opt-in/live gate: generate an example app and TypeScript-typecheck its web target.
     # Needs the toolchain (pnpm + tsc); never run by `task verify`.

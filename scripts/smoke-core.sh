@@ -48,6 +48,9 @@ code=$(curl -N -s -b "$jar" -o "$work/stream.txt" -w '%{http_code}' --max-time 6
 elapsed=$(( $(date +%s) - started ))
 check "build stream status" "$code" '^200$'
 check "build stream reached done (${elapsed}s)" "$(grep -c '"phase": *"done"' "$work/stream.txt" || true)" '^[1-9]'
+# PC-084: the Vibe promise is prompt -> running app in under 90 s. "done" is sent after the preview
+# has started, so the stream's own duration is exactly that wait.
+check "prompt to running app under 90s (${elapsed}s)" "$([[ $elapsed -lt 90 ]] && echo yes || echo no)" '^yes$'
 check "build stream had no error frame" "$(grep -c '"phase": *"error"' "$work/stream.txt" || true)" '^0$'
 if grep -q '"phase": *"error"' "$work/stream.txt"; then grep '"phase": *"error"' "$work/stream.txt" | head -2 | cut -c1-240; fi
 

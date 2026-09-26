@@ -165,6 +165,8 @@ export interface BuildJobResponse {
   substitutions?: { layer: string; asked: string; built: string; reason: string }[];
   /** PC-004: endpoints and screens with no real data behind them, by name. */
   not_connected?: { kind: string; name: string; reason: string }[];
+  /** PC-084: seconds per build stage (plan, assemble, repository, verify, preview, total). */
+  timings?: Record<string, number>;
   /** R-560: present on every build — the outcome of type-checking the generated code. */
   verification?: {
     status: "clean" | "repaired" | "failing" | "skipped";

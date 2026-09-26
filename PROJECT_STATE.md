@@ -4,6 +4,8 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-084 (2026-09-26): speed measured on every build.** Stage timings in results and the Studio, speed report, 90 s smoke check, offline gate. **Found and fixed:** console builds were never type-checked (provider not passed); mobile apps never type-checked (now via a shared Expo cache). Plan 20-29 s, assemble ~1 s, checks ~6 s, preview ~14 s. Gemini free quota exhausted today.
+
 > **PC-005 (2026-09-26): Vibe / Engineering mode switch in the Studio.** Vibe = chat, running app, Publish, plain notes; Engineering = + Files, Code, Problems, entities, type-check, commit, usage, download. Remembered per project.
 
 > **PC-004 (2026-09-26): generated apps never pretend.** No in-memory fake saves, no fake 200s, no invented cart/review data, no dead buttons; unwired parts are honest (501 / not-connected page) and named in every build result and README; no DB internals to clients; malformed ids are 422. Express 5. Live on four backends.

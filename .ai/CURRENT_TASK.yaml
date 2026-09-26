@@ -1,4 +1,4 @@
-task_id: PC-005
+task_id: PC-084
 status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
@@ -6,17 +6,20 @@ started_at: "2026-09-26"
 completed_at: "2026-09-26"
 branch: platform-completion
 objective: >-
-  A Vibe / Engineering mode switch in the Studio. Vibe hides the machinery (prompt -> running app
-  -> live URL); Engineering shows the plan, the stack, the files, the verification report and the
-  code. The mode is remembered per user and per project.
+  Speed is measured on every build and held to the Vibe target (prompt -> running app under 90 s):
+  per-stage timings in every build result and the Studio, a speed report across builds, an offline
+  regression gate on the deterministic stages, and a 90 s check in the live smoke.
 founder_gate: >-
-  Founder, 2026-09-26: two modes, Vibe and Engineering. "Continue task one by one without asking."
+  Founder-approved 2026-09-26 (queued as a win-the-category task). Done before PC-006 because
+  "wow in 30 seconds" cannot be pursued without knowing where the seconds go.
 companions:
-  - The PC-004 'Not connected to data yet' list is shown in the Studio in both modes
+  - Mobile apps are type-checked on every build from a shared Expo cache (founder asked "what about
+    the app side?"); the link is removed after the check so the cache is never written
+  - Studio shows "Ready in N s" (Vibe) and the stage breakdown (Engineering)
 allowed_paths:
-  - apps/console-web/
-  - services/control-plane/
   - services/agent-engine/
+  - apps/console-web/
+  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -24,17 +27,23 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Console builds; scripts/verify.sh passes
+  - Live builds through the console, timed per stage
+  - scripts/verify.sh passes
 model_tool_trace:
-  routing: deterministic_only
+  routing: live measurement outside task verify
   local_calls: 0
-  cloud_calls: 0
-scope_note: >-
-  The spec's Engineering tabs (IR editor, pack selector, multi-app architect, graduation) are their own
-  queue tasks (PC-022, PC-017, PC-028, PC-051). This task delivers the switch and gates what exists:
-  Vibe = chat, live preview, Publish, plain notes; Engineering = + Files, Code, Problems, entities,
-  type-check detail, commit, usage, Download code.
+  cloud_calls: 5  # smoke build+edit (Gemini), 2 timed builds (Gemini), 1 NVIDIA-pinned build that timed out
+live_proof: >-
+  Baseline smoke: build 61 s + preview 8 s. First timed build: plan 20.7 s, assemble 0.9, repo 0.3,
+  checks 4.3, and ~17 s preview inside the request — web app not type-checked. With the provider
+  passed naively: assemble 82 s (model-written pages), admin failed to compile, total 165 s. Final:
+  deterministic pages, provider for checks only; on the same real plan assemble 0.95 s, repo 0.29 s,
+  checks 5.5 s with admin clean and mobile clean (new). Expected prompt -> running app ~45-55 s on
+  Gemini. Gemini free-tier quota (20/day) was exhausted by testing; NVIDIA exceeded the 120 s limit.
 blockers: []
 deferred:
-  - "The mode is remembered in the browser; a server-side preference (all devices) can follow with the account settings work." 
-found_and_fixed: []
+  - "PC-006: cut plan (model) and preview-start time; extend repair to the admin app before model-written pages return."
+  - "PC-014: local model setting names an uninstalled model; pinned models the adapter was not configured with are refused."
+found_and_fixed:
+  - "The console's streaming build never passed the provider to verification, so no console build was type-checked (R-560's loop was inactive on the main path)."
+  - "Generated mobile apps were never type-checked in the build path (dependencies never installed)."

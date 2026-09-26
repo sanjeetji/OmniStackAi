@@ -95,7 +95,10 @@ QUEUE = [
     ("PC-006", "'Wow in 30 seconds': first screen streams fast, latest modern UI, maximum "
      "polish per page", "1 Vibe Mode live", "Vibe", "Pending", "P0", "",
      "R-558 fixed the design system; still needs speed-to-first-screen and visual quality. "
-     "From specs/table-stakes/01 and the buildout 'intent card' idea."),
+     "From specs/table-stakes/01 and the buildout 'intent card' idea. Measured in PC-084: plan "
+     "20-29 s (model) and preview start ~14 s are the stages to cut; model-written pages cost ~80 s "
+     "and their admin page failed to compile, so the repair loop must cover the admin app before "
+     "model-written pages return to the default path."),
     ("PC-084", "Speed targets measured on every build and enforced: prompt -> preview under "
      "90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate",
      "1 Vibe Mode live", "Vibe", "Not Started", "P1", "PC-006",
@@ -133,7 +136,9 @@ QUEUE = [
      "Pending", "P1", "", "R-511 Connectors v1 exists. Covers R-055, R-056."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
-     "Ollama adapter exists (R-003/R-006). Covers R-080, R-194."),
+     "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "
+     "qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not "
+     "configured with — detect installed models instead of trusting the setting."),
     ("R-574", "Store publishing for React Native apps: EAS build and submit to Play Store and "
      "App Store, proven with real accounts", "1 Vibe Mode live", "Both", "Pending", "P1",
      "PC-003", "R-546/R-547 generate the EAS config. Everything up to the upload is built and "

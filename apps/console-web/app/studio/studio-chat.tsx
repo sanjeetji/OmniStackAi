@@ -854,6 +854,7 @@ export default function StudioChat({
         substitutions: finalResult.substitutions,
         verification: finalResult.verification,
         notConnected: finalResult.not_connected,
+        timings: finalResult.timings,
       });
       setPreviewVersion((v) => v + 1);
     } catch (err: unknown) {

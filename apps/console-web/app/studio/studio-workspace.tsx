@@ -54,6 +54,8 @@ export interface WorkspaceSnapshot {
   verification?: BuildVerification;
   /** PC-004: endpoints and screens with no real data behind them, by name. */
   notConnected?: { kind: string; name: string; reason: string }[];
+  /** PC-084: seconds per build stage, measured on every build. */
+  timings?: Record<string, number>;
 }
 
 /** R-560: the outcome of compiling the generated web app. Mirrors the agent-engine's record. */
@@ -305,6 +307,17 @@ export function StudioWorkspace({
               </Button>
             ) : null}
           </div>
+        ) : null}
+        {snapshot.timings?.total ? (
+          // PC-084: how long the user actually waited, on every build. Vibe gets one number;
+          // Engineering sees where it went.
+          <p className="text-xs text-muted-foreground" aria-label="Build time">
+            Ready in {snapshot.timings.total.toFixed(0)}s
+            {engineering
+              ? ` · plan ${(snapshot.timings.plan ?? 0).toFixed(1)}s · assemble ${(snapshot.timings.assemble ?? 0).toFixed(1)}s` +
+                ` · checks ${(snapshot.timings.verify ?? 0).toFixed(1)}s · preview ${(snapshot.timings.preview ?? 0).toFixed(1)}s`
+              : null}
+          </p>
         ) : null}
         <dl hidden={!engineering} className="grid shrink-0 grid-cols-[auto_auto] gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <dt>Files</dt>

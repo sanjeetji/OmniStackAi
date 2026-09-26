@@ -36,6 +36,10 @@ WEB_PREFIX = "apps/web"
 #: An existing `node_modules` to symlink instead of installing. Documented since R-466 and, until
 #: this task, read by nothing outside the CLI.
 NODE_MODULES_ENV = "OMNISTACKAI_WEB_NODE_MODULES"
+#: The same idea for the Expo apps (founder, 2026-09-26: "what about the app side?"). Mobile apps
+#: used to be checked only when someone had installed their dependencies, which in the build path
+#: meant never. The cache's own package.json sits beside it so a mismatch is detected, not guessed.
+MOBILE_NODE_MODULES_ENV = "OMNISTACKAI_MOBILE_NODE_MODULES"
 
 #: "auto" verifies when dependencies are already there or can be linked; "install" also allows a
 #: `pnpm install`, which is slow enough to be a choice; "off" disables it.
@@ -276,11 +280,32 @@ def verify_other_surfaces(target_dir: str | os.PathLike[str]) -> dict[str, dict[
                     pass
         surfaces[relative] = _typecheck(app_dir)
 
-    mobile = root / "apps" / "mobile"
-    if mobile.is_dir():
-        # The mobile app's dependencies are Expo and React Native, nothing like the web app's, so
-        # the shared cache would be wrong for it. It is checked only when genuinely installed.
-        surfaces["apps/mobile"] = _typecheck(mobile)
+    # Every Expo app, not only `apps/mobile`: an ecosystem can hold a courier app and a customer
+    # app (R-562). Their dependencies are Expo and React Native, nothing like the web app's, so they
+    # get their own cache — linked only when the dependency set matches it exactly.
+    mobile_source = os.environ.get(MOBILE_NODE_MODULES_ENV) or None
+    mobile_ok = mobile_source is not None and Path(mobile_source).name == "node_modules"
+    mobile_deps = _dependency_set(Path(mobile_source).parent / "package.json") if mobile_ok else None
+    apps_root = root / "apps"
+    for app_dir in sorted(apps_root.iterdir()) if apps_root.is_dir() else ():
+        deps = _dependency_set(app_dir / "package.json")
+        if not deps or "expo" not in deps:
+            continue
+        link = app_dir / "node_modules"
+        linked = False
+        if mobile_ok and mobile_deps == deps and not link.exists():
+            try:
+                link.symlink_to(Path(mobile_source).resolve(), target_is_directory=True)
+                linked = True
+            except OSError:
+                pass
+        try:
+            surfaces[f"apps/{app_dir.name}"] = _typecheck(app_dir)
+        finally:
+            # The shared cache must never be written by a project's own install (Expo's preview
+            # installs in place), so the link lives only as long as the check.
+            if linked:
+                link.unlink(missing_ok=True)
 
     api = root / "services" / "api"
     if api.is_dir():

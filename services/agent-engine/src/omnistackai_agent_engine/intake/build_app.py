@@ -15,6 +15,7 @@ single model step and depends only on the vendor-neutral ``ModelProvider`` proto
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -62,6 +63,9 @@ class AppBuildResult:
     #: PC-004: endpoints and screens with no real data behind them, by name. Shown to the user so
     #: "is this real?" never has to be answered by clicking.
     not_connected: tuple[dict, ...] = ()
+    #: PC-084: seconds spent in each stage of this build (plan, assemble, repository, verify), so
+    #: speed is measured on every build rather than guessed at.
+    timings: dict = field(default_factory=dict)
 
 
 def build_app_from_ir(
@@ -79,20 +83,29 @@ def build_app_from_ir(
     context_truncated: bool = False,
     active_skills: tuple[str, ...] = (),
     truncated_skills: tuple[str, ...] = (),
+    model_written_pages: bool = True,
 ) -> AppBuildResult:
     """Assemble ``ir`` into a monorepo and materialize it as an owned Git repo at ``target_dir``.
+
+    ``model_written_pages`` (PC-084): with a provider, the overview page is normally model-written.
+    The console's streaming path turns that off — measured live, it cost 82 s of a 165 s build and
+    its admin page did not compile — while still passing the provider so verification and repair run.
 
     ``synthesize_screens`` / ``ui_outcomes`` (R-465) opt the web target into model-written screens and
     collect the per-file outcome records; both are no-ops without a ``provider``.
     """
+    timings: dict[str, float] = {}
+    started = time.perf_counter()
     project = assemble_project(
         ir,
-        provider=provider,
+        provider=provider if model_written_pages else None,
         prompt=prompt,
         model_id=model_id,
         synthesize_screens=synthesize_screens,
         ui_outcomes=ui_outcomes,
     )
+    timings["assemble"] = round(time.perf_counter() - started, 3)
+    started = time.perf_counter()
     repo = create_repository(
         project,
         target_dir,
@@ -101,6 +114,8 @@ def build_app_from_ir(
         commit_message=f"Initial commit: {ir.name}",
         overwrite=overwrite,
     )
+    timings["repository"] = round(time.perf_counter() - started, 3)
+    started = time.perf_counter()
     # R-560: the one seam. Both build twins and the ecosystem builder reach this function, so
     # verification cannot be wired into the sibling the console does not call — which is exactly
     # how R-555's ecosystem branch came to be live-broken while its tests passed.
@@ -115,6 +130,7 @@ def build_app_from_ir(
         author_email=author_email,
         outcomes=ui_outcomes,
     )
+    timings["verify"] = round(time.perf_counter() - started, 3)
     return AppBuildResult(
         prompt=prompt,
         ir=ir,
@@ -127,6 +143,7 @@ def build_app_from_ir(
         truncated_skills=truncated_skills,
         substitutions=_substitutions_for(ir, prompt),
         not_connected=_not_connected(ir),
+        timings=timings,
     )
 
 
@@ -202,6 +219,7 @@ def app_build_result_to_dict(
         # R-559: absent when nothing was substituted, so an ordinary build renders nothing extra.
         **({"substitutions": [dict(s) for s in result.substitutions]} if result.substitutions else {}),
         **({"not_connected": [dict(g) for g in result.not_connected]} if result.not_connected else {}),
+        **({"timings": dict(result.timings)} if result.timings else {}),
         # R-560: always present, unlike the two above. A build that was not type-checked has to say
         # so; silence would read as "checked and fine", which is the impression that let a
         # non-compiling app ship for nine tasks.
@@ -325,6 +343,7 @@ async def build_app_from_prompt(
                 reason=intent.reason,
             )
 
+    plan_started = time.perf_counter()
     result = await generate_ir(
         prompt,
         provider,
@@ -334,7 +353,8 @@ async def build_app_from_prompt(
         timeout_seconds=timeout_seconds,
         context=context,
     )
-    return build_app_from_ir(
+    plan_seconds = round(time.perf_counter() - plan_started, 3)
+    built = build_app_from_ir(
         result.ir,
         target_dir,
         author_name=author_name,
@@ -349,6 +369,8 @@ async def build_app_from_prompt(
         active_skills=result.active_skills,
         truncated_skills=result.truncated_skills,
     )
+    built.timings["plan"] = plan_seconds
+    return built
 
 
 async def build_app_from_prompt_stream(
@@ -398,6 +420,7 @@ async def build_app_from_prompt_stream(
             return
 
     result: IntakeResult | None = None
+    plan_started = time.perf_counter()
     async for item in generate_ir_stream(
         prompt,
         provider,
@@ -412,14 +435,23 @@ async def build_app_from_prompt_stream(
         else:
             result = item
     assert result is not None  # generate_ir_stream always yields exactly one IntakeResult last
-    yield build_app_from_ir(
+    plan_seconds = round(time.perf_counter() - plan_started, 3)
+    built = build_app_from_ir(
         result.ir,
         target_dir,
         author_name=author_name,
         author_email=author_email,
         prompt=prompt,
         overwrite=overwrite,
+        # PC-084 (found by timing a live build): the streaming twin — the path the console uses —
+        # did not pass the provider, so R-560's type-check-and-repair never ran on it: every
+        # console build reported "ran without a model provider, not type-checked".
+        provider=provider,
+        model_id=model_id,
+        model_written_pages=False,
         context_truncated=result.context_truncated,
         active_skills=result.active_skills,
         truncated_skills=result.truncated_skills,
     )
+    built.timings["plan"] = plan_seconds
+    yield built
