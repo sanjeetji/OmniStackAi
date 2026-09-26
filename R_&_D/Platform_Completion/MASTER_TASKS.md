@@ -30,8 +30,8 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 |---|---|
 | Completed | 410 |
 | Completed - needs live proof | 8 |
-| In Progress | 0 |
-| Pending | 100 |
+| In Progress | 1 |
+| Pending | 99 |
 | Not Started | 518 |
 | Superseded | 12 |
 | Deferred | 57 |
@@ -54,7 +54,7 @@ Open work queue: **108** tasks (P0: 14, P1: 49, P2: 31, P3: 14).
 | | | **Phase 1 Vibe Mode live**: Prompt -> running app with real API + DB -> live URL, for real users. | | | | | | |
 | 7 | R-591 | Complete auth for the Go backend: register, login, logout, me, forgot password, reset password | Completed | P0 | Both |  |  | A Go app with auth has no way for a real user to sign in. Parity with the Python backend's auth (R-461, R-463), companions included. |
 | 8 | R-590 | Workflow transitions as buttons on the generated screens | Completed | P0 | Both | R-588 |  | The user-visible half of R-566. |
-| 9 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | Pending | P0 | Vibe | PC-003 | ARCH-PWA | Works for templates only today; generated projects must install on a real phone. |
+| 9 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | In Progress | P0 | Vibe | PC-003 | ARCH-PWA | Works for templates only today; generated projects must install on a real phone. |
 | 10 | PC-004 | Real API + DB for every feature: a Vibe build fails if any screen or action is not wired to a real endpoint and table | Not Started | P0 | Vibe | R-590 | ARCH-PIPELINE, SPEC-VIBE-01 | No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro. Found in R-590: the Node repositories silently fall back to an in-memory map on any database error and report success; a malformed id answers 500 instead of 404 on the Python backend. |
 | 11 | PC-005 | Vibe / Engineering mode switch in the Studio | Not Started | P0 | Both |  | ARCH-STUDIO-MODES, BP-INTENT, SPEC-STUDIO-01 | From specs/studio-ux/01. Vibe hides the machinery; Engineering shows plan, stack, diffs, report, PRs. |
 | 12 | PC-006 | 'Wow in 30 seconds': first screen streams fast, latest modern UI, maximum polish per page | Pending | P0 | Vibe |  | BP-SWITCHER, SPEC-TS-01 | R-558 fixed the design system; still needs speed-to-first-screen and visual quality. From specs/table-stakes/01 and the buildout 'intent card' idea. |
