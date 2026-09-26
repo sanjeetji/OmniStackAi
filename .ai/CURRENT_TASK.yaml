@@ -1,25 +1,21 @@
-task_id: PC-004
-status: complete
+task_id: PC-005
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-26"
-completed_at: "2026-09-26"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Real API + DB behind every feature. A generated app has no mock data on its pages, no endpoint
-  answering 501, no button that does nothing, and no backend that pretends to save when the
-  database is down. What cannot be wired is reported to the user by name instead of shipped fake.
+  A Vibe / Engineering mode switch in the Studio. Vibe hides the machinery (prompt -> running app
+  -> live URL); Engineering shows the plan, the stack, the files, the verification report and the
+  code. The mode is remembered per user and per project.
 founder_gate: >-
-  Founder: "API + DB should be real for each feature, not just only modern UI"; "continue task one
-  by one without asking".
-companions:
-  - A 'Not connected to data yet' report in every build result and generated README
-  - Malformed values answer 422 on every backend instead of 500
-  - Express 5, so async database errors reach the error handler instead of crashing the server
+  Founder, 2026-09-26: two modes, Vibe and Engineering. "Continue task one by one without asking."
+companions: []
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/
-  - services/agent-engine/tests/
-  - scripts/test.sh
+  - apps/console-web/
+  - services/control-plane/
+  - services/agent-engine/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -27,26 +23,11 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - scripts/verify.sh passes
+  - Console builds; scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-live_proof: >-
-  PostgreSQL, four backends: GET /posts/not-a-uuid is 422 on Python, Go, Express and Hono; with the
-  database unreachable Express and Hono answer create and list with 500 (not a fake 201 / empty list),
-  leak no internals, and stay up with /healthz reporting the database unavailable. The R-591 (84) and
-  R-590 (32) live suites re-run green on the same builds.
-decision: >-
-  "A Vibe build fails if anything is unwired" was implemented as: nothing is ever faked, unwired parts
-  answer honestly (501 / a not-connected page), and the build names them. Failing the whole build
-  would punish a plan for one missing endpoint; hiding it was the actual harm.
 blockers: []
 deferred: []
-found_and_fixed:
-  - "Node fell back to an in-memory Map on any database error and reported success (data 'saved' then lost)."
-  - "Node answered endpoints it could not wire with 200 and a placeholder body."
-  - "'cart' and 'review' screens shipped invented products and reviews; fallback pages had buttons with no handler."
-  - "Go sent raw database errors to clients (SQL state included); Node's error handler sent err.message."
-  - "A malformed id answered 500 on every backend."
-  - "Express 4 would have crashed the Node server on the first async database error once the fake fallback was removed; moved to Express 5." 
+found_and_fixed: []
