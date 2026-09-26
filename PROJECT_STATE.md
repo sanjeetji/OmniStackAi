@@ -4,6 +4,9 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-093 (2026-09-26): intake repairs instead of rejecting.** Bad schema names resolved or dropped; a status-change endpoint becomes a real lifecycle; repairs reported. Live on Gemini: 6/6 valid (was 1/3).
+> **Found:** `normalize_ir` dropped `capabilities` and `brand` — every model-declared lifecycle vanished at intake since R-566. Fixed with an every-field test.
+
 > **PC-047 (2026-09-26): NVIDIA is a model provider.** From the founder's .env names; cloud tier, fallback or per-project; console and control plane list it. Live: 12.2 s smoke call OK.
 > Compared on the real intake step: NVIDIA 1/3 valid at 99-152 s (one timeout), Gemini 3 Flash 1/3 at 12-14 s — NVIDIA stays optional. **Found:** half of real intake runs fail on both models because intake rejects a status-change endpoint instead of repairing it → PC-093, next.
 

@@ -54,6 +54,7 @@ from ..model_gateway import (
 )
 from .context import assemble_context
 from .errors import IntakeError, IntakeResponseError
+from .ir_repair import repair_ir_dict
 
 DEFAULT_TEMPLATE_EXAMPLE = "minimal-blog"
 DEFAULT_MAX_OUTPUT_TOKENS = 4096
@@ -71,6 +72,8 @@ class IntakeResult:
     context_truncated: bool = False
     active_skills: tuple[str, ...] = ()
     truncated_skills: tuple[str, ...] = ()
+    #: PC-093: what intake repaired in the model's plan instead of rejecting it, one note each.
+    repairs: tuple[str, ...] = ()
 
 
 def _system_instruction(example_name: str) -> str:
@@ -557,6 +560,11 @@ def parse_ir_response(text: str) -> ApplicationIR:
     Raises IntakeResponseError when the text is not JSON or does not describe a
     structurally valid IR.
     """
+    return parse_ir_response_with_repairs(text)[0]
+
+
+def parse_ir_response_with_repairs(text: str) -> tuple[ApplicationIR, tuple[str, ...]]:
+    """`parse_ir_response`, plus a note for each repair made instead of rejecting (PC-093)."""
     payload = _extract_json_object(text)
     try:
         data = _robust_json_decode(payload)
@@ -565,13 +573,14 @@ def parse_ir_response(text: str) -> ApplicationIR:
     if not isinstance(data, dict):
         raise IntakeResponseError("model response JSON was not an object")
     data = _sanitize_ir_dict(data)
+    data, repairs = repair_ir_dict(data)
     try:
         ir = ApplicationIR.from_dict(data)
     except (ApplicationIRError, ValueError, TypeError, KeyError) as error:
         raise IntakeResponseError(
             f"model response was not a valid Application IR: {error}"
         ) from error
-    return normalize_ir(ir)
+    return normalize_ir(ir), repairs
 
 
 async def generate_ir(
@@ -607,7 +616,7 @@ async def generate_ir(
         timeout_seconds,
     )
     response = await provider.generate(request)
-    ir = parse_ir_response(response.text)
+    ir, repairs = parse_ir_response_with_repairs(response.text)
     issues = validate_ir(ir)
     if has_errors(issues):
         detail = "; ".join(
@@ -623,6 +632,7 @@ async def generate_ir(
         context_truncated=is_truncated,
         active_skills=tuple(active_skills),
         truncated_skills=tuple(truncated_skills),
+        repairs=repairs,
     )
 
 
@@ -663,7 +673,7 @@ async def generate_ir_stream(
             chunks.append(event.delta)
             yield event.delta
     text = "".join(chunks)
-    ir = parse_ir_response(text)
+    ir, repairs = parse_ir_response_with_repairs(text)
     issues = validate_ir(ir)
     if has_errors(issues):
         detail = "; ".join(
@@ -679,4 +689,5 @@ async def generate_ir_stream(
         context_truncated=is_truncated,
         active_skills=tuple(active_skills),
         truncated_skills=tuple(truncated_skills),
+        repairs=repairs,
     )

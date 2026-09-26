@@ -168,5 +168,10 @@ def normalize_ir(ir: ApplicationIR) -> ApplicationIR:
         screens=tuple(sorted(ir.screens, key=lambda screen: screen.id)),
         acceptance_criteria=tuple(sorted(ir.acceptance_criteria, key=lambda c: c.requirement_id)),
         fixtures=tuple(sorted(ir.fixtures, key=lambda fixture: fixture.entity)),
+        # PC-093: these two were missing, so every workflow a model declared and every brand on a
+        # parsed plan was dropped here — silently, in a function documented as lossless.
+        # Capability order is kept: it is declaration order, and the generators follow it.
+        brand=ir.brand,
+        capabilities=ir.capabilities,
         schema_version=ir.schema_version,
     )

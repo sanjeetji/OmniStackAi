@@ -1,4 +1,4 @@
-task_id: PC-047
+task_id: PC-093
 status: complete
 phase: Platform Completion — 0 Foundation
 tracker_row: null
@@ -6,57 +6,44 @@ started_at: "2026-09-26"
 completed_at: "2026-09-26"
 branch: platform-completion
 objective: >-
-  NVIDIA (nemotron-3-ultra through integrate.api.nvidia.com) is a first-class model provider,
-  configured entirely from .env (NVIDIA_API_KEY, OMNISTACKAI_NVIDIA_MODEL, NVIDIA_MODEL_BASE_URL),
-  selectable as the cloud tier, a fallback, or an explicit per-project provider, listed in the
-  console and the control plane, and proven with one real call plus a first comparison against
-  the providers already supported.
+  Intake repairs the model's commonest mistakes instead of rejecting the build: a schema name that
+  is not a declared entity is resolved to the entity it means or dropped, and a status-change
+  endpoint becomes a real workflow when the entity lists its states (or is removed when a workflow
+  already exists). Every repair is reported in IntakeResult.repairs.
 founder_gate: >-
-  Founder on 2026-09-26: "if you require LLM then I have added NVIDIA LLM details in .env file you
-  may use them"; then "merge and start".
+  Queued by PC-047's comparison; founder on 2026-09-26: "continue task one by one without asking".
 companions:
-  - Base-URL override from NVIDIA_MODEL_BASE_URL (HTTPS only), so the founder's setting is honoured
-  - Control-plane model list and key-format check (nvapi- prefix) for the settings screen
-  - .env.example and docs/MODEL_PROVIDER.md entries
+  - IntakeResult.repairs, filled by both generate_ir and its streaming twin
+  - parse_ir_response_with_repairs, with parse_ir_response unchanged for existing callers
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/
+  - services/agent-engine/src/omnistackai_agent_engine/intake/
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/validate.py
   - services/agent-engine/tests/
-  - services/control-plane/internal/ai/
-  - apps/console-web/data/overview.json
-  - docs/MODEL_PROVIDER.md
-  - .env.example
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - The key never appears in code, tests, logs, URLs, commits or task records
-  - The founder's .env is not modified; the cloud tier stays as the founder set it
+  - A repair is never silent; a plan that needs nothing is unchanged
+  - No lifecycle is invented for a field that lists no states
   - task verify stays offline with 0 model calls
-  - No invented prices; NVIDIA stays unpriced until a real price is known
 required_gates:
-  - Offline tests prove request shape, base URL, key handling and selection
-  - One real call through the gateway with the founder's key, output not logged beyond a short check
+  - The three real failure shapes from PC-047 now produce valid IRs
+  - Live re-run of the same prompts
   - scripts/verify.sh passes
 model_tool_trace:
   routing: explicit provider (live proof outside task verify)
   local_calls: 0
-  cloud_calls: 7  # 1 NVIDIA smoke call + 3 NVIDIA and 3 Gemini intake runs; task verify made 0
-live_proof:
-  smoke: "NVIDIA replied 'NVIDIA provider OK' in 12.2 s (25 in / 33 out tokens), through the gateway with the founder's key"
-  comparison: >-
-    Real intake step (prompt -> validated IR), 3 prompts each. NVIDIA nemotron-3-ultra: 1/3 valid,
-    99-152 s, one timeout at 240 s; its valid plan had 10 entities and 15 screens. Gemini 3 Flash
-    (current build model): 1/3 valid, 12-14 s; 5 entities, 5 screens. NVIDIA stays a choice and a
-    fallback, not the default; the founder's .env is unchanged.
+  cloud_calls: 6  # Gemini 3 Flash, 3 prompts x 2 rounds; task verify made 0
+live_proof: >-
+  Same three real prompts as PC-047, two rounds on Gemini 3 Flash: 6/6 valid (was 1/3), 9-14 s each,
+  every plan carrying a lifecycle. Repairs applied: an undeclared 'json' body removed (1), an ad-hoc
+  status endpoint removed because the entity already had a lifecycle (3).
 blockers: []
 deferred: []
 found_and_fixed:
   - >-
-    The console's per-project model picker and its provider fallback list offered only Groq, OpenAI,
-    Anthropic and Ollama, so NVIDIA could not be chosen for a project. Both now include it.
-found_not_fixed:
-  - >-
-    PC-093 (queued next, P0): 3 of 6 real intake runs, on both models, were rejected because the
-    model wrote a status-change endpoint whose request body names an undeclared type. Intake
-    rejects instead of repairing, so about half of real prompts fail at the first step.
+    normalize_ir rebuilt the IR field by field and left out `capabilities` and `brand`, so every
+    lifecycle a model declared was silently dropped at intake since R-566 — the model wrote the
+    workflow, the parser read it, and normalize_ir threw it away. Documented as lossless. Fixed, with
+    a test that checks every ApplicationIR field so a future field cannot be dropped the same way.
