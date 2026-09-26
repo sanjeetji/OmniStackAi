@@ -283,3 +283,51 @@ func TestAIHandlers(t *testing.T) {
 		t.Fatalf("DELETE /ai/keys/openai status = %d, want %d", w.Code, http.StatusOK)
 	}
 }
+
+// PC-047: NVIDIA keys are recognised by their prefix, and the model is offered for pinning.
+func TestNvidiaProvider(t *testing.T) {
+	mux := http.NewServeMux()
+	Register(mux, Deps{
+		AuthStore: &mockAuthStore{user: auth.User{ID: "test-user-1", Name: "Test User", Email: "test@example.com"}},
+		AIStore:   newMockAIStore(),
+	})
+	do := func(method, path, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, bytes.NewReader([]byte(body)))
+		req.Header.Set("Authorization", "Bearer valid-token")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		return w
+	}
+	valid := func() bool {
+		w := do(http.MethodPost, "/ai/keys/nvidia/test", "")
+		if w.Code != http.StatusOK {
+			t.Fatalf("POST /ai/keys/nvidia/test status = %d", w.Code)
+		}
+		var out struct {
+			Valid bool `json:"valid"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		return out.Valid
+	}
+
+	if w := do(http.MethodPut, "/ai/keys/nvidia", `{"api_key":"nvapi-test-key","label":"NVIDIA"}`); w.Code != http.StatusOK {
+		t.Fatalf("PUT /ai/keys/nvidia status = %d", w.Code)
+	}
+	if !valid() {
+		t.Error("an nvapi- key should pass the format check")
+	}
+	if w := do(http.MethodPut, "/ai/keys/nvidia", `{"api_key":"sk-not-an-nvidia-key","label":"NVIDIA"}`); w.Code != http.StatusOK {
+		t.Fatalf("PUT /ai/keys/nvidia status = %d", w.Code)
+	}
+	if valid() {
+		t.Error("a key without the nvapi- prefix should fail the format check")
+	}
+
+	w := do(http.MethodGet, "/ai/models", "")
+	if !bytes.Contains(w.Body.Bytes(), []byte(`"provider_id":"nvidia"`)) {
+		t.Errorf("GET /ai/models does not offer nvidia: %s", w.Body.String())
+	}
+}

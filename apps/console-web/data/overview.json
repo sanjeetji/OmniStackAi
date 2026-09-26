@@ -117,6 +117,14 @@
       "defaultModel": "accounts/fireworks/models/llama-v3p3-70b-instruct",
       "active": false,
       "keyEnv": "FIREWORKS_API_KEY"
+    },
+    {
+      "providerId": "nvidia",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "active": false,
+      "keyEnv": "NVIDIA_API_KEY"
     }
   ],
   "priceBook": [

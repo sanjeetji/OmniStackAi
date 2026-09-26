@@ -63,6 +63,12 @@ QUEUE = [
      "Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the "
      "NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only. Includes a "
      "first comparison against the providers we already support on the same build prompts."),
+    ("PC-093", "Intake repairs instead of rejecting: a model's status-change endpoint becomes a "
+     "workflow transition, and an undeclared request-schema reference is fixed, not fatal",
+     "0 Foundation", "Both", "Not Started", "P0", "",
+     "Found by PC-047's comparison (2026-09-26): 3 of 6 real intake runs, on both NVIDIA and "
+     "Gemini, were rejected for the same reason. Roughly half of real prompts fail at the first "
+     "step whichever model runs, so this comes before everything else."),
     ("PC-003", "Stack policy in code: an app request gets a store-ready React Native app AND "
      "an installable PWA with QR; Flutter and React.js refused with the reason", "0 Foundation",
      "Both", "Pending", "P0", "",

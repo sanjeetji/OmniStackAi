@@ -112,6 +112,17 @@ selection, the metadata-only overview, and the price book automatically.
   (`DEEPSEEK_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `TOGETHER_API_KEY`, `FIREWORKS_API_KEY`) and,
   to route the cloud tier to it, `OMNISTACKAI_CLOUD_PROVIDER=<id>`. Each stays inactive until its key is
   present; the model is overridable via `OMNISTACKAI_<PROVIDER>_MODEL`.
+- **NVIDIA (PC-047)**: `nvidia`, OpenAI-compatible, default model
+  `nvidia/nemotron-3-ultra-550b-a55b` at `https://integrate.api.nvidia.com/v1`. Set `NVIDIA_API_KEY`
+  (keys start with `nvapi-`); optionally `OMNISTACKAI_NVIDIA_MODEL` and `NVIDIA_MODEL_BASE_URL` (HTTPS
+  only; the adapter refuses anything else). Select it with `OMNISTACKAI_CLOUD_PROVIDER=nvidia`, add it
+  to `OMNISTACKAI_FALLBACK_PROVIDERS`, or pin it per project. It is **unpriced** in the price book:
+  no per-token price was verified, so usage is recorded with no cost rather than a guessed one.
+  Measured 2026-09-26 on the real intake step (3 prompts): 99-152 s per plan with one timeout at
+  240 s, against 12-14 s for `gemini-3-flash-preview`. Its accepted plan was the richest (10
+  entities, 15 screens), but at that speed it exceeds the default `OMNISTACKAI_CLOUD_TIMEOUT_SECONDS`
+  of 120 s, so it is offered as a choice and a fallback, not made the default. PC-085 decides
+  routing from proper evals.
 - **Custom (bring-your-own) providers**: declare any OpenAI-compatible endpoint from the environment —
   no code change. Name the ids, then give each a base URL, model, and key:
 

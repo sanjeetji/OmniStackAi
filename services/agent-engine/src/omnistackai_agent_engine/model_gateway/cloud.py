@@ -147,6 +147,9 @@ class CloudProviderSpec:
     key_env: str
     model_env: str
     default_model: str
+    #: Optional env var that overrides `base_url` (HTTPS only, enforced by the adapter). Empty means
+    #: the base URL is fixed. Only the *name* is recorded here, never a value.
+    base_url_env: str = ""
 
 
 PROVIDER_SPECS: dict[str, CloudProviderSpec] = {
@@ -189,6 +192,13 @@ PROVIDER_SPECS: dict[str, CloudProviderSpec] = {
     "fireworks": CloudProviderSpec(
         "fireworks", "openai", "https://api.fireworks.ai/inference/v1",
         "FIREWORKS_API_KEY", "OMNISTACKAI_FIREWORKS_MODEL", "accounts/fireworks/models/llama-v3p3-70b-instruct",
+    ),
+    # PC-047: NVIDIA's hosted API (build.nvidia.com), OpenAI-compatible. The env names are the ones
+    # the founder chose, so an existing .env works unchanged.
+    "nvidia": CloudProviderSpec(
+        "nvidia", "openai", "https://integrate.api.nvidia.com/v1",
+        "NVIDIA_API_KEY", "OMNISTACKAI_NVIDIA_MODEL", "nvidia/nemotron-3-ultra-550b-a55b",
+        base_url_env="NVIDIA_MODEL_BASE_URL",
     ),
 }
 
@@ -846,6 +856,19 @@ _KIND_TO_CLASS: dict[str, type[_HttpCloudProvider]] = {
 }
 
 
+def configured_base_url(spec: CloudProviderSpec, env: dict[str, str] | None = None) -> str:
+    """The spec's base URL, or the override its `base_url_env` names when that is set.
+
+    The adapter refuses anything but HTTPS, so an override cannot quietly send a key over plain HTTP.
+    """
+    if spec.base_url_env:
+        source = os.environ if env is None else env
+        override = (source.get(spec.base_url_env, "") or "").strip()
+        if override:
+            return override
+    return spec.base_url
+
+
 def create_cloud_provider(
     spec: CloudProviderSpec,
     *,
@@ -868,7 +891,7 @@ def create_cloud_provider(
         provider_id=spec.provider_id,
         api_key=api_key,
         descriptor=descriptor,
-        base_url=base_url or spec.base_url,
+        base_url=base_url or configured_base_url(spec),
         max_concurrency=max_concurrency,
         opener=opener,
         rate_limit_retries=rate_limit_retries,

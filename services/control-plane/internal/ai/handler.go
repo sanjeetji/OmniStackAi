@@ -290,6 +290,8 @@ func handleTestUserKey(deps Deps) http.HandlerFunc {
 			validFormat = strings.HasPrefix(key, "sk-ant-")
 		case "groq":
 			validFormat = strings.HasPrefix(key, "gsk_")
+		case "nvidia":
+			validFormat = strings.HasPrefix(key, "nvapi-")
 		}
 
 		if !validFormat {
@@ -328,6 +330,9 @@ func handleGetModels(deps Deps) http.HandlerFunc {
 		{ProviderID: "anthropic", ModelID: "claude-3-5-haiku-20241022", Name: "Claude 3.5 Haiku", Tier: "cloud", CostPer1kInput: "$0.0008", CostPer1kOutput: "$0.0040"},
 		{ProviderID: "google", ModelID: "gemini-2.0-flash", Name: "Gemini 2.0 Flash", Tier: "cloud", CostPer1kInput: "$0.0001", CostPer1kOutput: "$0.0004"},
 		{ProviderID: "deepseek", ModelID: "deepseek-chat", Name: "DeepSeek V3", Tier: "cloud", CostPer1kInput: "$0.00014", CostPer1kOutput: "$0.00028"},
+		// PC-047: unpriced on purpose — no published per-token price was verified, and a guessed one
+		// would mis-charge credits. The cost columns stay empty until a real price is known.
+		{ProviderID: "nvidia", ModelID: "nvidia/nemotron-3-ultra-550b-a55b", Name: "NVIDIA Nemotron 3 Ultra", Tier: "cloud"},
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

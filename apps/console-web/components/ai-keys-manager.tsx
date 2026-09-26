@@ -70,6 +70,13 @@ const DEFAULT_PROVIDERS: { id: string; name: string; kind: string; defaultModel:
     defaultModel: "claude-3-5-sonnet-20241022",
     supportedModels: ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"],
   },
+  {
+    id: "nvidia",
+    name: "NVIDIA",
+    kind: "cloud",
+    defaultModel: "nvidia/nemotron-3-ultra-550b-a55b",
+    supportedModels: ["nvidia/nemotron-3-ultra-550b-a55b"],
+  },
 ];
 
 export function AIKeysManager() {

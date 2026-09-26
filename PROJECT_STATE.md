@@ -4,6 +4,9 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-047 (2026-09-26): NVIDIA is a model provider.** From the founder's .env names; cloud tier, fallback or per-project; console and control plane list it. Live: 12.2 s smoke call OK.
+> Compared on the real intake step: NVIDIA 1/3 valid at 99-152 s (one timeout), Gemini 3 Flash 1/3 at 12-14 s — NVIDIA stays optional. **Found:** half of real intake runs fail on both models because intake rejects a status-change endpoint instead of repairing it → PC-093, next.
+
 > **PC-002 + PC-062 (2026-09-26): founder decisions recorded; native mobile preview planned.**
 > No stack named → store-ready React Native + PWA with QR; native asked → Kotlin/Swift. Keys last: all integrations built first, accounts supplied at PC-070. Master list now 771 items (architecture plan, PG-01..PG-21, GA-01..GA-12 added); 91 open in the queue.
 > Mobile preview: Android emulator headless from the SDK command line (no Android Studio), streamed into the Studio; hosted on Linux + KVM (Cuttlefish). iOS needs Xcode (installed headlessly) — no open-source simulator exists. This Mac: M2, no AVD/system image, no Xcode.

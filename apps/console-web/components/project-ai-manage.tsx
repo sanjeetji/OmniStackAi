@@ -36,6 +36,7 @@ const PROVIDER_OPTIONS = [
   { id: "groq", name: "Groq", defaultModel: "llama-3.3-70b-versatile" },
   { id: "openai", name: "OpenAI", defaultModel: "gpt-4o" },
   { id: "anthropic", name: "Anthropic", defaultModel: "claude-3-5-sonnet-20241022" },
+  { id: "nvidia", name: "NVIDIA", defaultModel: "nvidia/nemotron-3-ultra-550b-a55b" },
   { id: "ollama", name: "Local Ollama", defaultModel: "qwen2.5-coder:14b" },
 ];
 
