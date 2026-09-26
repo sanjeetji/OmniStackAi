@@ -298,6 +298,7 @@ def build_run_plan(
     admin_url = f"http://127.0.0.1:{admin_port}" if has_admin else ""
     # R-545: Expo binds on the LAN so a phone can reach it; the QR encodes the exp:// form.
     lan = lan_address() if has_mobile else "127.0.0.1"
+    web_lan = lan if has_mobile else lan_address()
     # One port per app, from `mobile_port` upward. The first keeps the original port and the
     # original `mobile_url`/`expo_url`, so a single-app project and everything reading those two
     # fields behaves exactly as before.
@@ -480,6 +481,8 @@ def build_run_plan(
                     ("NEXT_PUBLIC_API_URL", public_api_url),
                     ("BASE_PATH", base_path),
                     ("NEXT_PUBLIC_BASE_PATH", base_path),
+                    # R-573: the in-app QR swaps localhost for this, so a phone can open the page.
+                    ("NEXT_PUBLIC_LAN_HOST", web_lan),
                 ) + extra_tuples,
                 background=True,
             )

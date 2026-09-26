@@ -50,7 +50,13 @@ class MaterializeTests(TestCase):
             for generated in project.files():
                 on_disk = Path(tmp) / generated.path
                 self.assertTrue(on_disk.is_file(), generated.path)
-                self.assertEqual(on_disk.read_text(encoding="utf-8"), generated.content)
+                if generated.base64_encoded:
+                    # R-573: web apps now carry real PNG icons; they are written as bytes.
+                    import base64
+
+                    self.assertEqual(on_disk.read_bytes(), base64.b64decode(generated.content))
+                else:
+                    self.assertEqual(on_disk.read_text(encoding="utf-8"), generated.content)
 
     def test_non_empty_target_requires_overwrite(self) -> None:
         project = _project()

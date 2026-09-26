@@ -1,9 +1,9 @@
 task_id: R-573
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-26"
-completed_at: null
+completed_at: "2026-09-26"
 branch: platform-completion
 objective: >-
   Every generated web app installs on a phone: a web app manifest from the brand, icons, a service
@@ -12,7 +12,10 @@ objective: >-
 founder_gate: >-
   Founder, 2026-09-26: an app request gets a store-ready React Native app AND an installable PWA
   with a QR code by default. "Continue task one by one without asking."
-companions: []
+companions:
+  - Admin console inherits the same PWA support
+  - Stack policy: a PWA request is honoured as asked (no substitution note)
+  - Run plan passes NEXT_PUBLIC_LAN_HOST so the QR works from a phone
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/
   - services/agent-engine/tests/
@@ -31,6 +34,12 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+live_proof: >-
+  A generated project assembled, built with `next build` and served with `next start`; opened in
+  headless Google Chrome (persistent profile): installability errors [], manifest errors [], service
+  worker activated at scope /, "Get the app" control with QR present, and with the network cut a
+  navigation answered 200 with the offline page. Manifest, theme-color, apple-touch-icon and
+  apple-mobile-web-app tags present; icons are real PNGs at 192/512/512-maskable/180.
 blockers: []
 deferred: []
 found_and_fixed: []

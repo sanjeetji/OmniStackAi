@@ -4,6 +4,8 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-573 (2026-09-26): every web app and admin console is an installable PWA with a QR.** Manifest, PNG icons, honest service worker (no API caching), offline page, install control, iOS guidance, LAN-aware QR. Chrome: zero installability errors.
+
 > **R-590 (2026-09-26): lifecycles operable from every screen, and only through transitions.** List rows, detail pages and the mobile detail screen show state + legal moves; create/update can no longer write the state on any backend. Live 32/32 on four backends.
 > **Found and fixed:** the default Python backend could not create records through its API at all (two separate bugs); mobile called /api/ paths nobody serves; Node transitions/update and Hono typing fixed. **Recorded:** Node in-memory fallback + Python 500 on bad id (PC-004); self-registered role not a plan role (PC-011).
 

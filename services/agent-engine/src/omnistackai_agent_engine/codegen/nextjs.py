@@ -73626,7 +73626,10 @@ def _layout_file(ir: ApplicationIR) -> str:
         'import "./globals.css";\n'
         'import { Navbar } from "@/components/navbar";\n'
         'import { ToastProvider } from "@/components/toast";\n'
+        'import { PwaSupport } from "@/components/pwa-support";\n'
         f"{auth_import}\n"
+        "// R-573: the browser chrome and the installed app take the brand colour.\n"
+        f'export const viewport = {{ themeColor: "{ir.brand.primary_color}" }};\n\n'
         "export const metadata: Metadata = {\n"
         '  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),\n'
         "  title: {\n"
@@ -73648,6 +73651,9 @@ def _layout_file(ir: ApplicationIR) -> str:
         "  alternates: {\n"
         '    canonical: "/",\n'
         "  },\n"
+        "  // R-573: installable on iOS as well — standalone, titled, with a PNG touch icon.\n"
+        f'  appleWebApp: {{ capable: true, title: "{escaped_name}", statusBarStyle: "default" }},\n'
+        '  icons: { apple: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/icons/apple-touch-icon.png` },\n'
         "};\n\n"
         "export default function RootLayout({ children }: { children: React.ReactNode }) {\n"
         "  return (\n"
@@ -73663,6 +73669,7 @@ def _layout_file(ir: ApplicationIR) -> str:
         '      <body style={{ margin: 0, background: "var(--color-background-subtle, #f8fafc)", color: "var(--color-text, #0f172a)", fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)" }}>\n'
         f"{json_ld}"
         f"{body_content}"
+        "        <PwaSupport />\n"
         "      </body>\n"
         "    </html>\n"
         "  );\n"
@@ -74245,6 +74252,11 @@ class NextjsWebAdapter:
                     ),
                 )
             )
+
+        # R-573: every web app and admin console is an installable PWA.
+        from .pwa import pwa_files
+
+        files.extend(pwa_files(ir))
 
         # R-590: one lifecycle panel per workflow, used by the detail pages.
         from .lifecycle_ui import web_lifecycle_files

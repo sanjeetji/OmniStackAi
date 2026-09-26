@@ -35,10 +35,13 @@ class BuilderShowcaseTests(TestCase):
                 # apps/admin/app/page.tsx stays out (its diff invariance is asserted elsewhere).
                 "apps/admin/README.md",
                 "apps/admin/app/layout.tsx",
+                # R-573: the installable app's manifest carries the product name.
+                "apps/admin/app/manifest.ts",
                 "apps/admin/app/opengraph-image.tsx",
                 "apps/admin/public/llms.txt",
                 "apps/web/README.md",
                 "apps/web/app/layout.tsx",
+                "apps/web/app/manifest.ts",
                 "apps/web/app/opengraph-image.tsx",
                 "apps/web/app/page.tsx",
                 "apps/web/public/llms.txt",

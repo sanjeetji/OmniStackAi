@@ -87,9 +87,8 @@ _WEB_TARGETS: dict[WebStrategy, tuple[GenerationTarget, ...]] = {
     WebStrategy.NEXTJS: (GenerationTarget.NEXTJS_WEB,),
     WebStrategy.FLUTTER_WEB: (),
     WebStrategy.RN_WEB: (),
-    # A PWA is a Next.js app plus a manifest and a service worker. The adapter exists; the manifest
-    # does not yet (R-573), so this resolves to Next.js and says so rather than claiming to be
-    # installable.
+    # A PWA is a Next.js app plus a manifest and a service worker. Since R-573 every generated
+    # Next.js app has both, so a PWA request is simply honoured.
     WebStrategy.PWA: (GenerationTarget.NEXTJS_WEB,),
 }
 
@@ -199,12 +198,9 @@ def resolve_stack(strategy: ProjectStrategy, registry: AdapterRegistry | None = 
             Substitution("web", web.value, WEB_FALLBACK.value, _web_reason(web, WEB_FALLBACK))
         )
     elif web is WebStrategy.PWA:
-        # Supported, but not yet everything the name promises. Say so rather than let someone
-        # discover on the day they try to install it.
+        # R-573: every Next.js app is installable now, so the request is met as asked; it builds
+        # with the same adapter and needs no substitution note.
         resolved = replace(resolved, web_strategy=WEB_FALLBACK)
-        substitutions.append(
-            Substitution("web", web.value, WEB_FALLBACK.value, _web_reason(web, WEB_FALLBACK))
-        )
 
     return StackPlan(resolved, tuple(substitutions))
 

@@ -21,6 +21,7 @@ import binascii  # noqa: F401 - imported for the error type GeneratedFile raises
 import hashlib
 import json
 import struct
+import functools
 import zlib
 
 from ..application_ir import ApplicationIR, BrandTokens
@@ -133,6 +134,9 @@ def _mark_grid(seed: str, cells: int = 5) -> list[list[bool]]:
     return grid
 
 
+# R-573: every web app and admin console now draws icons too. The drawing is a pure function of its
+# arguments, so it is drawn once per (size, colours, name) instead of per build.
+@functools.lru_cache(maxsize=128)
 def _mark_png(size: int, background: str, ink: str, seed: str, *, cells: int = 5, margin_ratio: float = 0.18) -> bytes:
     """Render the mark: rounded cells in `ink` on a solid `background`."""
     bg = _rgb(background)
