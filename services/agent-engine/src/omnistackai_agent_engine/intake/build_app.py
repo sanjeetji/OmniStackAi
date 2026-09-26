@@ -122,19 +122,28 @@ def build_app_from_ir(
         context_truncated=context_truncated,
         active_skills=active_skills,
         truncated_skills=truncated_skills,
-        substitutions=_substitutions_for(ir),
+        substitutions=_substitutions_for(ir, prompt),
     )
 
 
-def _substitutions_for(ir: ApplicationIR) -> tuple[dict, ...]:
+def _substitutions_for(ir: ApplicationIR, prompt: str = "") -> tuple[dict, ...]:
     """What the assembler substituted, from the same function the assembler used to decide it.
 
     Deliberately not recomputed with its own rules: the console reporting one stack while the
     repository on disk holds another is the failure mode this task exists to remove.
-    """
-    from ..codegen.capabilities import resolve_stack
 
-    return tuple(s.as_dict() for s in resolve_stack(ir.project_strategy).substitutions)
+    PC-003: plus the stacks the prompt named that no IR field can hold (React.js, Vue, Spring,
+    MySQL ...), judged against the *resolved* strategy so the note names what was really built.
+    """
+    from ..codegen.capabilities import named_stack_substitutions, resolve_stack
+
+    plan = resolve_stack(ir.project_strategy)
+    notes = [s.as_dict() for s in plan.substitutions]
+    layers_already_explained = {n["layer"] for n in notes}
+    for s in named_stack_substitutions(prompt, plan.strategy):
+        if s.layer not in layers_already_explained:
+            notes.append(s.as_dict())
+    return tuple(notes)
 
 
 def app_build_result_to_dict(
@@ -256,7 +265,7 @@ def build_ecosystem_from_plan(
         truncated_skills=truncated_skills,
         ecosystem_apps=tuple(directories),
         ecosystem_reason=reason,
-        substitutions=_substitutions_for(shared),
+        substitutions=_substitutions_for(shared, prompt),
     )
 
 

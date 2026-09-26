@@ -1,4 +1,4 @@
-task_id: PC-093
+task_id: PC-003
 status: complete
 phase: Platform Completion — 0 Foundation
 tracker_row: null
@@ -6,44 +6,40 @@ started_at: "2026-09-26"
 completed_at: "2026-09-26"
 branch: platform-completion
 objective: >-
-  Intake repairs the model's commonest mistakes instead of rejecting the build: a schema name that
-  is not a declared entity is resolved to the entity it means or dropped, and a status-change
-  endpoint becomes a real workflow when the entity lists its states (or is removed when a workflow
-  already exists). Every repair is reported in IntakeResult.repairs.
+  The stack policy holds in code. What R-559 and R-562 already did was checked and kept: an app
+  request with no stack named gets a React Native app, Flutter and native requests get React
+  Native with a stated reason. The remaining gap was stacks the IR has no field for — React.js,
+  Vue, Angular, Svelte, Ionic, Xamarin/MAUI, Spring, Laravel, Rails, .NET, Django/Flask, MySQL,
+  MongoDB, SQLite, Firebase/Supabase — which the model silently mapped to Next.js, Python or
+  PostgreSQL. The prompt is now read for them and each becomes a substitution note naming what
+  was built instead, on both the single-app and ecosystem build paths.
 founder_gate: >-
-  Queued by PC-047's comparison; founder on 2026-09-26: "continue task one by one without asking".
+  Founder, 2026-09-26: forget Flutter and React.js; Next.js web/admin; app requests get React
+  Native + PWA with QR; native when asked. "Continue task one by one without asking."
 companions:
-  - IntakeResult.repairs, filled by both generate_ir and its streaming twin
-  - parse_ir_response_with_repairs, with parse_ir_response unchanged for existing callers
+  - Notes for every layer (web, mobile, backend, database), not only the one named in the task
+  - A layer already explained by resolve_stack is not explained twice
+  - Notes only for layers that are actually built (no mobile note for a web-only project)
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/intake/
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/validate.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/capabilities.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
   - services/agent-engine/tests/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - A repair is never silent; a plan that needs nothing is unchanged
-  - No lifecycle is invented for a field that lists no states
+  - No false alarms on ordinary words (spring sale, ruby jewellery, Maui, capacitors, javascript)
+  - React Native is never reported as React.js
   - task verify stays offline with 0 model calls
 required_gates:
-  - The three real failure shapes from PC-047 now produce valid IRs
-  - Live re-run of the same prompts
+  - Offline tests for every named stack, false-alarm cases and both build paths
   - scripts/verify.sh passes
 model_tool_trace:
-  routing: explicit provider (live proof outside task verify)
+  routing: deterministic_only
   local_calls: 0
-  cloud_calls: 6  # Gemini 3 Flash, 3 prompts x 2 rounds; task verify made 0
-live_proof: >-
-  Same three real prompts as PC-047, two rounds on Gemini 3 Flash: 6/6 valid (was 1/3), 9-14 s each,
-  every plan carrying a lifecycle. Repairs applied: an undeclared 'json' body removed (1), an ad-hoc
-  status endpoint removed because the entity already had a lifecycle (3).
+  cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed:
-  - >-
-    normalize_ir rebuilt the IR field by field and left out `capabilities` and `brand`, so every
-    lifecycle a model declared was silently dropped at intake since R-566 — the model wrote the
-    workflow, the parser read it, and normalize_ir threw it away. Documented as lossless. Fixed, with
-    a test that checks every ApplicationIR field so a future field cannot be dropped the same way.
+deferred:
+  - "The PWA + QR half of the app default is R-573 (queued at #8)."
+found_and_fixed: []

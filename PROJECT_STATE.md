@@ -4,6 +4,8 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-003 (2026-09-26): named stacks we do not build get a reason.** React.js, Vue, Angular, Spring, Laravel, Rails, .NET, MySQL, MongoDB and others in the prompt now produce substitution notes naming what was built; no false alarms on ordinary words.
+
 > **PC-093 (2026-09-26): intake repairs instead of rejecting.** Bad schema names resolved or dropped; a status-change endpoint becomes a real lifecycle; repairs reported. Live on Gemini: 6/6 valid (was 1/3).
 > **Found:** `normalize_ir` dropped `capabilities` and `brand` — every model-declared lifecycle vanished at intake since R-566. Fixed with an every-field test.
 

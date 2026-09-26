@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 407 |
+| Completed | 408 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
-| Pending | 101 |
+| Pending | 100 |
 | Not Started | 520 |
 | Superseded | 12 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1114** |
 
-Open work queue: **111** tasks (P0: 17, P1: 49, P2: 31, P3: 14).
+Open work queue: **110** tasks (P0: 16, P1: 49, P2: 31, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -50,7 +50,7 @@ Open work queue: **111** tasks (P0: 17, P1: 49, P2: 31, P3: 14).
 | 3 | PC-062 | Native mobile preview: R&D and plan (open source first) | Completed | P0 | Both |  |  | NATIVE_MOBILE_PREVIEW_PLAN.md in this folder. |
 | 4 | PC-047 | NVIDIA model provider (nemotron-3-ultra) for builds, configured from .env | Completed | P0 | Platform |  |  | Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only. Includes a first comparison against the providers we already support on the same build prompts. |
 | 5 | PC-093 | Intake repairs instead of rejecting: a model's status-change endpoint becomes a workflow transition, and an undeclared request-schema reference is fixed, not fatal | Completed | P0 | Both |  |  | Found by PC-047's comparison (2026-09-26): 3 of 6 real intake runs, on both NVIDIA and Gemini, were rejected for the same reason. Roughly half of real prompts fail at the first step whichever model runs, so this comes before everything else. |
-| 6 | PC-003 | Stack policy in code: an app request gets a store-ready React Native app AND an installable PWA with QR; Flutter and React.js refused with the reason | Pending | P0 | Both |  |  | R-562 already builds the React Native app; the PWA + QR half is R-573. Native Kotlin/Swift only after Phase 5. Uses the R-559 'nearest thing we can build, with a reason' path. |
+| 6 | PC-003 | Stack policy in code: an app request gets a store-ready React Native app AND an installable PWA with QR; Flutter and React.js refused with the reason | Completed | P0 | Both |  |  | R-562 already builds the React Native app; the PWA + QR half is R-573. Native Kotlin/Swift only after Phase 5. Uses the R-559 'nearest thing we can build, with a reason' path. |
 | | | **Phase 1 Vibe Mode live**: Prompt -> running app with real API + DB -> live URL, for real users. | | | | | | |
 | 7 | R-591 | Complete auth for the Go backend: register, login, logout, me, forgot password, reset password | Not Started | P0 | Both |  |  | A Go app with auth has no way for a real user to sign in. Parity with the Python backend's auth (R-461, R-463), companions included. |
 | 8 | R-590 | Workflow transitions as buttons on the generated screens | Not Started | P0 | Both | R-588 |  | The user-visible half of R-566. |
@@ -864,6 +864,7 @@ What each tracker phase asks for, and where it is covered:
 | GAP-OPENAPI | A worked OpenAPI contract example | Completed |  | Every generated project ships openapi.json. |
 | PC-001 | Master task list: reconcile every R_&_D source into one queue | Completed | 2026-09-26 | This document. Done when the founder approves it. |
 | PC-002 | Founder decisions that block later phases (see Decisions sheet) | Completed | 2026-09-26 | Pricing/free tier, hosting cloud + region, payment processor, email verification, in-browser preview engine licence, app-store accounts. D-5, D-8, D-9 answered 2026-09-26. |
+| PC-003 | Stack policy in code: an app request gets a store-ready React Native app AND an installable PWA with QR; Flutter and React.js refused with the reason | Completed | 2026-09-26 | R-562 already builds the React Native app; the PWA + QR half is R-573. Native Kotlin/Swift only after Phase 5. Uses the R-559 'nearest thing we can build, with a reason' path. |
 | PC-047 | NVIDIA model provider (nemotron-3-ultra) for builds, configured from .env | Completed | 2026-09-26 | Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only. Includes a first comparison against the providers we already support on the same build prompts. |
 | PC-062 | Native mobile preview: R&D and plan (open source first) | Completed | 2026-09-26 | NATIVE_MOBILE_PREVIEW_PLAN.md in this folder. |
 | PC-093 | Intake repairs instead of rejecting: a model's status-change endpoint becomes a workflow transition, and an undeclared request-schema reference is fixed, not fatal | Completed | 2026-09-26 | Found by PC-047's comparison (2026-09-26): 3 of 6 real intake runs, on both NVIDIA and Gemini, were rejected for the same reason. Roughly half of real prompts fail at the first step whichever model runs, so this comes before everything else. |

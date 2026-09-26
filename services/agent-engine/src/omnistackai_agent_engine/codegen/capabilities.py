@@ -222,3 +222,89 @@ def offerable_mobile_profiles(registry: AdapterRegistry | None = None) -> tuple[
         registry = default_registry()
     profiles = supported_mobile_profiles(registry)
     return tuple(p.value for p in MobileProfile if p in profiles or p is MobileProfile.NONE)
+
+
+# --- Stacks the plan has no field for (PC-003) --------------------------------------------------
+#
+# `resolve_stack` can only speak about what the IR records, and the IR has no value for React.js,
+# Vue, Angular, Spring, Laravel, MySQL or MongoDB. A user who asked for one of those got Next.js or
+# Python or PostgreSQL with nothing anywhere saying so — the silent substitution R-559 removed for
+# Flutter, still alive one level up, because the model quietly writes the nearest value the schema
+# allows. So the prompt itself is read, deterministically, for stacks it names that we do not build,
+# and each becomes the same kind of note R-559 sends to the console.
+#
+# Patterns are deliberately narrow — a word-bounded name, not a guess at intent. A false "you asked
+# for Vue" is worse than none, so ambiguous words ("go", "rails", "rust" on their own) are not here.
+
+#: (layer, asked label, regex, how we describe what was built instead)
+_NAMED_STACKS: tuple[tuple[str, str, str, str], ...] = (
+    ("web", "React.js", r"\b(?:react(?:\.js|js)?|create[- ]react[- ]app|vite)\b(?!\s*native)",
+     "Next.js is React with routing and server rendering built in, so the web app is React code "
+     "you can keep extending"),
+    ("web", "Vue", r"\b(?:vue(?:\.js|js)?|nuxt(?:\.js)?)\b", "the web app is built in Next.js (React)"),
+    ("web", "Angular", r"\bangular(?:js)?\b", "the web app is built in Next.js (React)"),
+    ("web", "Svelte", r"\bsvelte(?:kit)?\b", "the web app is built in Next.js (React)"),
+    ("mobile", "Ionic / Capacitor", r"\b(?:ionic|capacitorjs|capacitor\s+(?:app|js))\b",
+     "the app is built in React Native, which publishes to both the App Store and Google Play"),
+    ("mobile", "Xamarin / .NET MAUI", r"(?:\bxamarin\b|\.net\s*maui\b)",
+     "the app is built in React Native, which publishes to both the App Store and Google Play"),
+    ("backend", "Java / Spring", r"\b(?:spring\s*boot|spring\s+framework|java)\b", ""),
+    ("backend", "PHP / Laravel", r"\b(?:laravel|php|symfony)\b", ""),
+    ("backend", "Ruby on Rails", r"\b(?:ruby\s+on\s+rails|ruby\s+(?:backend|api|server))\b", ""),
+    ("backend", ".NET / C#", r"(?:\basp\.net\b|\.net\s*core\b|\bc#)", ""),
+    ("backend", "Django / Flask", r"\b(?:django|flask)\b", ""),
+    ("database", "MySQL", r"\b(?:mysql|mariadb)\b", ""),
+    ("database", "MongoDB", r"\bmongo(?:db)?\b", ""),
+    ("database", "SQLite", r"\bsqlite\b", ""),
+    ("database", "Firebase / Supabase", r"\b(?:firebase|firestore|supabase)\b", ""),
+)
+
+_BACKEND_SPOKEN = {"python": "Python (FastAPI)", "go": "Go", "node": "Node.js"}
+
+
+def _named_reason(layer: str, asked: str, built_text: str) -> str:
+    if layer == "database" and asked == "MongoDB":
+        return ("You asked for MongoDB. MongoDB support is planned; until it ships the data is "
+                "stored in PostgreSQL, a production relational database.")
+    if layer == "database" and asked.startswith("Firebase"):
+        return (f"You asked for {asked}. Your app gets its own real API and a PostgreSQL database "
+                f"instead, so the code and data are fully yours.")
+    if asked == "React.js":
+        return ("You asked for React.js. OmniStackAI builds web apps in Next.js, which is React with "
+                "routing and server rendering built in, so your web app is React code you can keep "
+                "extending.")
+    if asked == "Django / Flask":
+        return f"You asked for {asked}. The backend is built in {built_text}, the Python framework OmniStackAI generates."
+    return f"You asked for {asked}. OmniStackAI does not generate {asked} yet, so {built_text}."
+
+
+def named_stack_substitutions(prompt: str, strategy: ProjectStrategy) -> tuple[Substitution, ...]:
+    """Stacks the prompt names that no IR field can hold, and what was built instead."""
+    import re
+
+    text = " ".join(str(prompt or "").lower().split())
+    if not text:
+        return ()
+    # React Native is something we build; take it out before looking for React.js.
+    text = re.sub(r"\breact[\s-]*native\b", " rn-mobile ", text)
+    out: list[Substitution] = []
+    for layer, asked, pattern, built_phrase in _NAMED_STACKS:
+        if not re.search(pattern, text):
+            continue
+        if layer == "web":
+            if strategy.web_strategy is WebStrategy.NONE and strategy.admin_strategy.value == "none":
+                continue
+            built, built_text = "nextjs", built_phrase
+        elif layer == "mobile":
+            if strategy.mobile_profile is MobileProfile.NONE:
+                continue
+            built, built_text = MOBILE_FALLBACK.value, built_phrase
+        elif layer == "backend":
+            built = strategy.backend_strategy.value
+            built_text = _BACKEND_SPOKEN.get(built, built)
+            built_phrase = f"the backend is built in {built_text}"
+            built_text = built_text if asked == "Django / Flask" else built_phrase
+        else:
+            built, built_text = "postgres", "the data is stored in PostgreSQL"
+        out.append(Substitution(layer, asked, built, _named_reason(layer, asked, built_text)))
+    return tuple(out)
