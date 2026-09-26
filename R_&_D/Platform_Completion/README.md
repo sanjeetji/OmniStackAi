@@ -1,7 +1,7 @@
 # Platform Completion
 
 **This folder is the only work queue until the platform is finished.** Every open task from the
-v6 tracker, `.ai/ROADMAP.md`, the draft specs in `R_&_D/specs/`, the template plan, the
+v6 tracker (task table, Production_Gates, RND_Gap_Audit), `.ai/ROADMAP.md`, `docs/ARCHITECTURE_MASTER_PLAN.md`, the draft specs in `R_&_D/specs/`, the template plan, the
 commercial kickoff, the buildout plan and the V6 gap analysis has been reconciled here. Each has
 a status, a priority and the queue item that covers it. Other documents are sources now, not
 queues.
@@ -10,7 +10,8 @@ queues.
 
 | File | Use it for |
 |---|---|
-| `OmniStackAI_Master_Tasks.xlsx` | The main document. Sheets: **Start Here**, **Work Queue** (ordered), **All Tasks** (all 686, filterable), **Summary**, **Decisions**, **Legend**. |
+| `OmniStackAI_Master_Tasks.xlsx` | The main document. Sheets: **Start Here**, **Work Queue** (ordered), **All Tasks** (every item, filterable), **Summary**, **Tracker Phases** (how each v6 tracker phase is covered), **Targets**, **Decisions**, **Legend**. |
+| `NATIVE_MOBILE_PREVIEW_PLAN.md` | How users preview Android and iOS apps: open source first, local then hosted, and how the sandbox isolates them. |
 | `MASTER_TASKS.md` | The same content as Markdown, readable on GitHub and by any AI tool. |
 | `tools/tasks_data.py` | The source of truth for statuses, priorities and order. |
 | `tools/build_master_tasks.py` | Regenerates both documents. |
@@ -25,9 +26,10 @@ modern UI and the maximum features the prompt implies, customisable afterwards.
 - **Engineering Mode:** see the plan, choose the stack, import a repo, review diffs, see the
   verification report, open GitHub pull requests.
 
-Stack policy: Next.js for web and admin. An app request gets a React Native (Expo) app ready to
-publish on Google Play and the App Store, **and** an installable PWA with a QR code. Native
-Kotlin + Jetpack Compose and Swift + SwiftUI come **last** (Phase 5). Flutter and React.js are
+Stack policy: Next.js for web and admin. An app request that names no stack gets a React Native (Expo) app ready to
+publish on Google Play and the App Store, **and** an installable PWA with a QR code. When the
+user asks for native, Kotlin + Jetpack Compose and Swift + SwiftUI are generated (built in
+Phase 5). Flutter and React.js are
 not offered. PostgreSQL is the default database, with MongoDB as an option. Builds use NVIDIA
 nemotron-3-ultra; its key lives only in `.env`.
 
@@ -41,8 +43,11 @@ nemotron-3-ultra; its key lives only in `.env`.
    the status by hand.
 4. Any other change (a new task, a re-order, a founder decision) goes in `tools/tasks_data.py`,
    then re-run the generator. Commit the data file, the Markdown and the spreadsheet together.
-5. Stop and ask the founder before anything in the **Decisions** sheet, paid cloud services, new
-   infrastructure or native mobile work.
+5. **Keys last.** Build every integration completely (cloud, database, payments, email, stores,
+   device services) so that only accounts and keys are missing; the founder supplies them at
+   PC-070. Never put a key in code, prompts, logs or commits.
+6. Stop and ask the founder before spending money, creating infrastructure or starting native
+   (Kotlin/Swift) generation.
 
 ```bash
 # Markdown only (any Python 3.9+):

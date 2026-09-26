@@ -49,6 +49,7 @@ class Task:
     mode: str = ""
     depends: str = ""
     order: int = 0
+    tracker_phase: str = ""
 
 
 def natural(task_id: str) -> tuple:
@@ -84,7 +85,8 @@ def read_tracker() -> dict[str, dict]:
     out = {}
     for row in wb["Phase_Roadmap"].iter_rows(values_only=True):
         if isinstance(row[0], str) and re.match(r"^R-\d{3}$", row[0]):
-            out[row[0]] = {"area": row[2] or "", "title": row[3] or "", "status": row[7] or ""}
+            out[row[0]] = {"area": row[2] or "", "title": row[3] or "", "status": row[7] or "",
+                           "tphase": row[1] or ""}
     return out
 
 
@@ -114,7 +116,8 @@ def read_tracker_stdlib() -> dict[str, dict]:
                 vals[col] = "".join(t.text or "" for t in c.find(ns + "is").iter(ns + "t"))
         rid = vals.get("A", "")
         if re.match(r"^R-\d{3}$", rid):
-            out[rid] = {"area": vals.get("C", ""), "title": vals.get("D", ""), "status": vals.get("H", "")}
+            out[rid] = {"area": vals.get("C", ""), "title": vals.get("D", ""), "status": vals.get("H", ""),
+                        "tphase": vals.get("B", "")}
     return out
 
 
@@ -161,7 +164,7 @@ def build() -> tuple[list[Task], list[Task]]:
         rows[tid] = Task(
             id=tid, title=t["title"], source="Execution_Tracker_v6", area=t["area"],
             phase=phase_for(status, tracked), status=status, priority=prio, tracked_in=tracked,
-            done_on=done[0] if done else "", notes=note,
+            done_on=done[0] if done else "", notes=note, tracker_phase=t["tphase"],
         )
     if missing:
         raise SystemExit(f"tracker items with no classification in tasks_data.py: {missing}")
@@ -198,6 +201,8 @@ def build() -> tuple[list[Task], list[Task]]:
             raise SystemExit(f"{t.id} points at unknown task {t.tracked_in}")
         if t.status not in data.STATUSES:
             raise SystemExit(f"{t.id} has unknown status {t.status!r}")
+        if t.status in OPEN and t.id not in queue_ids and t.tracked_in not in queue_ids:
+            raise SystemExit(f"{t.id} is open but no queue task covers it")
 
     everything = sorted(
         rows.values(),
@@ -213,6 +218,15 @@ def covers(queue: list[Task], everything: list[Task]) -> dict[str, str]:
         if t.tracked_in and t.id != t.tracked_in and t.status not in ("Completed", "Superseded", "Dropped"):
             by.setdefault(t.tracked_in, []).append(t.id)
     return {k: ", ".join(sorted(v, key=natural)) for k, v in by.items()}
+
+
+def tracker_phase_rows(everything: list[Task]) -> list[str]:
+    rows = []
+    for phase in ("MVP", "MID", "ADVANCED", "PRODUCTION"):
+        mine = [t for t in everything if t.tracker_phase == phase]
+        counts = [sum(1 for t in mine if t.status == s) for s in STATUS_ORDER]
+        rows.append(f"| {phase} | " + " | ".join(map(str, counts)) + f" | {len(mine)} |")
+    return rows
 
 
 # --- Markdown ------------------------------------------------------------------------------------
@@ -261,6 +275,16 @@ def write_md(queue: list[Task], everything: list[Task]) -> None:
         "| ID | Question | Why | Blocks | Recommendation | Founder answer |", "|---|---|---|---|---|---|",
         *[f"| {d[0]} | {md_cell(d[1])} | {md_cell(d[2])} | {md_cell(d[3])} | {md_cell(d[4])} | {md_cell(d[5])} |"
           for d in data.DECISIONS],
+        "", "## Success targets", "", "| Measure | Target |", "|---|---|",
+        *[f"| {a} | {b} |" for a, b in data.TARGETS],
+        "", "## Are the v6 tracker's phases covered?", "",
+        "Tracker rows by tracker phase and where they stand now:", "",
+        "| Tracker phase | " + " | ".join(STATUS_ORDER) + " | Total |",
+        "|---|" + "---|" * (len(STATUS_ORDER) + 1),
+        *tracker_phase_rows(everything),
+        "", "What each tracker phase asks for, and where it is covered:", "",
+        "| Tracker phase | Dimension | Tracker asks | Covered by |", "|---|---|---|---|",
+        *[f"| {a} | {b} | {md_cell(c)} | {md_cell(d)} |" for a, b, c, d in data.TRACKER_PHASES],
         "", "## Strengthen the weak areas", "", "| Area | Where it is done |", "|---|---|",
         *[f"| {a} | {w} |" for a, w in g["strengthen"]],
         "", "## Every open, deferred and dropped item from R_&_D, and where it is tracked", "",
@@ -392,6 +416,15 @@ def write_xlsx(queue: list[Task], everything: list[Task]) -> bool:
     for i in range(2, len(PHASE_ORDER) + 3):
         ws.column_dimensions[get_column_letter(i)].width = 16
 
+    table(wb.create_sheet("Tracker Phases"), ["Tracker phase", "Dimension", "Tracker asks", "Covered by"],
+          [list(r) for r in data.TRACKER_PHASES], [14, 18, 50, 90])
+    ws = wb["Tracker Phases"]
+    ws.append([])
+    ws.append(["Tracker phase", *STATUS_ORDER, "Total"])
+    for line in tracker_phase_rows(everything):
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        ws.append([cells[0], *map(int, cells[1:])])
+    table(wb.create_sheet("Targets"), ["Measure", "Target"], [list(t) for t in data.TARGETS], [45, 45])
     table(wb.create_sheet("Decisions"),
           ["ID", "Question", "Why it matters", "Blocks", "Recommendation", "Founder answer"],
           [list(d) for d in data.DECISIONS], [6, 50, 40, 22, 50, 40])

@@ -4,6 +4,10 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-002 + PC-062 (2026-09-26): founder decisions recorded; native mobile preview planned.**
+> No stack named → store-ready React Native + PWA with QR; native asked → Kotlin/Swift. Keys last: all integrations built first, accounts supplied at PC-070. Master list now 771 items (architecture plan, PG-01..PG-21, GA-01..GA-12 added); 91 open in the queue.
+> Mobile preview: Android emulator headless from the SDK command line (no Android Studio), streamed into the Studio; hosted on Linux + KVM (Cuttlefish). iOS needs Xcode (installed headlessly) — no open-source simulator exists. This Mac: M2, no AVD/system image, no Xcode.
+
 > **PC-001 (2026-09-26): one master task list; `R_&_D/Platform_Completion/` is now the only work queue.**
 > 688 tasks from every R_&_D source, each with status, priority and the queue item covering it; 75 open in order. Next: PC-047 (NVIDIA provider), then PC-003 and R-591.
 > Stack policy: Next.js web/admin; app request → store-ready React Native app + PWA with QR; Kotlin/Swift native last; no Flutter or React.js; PostgreSQL default, MongoDB option; NVIDIA nemotron-3-ultra for builds.

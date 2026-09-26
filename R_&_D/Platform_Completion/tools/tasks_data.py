@@ -36,6 +36,8 @@ PHASES = {
     "3 Engineering Mode": "Plan, stack choice, repo import, diffs, verification report, PRs, memory.",
     "4 Production ops": "Security audits, backup/recovery, compliance, observability.",
     "5 Native mobile (last)": "Kotlin/Compose + Swift/SwiftUI, through to Play Store and App Store.",
+    "6 Go-live (credentials last)": "The founder supplies accounts and keys; every live proof "
+    "is run; the platform opens to real users.",
     "Post-launch": "Deferred until the platform is live and the queue above is empty.",
     "Delivered": "Already built.",
 }
@@ -52,6 +54,8 @@ QUEUE = [
      "Platform", "Pending", "P0", "PC-001",
      "Pricing/free tier, hosting cloud + region, payment processor, email verification, "
      "in-browser preview engine licence, app-store accounts. D-5, D-8, D-9 answered 2026-09-26."),
+    ("PC-062", "Native mobile preview: R&D and plan (open source first)", "0 Foundation",
+     "Both", "Not Started", "P0", "", "NATIVE_MOBILE_PREVIEW_PLAN.md in this folder."),
     ("PC-047", "NVIDIA model provider (nemotron-3-ultra) for builds, configured from .env",
      "0 Foundation", "Platform", "Not Started", "P0", "",
      "Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the "
@@ -80,24 +84,27 @@ QUEUE = [
      "R-558 fixed the design system; still needs speed-to-first-screen and visual quality. "
      "From specs/table-stakes/01 and the buildout 'intent card' idea."),
     ("PC-007", "Instant in-browser preview (no local toolchain needed)", "1 Vibe Mode live",
-     "Vibe", "Not Started", "P0", "PC-002",
-     "From specs/table-stakes/02 and tracker R-174. Engine choice needs a licence decision."),
-    ("PC-008", "One-click publish to a live URL, proven end to end with a real account",
-     "1 Vibe Mode live", "Vibe", "Pending", "P0", "PC-009",
-     "R-509/R-510 are built but never run against real Vercel/Netlify. From "
-     "specs/table-stakes/03."),
+     "Vibe", "Not Started", "P0", "",
+     "From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with "
+     "an open-source engine first; a paid engine licence (D-6) is only a key at the end."),
+    ("PC-008", "One-click publish to a live URL: web, admin, API and database together, code "
+     "complete and proven against local stand-ins", "1 Vibe Mode live", "Vibe", "Pending", "P0",
+     "PC-049", "R-509/R-510 publish the web app only and were never run for real. From "
+     "specs/table-stakes/03. Real accounts are plugged in at PC-070."),
     ("PC-009", "Hosted multi-tenant service: per-user isolation of builds, sessions and "
      "previews; quotas; egress policy", "1 Vibe Mode live", "Platform", "Not Started", "P0",
-     "PC-002", "Today the Studio is one trusted operator's tool. Needs founder sign-off "
-     "(new infrastructure). Covers R-100, R-214, R-071, R-175."),
+     "", "Today the Studio is one trusted operator's tool. Built cloud-neutral and proven "
+     "locally (Colima); the cloud account (D-2) is plugged in at PC-070. "
+     "Covers R-100, R-214, R-071, R-175."),
     ("PC-010", "Credit fairness: estimate before a build, no charge for internal retries, "
      "per-task budgets, cost guardrails", "1 Vibe Mode live", "Platform", "Not Started", "P0",
      "", "Covers R-046, R-047, R-025, R-104."),
     ("PC-011", "Plans, entitlements, credit top-up and super_admin console (Phase E)",
-     "1 Vibe Mode live", "Platform", "Not Started", "P0", "PC-002",
-     "Covers R-109. Payment processor for platform billing needs founder sign-off."),
-    ("PC-012", "Legal and account basics: ToS, privacy, retention, email verification",
-     "1 Vibe Mode live", "Platform", "Not Started", "P0", "PC-002", "Covers R-108."),
+     "1 Vibe Mode live", "Platform", "Not Started", "P0", "",
+     "Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at "
+     "PC-070. Covers R-109."),
+    ("PC-012", "Legal and account basics: ToS, privacy, retention, deletion/export, email "
+     "verification", "1 Vibe Mode live", "Platform", "Not Started", "P0", "", "Covers R-108."),
     ("PC-013", "Verified integrations catalog with health tests", "1 Vibe Mode live", "Vibe",
      "Pending", "P1", "", "R-511 Connectors v1 exists. Covers R-055, R-056."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
@@ -105,11 +112,21 @@ QUEUE = [
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194."),
     ("R-574", "Store publishing for React Native apps: EAS build and submit to Play Store and "
      "App Store, proven with real accounts", "1 Vibe Mode live", "Both", "Pending", "P1",
-     "PC-003", "R-546/R-547 generate the EAS config; never run with real store accounts (D-7). "
-     "Covers R-062, R-063."),
-    ("PC-015", "Private beta with real users: product KPIs, minimal support tooling, feedback",
-     "1 Vibe Mode live", "Platform", "Not Started", "P0", "PC-008, PC-009, PC-011, PC-012",
-     "Covers R-051, R-107. The platform is not 'live' until strangers use it."),
+     "PC-003", "R-546/R-547 generate the EAS config. Everything up to the upload is built and "
+     "tested; the Apple and Google accounts (D-7) are plugged in at PC-070. Covers R-062, R-063."),
+    ("PC-049", "Managed database for published apps: provision PostgreSQL (Neon, Supabase or "
+     "self-hosted) and run migrations and seeds on publish", "1 Vibe Mode live", "Vibe",
+     "Not Started", "P0", "", "A live URL needs a live database. Provider interface with a "
+     "local Docker implementation; MongoDB Atlas once PC-048 exists. From the architecture plan."),
+    ("PC-050", "Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, "
+     "command menu, drawer, toasts, tables, forms, maps, uploads)", "1 Vibe Mode live", "Vibe",
+     "Not Started", "P1", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
+     "tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, "
+     "repaired like today's allowlist. From the architecture plan."),
+    ("PC-063", "Android emulator preview without Android Studio: SDK command-line bootstrap, "
+     "headless emulator, auto-install, streamed into the Studio", "1 Vibe Mode live", "Both",
+     "Not Started", "P1", "", "See NATIVE_MOBILE_PREVIEW_PLAN.md. Open source first; local "
+     "on the founder's Mac, then hosted in PC-065. Covers R-052."),
     # Phase 2 - Maximum features
     ("R-582", "Smarter IR synthesis: multi-pass planning and self-critique before generation",
      "2 Maximum features", "Both", "Not Started", "P1", "", "Where 'more features per prompt' is won."),
@@ -163,6 +180,30 @@ QUEUE = [
      "D-8. Every backend adapter needs a Mongo data layer; lifecycle and uniqueness rules move "
      "from SQL constraints to schema validation and indexes. Lifts the Phase T 'PostgreSQL "
      "only' gate. Covers R-075."),
+    ("PC-052", "File uploads and storage in generated apps (S3-compatible, presigned URLs, "
+     "image processing)", "2 Maximum features", "Both", "Not Started", "P1", "",
+     "Local MinIO-style store for dev; any S3 provider on publish. From the architecture plan."),
+    ("PC-053", "Notifications in generated apps: email, push (Expo and native), in-app, "
+     "user preferences", "2 Maximum features", "Both", "Not Started", "P1", "R-568",
+     "R-516 gives email. From the architecture plan."),
+    ("PC-054", "Tests generated with every app: API contract, end-to-end (Playwright), unit",
+     "2 Maximum features", "Both", "Not Started", "P1", "",
+     "Architecture-plan target: over 80% coverage of generated code."),
+    ("PC-059", "Form and wizard engine: multi-step, conditional fields, draft autosave",
+     "2 Maximum features", "Both", "Not Started", "P2", "", "From the architecture plan."),
+    ("PC-057", "Generated-app operations: rate limiting, signed webhooks with retries, audit "
+     "log, error tracking and tracing hooks", "2 Maximum features", "Both", "Not Started", "P2",
+     "", "From the architecture plan (api-gateway, webhooks, audit, observability packs)."),
+    ("PC-055", "Internationalisation in generated apps (web, admin, mobile)",
+     "2 Maximum features", "Both", "Not Started", "P2", "", "From the architecture plan."),
+    ("PC-064", "iOS Simulator preview: Xcode installed and driven from the command line, "
+     "simulator streamed into the Studio (Mac only)", "2 Maximum features", "Both",
+     "Not Started", "P2", "PC-063", "See NATIVE_MOBILE_PREVIEW_PLAN.md. No open-source iOS "
+     "simulator exists; Xcode is free but Mac-only. Covers R-053."),
+    ("PC-056", "Feature flags and A/B tests in generated apps", "2 Maximum features", "Both",
+     "Not Started", "P3", "", "From the architecture plan."),
+    ("PC-058", "Search engine option (Meilisearch or Typesense) beyond keyword search",
+     "2 Maximum features", "Both", "Not Started", "P3", "", "From the architecture plan."),
     ("R-583", "Next.js static export mode", "2 Maximum features", "Both", "Not Started", "P3", "",
      "The cheap answer to 'no SSR, no Vercel'."),
     # Phase 3 - Engineering Mode
@@ -192,8 +233,14 @@ QUEUE = [
      "Both", "Not Started", "P1", "", "Covers R-019, R-027, R-057."),
     ("PC-027", "Version timeline and safe, non-destructive rollback", "3 Engineering Mode",
      "Both", "Not Started", "P1", "", "Covers R-022 and buildout idea 'R-524'."),
-    ("PC-028", "Cloud deploy adapters beyond Vercel/Netlify", "3 Engineering Mode",
-     "Engineering", "Not Started", "P2", "PC-008", "From specs/deploy-adapters/01."),
+    ("PC-051", "Graduation bridge: open a Vibe project in Engineering Mode with nothing lost, "
+     "and back", "3 Engineering Mode", "Both", "Not Started", "P1", "PC-005, PC-022",
+     "Projects already keep ir.json, so the IR carries over; custom UI and history must too. "
+     "From the architecture plan."),
+    ("PC-028", "Cloud deploy adapters beyond Vercel/Netlify: containers, Kubernetes (Helm), "
+     "Terraform", "3 Engineering Mode",
+     "Engineering", "Not Started", "P2", "PC-008", "From specs/deploy-adapters/01 and the "
+     "architecture plan."),
     ("PC-029", "Team collaboration: roles, approvals, preview comments", "3 Engineering Mode",
      "Engineering", "Pending", "P2", "", "R-515 gives teams. Covers R-064, R-065."),
     ("PC-030", "Tool registry and MCP gateway with a tool secret broker", "3 Engineering Mode",
@@ -224,6 +271,14 @@ QUEUE = [
      "PC-010", "Covers R-110."),
     ("PC-040", "Environments per project (dev / preview / prod)", "4 Production ops", "Both",
      "Not Started", "P2", "", "Covers R-126 (org and workspace parts exist)."),
+    ("PC-065", "Hosted Android emulators for every user: Linux + KVM pool, per-session "
+     "isolation, browser streaming, metering", "4 Production ops", "Both", "Not Started", "P2",
+     "PC-009, PC-063", "See NATIVE_MOBILE_PREVIEW_PLAN.md. Built and proven on a local Linux "
+     "VM; the server account is plugged in at PC-070."),
+    ("PC-067", "Production readiness sign-off: every blocking gate PG-01..PG-21 has evidence",
+     "4 Production ops", "Platform", "Not Started", "P1", "PC-031..PC-041",
+     "The tracker's Production_Gates sheet. The platform is not called production-ready "
+     "before this."),
     ("PC-041", "HA control plane and canary platform releases", "4 Production ops", "Platform",
      "Not Started", "P2", "PC-009", "Covers R-095, R-106."),
     # Phase 5 - Native, last
@@ -242,8 +297,23 @@ QUEUE = [
      "Both", "Not Started", "P2", "R-575, R-576", "Covers R-049, R-050, R-101."),
     ("PC-045", "Native modules and PWA-to-native migration", "5 Native mobile (last)", "Both",
      "Not Started", "P3", "R-575, R-576", "Covers R-163, R-165."),
+    ("PC-066", "Hosted iOS simulators on Mac hosts (on demand, metered)", "5 Native mobile (last)",
+     "Both", "Not Started", "P3", "PC-064", "Apple allows macOS only on Apple hardware, so this "
+     "needs Mac servers. See NATIVE_MOBILE_PREVIEW_PLAN.md."),
     ("PC-046", "Local Mac agent for iOS builds and simulators", "5 Native mobile (last)",
      "Engineering", "Not Started", "P3", "R-576", "Covers R-054, R-161."),
+    # Phase 6 - Go-live: the founder supplies accounts and keys at the very end
+    ("PC-070", "Credentials handover: founder supplies cloud, database, payment, email, Apple "
+     "and Google accounts and keys; each is plugged in without code changes",
+     "6 Go-live (credentials last)", "Platform", "Not Started", "P0", "Phases 1-5",
+     "Everything before this is built so that only keys and secrets are missing. Keys go into "
+     "the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7."),
+    ("PC-071", "Live proof of every 'Completed - needs live proof' item with the real accounts",
+     "6 Go-live (credentials last)", "Platform", "Not Started", "P0", "PC-070",
+     "Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores."),
+    ("PC-015", "Private beta with real users: product KPIs, minimal support tooling, feedback",
+     "6 Go-live (credentials last)", "Platform", "Not Started", "P0", "PC-071",
+     "Covers R-051, R-107. The platform is not 'live' until strangers use it."),
 ]
 
 # --- Tracker items that are not Done in the v6 tracker ----------------------------------------
@@ -294,8 +364,8 @@ TRACKER = {
     "R-049": (N, "P2", "PC-044", ""),
     "R-050": (N, "P2", "PC-044", ""),
     "R-051": (N, "P0", "PC-015", ""),
-    "R-052": (D, "P3", "", "Emulator streaming: costly; QR on a real phone covers it."),
-    "R-053": (D, "P3", "", "Simulator streaming: as above."),
+    "R-052": (N, "P1", "PC-063", "Android emulator streaming (founder asked for it)."),
+    "R-053": (N, "P2", "PC-064", "iOS Simulator streaming."),
     "R-054": (N, "P3", "PC-046", ""),
     "R-055": (P, "P1", "PC-013", ""),
     "R-056": (N, "P1", "PC-013", ""),
@@ -539,6 +609,134 @@ OTHER = [
     ("GAP-EVALS", "Model eval and benchmark suite for ai/evals",
      "V6_Review_and_Gap_Analysis section 3", N, "P2", "PC-014",
      "Needed to recommend a local model honestly."),
+    ("ARCH-PACKS", "Pack manifest v2, composition engine, ~30 horizontal and ~80 vertical packs",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §4.2, §5.1, §10", N, "P2", "PC-017", ""),
+    ("ARCH-VERTICALS", "Vertical packs for 10 domains (healthcare, mobility, commerce, fintech, food, real estate, education, SaaS, logistics, services)",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §5.1", N, "P2", "PC-017", ""),
+    ("ARCH-PIPELINE", "Vibe pipeline: classify -> select packs -> compose IR -> generate -> provision -> preview in 90 s",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §4.1", P, "P0", "PC-004", "Generate and preview exist; provision is PC-049."),
+    ("ARCH-SUPABASE", "Real managed database for Vibe apps (Supabase in the plan; any managed PostgreSQL here)",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §4.3", N, "P0", "PC-049", "The plan's Supabase Auth/Storage are replaced by the generated backend's own auth and PC-052."),
+    ("ARCH-WEBCONTAINER", "WebContainer instant preview with a local Docker fallback",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §4.1, §11", N, "P0", "PC-007", ""),
+    ("ARCH-ALLOWLIST", "Expanded LLM UI import allowlist",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §4.4", N, "P1", "PC-050", ""),
+    ("ARCH-DOMAIN-IR", "Domain IR: guards, business rules, field masks, row filters, page templates",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §5.2", P, "P1", "R-570", "State machines done (R-566); field masks and row filters are R-570; guards and rules R-571."),
+    ("ARCH-GENERATORS", "Advanced generators: state machine, role app, page template, shared package, seed data, form wizard, realtime",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §5.3", P, "P1", "PC-017", "State machine done (R-566/588/589); shared package R-572; form wizard PC-059; realtime R-569."),
+    ("ARCH-GRADUATION", "Graduation bridge Vibe <-> Engineering",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §6", N, "P1", "PC-051", ""),
+    ("ARCH-STUDIO-MODES", "Mode-aware Studio: Vibe shows only what matters, Engineering shows everything",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §7", N, "P0", "PC-005", ""),
+    ("ARCH-ENG-OPTIONS", "Engineering options: IR editor, dependency graph, pack selector, per-app framework, CI/CD editor",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §7.2", N, "P1", "PC-022", "Flutter in that list is dropped by the stack policy."),
+    ("ARCH-DB-OPTIONS", "Database choice per project (the plan lists PG/MySQL/SQLite)",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §7.2", N, "P2", "PC-048", "MongoDB first (D-8); others if they prove best."),
+    ("ARCH-K8S", "Kubernetes (Helm/Kustomize) and Terraform deploy generator",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 3", N, "P2", "PC-028", ""),
+    ("ARCH-IMPORT-SOURCES", "Import from GitHub/GitLab/Bitbucket, local folder, Vercel/Netlify, Supabase",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §8.1", N, "P1", "R-579", ""),
+    ("ARCH-IMPORT-MODES", "Import modes: analyse only, add feature as PR, modernise UI, add mobile, full migration",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §8.3", N, "P1", "R-578", ""),
+    ("ARCH-PAYMENTS", "Payment flow generator: Stripe Connect, webhooks, subscriptions",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 3", N, "P1", "R-567", ""),
+    ("ARCH-REALTIME", "Realtime adapter: hooks, presence, optimistic UI",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §5.3", N, "P1", "R-569", ""),
+    ("ARCH-FILES", "File upload pipeline: S3 direct, processing, PDF generation",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 3", N, "P1", "PC-052", ""),
+    ("ARCH-NOTIFY", "Notification system: multi-channel, templates, preferences",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 3", N, "P1", "PC-053", ""),
+    ("ARCH-SEARCH", "Search/filter engine (Meilisearch)",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 2", N, "P3", "PC-058", ""),
+    ("ARCH-FORMS", "Form/wizard engine",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §5.3", N, "P2", "PC-059", ""),
+    ("ARCH-PWA", "PWA / offline support",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4", P, "P0", "R-573", ""),
+    ("ARCH-I18N", "i18n framework",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4", N, "P2", "PC-055", ""),
+    ("ARCH-FLAGS", "A/B testing and feature-flag runtime",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4", N, "P3", "PC-056", ""),
+    ("ARCH-OBSERVABILITY", "Advanced observability for generated apps (tracing, dashboards)",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4", N, "P2", "PC-057", ""),
+    ("ARCH-PERF", "Performance: bundle analysis, lazy loading, edge caching",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4", N, "P2", "PC-037", ""),
+    ("ARCH-TESTS", "Generated tests with over 80% coverage",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §12", N, "P1", "PC-054", ""),
+    ("ARCH-TEMPLATES-UX", "Template marketplace UX",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4", N, "P2", "PC-018", ""),
+    ("ARCH-COMPONENT-BROWSER", "Component library browser",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §7.3", N, "P3", "PC-020", ""),
+    ("ARCH-NATIVE", "True native mobile (Kotlin/Compose + Swift/SwiftUI)",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 3", N, "P2", "R-575", "Also R-576."),
+    ("ARCH-ENTERPRISE", "Enterprise: SSO (SAML/OIDC), SCIM, audit export, data residency",
+     "docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4", D, "P3", "", "After launch."),
+    ("PG-01", "All P0 MVP architecture requirements complete",
+     "Tracker Production_Gates", N, "P1", "PC-067", ""),
+    ("PG-02", "Critical flows have automated E2E and regression tests",
+     "Tracker Production_Gates", N, "P1", "PC-037", ""),
+    ("PG-03", "Release qualification suite passes across supported target versions",
+     "Tracker Production_Gates", N, "P2", "PC-037", ""),
+    ("PG-04", "No unresolved critical/high security findings",
+     "Tracker Production_Gates", N, "P1", "PC-032", ""),
+    ("PG-05", "Tenant isolation test suite passes",
+     "Tracker Production_Gates", N, "P0", "PC-009", ""),
+    ("PG-06", "External penetration test completed, critical items fixed",
+     "Tracker Production_Gates", N, "P1", "PC-032", ""),
+    ("PG-07", "On-call, incident runbooks, status page, postmortems",
+     "Tracker Production_Gates", N, "P2", "PC-033", ""),
+    ("PG-08", "Backup restore drill completed",
+     "Tracker Production_Gates", N, "P1", "PC-031", ""),
+    ("PG-09", "Load test meets target concurrent builds/previews",
+     "Tracker Production_Gates", N, "P1", "PC-034", ""),
+    ("PG-10", "SLOs and alerting live",
+     "Tracker Production_Gates", N, "P1", "PC-033", ""),
+    ("PG-11", "Canary/rollback platform release process proven",
+     "Tracker Production_Gates", N, "P2", "PC-041", ""),
+    ("PG-12", "Usage ledger reconciles with provider invoices",
+     "Tracker Production_Gates", N, "P2", "PC-039", ""),
+    ("PG-13", "Spending caps and anomaly kill switches tested",
+     "Tracker Production_Gates", N, "P0", "PC-010", ""),
+    ("PG-14", "Deletion/export/retention workflows tested",
+     "Tracker Production_Gates", N, "P0", "PC-012", ""),
+    ("PG-15", "Redacted diagnostic bundle and support workflow",
+     "Tracker Production_Gates", N, "P1", "PC-015", ""),
+    ("PG-16", "Plan entitlements and quota enforcement tested",
+     "Tracker Production_Gates", N, "P0", "PC-011", ""),
+    ("PG-17", "A fresh AI/developer session resumes the task from Git + durable state",
+     "Tracker Production_Gates", P, "P1", "PC-067", "AGENTS.md, CURRENT_TASK.yaml and this queue exist; the formal drill does not."),
+    ("PG-18", "Local/cloud model providers pass conformance and quality evals",
+     "Tracker Production_Gates", N, "P1", "PC-014", ""),
+    ("PG-19", "Local model endpoint exposure/auth/network policy",
+     "Tracker Production_Gates", P, "P1", "PC-014", "Ollama is loopback-only (R-003)."),
+    ("PG-20", "Expand/migrate/contract migration and rollback rehearsal",
+     "Tracker Production_Gates", N, "P1", "PC-036", ""),
+    ("PG-21", "Prompt/tool poisoning, secret exfiltration, replay tests",
+     "Tracker Production_Gates", N, "P1", "PC-032", ""),
+    ("GA-01", "Portable AI start contract (AGENTS.md + adapters)",
+     "Tracker RND_Gap_Audit", C, "", "", "AGENTS.md, CLAUDE.md."),
+    ("GA-02", "Work resume: PROJECT_STATE + CURRENT_TASK + handoff",
+     "Tracker RND_Gap_Audit", C, "", "", ""),
+    ("GA-03", "First-class Ollama-compatible provider with quality eval",
+     "Tracker RND_Gap_Audit", P, "P1", "PC-014", "Provider done (R-006); eval missing."),
+    ("GA-04", "Per-model safe context registry, no silent truncation",
+     "Tracker RND_Gap_Audit", P, "P1", "PC-014", "Safe input budget exists (R-522)."),
+    ("GA-05", "Route by measured task, eval, latency, context and cost",
+     "Tracker RND_Gap_Audit", P, "P2", "PC-014", ""),
+    ("GA-06", "doctor / bootstrap / status / handoff commands",
+     "Tracker RND_Gap_Audit", C, "", "R-551", ""),
+    ("GA-07", "Environments local -> test -> preview -> staging -> prod with typed config",
+     "Tracker RND_Gap_Audit", P, "P2", "PC-040", ""),
+    ("GA-08", "Expand/migrate/contract database releases",
+     "Tracker RND_Gap_Audit", N, "P1", "PC-036", ""),
+    ("GA-09", "Agentic threat model and red-team corpus",
+     "Tracker RND_Gap_Audit", N, "P1", "PC-032", ""),
+    ("GA-10", "Extended production evidence set",
+     "Tracker RND_Gap_Audit", N, "P1", "PC-067", ""),
+    ("GA-11", "Pinned supply chain, SBOM/provenance, patch SLA",
+     "Tracker RND_Gap_Audit", P, "P2", "PC-035", "Lockfiles pinned; SBOM missing."),
+    ("GA-12", "Feature flags with owner/expiry, canary/blue-green",
+     "Tracker RND_Gap_Audit", N, "P2", "PC-041", ""),
 ]
 
 # --- Founder decisions ---------------------------------------------------------------------------
@@ -552,31 +750,88 @@ DECISIONS = [
      "Accepted 2026-09-26 for the beta."),
     ("D-2", "Hosting cloud and region for the live service", "New infrastructure needs sign-off.",
      "PC-009, PC-008, Phase 4", "One region, one managed Postgres, container hosting; decide after cost quotes.",
-     "Direction accepted 2026-09-26; the provider and spend still need an explicit yes when PC-009 starts."),
+     "Keys last (founder, 2026-09-26): all code and integrations are finished first; the account and keys are plugged in at PC-070."),
     ("D-3", "Payment processor for platform billing", "Paid cloud service needs sign-off.",
      "PC-011", "Stripe (global) with Razorpay for India, as generated apps already support both.",
-     "Direction accepted 2026-09-26; opening the accounts needs an explicit yes when PC-011 starts."),
+     "Keys last (founder, 2026-09-26): all code and integrations are finished first; the account and keys are plugged in at PC-070."),
     ("D-4", "Email verification and password reset required for beta?", "Changes PC-012 scope.",
      "PC-012", "Yes: strangers are signing up.", "Accepted 2026-09-26."),
     ("D-5", "What does an app request produce?",
      "R-562 answers an app request with React Native today.", "PC-003, R-573, R-574",
      "React Native plus PWA + QR.",
-     "2026-09-26: a React Native (Expo) app ready to publish on Google Play and the App Store, AND "
-     "an installable PWA with a QR code. Kotlin/Swift native stays last."),
+     "2026-09-26: when the user names no stack, a React Native (Expo) app ready to publish on "
+     "Google Play and the App Store AND an installable PWA with a QR code. When the user asks for "
+     "native, Kotlin/Compose and Swift/SwiftUI are generated (R-575/R-576)."),
+    ("D-10", "Native mobile preview approach", "The founder asked for emulators and simulators "
+     "without Android Studio or Xcode GUIs, open source first.", "PC-063, PC-064, PC-065, PC-066",
+     "See NATIVE_MOBILE_PREVIEW_PLAN.md.",
+     "2026-09-26: open source first; Android Studio, Xcode GUI and paid services only later."),
     ("D-6", "In-browser preview engine (WebContainers needs a commercial licence; alternatives exist)",
      "PC-007 cannot start without it.", "PC-007", "Evaluate licence cost vs a server-side sandbox preview.",
-     "Evaluation accepted 2026-09-26; any paid licence needs an explicit yes."),
+     "Open source first (founder, 2026-09-26). Keys last (founder, 2026-09-26): all code and integrations are finished first; the account and keys are plugged in at PC-070."),
     ("D-7", "Apple Developer and Google Play accounts; go-ahead for Kotlin/Swift native",
      "Store publishing needs real accounts; standing rule: stop and ask before native work.",
      "R-574, PC-042 and all of Phase 5",
      "Accounts when R-574 is reached; native when Phases 1-4 are done.",
-     "Direction accepted 2026-09-26; the founder creates the accounts when R-574 starts."),
+     "Keys last (founder, 2026-09-26): all code and integrations are finished first; the account and keys are plugged in at PC-070."),
     ("D-8", "Database options beyond PostgreSQL", "Changes every backend adapter.", "PC-048",
      "PostgreSQL default; add MongoDB as an option.",
      "2026-09-26: PostgreSQL by default; MongoDB as an option (more later if they are the best choice)."),
     ("D-9", "Which LLM the platform uses for builds", "Quality and cost of every build.", "PC-047",
      "Use the founder's NVIDIA key.",
      "2026-09-26: NVIDIA nemotron-3-ultra via the NVIDIA API; key, model and base URL are in .env."),
+]
+
+# Where each part of the v6 tracker's phase table (Phase_Roadmap rows 4-8) is covered.
+# (tracker phase, dimension, what the tracker asks, where it is now)
+TRACKER_PHASES = [
+    ("MVP", "Outcome", "Reliable software factory", "Delivered for generation; hardening in Phases 1 and 4."),
+    ("MVP", "Mobile", "Flutter + Expo/RN; native beta", "RN/Expo delivered (R-514, R-545, R-546); Flutter dropped; native in Phase 5 (R-575, R-576)."),
+    ("MVP", "Web/Admin", "Next.js", "Delivered."),
+    ("MVP", "Backend/DB", "Go/Python; Postgres default + DB recommender", "Delivered (Python, Go, Node; PostgreSQL). MongoDB option PC-048."),
+    ("MVP", "Context/Memory", "IR + Context Engine v1", "IR v2 delivered (R-564); memory R-581."),
+    ("MVP", "Runtime/Preview", "Browser first + QR paths; Linux; iOS build", "Local preview + QR delivered; in-browser PC-007; Linux sandboxes delivered (R-486..R-490); iOS build via EAS R-574."),
+    ("MVP", "Workflow/Agents", "Temporal + model gateway", "Gateway delivered; durable runs in R-577/PC-038 (Temporal itself deferred)."),
+    ("MVP", "Git/Delivery", "Task worktrees/PR", "Push delivered (R-501); PRs PC-026."),
+    ("MVP", "Security", "Isolation + secret broker + scans", "Scans and secrets delivered; tenant isolation PC-009."),
+    ("MVP", "Cost", "Cost per successful task", "Ledger delivered; PC-010, PC-039."),
+    ("MVP", "Enterprise", "Foundations only", "Teams delivered (R-515)."),
+    ("MVP", "Gate", "Build/test/deploy evidence", "Build/test evidence delivered (R-560, R-561); deploy evidence PC-008 + PC-071."),
+    ("MID", "Outcome", "Professional developer / agency", "Phases 2 and 3."),
+    ("MID", "Mobile", "Native GA", "Phase 5 (R-575, R-576, R-574, PC-044)."),
+    ("MID", "Web/Admin", "Enhanced", "Phase 2 (R-572, PC-050, PC-019, PC-020)."),
+    ("MID", "Backend/DB", "Store APIs + more DB profiles", "R-574 (stores), PC-048 (MongoDB)."),
+    ("MID", "Context/Memory", "Evidence-backed memory + richer graph", "R-581, R-578."),
+    ("MID", "Runtime/Preview", "Streamed emulators/simulators + Local Agent", "PC-063, PC-064, PC-065, PC-066, PC-046."),
+    ("MID", "Workflow/Agents", "Remote debug + BYOK", "BYOK delivered (R-504); remote/time-travel debug deferred (R-197)."),
+    ("MID", "Git/Delivery", "Existing repo + handover", "R-578, R-579; download/push delivered (R-501)."),
+    ("MID", "Security", "Visual/DAST/SBOM", "PC-032, PC-035, PC-037."),
+    ("MID", "Cost", "Native rebuild avoidance", "PC-044 (build fingerprinting); Expo fingerprint in R-574."),
+    ("MID", "Enterprise", "RBAC/SSO-ready", "PC-029; SSO deferred (ARCH-ENTERPRISE)."),
+    ("MID", "Gate", "Quality + supportability", "PC-037, PC-054, PC-015."),
+    ("ADVANCED", "Outcome", "Enterprise flexibility", "Deferred until after launch, on purpose. Pull any item forward if a customer needs it."),
+    ("ADVANCED", "Mobile", "Device cloud + migration", "Hosted emulators PC-065/PC-066; PWA/RN-to-native migration PC-045; physical device cloud deferred."),
+    ("ADVANCED", "Other dimensions", "BYOC, private runners, multi-region, policy-as-code, private models, two-person approval, predictive scheduling", "Deferred (R-081..R-093, R-130, R-166..R-168, R-201..R-209)."),
+    ("PRODUCTION", "Outcome", "Operational trust", "Phase 4 + Phase 6; signed off by PC-067 against PG-01..PG-21."),
+    ("PRODUCTION", "Web/Admin", "HA hosting", "PC-041."),
+    ("PRODUCTION", "Backend/DB", "HA/DR data, restore drills", "PC-031."),
+    ("PRODUCTION", "Runtime", "Multi-region as sold", "Deferred (R-084) until a customer needs it."),
+    ("PRODUCTION", "Workflow", "Workflow failover", "PC-038."),
+    ("PRODUCTION", "Git/Delivery", "Release qualification", "PC-037."),
+    ("PRODUCTION", "Security", "Pen test / SOC 2-ready controls", "PC-032, PC-035."),
+    ("PRODUCTION", "Cost", "Positive unit economics", "PC-039."),
+    ("PRODUCTION", "Enterprise", "SLA/process", "PC-033."),
+    ("PRODUCTION", "Gate", "Measured outcomes", "PC-015 (beta KPIs), PC-067."),
+]
+
+TARGETS = [
+    ("Vibe: prompt -> live preview", "under 90 seconds"),
+    ("Vibe: prompt -> deployed URL", "under 3 minutes"),
+    ("Engineering: prompt -> multi-app monorepo", "under 3 minutes"),
+    ("Graduation Vibe -> Engineering", "under 30 seconds, nothing lost"),
+    ("Generated code", "TypeScript strict 0 errors; every surface builds"),
+    ("Generated tests", "over 80% coverage"),
+    ("Project import success", "over 90%"),
 ]
 
 GOAL = {
@@ -590,10 +845,13 @@ GOAL = {
     "see the verification report, open GitHub pull requests.",
     "stack": [
         "Web and admin panel: Next.js by default.",
-        "App requested (either mode): a React Native (Expo) app ready to publish on Google Play "
-        "and the App Store, plus an installable PWA with a QR code, by default.",
-        "Native, when asked and only after Phase 5: Kotlin + Jetpack Compose and Swift + SwiftUI, "
-        "best in class, through to Play Store and App Store publishing.",
+        "App requested without naming a stack (either mode): a React Native (Expo) app ready "
+        "to publish on Google Play and the App Store, plus an installable PWA with a QR code.",
+        "App requested as native: Kotlin + Jetpack Compose (Android) and/or Swift + SwiftUI (iOS) "
+        "is generated, best in class, through to store publishing. Until R-575/R-576 ship, the "
+        "React Native app is built instead and the user is told why (the R-559 rule).",
+        "Accounts and keys (cloud, database, payments, email, Apple, Google, sandboxes) come "
+        "last: all code and integrations are finished first, so go-live is only credentials.",
         "Flutter and React.js: not offered. A request for either is answered with the nearest "
         "supported stack and the reason.",
         "Backend: Python by default; Go and Node on request.",
