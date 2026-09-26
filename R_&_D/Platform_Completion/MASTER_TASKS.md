@@ -31,14 +31,14 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 | Completed | 405 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
-| Pending | 62 |
-| Not Started | 265 |
+| Pending | 101 |
+| Not Started | 511 |
 | Superseded | 12 |
-| Deferred | 58 |
+| Deferred | 57 |
 | Dropped | 9 |
-| **Total** | **819** |
+| **Total** | **1103** |
 
-Open work queue: **97** tasks (P0: 18, P1: 41, P2: 26, P3: 12).
+Open work queue: **102** tasks (P0: 18, P1: 41, P2: 29, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -85,72 +85,77 @@ Open work queue: **97** tasks (P0: 18, P1: 41, P2: 26, P3: 12).
 | 36 | PC-076 | Page template engine: domain pages from templates with IR slots (dispatch board, SOAP notes ...) | Not Started | P1 | Both | PC-017 | SPEC-PACK-06C | From specs/pack-framework/06c. |
 | 37 | PC-077 | Rich seed data generator: realistic, domain-aware, deterministic demo data | Pending | P2 | Both | PC-017 | SPEC-PACK-06E | Fixture seeds exist (R-248) and must stay deterministic (R-586). From specs/pack-framework/06e. |
 | 38 | PC-072 | Blueprint conversion: turn RideNow, Bazaar and CareClinic templates into blueprints that regenerate them (golden-file test) | Not Started | P1 | Both | PC-017, PC-075, PC-076 | SPEC-PACK-05 | From specs/pack-framework/05. |
-| 39 | PC-073 | Horizontal packs registry: all 31 universal packs as manifest v2 packs that work alone and compose (HP-* rows) | Pending | P1 | Both | PC-017 | ARCH-PACKS, HP-accessibility, HP-admin-crud, HP-analytics, HP-api-docs, HP-audit-compliance, HP-auth-rbac, HP-cache, HP-communications, HP-feature-flags, HP-files-storage, HP-localization, HP-marketplace-core, HP-multi-app, HP-notifications, HP-observability, HP-payments, HP-performance, HP-pwa, HP-queue, HP-ratings-reviews, HP-rbac-advanced, HP-real-time, HP-referrals-affiliates, HP-scheduling, HP-search, HP-secrets, HP-storybook, HP-subscriptions, HP-testing, HP-webhooks, HP-workflows, SPEC-PACK-03 | Each pack packages a capability built by its own task; core 10 first (auth, db, api, design, admin, payments, notifications, files, realtime, workflows). From specs/pack-framework/03. |
-| 40 | PC-074 | Vertical packs: the first 10 domains (VP-* rows) | Pending | P1 | Both | PC-073, PC-072 | ARCH-VERTICALS, SPEC-PACK-04, VP-commerce-core, VP-edtech-core, VP-fintech-core, VP-food-delivery-core, VP-healthcare-core, VP-hr-core, VP-logistics-core, VP-mobility-core, VP-real-estate-core, VP-saas-b2b-core | Healthcare, mobility and commerce come from the three templates; seven are new. From specs/pack-framework/04. |
-| 41 | PC-018 | Template marketplace v2: blueprint catalog and pack publishing | Not Started | P2 | Vibe | PC-017 | ARCH-TEMPLATES-UX, SPEC-TPL-01 | From specs/template-marketplace/01. |
-| 42 | TPL-POCKET | Template: Pocket, digital wallet (fintech) | Not Started | P2 | Vibe | R-567 |  | Template plan section 6.3. |
-| 43 | TPL-LEARNHUB | Template: LearnHub, LMS + course marketplace | Not Started | P2 | Vibe |  |  | Template plan section 6.4. |
-| 44 | TPL-GLOW | Template: Glow, salon and spa booking | Not Started | P3 | Vibe |  |  | Template plan section 6.5. |
-| 45 | TPL-FRESHCART | Template: FreshCart, quick-commerce grocery | Not Started | P3 | Vibe | R-569 |  | Template plan section 6.6. |
-| 46 | TPL-ESTATELY | Template: Estately, property marketplace + agent CRM | Not Started | P3 | Vibe |  |  | Template plan section 6.7. |
-| 47 | TPL-FIXIT | Template: FixIt, home-services marketplace | Not Started | P3 | Vibe |  |  | Template plan section 6.8. |
-| 48 | TPL-INKWELL | Template: Inkwell Press, blogging/publishing | Not Started | P3 | Vibe |  |  | Template plan section 6.9. |
-| 49 | PC-019 | Visual click-to-edit in the preview (design tokens and copy only) | Not Started | P2 | Vibe |  | BP-CLICKEDIT | Buildout plan idea 'R-520'. |
-| 50 | PC-020 | Brand kit / Style DNA UI across all surfaces | Pending | P2 | Vibe |  | ARCH-COMPONENT-BROWSER, BP-BRANDKIT | brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. |
-| 51 | PC-021 | Screenshot or Figma to app | Not Started | P3 | Vibe |  | BP-FIGMA | Buildout idea 'R-527'. |
-| 52 | PC-048 | Database choice: MongoDB as an option beside PostgreSQL (the default) | Not Started | P2 | Both | R-570 | ARCH-DB-OPTIONS, R-075 | D-8. Every backend adapter needs a Mongo data layer; lifecycle and uniqueness rules move from SQL constraints to schema validation and indexes. Lifts the Phase T 'PostgreSQL only' gate. |
-| 53 | PC-052 | File uploads and storage in generated apps (S3-compatible, presigned URLs, image processing) | Not Started | P1 | Both |  | ARCH-FILES | Local MinIO-style store for dev; any S3 provider on publish. From the architecture plan. |
-| 54 | PC-053 | Notifications in generated apps: email, push (Expo and native), in-app, user preferences | Not Started | P1 | Both | R-568 | ARCH-NOTIFY | R-516 gives email. From the architecture plan. |
-| 55 | PC-054 | Tests generated with every app: API contract, end-to-end (Playwright), unit | Not Started | P1 | Both |  | ARCH-TESTS | Architecture-plan target: over 80% coverage of generated code. |
-| 56 | PC-059 | Form and wizard engine: multi-step, conditional fields, draft autosave | Not Started | P2 | Both |  | ARCH-FORMS | From the architecture plan. |
-| 57 | PC-057 | Generated-app operations: rate limiting, signed webhooks with retries, audit log, error tracking and tracing hooks | Not Started | P2 | Both |  | ARCH-OBSERVABILITY | From the architecture plan (api-gateway, webhooks, audit, observability packs). |
-| 58 | PC-055 | Internationalisation in generated apps (web, admin, mobile) | Not Started | P2 | Both |  | ARCH-I18N | From the architecture plan. |
-| 59 | PC-064 | iOS Simulator preview: Xcode installed and driven from the command line, simulator streamed into the Studio (Mac only) | Not Started | P2 | Both | PC-063 | R-053 | See NATIVE_MOBILE_PREVIEW_PLAN.md. No open-source iOS simulator exists; Xcode is free but Mac-only. |
-| 60 | PC-056 | Feature flags and A/B tests in generated apps | Not Started | P3 | Both |  | ARCH-FLAGS | From the architecture plan. |
-| 61 | PC-058 | Search engine option (Meilisearch or Typesense) beyond keyword search | Not Started | P3 | Both |  | ARCH-SEARCH | From the architecture plan. |
-| 62 | R-583 | Next.js static export mode | Not Started | P3 | Both |  |  | The cheap answer to 'no SSR, no Vercel'. |
+| 39 | PC-073 | Horizontal packs, wave 1: the P0/P1 universal packs as manifest v2 packs that work alone and compose (HP-* rows) | Pending | P1 | Both | PC-017 | ARCH-PACKS, HP-admin-crud, HP-ai-assistant, HP-api-core, HP-app-store-assets, HP-auth-rbac, HP-camera-qr, HP-database-pg, HP-deep-links, HP-design-system, HP-files-storage, HP-geolocation, HP-in-app-purchases, HP-maps-geo, HP-mobile-push, HP-multi-app, HP-multi-tenancy, HP-notifications, HP-offline-sync, HP-payments-core, HP-pwa, HP-queue-jobs, HP-rbac-advanced, HP-realtime-core, HP-rules-engine, HP-scheduling, HP-secure-storage, HP-testing, HP-wallet-ledger, HP-workflows-core, SPEC-PACK-03 | Core first (auth, database, API, design system, admin, payments, notifications, files, realtime, workflows), then the mobile & device and AI packs. Each pack packages a capability built by its own task. Full list: PACK_CATALOG.md. |
+| 40 | PC-074 | Vertical packs, wave 1: healthcare, mobility, commerce (VP-* rows) on every surface: API, web, app, admin panel | Pending | P1 | Both | PC-073, PC-072 | ARCH-VERTICALS, SPEC-PACK-04, VP-affiliates, VP-appointments, VP-auctions-bidding, VP-background-checks, VP-billing-codes, VP-cart-checkout, VP-clinical-trials, VP-commissions, VP-deliveries, VP-dental-clinic, VP-dispatch, VP-drivers, VP-emr, VP-fleet, VP-fulfillment, VP-hipaa-compliance, VP-insurance-commercial, VP-inventory, VP-lab-integration, VP-lab-orders, VP-last-mile, VP-listings, VP-marketplace-seo, VP-mental-health, VP-orders, VP-parking, VP-patients, VP-pharmacy-integration, VP-prescriptions, VP-providers, VP-purchase-orders, VP-returns, VP-reviews, VP-rides, VP-subscriptions-commerce, VP-surge-pricing, VP-telehealth, VP-vehicle-rentals, VP-vendors, VP-wishlists-recommendations | Built from the CareClinic, RideNow and Bazaar templates. |
+| 41 | PC-078 | Horizontal packs, wave 2 (P2 HP-* rows) | Not Started | P2 | Both | PC-073 | HP-accessibility, HP-activity-feed, HP-analytics-events, HP-api-docs, HP-approvals, HP-audit-log, HP-audit-trail, HP-background-tasks, HP-billing-metering, HP-biometrics, HP-calendar-sync, HP-charts-dashboards, HP-ci-cd, HP-cms-marketing-site, HP-communications, HP-compliance-gdpr, HP-compliance-hipaa, HP-config-env, HP-consent-management, HP-coupons-promotions, HP-crash-reporting, HP-crm, HP-custom-domains, HP-data-import-export, HP-data-tables, HP-database-mongo, HP-e-sign, HP-encryption, HP-forms-engine, HP-identity-verification, HP-integration-hub, HP-invoicing, HP-localization, HP-marketplace-payments, HP-moderation, HP-multi-currency, HP-observability, HP-onboarding-invitations, HP-ota-updates, HP-pdf-documents, HP-performance, HP-pricing-engine, HP-ratings-reviews, HP-reporting, HP-rich-text, HP-secrets, HP-security-headers, HP-seo, HP-subscriptions, HP-support-helpdesk, HP-task-management, HP-theming-branding, HP-vector-search, HP-video-calling, HP-webhooks | Full list: PACK_CATALOG.md. |
+| 42 | PC-080 | Vertical packs, wave 2: the PRD's blueprints (quick commerce, fintech, food, real estate, edtech, SaaS/B2B, logistics, home services, beauty & wellness, HR) on every surface | Not Started | P2 | Both | PC-074 | VP-accounts, VP-agent-crm, VP-api-management, VP-assignments, VP-attendance-leave, VP-basket-reorder, VP-bill-payments-upi, VP-candidate-pipeline, VP-cards, VP-catering, VP-certificates, VP-client-profiles, VP-co-living-rentals, VP-cohorts, VP-compliance-aml, VP-compliance-education, VP-compliance-kyc, VP-contracts, VP-couriers, VP-courses, VP-credit-scoring, VP-customer-success, VP-customs, VP-dark-stores, VP-delivery-slots, VP-delivery-tracking, VP-digital-assets, VP-employee-onboarding, VP-enrollments, VP-entitlements, VP-escrow, VP-fleet-management, VP-food-orders, VP-freight-forwarding, VP-ghost-kitchens, VP-grading, VP-grocery-catalog, VP-inventory-wms, VP-investment-analysis, VP-job-lifecycle, VP-job-quotes, VP-jobs-ats, VP-kitchen, VP-last-mile-logistics, VP-ledger-core, VP-lending, VP-listings-re, VP-live-classes, VP-lms-admin, VP-loyalty, VP-marketplace-saas, VP-memberships-packages, VP-menus, VP-offers, VP-open-banking, VP-organizations, VP-payroll, VP-performance-reviews, VP-personal-finance, VP-procurement, VP-properties, VP-property-mgmt, VP-provider-matching, VP-quizzes-exams, VP-regulatory-reporting, VP-restaurants, VP-rider-batching, VP-salon-booking, VP-scim-provisioning, VP-seats, VP-service-catalog, VP-service-menu, VP-service-warranty, VP-shipments, VP-sso-oidc, VP-sso-saml, VP-staff-schedules, VP-substitutions, VP-supply-chain-visibility, VP-table-reservations, VP-teams, VP-tours, VP-trade-finance, VP-transfers, VP-transportation, VP-treasury, VP-usage-metering, VP-video-streaming, VP-warehouses, VP-wealth-management, VP-white-label, VP-yard-management | Each domain's templates (Pocket, FreshCart, Estately, LearnHub, FixIt, Glow) showcase it. |
+| 43 | PC-079 | Horizontal packs, wave 3 (P3 HP-* rows) | Not Started | P3 | Both | PC-078 | HP-api-gateway, HP-backups-restore, HP-bluetooth-nfc, HP-cache-layer, HP-compliance-soc2, HP-data-archival, HP-developer-portal, HP-feature-flags, HP-forecasting, HP-fraud-risk, HP-gamification, HP-git-ops, HP-health-fitness-data, HP-iot-telematics, HP-mcp-gateway, HP-media-player-device, HP-ml-inference, HP-onboarding-tours, HP-plugin-system, HP-referrals-affiliates, HP-search-engine, HP-share-contacts, HP-storybook, HP-tax-compliance | Full list: PACK_CATALOG.md. |
+| 44 | PC-081 | Vertical packs, wave 3: 16 further industries (professional services, content, travel, events, fitness, social, insurance, automotive, POS, manufacturing, legal, civic, utilities, pets, schools, construction, agriculture) on every surface | Not Started | P3 | Both | PC-080 | VP-agents-brokers, VP-agri-marketplace, VP-articles-cms, VP-attendance-school, VP-bids-estimates, VP-bill-of-materials, VP-channel-manager, VP-check-in, VP-citizen-services, VP-claims, VP-class-booking, VP-client-intake, VP-client-portal, VP-clubs-leagues, VP-community-comments, VP-compliance-ps, VP-construction-projects, VP-court-calendar, VP-creator-monetization, VP-customer-loyalty-pos, VP-dating-matching, VP-dealer-inventory, VP-donations-fundraising, VP-editorial-workflow, VP-ev-charging, VP-events, VP-farm-advisory, VP-farms-fields, VP-feeds-posts, VP-field-service, VP-forums-qa, VP-grants, VP-groups-communities, VP-gym-memberships, VP-hotel-pms, VP-invoicing-ps, VP-itineraries, VP-legal-documents, VP-maintenance-cmms, VP-matters-cases, VP-meter-reading, VP-newsletters, VP-outage-management, VP-parent-portal, VP-parts-catalog, VP-paywall-membership, VP-permits-licensing, VP-personal-training, VP-pet-profiles, VP-pet-services, VP-podcasts-video, VP-policies, VP-pos-terminal, VP-premium-billing, VP-production-orders, VP-profiles-social, VP-projects, VP-proposals, VP-quality-control, VP-quotes-underwriting, VP-resource-planning, VP-retainers, VP-school-admin, VP-school-transport, VP-seating-maps, VP-service-center, VP-shift-cash-management, VP-site-diary, VP-sponsors-exhibitors, VP-store-inventory, VP-subcontractors, VP-test-drives, VP-ticketing, VP-time-tracking, VP-tours-activities, VP-travel-booking, VP-utility-billing, VP-vehicle-history, VP-vet-clinic, VP-volunteers, VP-workout-plans | One industry at a time, ordered by what users actually build. |
+| 45 | PC-018 | Template marketplace v2: blueprint catalog and pack publishing | Not Started | P2 | Vibe | PC-017 | ARCH-TEMPLATES-UX, SPEC-TPL-01 | From specs/template-marketplace/01. |
+| 46 | TPL-POCKET | Template: Pocket, digital wallet (fintech) | Not Started | P2 | Vibe | R-567 |  | Template plan section 6.3. |
+| 47 | TPL-LEARNHUB | Template: LearnHub, LMS + course marketplace | Not Started | P2 | Vibe |  |  | Template plan section 6.4. |
+| 48 | TPL-GLOW | Template: Glow, salon and spa booking | Not Started | P3 | Vibe |  |  | Template plan section 6.5. |
+| 49 | TPL-FRESHCART | Template: FreshCart, quick-commerce grocery | Not Started | P3 | Vibe | R-569 |  | Template plan section 6.6. |
+| 50 | TPL-ESTATELY | Template: Estately, property marketplace + agent CRM | Not Started | P3 | Vibe |  |  | Template plan section 6.7. |
+| 51 | TPL-FIXIT | Template: FixIt, home-services marketplace | Not Started | P3 | Vibe |  |  | Template plan section 6.8. |
+| 52 | TPL-INKWELL | Template: Inkwell Press, blogging/publishing | Not Started | P3 | Vibe |  |  | Template plan section 6.9. |
+| 53 | PC-019 | Visual click-to-edit in the preview (design tokens and copy only) | Not Started | P2 | Vibe |  | BP-CLICKEDIT | Buildout plan idea 'R-520'. |
+| 54 | PC-020 | Brand kit / Style DNA UI across all surfaces | Pending | P2 | Vibe |  | ARCH-COMPONENT-BROWSER, BP-BRANDKIT | brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. |
+| 55 | PC-021 | Screenshot or Figma to app | Not Started | P3 | Vibe |  | BP-FIGMA | Buildout idea 'R-527'. |
+| 56 | PC-048 | Database choice: MongoDB as an option beside PostgreSQL (the default) | Not Started | P2 | Both | R-570 | ARCH-DB-OPTIONS, R-075 | D-8. Every backend adapter needs a Mongo data layer; lifecycle and uniqueness rules move from SQL constraints to schema validation and indexes. Lifts the Phase T 'PostgreSQL only' gate. |
+| 57 | PC-052 | File uploads and storage in generated apps (S3-compatible, presigned URLs, image processing) | Not Started | P1 | Both |  | ARCH-FILES | Local MinIO-style store for dev; any S3 provider on publish. From the architecture plan. |
+| 58 | PC-053 | Notifications in generated apps: email, push (Expo and native), in-app, user preferences | Not Started | P1 | Both | R-568 | ARCH-NOTIFY | R-516 gives email. From the architecture plan. |
+| 59 | PC-054 | Tests generated with every app: API contract, end-to-end (Playwright), unit | Not Started | P1 | Both |  | ARCH-TESTS | Architecture-plan target: over 80% coverage of generated code. |
+| 60 | PC-059 | Form and wizard engine: multi-step, conditional fields, draft autosave | Not Started | P2 | Both |  | ARCH-FORMS | From the architecture plan. |
+| 61 | PC-057 | Generated-app operations: rate limiting, signed webhooks with retries, audit log, error tracking and tracing hooks | Not Started | P2 | Both |  | ARCH-OBSERVABILITY | From the architecture plan (api-gateway, webhooks, audit, observability packs). |
+| 62 | PC-055 | Internationalisation in generated apps (web, admin, mobile) | Not Started | P2 | Both |  | ARCH-I18N | From the architecture plan. |
+| 63 | PC-064 | iOS Simulator preview: Xcode installed and driven from the command line, simulator streamed into the Studio (Mac only) | Not Started | P2 | Both | PC-063 | R-053 | See NATIVE_MOBILE_PREVIEW_PLAN.md. No open-source iOS simulator exists; Xcode is free but Mac-only. |
+| 64 | PC-056 | Feature flags and A/B tests in generated apps | Not Started | P3 | Both |  | ARCH-FLAGS | From the architecture plan. |
+| 65 | PC-058 | Search engine option (Meilisearch or Typesense) beyond keyword search | Not Started | P3 | Both |  | ARCH-SEARCH | From the architecture plan. |
+| 66 | R-583 | Next.js static export mode | Not Started | P3 | Both |  |  | The cheap answer to 'no SSR, no Vercel'. |
 | | | **Phase 3 Engineering Mode**: Plan, stack choice, repo import, diffs, verification report, PRs, memory. | | | | | | |
-| 63 | PC-022 | Plan view: see and edit the plan (apps, roles, entities, flows) before building | Not Started | P1 | Engineering | PC-005 | ARCH-ENG-OPTIONS, SPEC-ENG-01 | Buildout idea 'intent cards'; specs/engineering-mode/01. |
-| 64 | PC-023 | Stack chooser: pick web/admin/mobile/backend, refused with a reason when unsupported | Pending | P1 | Engineering | PC-005 | R-135 | R-565 carries the stack in the IR; needs the UI. |
-| 65 | R-577 | Agentic mode core: plan -> edit files -> verify -> repair, bounded, auditable | Not Started | P1 | Engineering |  | R-042, R-176, R-177, R-178, R-179, R-180, R-183, R-184 |  |
-| 66 | R-578 | Import an existing local project (agentic mode, not IR mode) | Not Started | P1 | Engineering | R-577 | ARCH-IMPORT-MODES, R-018, R-076, SPEC-REPO-01, SPEC-STUDIO-02 |  |
-| 67 | R-579 | GitHub import and push-back | Pending | P1 | Engineering | R-578 | ARCH-IMPORT-SOURCES | R-501 can push a generated project; import is missing. |
-| 68 | PC-024 | Diff review per change, with change impact / blast radius | Not Started | P1 | Engineering | R-577 | R-016, R-017, T-5 |  |
-| 69 | PC-025 | Verification report view: per-surface compile, tests, security, in the Studio | Pending | P1 | Engineering |  |  | R-560/R-561/R-508 produce the data; nothing shows it as a report. |
-| 70 | PC-026 | Open GitHub pull requests (branch per change, PR naming) | Not Started | P1 | Engineering | R-579 | R-021, R-125 |  |
-| 71 | R-581 | Memory across sessions: semantic project memory on pgvector | Not Started | P1 | Both |  | R-019, R-027, R-057 |  |
-| 72 | PC-027 | Version timeline and safe, non-destructive rollback | Not Started | P1 | Both |  | BP-TIMELINE, R-022 |  |
-| 73 | PC-051 | Graduation bridge: open a Vibe project in Engineering Mode with nothing lost, and back | Not Started | P1 | Both | PC-005, PC-022 | ARCH-GRADUATION | Projects already keep ir.json, so the IR carries over; custom UI and history must too. From the architecture plan. |
-| 74 | PC-028 | Cloud deploy adapters beyond Vercel/Netlify: containers, Kubernetes (Helm), Terraform | Not Started | P2 | Engineering | PC-008 | ARCH-K8S, SPEC-DEPLOY-01 | From specs/deploy-adapters/01 and the architecture plan. |
-| 75 | PC-029 | Team collaboration: roles, approvals, preview comments | Pending | P2 | Engineering |  | BP-COMMENTS, R-064, R-065 | R-515 gives teams. |
-| 76 | PC-030 | Tool registry and MCP gateway with a tool secret broker | Not Started | P2 | Engineering | R-577 | R-185, R-186, R-187 |  |
+| 67 | PC-022 | Plan view: see and edit the plan (apps, roles, entities, flows) before building | Not Started | P1 | Engineering | PC-005 | ARCH-ENG-OPTIONS, SPEC-ENG-01 | Buildout idea 'intent cards'; specs/engineering-mode/01. |
+| 68 | PC-023 | Stack chooser: pick web/admin/mobile/backend, refused with a reason when unsupported | Pending | P1 | Engineering | PC-005 | R-135 | R-565 carries the stack in the IR; needs the UI. |
+| 69 | R-577 | Agentic mode core: plan -> edit files -> verify -> repair, bounded, auditable | Not Started | P1 | Engineering |  | R-042, R-176, R-177, R-178, R-179, R-180, R-183, R-184 |  |
+| 70 | R-578 | Import an existing local project (agentic mode, not IR mode) | Not Started | P1 | Engineering | R-577 | ARCH-IMPORT-MODES, R-018, R-076, SPEC-REPO-01, SPEC-STUDIO-02 |  |
+| 71 | R-579 | GitHub import and push-back | Pending | P1 | Engineering | R-578 | ARCH-IMPORT-SOURCES | R-501 can push a generated project; import is missing. |
+| 72 | PC-024 | Diff review per change, with change impact / blast radius | Not Started | P1 | Engineering | R-577 | R-016, R-017, T-5 |  |
+| 73 | PC-025 | Verification report view: per-surface compile, tests, security, in the Studio | Pending | P1 | Engineering |  |  | R-560/R-561/R-508 produce the data; nothing shows it as a report. |
+| 74 | PC-026 | Open GitHub pull requests (branch per change, PR naming) | Not Started | P1 | Engineering | R-579 | R-021, R-125 |  |
+| 75 | R-581 | Memory across sessions: semantic project memory on pgvector | Not Started | P1 | Both |  | R-019, R-027, R-057 |  |
+| 76 | PC-027 | Version timeline and safe, non-destructive rollback | Not Started | P1 | Both |  | BP-TIMELINE, R-022 |  |
+| 77 | PC-051 | Graduation bridge: open a Vibe project in Engineering Mode with nothing lost, and back | Not Started | P1 | Both | PC-005, PC-022 | ARCH-GRADUATION | Projects already keep ir.json, so the IR carries over; custom UI and history must too. From the architecture plan. |
+| 78 | PC-028 | Cloud deploy adapters beyond Vercel/Netlify: containers, Kubernetes (Helm), Terraform | Not Started | P2 | Engineering | PC-008 | ARCH-K8S, SPEC-DEPLOY-01 | From specs/deploy-adapters/01 and the architecture plan. |
+| 79 | PC-029 | Team collaboration: roles, approvals, preview comments | Pending | P2 | Engineering |  | BP-COMMENTS, R-064, R-065 | R-515 gives teams. |
+| 80 | PC-030 | Tool registry and MCP gateway with a tool secret broker | Not Started | P2 | Engineering | R-577 | R-185, R-186, R-187 |  |
 | | | **Phase 4 Production ops**: Security audits, backup/recovery, compliance, observability. | | | | | | |
-| 77 | PC-031 | Backup, restore drills and disaster recovery | Not Started | P1 | Platform | PC-009 | PG-08, R-096, R-097 |  |
-| 78 | PC-032 | Security audits: independent pen test, DAST, prompt-injection and MCP isolation tests | Not Started | P1 | Platform | PC-009 | GA-09, PG-04, PG-06, PG-21, R-069, R-098, R-213 |  |
-| 79 | PC-033 | Observability: platform logs, metrics, task trace, SLOs, incident process | Not Started | P1 | Platform | PC-009 | PG-07, PG-10, R-043, R-044, R-094, R-102 |  |
-| 80 | PC-034 | Load and capacity tests | Not Started | P1 | Platform | PC-009 | PG-09, R-103 |  |
-| 81 | PC-035 | Compliance: SOC 2 readiness, SBOM + licence gate, OSS licence review | Not Started | P2 | Platform |  | GA-11, R-070, R-099, R-154, R-190, R-219 |  |
-| 82 | PC-036 | Migration safety checks for generated schema changes | Pending | P1 | Both |  | GA-08, PG-20, R-040 | R-584 flags data loss; needs a real gate. |
-| 83 | PC-037 | Release quality: qualification suite, API contract tests, visual regression, performance budgets | Not Started | P2 | Platform |  | ARCH-PERF, GAP-TESTTOOLS, PG-02, PG-03, R-039, R-059, R-060, R-105 |  |
-| 84 | PC-038 | Reliability of runs: crash-resume, no duplicate side effects, stream replay | Not Started | P2 | Platform | R-577 | R-182, R-210, R-211, R-212, R-216 |  |
-| 85 | PC-039 | Unit economics dashboard | Not Started | P2 | Platform | PC-010 | PG-12, R-110 |  |
-| 86 | PC-040 | Environments per project (dev / preview / prod) | Not Started | P2 | Both |  | GA-07, R-126 |  |
-| 87 | PC-065 | Hosted Android emulators for every user: Linux + KVM pool, per-session isolation, browser streaming, metering | Not Started | P2 | Both | PC-009, PC-063 |  | See NATIVE_MOBILE_PREVIEW_PLAN.md. Built and proven on a local Linux VM; the server account is plugged in at PC-070. |
-| 88 | PC-067 | Production readiness sign-off: every blocking gate PG-01..PG-21 has evidence | Not Started | P1 | Platform | PC-031..PC-041 | GA-10, PG-01, PG-17 | The tracker's Production_Gates sheet. The platform is not called production-ready before this. |
-| 89 | PC-041 | HA control plane and canary platform releases | Not Started | P2 | Platform | PC-009 | GA-12, PG-11, R-095, R-106 |  |
+| 81 | PC-031 | Backup, restore drills and disaster recovery | Not Started | P1 | Platform | PC-009 | PG-08, R-096, R-097 |  |
+| 82 | PC-032 | Security audits: independent pen test, DAST, prompt-injection and MCP isolation tests | Not Started | P1 | Platform | PC-009 | GA-09, PG-04, PG-06, PG-21, R-069, R-098, R-213 |  |
+| 83 | PC-033 | Observability: platform logs, metrics, task trace, SLOs, incident process | Not Started | P1 | Platform | PC-009 | PG-07, PG-10, R-043, R-044, R-094, R-102 |  |
+| 84 | PC-034 | Load and capacity tests | Not Started | P1 | Platform | PC-009 | PG-09, R-103 |  |
+| 85 | PC-035 | Compliance: SOC 2 readiness, SBOM + licence gate, OSS licence review | Not Started | P2 | Platform |  | GA-11, R-070, R-099, R-154, R-190, R-219 |  |
+| 86 | PC-036 | Migration safety checks for generated schema changes | Pending | P1 | Both |  | GA-08, PG-20, R-040 | R-584 flags data loss; needs a real gate. |
+| 87 | PC-037 | Release quality: qualification suite, API contract tests, visual regression, performance budgets | Not Started | P2 | Platform |  | ARCH-PERF, GAP-TESTTOOLS, PG-02, PG-03, R-039, R-059, R-060, R-105 |  |
+| 88 | PC-038 | Reliability of runs: crash-resume, no duplicate side effects, stream replay | Not Started | P2 | Platform | R-577 | R-182, R-210, R-211, R-212, R-216 |  |
+| 89 | PC-039 | Unit economics dashboard | Not Started | P2 | Platform | PC-010 | PG-12, R-110 |  |
+| 90 | PC-040 | Environments per project (dev / preview / prod) | Not Started | P2 | Both |  | GA-07, R-126 |  |
+| 91 | PC-065 | Hosted Android emulators for every user: Linux + KVM pool, per-session isolation, browser streaming, metering | Not Started | P2 | Both | PC-009, PC-063 |  | See NATIVE_MOBILE_PREVIEW_PLAN.md. Built and proven on a local Linux VM; the server account is plugged in at PC-070. |
+| 92 | PC-067 | Production readiness sign-off: every blocking gate PG-01..PG-21 has evidence | Not Started | P1 | Platform | PC-031..PC-041 | GA-10, PG-01, PG-17 | The tracker's Production_Gates sheet. The platform is not called production-ready before this. |
+| 93 | PC-041 | HA control plane and canary platform releases | Not Started | P2 | Platform | PC-009 | GA-12, PG-11, R-095, R-106 |  |
 | | | **Phase 5 Native mobile (last)**: Kotlin/Compose + Swift/SwiftUI, through to Play Store and App Store. | | | | | | |
-| 90 | PC-042 | Native go-ahead gate: founder approval, toolchains, Apple and Google accounts | Not Started | P2 | Both | Phases 1-4 |  | Standing rule: stop and ask before native mobile work. |
-| 91 | R-575 | Native Android: Kotlin + Jetpack Compose, best in class | Not Started | P2 | Both | PC-042 | ARCH-NATIVE, R-035, R-144, R-145, SPEC-NATIVE-01 |  |
-| 92 | R-576 | Native iOS: Swift + SwiftUI, best in class | Not Started | P2 | Both | PC-042 | R-036, R-146, R-147 |  |
-| 93 | PC-043 | Native recommendation: when to offer native instead of PWA | Not Started | P2 | Both | R-575, R-576 | R-120 |  |
-| 94 | PC-044 | Signed native builds (AAB/IPA), signing-key hardening, and store submission through the R-574 pipeline | Not Started | P2 | Both | R-575, R-576 | R-049, R-050, R-101 |  |
-| 95 | PC-045 | Native modules and PWA-to-native migration | Not Started | P3 | Both | R-575, R-576 | R-163, R-165 |  |
-| 96 | PC-066 | Hosted iOS simulators on Mac hosts (on demand, metered) | Not Started | P3 | Both | PC-064 |  | Apple allows macOS only on Apple hardware, so this needs Mac servers. See NATIVE_MOBILE_PREVIEW_PLAN.md. |
-| 97 | PC-046 | Local Mac agent for iOS builds and simulators | Not Started | P3 | Engineering | R-576 | R-054, R-161 |  |
+| 94 | PC-042 | Native go-ahead gate: founder approval, toolchains, Apple and Google accounts | Not Started | P2 | Both | Phases 1-4 |  | Standing rule: stop and ask before native mobile work. |
+| 95 | R-575 | Native Android: Kotlin + Jetpack Compose, best in class | Not Started | P2 | Both | PC-042 | ARCH-NATIVE, R-035, R-144, R-145, SPEC-NATIVE-01 |  |
+| 96 | R-576 | Native iOS: Swift + SwiftUI, best in class | Not Started | P2 | Both | PC-042 | R-036, R-146, R-147 |  |
+| 97 | PC-043 | Native recommendation: when to offer native instead of PWA | Not Started | P2 | Both | R-575, R-576 | R-120 |  |
+| 98 | PC-044 | Signed native builds (AAB/IPA), signing-key hardening, and store submission through the R-574 pipeline | Not Started | P2 | Both | R-575, R-576 | R-049, R-050, R-101 |  |
+| 99 | PC-082 | Native implementations of every mobile & device pack and every vertical pack's app screens in Kotlin/Compose and Swift/SwiftUI | Not Started | P2 | Both | R-575, R-576 |  | PRD §5.1: packs are stack-aware; React Native implementations come first with the pack itself. |
+| 100 | PC-045 | Native modules and PWA-to-native migration | Not Started | P3 | Both | R-575, R-576 | R-163, R-165 |  |
+| 101 | PC-066 | Hosted iOS simulators on Mac hosts (on demand, metered) | Not Started | P3 | Both | PC-064 |  | Apple allows macOS only on Apple hardware, so this needs Mac servers. See NATIVE_MOBILE_PREVIEW_PLAN.md. |
+| 102 | PC-046 | Local Mac agent for iOS builds and simulators | Not Started | P3 | Engineering | R-576 | R-054, R-161 |  |
 | | | **Phase 6 Go-live (credentials last)**: The founder supplies accounts and keys; every live proof is run; the platform opens to real users. | | | | | | |
-| 98 | PC-070 | Credentials handover: founder supplies cloud, database, payment, email, Apple and Google accounts and keys; each is plugged in without code changes | Not Started | P0 | Platform | Phases 1-5 |  | Everything before this is built so that only keys and secrets are missing. Keys go into the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7. |
-| 99 | PC-071 | Live proof of every 'Completed - needs live proof' item with the real accounts | Not Started | P0 | Platform | PC-070 |  | Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. |
-| 100 | PC-015 | Private beta with real users: product KPIs, minimal support tooling, feedback | Not Started | P0 | Platform | PC-071 | PG-15, R-051, R-107, R-513 | The platform is not 'live' until strangers use it. |
+| 103 | PC-070 | Credentials handover: founder supplies cloud, database, payment, email, Apple and Google accounts and keys; each is plugged in without code changes | Not Started | P0 | Platform | Phases 1-5 |  | Everything before this is built so that only keys and secrets are missing. Keys go into the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7. |
+| 104 | PC-071 | Live proof of every 'Completed - needs live proof' item with the real accounts | Not Started | P0 | Platform | PC-070 |  | Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. |
+| 105 | PC-015 | Private beta with real users: product KPIs, minimal support tooling, feedback | Not Started | P0 | Platform | PC-071 | PG-15, R-051, R-107, R-513 | The platform is not 'live' until strangers use it. |
 
 ## Founder decisions
 
@@ -259,18 +264,46 @@ What each tracker phase asks for, and where it is covered:
 | GA-07 | Environments local -> test -> preview -> staging -> prod with typed config | Tracker RND_Gap_Audit | Pending | P2 | PC-040 |  |
 | GA-11 | Pinned supply chain, SBOM/provenance, patch SLA | Tracker RND_Gap_Audit | Pending | P2 | PC-035 | Lockfiles pinned; SBOM missing. |
 | GAP-TESTTOOLS | Pin the testing toolchain (Playwright, pytest, go test, k6) | V6_Review_and_Gap_Analysis section 3 | Pending | P2 | PC-037 | pytest/unittest, go test and Playwright (templates) are in use; k6 is not. |
-| HP-accessibility | Horizontal pack accessibility: WCAG 2.1 AA, axe-core automated checks | specs/pack-framework/03 | Pending | P2 | PC-073 | Generated UI is accessible (R-296); automated axe checks new. |
-| HP-admin-crud | Horizontal pack admin-crud: Generated admin: tables, filters, bulk actions, audit log, exports | specs/pack-framework/03 | Pending | P1 | PC-073 | Admin app exists (R-542, R-270, R-271). |
-| HP-analytics | Horizontal pack analytics: Event tracking, PostHog/GA4/Mixpanel, dashboards, funnels | specs/pack-framework/03 | Pending | P2 | PC-073 | Published-app analytics exists (R-513). |
-| HP-api-docs | Horizontal pack api-docs: OpenAPI, Swagger UI, Postman collection, SDKs | specs/pack-framework/03 | Pending | P2 | PC-073 | OpenAPI exists (R-260, R-588). |
-| HP-auth-rbac | Horizontal pack auth-rbac: Login, register, roles, permissions, JWT, sessions, passkeys | specs/pack-framework/03 | Pending | P1 | PC-073 | Auth exists (R-461, R-241..R-243, R-591 for Go); passkeys new. |
-| HP-multi-app | Horizontal pack multi-app: Shared API, cross-app auth, preview proxy, deploy coordination | specs/pack-framework/03 | Pending | P1 | PC-073 | Ecosystem monorepo exists (R-554, R-447, R-553). |
-| HP-notifications | Horizontal pack notifications: Email/SMS/push, templates, preferences, in-app centre, digest | specs/pack-framework/03 | Pending | P1 | PC-073 | Email exists (R-516); rest PC-053. |
-| HP-payments | Horizontal pack payments: Stripe/Razorpay checkout, webhooks, subscriptions, invoices, refunds | specs/pack-framework/03 | Pending | P1 | PC-073 | Checkout exists (R-512); ledger/refunds R-567. |
-| HP-pwa | Horizontal pack pwa: Service worker, offline, push, background sync | specs/pack-framework/03 | Pending | P0 | PC-073 | R-573. |
-| HP-search | Horizontal pack search: Meilisearch/Typesense, facets, saved searches, synonyms | specs/pack-framework/03 | Pending | P3 | PC-073 | Keyword search exists (R-261); engine PC-058. |
-| HP-secrets | Horizontal pack secrets: Env/Vault management, rotation, audit | specs/pack-framework/03 | Pending | P2 | PC-073 | Platform secrets exist (R-503); generated-app side new. |
-| HP-workflows | Horizontal pack workflows: State machine engine: transitions, guards, actions, audit | specs/pack-framework/03 | Pending | P1 | PC-073 | Transitions done (R-566, R-588, R-589); guards/actions R-571; buttons R-590. |
+| HP-accessibility | Horizontal pack accessibility: WCAG 2.1 AA, automated axe checks | spec | Pending | P2 | PC-078 | Accessible UI exists (R-296). |
+| HP-activity-feed | Horizontal pack activity-feed: Activity streams, timelines, follow/subscribe | new (registry dependency) | Pending | P2 | PC-078 | Timeline component exists (R-336). |
+| HP-admin-crud | Horizontal pack admin-crud: Generated admin: tables, filters, bulk actions, exports | spec | Pending | P1 | PC-073 | Admin app exists (R-542, R-270, R-271). |
+| HP-analytics-events | Horizontal pack analytics-events: Event tracking, funnels, cohorts (PostHog/GA4) | spec, registry | Pending | P2 | PC-078 | Published-app analytics exists (R-513). |
+| HP-api-core | Horizontal pack api-core: REST API, validation, OpenAPI, errors, rate limiting | registry | Pending | P1 | PC-073 | Python/Go/Node APIs exist (R-229, R-230, R-517). |
+| HP-api-docs | Horizontal pack api-docs: OpenAPI, Swagger UI, Postman collection, SDKs | spec | Pending | P2 | PC-078 | OpenAPI exists (R-260, R-588). |
+| HP-app-store-assets | Horizontal pack app-store-assets: Icons, splash, screenshots, store listing metadata | new | Pending | P1 | PC-073 | Icons and EAS config exist (R-546, R-547); R-574. |
+| HP-auth-rbac | Horizontal pack auth-rbac: Login, register, roles, sessions, MFA, OAuth, passkeys | spec, registry | Pending | P1 | PC-073 | Auth exists (R-461, R-241..R-243); Go login R-591. |
+| HP-camera-qr | Horizontal pack camera-qr: Camera, photo/video capture, QR and barcode scanning | PRD (+ registry 'barcode') | Pending | P1 | PC-073 | QR generation exists (R-382). |
+| HP-charts-dashboards | Horizontal pack charts-dashboards: Charts, dashboards, live series | registry | Pending | P2 | PC-078 | Chart suite exists (R-370). |
+| HP-ci-cd | Horizontal pack ci-cd: CI workflows, containers, Helm, preview environments | registry | Pending | P2 | PC-078 | CI/CD workflow generation exists (R-452). |
+| HP-communications | Horizontal pack communications: 1:1 and group chat, threads, mentions, reactions, attachments | spec, registry | Pending | P2 | PC-078 | Chat component exists (R-384). |
+| HP-config-env | Horizontal pack config-env: Typed env config, secret references, multi-environment | registry | Pending | P2 | PC-078 | Credential templates exist (R-547). |
+| HP-consent-management | Horizontal pack consent-management: Consent capture and ledger, cookie preferences | new (registry dependency) | Pending | P2 | PC-078 | Cookie consent component exists (R-402). |
+| HP-custom-domains | Horizontal pack custom-domains: Custom domains, DNS, TLS certificates | new (registry dependency 'dns') | Pending | P2 | PC-078 | Custom domains exist for published apps (R-510). |
+| HP-data-import-export | Horizontal pack data-import-export: CSV/Excel import with mapping and validation; bulk export | new | Pending | P2 | PC-078 | CSV/JSON export exists (R-271, R-308). |
+| HP-data-tables | Horizontal pack data-tables: Virtualised tables, grouping, column picker, export | registry | Pending | P2 | PC-078 | Data grid exists (R-329). |
+| HP-database-pg | Horizontal pack database-pg: PostgreSQL schema, migrations, seeds, row-level security | registry | Pending | P1 | PC-073 | Schema/migrations/seeds exist (R-238, R-248). |
+| HP-design-system | Horizontal pack design-system: Design tokens, components, motion, dark mode | registry | Pending | P1 | PC-073 | Design system exists (R-558, R-324, R-491). |
+| HP-e-sign | Horizontal pack e-sign: Document signing, signer flows, certificates | new (registry dependency) | Pending | P2 | PC-078 | Signature pad exists (R-372). |
+| HP-integration-hub | Horizontal pack integration-hub: Connectors (Slack, HubSpot, Salesforce ...), workflow builder | registry | Pending | P2 | PC-078 | Connectors v1 exist (R-511). |
+| HP-maps-geo | Horizontal pack maps-geo: Maps, geocoding, geofences, routes, address autocomplete | registry ('mapping', listed under mobility), PRD | Pending | P1 | PC-073 | Geo-map component exists (R-387). |
+| HP-media-player-device | Horizontal pack media-player-device: Audio/video playback, background audio, casting | new | Pending | P3 | PC-079 | Web media players exist (R-376, R-390). |
+| HP-multi-app | Horizontal pack multi-app: Shared API, cross-app auth, preview proxy, deploy coordination | spec | Pending | P1 | PC-073 | Ecosystem monorepo exists (R-554, R-447, R-553). |
+| HP-multi-currency | Horizontal pack multi-currency: Currencies, exchange rates, price lists | registry (listed under commerce) | Pending | P2 | PC-078 | Currency input exists (R-409). |
+| HP-notifications | Horizontal pack notifications: Email, SMS, push, in-app centre, preferences, digests | spec, registry | Pending | P1 | PC-073 | Email exists (R-516); PC-053. |
+| HP-onboarding-tours | Horizontal pack onboarding-tours: Product tours and spotlight guides | new | Pending | P3 | PC-079 | Tour component exists (R-363). |
+| HP-payments-core | Horizontal pack payments-core: Stripe/Razorpay/Paddle payments, refunds, disputes | spec, registry, PRD | Pending | P1 | PC-073 | Checkout exists (R-512). |
+| HP-pdf-documents | Horizontal pack pdf-documents: Document templates, PDF generation, document store | new (registry dependencies 'documents', 'pdf-generation') | Pending | P2 | PC-078 | PDF viewer component exists (R-388). |
+| HP-pwa | Horizontal pack pwa: Installable app, service worker, offline, push, QR | spec | Pending | P0 | PC-073 | R-573. |
+| HP-ratings-reviews | Horizontal pack ratings-reviews: Stars, reviews, moderation, aggregates | spec | Pending | P2 | PC-078 | Rating component exists (R-333). |
+| HP-rich-text | Horizontal pack rich-text: Rich text editor, mentions, slash commands | registry | Pending | P2 | PC-078 | Markdown editor exists (R-365). |
+| HP-scheduling | Horizontal pack scheduling: Calendars, recurrence, conflicts, time zones, bookings, reminders | spec, registry | Pending | P1 | PC-073 | Calendar/time-picker components exist (R-366, R-371). |
+| HP-search-engine | Horizontal pack search-engine: Meilisearch/Typesense, facets, typo tolerance | spec, registry | Pending | P3 | PC-079 | Keyword search exists (R-261); PC-058. |
+| HP-secrets | Horizontal pack secrets: Secret management, rotation, audit | spec | Pending | P2 | PC-078 | Platform secrets exist (R-503). |
+| HP-seo | Horizontal pack seo: Metadata, sitemaps, structured data, AI-search readiness | new (registry dependency) | Pending | P2 | PC-078 | SEO exists (R-505). |
+| HP-task-management | Horizontal pack task-management: Tasks, assignees, due dates, boards | new (registry dependency 'tasks') | Pending | P2 | PC-078 | Kanban component exists (R-367). |
+| HP-theming-branding | Horizontal pack theming-branding: Brand kit applied to every surface | new | Pending | P2 | PC-078 | brand.json exists (R-548); PC-020. |
+| HP-webhooks | Horizontal pack webhooks: Outgoing webhooks, retries, signatures, replay | spec, registry | Pending | P2 | PC-078 | Cross-surface webhooks exist (R-448); PC-057. |
+| HP-workflows-core | Horizontal pack workflows-core: State machines, transitions, guards, actions, audit | spec, registry | Pending | P1 | PC-073 | Transitions done (R-566, R-588, R-589); guards R-571; buttons R-590. |
 | PG-17 | A fresh AI/developer session resumes the task from Git + durable state | Tracker Production_Gates | Pending | P1 | PC-067 | AGENTS.md, CURRENT_TASK.yaml and this queue exist; the formal drill does not. |
 | PG-19 | Local model endpoint exposure/auth/network policy | Tracker Production_Gates | Pending | P1 | PC-014 | Ollama is loopback-only (R-003). |
 | R-027 | pgvector initially | Execution_Tracker_v6 | Pending | P1 | R-581 | Extension installed, no embeddings table. |
@@ -288,9 +321,20 @@ What each tracker phase asks for, and where it is covered:
 | SPEC-PACK-06E | Rich seed data generator | specs/pack-framework/06e | Pending | P2 | PC-077 | Seeds exist (R-248); the spec asks for realistic volume. |
 | SPEC-TS-01 | Instant chat -> pretty UI | specs/table-stakes/01 | Pending | P0 | PC-006 | Draft spec. |
 | SPEC-TS-03 | One-click deploy | specs/table-stakes/03 | Pending | P0 | PC-008 | Draft spec. |
-| VP-commerce-core | Vertical pack commerce-core: Listings, cart, checkout, inventory, fulfilment, vendors, commissions | specs/pack-framework/04 | Pending | P1 | PC-074 | From the Bazaar template (PC-072). |
-| VP-healthcare-core | Vertical pack healthcare-core: Patients, providers, appointments, EMR, telehealth, prescriptions, labs | specs/pack-framework/04 | Pending | P1 | PC-074 | From the CareClinic template (PC-072). |
-| VP-mobility-core | Vertical pack mobility-core: Rides, drivers, dispatch, routing, surge, earnings | specs/pack-framework/04 | Pending | P1 | PC-074 | From the RideNow template (PC-072). |
+| VP-appointments | Vertical pack appointments: Appointments, slots, reminders, waitlist | registry | Pending | P1 | PC-074 | CareClinic template. |
+| VP-cart-checkout | Vertical pack cart-checkout: Cart, coupons, checkout sessions | registry | Pending | P1 | PC-074 | Bazaar template. |
+| VP-commissions | Vertical pack commissions: Commission rules, splits, payout cycles | registry | Pending | P1 | PC-074 | Bazaar ledger. |
+| VP-dispatch | Vertical pack dispatch: Zones, assignment rules, heatmaps | registry | Pending | P1 | PC-074 | RideNow template (partial). |
+| VP-drivers | Vertical pack drivers: Drivers, vehicles, documents, earnings | registry | Pending | P1 | PC-074 | RideNow template. |
+| VP-emr | Vertical pack emr: Encounters, notes, diagnoses, vitals | registry | Pending | P1 | PC-074 | CareClinic template (partial). |
+| VP-listings | Vertical pack listings: Listings, categories, variants, media | registry | Pending | P1 | PC-074 | Bazaar template. |
+| VP-orders | Vertical pack orders: Orders, line items, timelines | new (registry dependency) | Pending | P1 | PC-074 | Bazaar template. |
+| VP-patients | Vertical pack patients: Patients, records, insurance, consent | registry | Pending | P1 | PC-074 | CareClinic template. |
+| VP-prescriptions | Vertical pack prescriptions: Prescriptions, medications, pharmacies | registry | Pending | P1 | PC-074 | CareClinic template (partial). |
+| VP-providers | Vertical pack providers: Providers, specialties, licences, schedules | registry | Pending | P1 | PC-074 | CareClinic template. |
+| VP-rides | Vertical pack rides: Rides, routes, fares, matching, receipts | registry | Pending | P1 | PC-074 | RideNow template. |
+| VP-telehealth | Vertical pack telehealth: Video consults, consent, technical checks | registry | Pending | P1 | PC-074 | CareClinic template. |
+| VP-vendors | Vertical pack vendors: Vendors, storefronts, verification | registry | Pending | P1 | PC-074 | Bazaar template. |
 | ARCH-ALLOWLIST | Expanded LLM UI import allowlist | docs/ARCHITECTURE_MASTER_PLAN.md §4.4 | Not Started | P1 | PC-050 |  |
 | ARCH-COMPONENT-BROWSER | Component library browser | docs/ARCHITECTURE_MASTER_PLAN.md §7.3 | Not Started | P3 | PC-020 |  |
 | ARCH-DB-OPTIONS | Database choice per project (the plan lists PG/MySQL/SQLite) | docs/ARCHITECTURE_MASTER_PLAN.md §7.2 | Not Started | P2 | PC-048 | MongoDB first (D-8); others if they prove best. |
@@ -330,25 +374,74 @@ What each tracker phase asks for, and where it is covered:
 | GA-12 | Feature flags with owner/expiry, canary/blue-green | Tracker RND_Gap_Audit | Not Started | P2 | PC-041 |  |
 | GAP-EVALS | Model eval and benchmark suite for ai/evals | V6_Review_and_Gap_Analysis section 3 | Not Started | P2 | PC-014 | Needed to recommend a local model honestly. |
 | GAP-LEGAL | Legal layer: ToS, DPA, code-handling agreement | V6_Review_and_Gap_Analysis section 3 | Not Started | P0 | PC-012 |  |
-| HP-audit-compliance | Horizontal pack audit-compliance: Immutable audit log, GDPR export, retention, lineage | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-057, PC-012. |
-| HP-cache | Horizontal pack cache: Redis/Valkey, invalidation | specs/pack-framework/03 | Not Started | P3 | PC-073 | New pack. |
-| HP-communications | Horizontal pack communications: Chat, comments, mentions, threads, attachments, reactions | specs/pack-framework/03 | Not Started | P2 | PC-073 | New pack; needs R-569. |
-| HP-feature-flags | Horizontal pack feature-flags: Rollouts, targeting, experiments, kill switches | specs/pack-framework/03 | Not Started | P3 | PC-073 | PC-056. |
-| HP-files-storage | Horizontal pack files-storage: S3 presigned uploads, progress, preview, PDF generation, CDN | specs/pack-framework/03 | Not Started | P1 | PC-073 | PC-052. |
-| HP-localization | Horizontal pack localization: i18n, RTL, currency, date/number formatting | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-055. |
-| HP-marketplace-core | Horizontal pack marketplace-core: Two-sided matching, commissions, payouts, disputes, escrow | specs/pack-framework/03 | Not Started | P2 | PC-073 | R-567; Bazaar template shows the shape. |
-| HP-observability | Horizontal pack observability: OpenTelemetry, logs, metrics, traces, Sentry, alerting | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-057. |
-| HP-performance | Horizontal pack performance: Bundle analysis, Core Web Vitals, Lighthouse CI | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-037. |
-| HP-queue | Horizontal pack queue: Background jobs, dead letter, priority, scheduling | specs/pack-framework/03 | Not Started | P1 | PC-073 | R-568. |
-| HP-ratings-reviews | Horizontal pack ratings-reviews: Stars, reviews, moderation, aggregates, helpful votes | specs/pack-framework/03 | Not Started | P2 | PC-073 | New pack. |
-| HP-rbac-advanced | Horizontal pack rbac-advanced: ABAC, resource-level permissions, org hierarchies, impersonation | specs/pack-framework/03 | Not Started | P1 | PC-073 | R-570. |
-| HP-real-time | Horizontal pack real-time: Presence, live updates, typing indicators | specs/pack-framework/03 | Not Started | P1 | PC-073 | R-569. |
-| HP-referrals-affiliates | Horizontal pack referrals-affiliates: Codes, tracking, rewards, payouts | specs/pack-framework/03 | Not Started | P3 | PC-073 | New pack; payouts need R-567. |
-| HP-scheduling | Horizontal pack scheduling: Calendars, recurrence, conflicts, time zones, bookings, reminders | specs/pack-framework/03 | Not Started | P1 | PC-073 | New pack; reminders need R-568. |
-| HP-storybook | Horizontal pack storybook: Component docs, visual tests, design playground | specs/pack-framework/03 | Not Started | P3 | PC-073 | New pack. |
-| HP-subscriptions | Horizontal pack subscriptions: Plans, trials, up/downgrades, proration, dunning | specs/pack-framework/03 | Not Started | P2 | PC-073 | R-567. |
-| HP-testing | Horizontal pack testing: Playwright E2E, contract, visual regression | specs/pack-framework/03 | Not Started | P1 | PC-073 | PC-054. |
-| HP-webhooks | Horizontal pack webhooks: Outgoing webhooks, retry, signatures, dead letter | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-057. |
+| HP-ai-assistant | Horizontal pack ai-assistant: In-app AI: chat assistant, summarise, extract, generate, over the app's own data | new | Not Started | P1 | PC-073 | Uses the platform's model gateway pattern; keys at PC-070. |
+| HP-api-gateway | Horizontal pack api-gateway: Rate limits, API keys, transformations | registry | Not Started | P3 | PC-079 |  |
+| HP-approvals | Horizontal pack approvals: Multi-step approval chains, escalation, delegation | registry | Not Started | P2 | PC-078 |  |
+| HP-audit-log | Horizontal pack audit-log: Append-only, tamper-evident audit log with query API | registry | Not Started | P2 | PC-078 | PC-057. |
+| HP-audit-trail | Horizontal pack audit-trail: Entity history, diffs, point-in-time queries | registry | Not Started | P2 | PC-078 |  |
+| HP-background-tasks | Horizontal pack background-tasks: Background fetch, scheduled local work | new | Not Started | P2 | PC-078 |  |
+| HP-backups-restore | Horizontal pack backups-restore: Point-in-time backups and self-service restore for generated apps | new | Not Started | P3 | PC-079 |  |
+| HP-billing-metering | Horizontal pack billing-metering: Usage metering, rating, invoicing, dunning | registry | Not Started | P2 | PC-078 |  |
+| HP-biometrics | Horizontal pack biometrics: Face ID / Touch ID / BiometricPrompt, passkeys | PRD | Not Started | P2 | PC-078 |  |
+| HP-bluetooth-nfc | Horizontal pack bluetooth-nfc: Bluetooth LE and NFC | new | Not Started | P3 | PC-079 |  |
+| HP-cache-layer | Horizontal pack cache-layer: Redis/Valkey caching, invalidation, locks | spec, registry | Not Started | P3 | PC-079 |  |
+| HP-calendar-sync | Horizontal pack calendar-sync: Google/Outlook/iCal sync | new (registry dependency 'calendar') | Not Started | P2 | PC-078 |  |
+| HP-cms-marketing-site | Horizontal pack cms-marketing-site: Landing pages, blog, CMS for non-developers | new | Not Started | P2 | PC-078 |  |
+| HP-compliance-gdpr | Horizontal pack compliance-gdpr: Data export, deletion, consent, retention | registry | Not Started | P2 | PC-078 | PC-012. |
+| HP-compliance-hipaa | Horizontal pack compliance-hipaa: PHI masking, access audit, breach notification | registry | Not Started | P2 | PC-078 |  |
+| HP-compliance-soc2 | Horizontal pack compliance-soc2: Control mapping, evidence collection, access reviews | registry | Not Started | P3 | PC-079 |  |
+| HP-coupons-promotions | Horizontal pack coupons-promotions: Coupons, discounts, promotions, gift cards | new | Not Started | P2 | PC-078 |  |
+| HP-crash-reporting | Horizontal pack crash-reporting: Crash and ANR reporting with symbolication | new | Not Started | P2 | PC-078 |  |
+| HP-crm | Horizontal pack crm: Contacts, companies, leads, pipeline, activities | new (registry dependency) | Not Started | P2 | PC-078 |  |
+| HP-data-archival | Horizontal pack data-archival: Tiered storage, retention, legal hold | registry | Not Started | P3 | PC-079 |  |
+| HP-database-mongo | Horizontal pack database-mongo: MongoDB collections, schema validation, indexes, seeds | new | Not Started | P2 | PC-078 | Founder decision D-8; built by PC-048. |
+| HP-deep-links | Horizontal pack deep-links: Universal/app links, share links into screens | new | Not Started | P1 | PC-073 |  |
+| HP-developer-portal | Horizontal pack developer-portal: API keys, docs, usage for third-party developers | new (registry dependency) | Not Started | P3 | PC-079 |  |
+| HP-encryption | Horizontal pack encryption: Field-level encryption, key rotation, KMS | registry | Not Started | P2 | PC-078 |  |
+| HP-feature-flags | Horizontal pack feature-flags: Flags, rollouts, experiments, kill switches | spec, registry | Not Started | P3 | PC-079 | PC-056. |
+| HP-files-storage | Horizontal pack files-storage: S3-compatible uploads, presigned URLs, image transforms, CDN | spec, registry | Not Started | P1 | PC-073 | PC-052. |
+| HP-forecasting | Horizontal pack forecasting: Demand and cash forecasts from history | new (registry dependency) | Not Started | P3 | PC-079 |  |
+| HP-forms-engine | Horizontal pack forms-engine: Multi-step wizards, conditional fields, drafts | registry | Not Started | P2 | PC-078 | PC-059. |
+| HP-fraud-risk | Horizontal pack fraud-risk: Risk scoring, velocity rules, device fingerprints, blocklists | new | Not Started | P3 | PC-079 |  |
+| HP-gamification | Horizontal pack gamification: Points, badges, levels, leaderboards, streaks | new (registry dependency) | Not Started | P3 | PC-079 |  |
+| HP-geolocation | Horizontal pack geolocation: Foreground/background location, live tracking | PRD | Not Started | P1 | PC-073 | Needs R-569. |
+| HP-git-ops | Horizontal pack git-ops: Conventional commits, changelog, releases | registry | Not Started | P3 | PC-079 |  |
+| HP-health-fitness-data | Horizontal pack health-fitness-data: HealthKit and Health Connect | new | Not Started | P3 | PC-079 |  |
+| HP-identity-verification | Horizontal pack identity-verification: KYC/KYB, document and selfie checks, verification status | new (registry dependency 'verification') | Not Started | P2 | PC-078 |  |
+| HP-in-app-purchases | Horizontal pack in-app-purchases: Apple and Google in-app purchases and subscriptions | new | Not Started | P1 | PC-073 | Required by store rules for digital goods; keys at PC-070. |
+| HP-invoicing | Horizontal pack invoicing: Invoices, PDFs, recurring invoices, reminders | registry | Not Started | P2 | PC-078 |  |
+| HP-iot-telematics | Horizontal pack iot-telematics: Device registry, telemetry ingestion, alerts | new (registry dependencies 'iot', 'telematics') | Not Started | P3 | PC-079 |  |
+| HP-localization | Horizontal pack localization: i18n, RTL, currency and date formatting | spec | Not Started | P2 | PC-078 | PC-055. |
+| HP-marketplace-payments | Horizontal pack marketplace-payments: Split payments, escrow, payouts, seller onboarding | spec ('marketplace-core'), registry | Not Started | P2 | PC-078 | R-567; Bazaar shows the shape. |
+| HP-mcp-gateway | Horizontal pack mcp-gateway: MCP server exposing the app's tools to AI agents | registry | Not Started | P3 | PC-079 |  |
+| HP-ml-inference | Horizontal pack ml-inference: Model inference endpoints for scoring and classification | new (registry dependency) | Not Started | P3 | PC-079 |  |
+| HP-mobile-push | Horizontal pack mobile-push: Push notifications (Expo, FCM, APNs), deep-link on tap | PRD | Not Started | P1 | PC-073 | PC-053. |
+| HP-moderation | Horizontal pack moderation: Content moderation (AI + human queue), reports, bans | new (registry dependency) | Not Started | P2 | PC-078 |  |
+| HP-multi-tenancy | Horizontal pack multi-tenancy: Tenant isolation, per-tenant data, tenant switching | new (registry dependency) | Not Started | P1 | PC-073 |  |
+| HP-observability | Horizontal pack observability: Logs, metrics, traces, error tracking, alerting | spec, registry | Not Started | P2 | PC-078 | PC-057. |
+| HP-offline-sync | Horizontal pack offline-sync: Offline-first storage, sync queue, conflict resolution | new | Not Started | P1 | PC-073 |  |
+| HP-onboarding-invitations | Horizontal pack onboarding-invitations: Sign-up flows, invitations, first-run checklists | new (registry dependency) | Not Started | P2 | PC-078 |  |
+| HP-ota-updates | Horizontal pack ota-updates: Over-the-air updates and in-app update prompts | new | Not Started | P2 | PC-078 |  |
+| HP-performance | Horizontal pack performance: Bundle analysis, Core Web Vitals, Lighthouse CI | spec | Not Started | P2 | PC-078 | PC-037. |
+| HP-plugin-system | Horizontal pack plugin-system: Sandboxed plugins and extension marketplace | registry | Not Started | P3 | PC-079 |  |
+| HP-pricing-engine | Horizontal pack pricing-engine: Price rules, tiers, dynamic pricing, quotes | new (registry dependencies 'pricing', 'rate-engine') | Not Started | P2 | PC-078 |  |
+| HP-queue-jobs | Horizontal pack queue-jobs: Background jobs, retries, schedules, dead letter | spec, registry | Not Started | P1 | PC-073 | R-568. |
+| HP-rbac-advanced | Horizontal pack rbac-advanced: Ownership rules, row-level and field-level permissions, org hierarchies, impersonation | spec | Not Started | P1 | PC-073 | R-570. |
+| HP-realtime-core | Horizontal pack realtime-core: Live updates, presence, broadcast | spec, registry | Not Started | P1 | PC-073 | R-569. |
+| HP-referrals-affiliates | Horizontal pack referrals-affiliates: Referral codes, tracking, rewards | spec | Not Started | P3 | PC-079 |  |
+| HP-reporting | Horizontal pack reporting: Scheduled reports, report builder, PDF/Excel delivery | new (registry dependency) | Not Started | P2 | PC-078 |  |
+| HP-rules-engine | Horizontal pack rules-engine: Business rules on create/update/transition | new (architecture plan) | Not Started | P1 | PC-073 | R-571. |
+| HP-secure-storage | Horizontal pack secure-storage: Keychain/Keystore-backed storage for tokens and secrets | PRD | Not Started | P1 | PC-073 |  |
+| HP-security-headers | Horizontal pack security-headers: CSP, HSTS, permissions policy, nonces | registry | Not Started | P2 | PC-078 |  |
+| HP-share-contacts | Horizontal pack share-contacts: Share sheet, contacts picker, calendar events | new (registry dependency 'sharing') | Not Started | P3 | PC-079 |  |
+| HP-storybook | Horizontal pack storybook: Component docs and visual playground | spec | Not Started | P3 | PC-079 |  |
+| HP-subscriptions | Horizontal pack subscriptions: Plans, trials, proration, pausing, dunning | spec, registry | Not Started | P2 | PC-078 | R-567. |
+| HP-support-helpdesk | Horizontal pack support-helpdesk: Tickets, knowledge base, live-chat widget, SLAs | new | Not Started | P2 | PC-078 |  |
+| HP-tax-compliance | Horizontal pack tax-compliance: VAT/GST/sales tax calculation and validation | registry | Not Started | P3 | PC-079 |  |
+| HP-testing | Horizontal pack testing: Generated unit, contract and end-to-end tests | spec | Not Started | P1 | PC-073 | PC-054. |
+| HP-vector-search | Horizontal pack vector-search: Embeddings and semantic search on pgvector | new | Not Started | P2 | PC-078 |  |
+| HP-video-calling | Horizontal pack video-calling: WebRTC calls, screen share, recording, transcripts | registry | Not Started | P2 | PC-078 |  |
+| HP-wallet-ledger | Horizontal pack wallet-ledger: Double-entry ledger, accounts, transfers, reconciliation | registry, PRD | Not Started | P1 | PC-073 | R-567. |
 | MULTI-TENANT | Per-user backend multi-tenancy of the Studio server | Commercial_Platform_Kickoff section 3 | Not Started | P0 | PC-009 | 'A single trusted operator's tool that looks like a SaaS.' |
 | PG-01 | All P0 MVP architecture requirements complete | Tracker Production_Gates | Not Started | P1 | PC-067 |  |
 | PG-02 | Critical flows have automated E2E and regression tests | Tracker Production_Gates | Not Started | P1 | PC-037 |  |
@@ -470,13 +563,205 @@ What each tracker phase asks for, and where it is covered:
 | SPEC-TS-02 | Live in-browser preview | specs/table-stakes/02 | Not Started | P0 | PC-007 | Draft spec. |
 | SPEC-VIBE-01 | Vibe Mode Pro: AI builds it with a real backend | specs/vibe-mode-pro/01 | Not Started | P0 | PC-004 | Draft spec. |
 | T-5 | Workspace upgrades: editable code, diff per edit, API explorer | Template_Marketplace_Plan section 7 | Not Started | P1 | PC-024 |  |
-| VP-edtech-core | Vertical pack edtech-core: Courses, enrolments, assignments, grades, certificates, video | specs/pack-framework/04 | Not Started | P2 | PC-074 | Showcase template TPL-LEARNHUB. |
-| VP-fintech-core | Vertical pack fintech-core: Accounts, ledger, transfers, KYC, cards, lending, compliance | specs/pack-framework/04 | Not Started | P2 | PC-074 | Needs R-567; showcase template TPL-POCKET. |
-| VP-food-delivery-core | Vertical pack food-delivery-core: Restaurants, menus, orders, kitchen, couriers, dark stores | specs/pack-framework/04 | Not Started | P2 | PC-074 | Showcase template TPL-FRESHCART. |
-| VP-hr-core | Vertical pack hr-core: Hiring, onboarding, payroll, performance, attendance | specs/pack-framework/04 | Not Started | P3 | PC-074 | New. |
-| VP-logistics-core | Vertical pack logistics-core: Shipments, warehouses, tracking, route optimisation, customs | specs/pack-framework/04 | Not Started | P2 | PC-074 | Also fixes 'a logistics prompt yields one app' with R-580. |
-| VP-real-estate-core | Vertical pack real-estate-core: Properties, listings, tours, offers, contracts, escrow | specs/pack-framework/04 | Not Started | P2 | PC-074 | Showcase template TPL-ESTATELY. |
-| VP-saas-b2b-core | Vertical pack saas-b2b-core: Orgs, teams, seats, entitlements, SSO, usage metering | specs/pack-framework/04 | Not Started | P2 | PC-074 | New. |
+| VP-accounts | Vertical pack accounts: Accounts, holders, beneficiaries, limits | registry | Not Started | P2 | PC-080 |  |
+| VP-affiliates | Vertical pack affiliates: Affiliate links, conversions, tiers | registry | Not Started | P1 | PC-074 |  |
+| VP-agent-crm | Vertical pack agent-crm: Agent leads, pipelines, follow-ups | new (template Estately) | Not Started | P2 | PC-080 |  |
+| VP-agents-brokers | Vertical pack agents-brokers: Agents, commissions, books | new | Not Started | P3 | PC-081 |  |
+| VP-agri-marketplace | Vertical pack agri-marketplace: Produce listings, buyers, logistics | new | Not Started | P3 | PC-081 |  |
+| VP-api-management | Vertical pack api-management: API products, keys, monetisation | registry | Not Started | P2 | PC-080 |  |
+| VP-articles-cms | Vertical pack articles-cms: Articles, authors, categories, SEO | new | Not Started | P3 | PC-081 |  |
+| VP-assignments | Vertical pack assignments: Assignments, submissions, rubrics, peer review | registry (+ dependencies 'submissions', 'plagiarism') | Not Started | P2 | PC-080 |  |
+| VP-attendance-leave | Vertical pack attendance-leave: Attendance, shifts, leave requests | spec | Not Started | P2 | PC-080 |  |
+| VP-attendance-school | Vertical pack attendance-school: Attendance and absence alerts | new | Not Started | P3 | PC-081 |  |
+| VP-auctions-bidding | Vertical pack auctions-bidding: Auctions, bids, reserve prices | new | Not Started | P1 | PC-074 |  |
+| VP-background-checks | Vertical pack background-checks: Driver checks, adverse actions | registry | Not Started | P1 | PC-074 |  |
+| VP-basket-reorder | Vertical pack basket-reorder: Reorder, smart baskets | new | Not Started | P2 | PC-080 |  |
+| VP-bids-estimates | Vertical pack bids-estimates: Estimates, bids, change orders | new | Not Started | P3 | PC-081 |  |
+| VP-bill-of-materials | Vertical pack bill-of-materials: BOMs, versions, costing | new | Not Started | P3 | PC-081 |  |
+| VP-bill-payments-upi | Vertical pack bill-payments-upi: Bill payments, UPI, QR payments | new | Not Started | P2 | PC-080 |  |
+| VP-billing-codes | Vertical pack billing-codes: Claims, codes, payers, remittance | registry | Not Started | P1 | PC-074 |  |
+| VP-candidate-pipeline | Vertical pack candidate-pipeline: Stages, interviews, scorecards, offers | new | Not Started | P2 | PC-080 |  |
+| VP-cards | Vertical pack cards: Card issuing, authorisations, disputes | registry | Not Started | P2 | PC-080 |  |
+| VP-catering | Vertical pack catering: Catering orders, proposals, deposits | registry | Not Started | P2 | PC-080 |  |
+| VP-certificates | Vertical pack certificates: Certificates, verifiable credentials | registry | Not Started | P2 | PC-080 |  |
+| VP-channel-manager | Vertical pack channel-manager: Rates and availability across channels | new | Not Started | P3 | PC-081 |  |
+| VP-check-in | Vertical pack check-in: Scan-in, badges, capacity | new | Not Started | P3 | PC-081 |  |
+| VP-citizen-services | Vertical pack citizen-services: Service requests, status tracking | new | Not Started | P3 | PC-081 |  |
+| VP-claims | Vertical pack claims: FNOL, adjusting, settlement | new | Not Started | P3 | PC-081 |  |
+| VP-class-booking | Vertical pack class-booking: Classes, instructors, capacity, waitlists | new | Not Started | P3 | PC-081 |  |
+| VP-client-intake | Vertical pack client-intake: Intake forms, conflict checks | new | Not Started | P3 | PC-081 |  |
+| VP-client-portal | Vertical pack client-portal: Client portal, approvals, reports | registry (+ dependencies 'customer-portal', 'clients') | Not Started | P3 | PC-081 |  |
+| VP-client-profiles | Vertical pack client-profiles: Client history, preferences, before/after photos | new | Not Started | P2 | PC-080 |  |
+| VP-clinical-trials | Vertical pack clinical-trials: Trials, protocols, enrolment, adverse events | registry | Not Started | P1 | PC-074 |  |
+| VP-clubs-leagues | Vertical pack clubs-leagues: Teams, fixtures, standings | new | Not Started | P3 | PC-081 |  |
+| VP-co-living-rentals | Vertical pack co-living-rentals: Rooms, short stays, house rules | new | Not Started | P2 | PC-080 |  |
+| VP-cohorts | Vertical pack cohorts: Cohorts, mentors, leaderboards | registry | Not Started | P2 | PC-080 |  |
+| VP-community-comments | Vertical pack community-comments: Comments, reactions, moderation | new | Not Started | P3 | PC-081 |  |
+| VP-compliance-aml | Vertical pack compliance-aml: AML alerts, cases, watchlists | registry (+ dependency 'case-management') | Not Started | P2 | PC-080 |  |
+| VP-compliance-education | Vertical pack compliance-education: FERPA/COPPA consent and audit | registry | Not Started | P2 | PC-080 |  |
+| VP-compliance-kyc | Vertical pack compliance-kyc: KYC profiles, verification, risk rating | registry | Not Started | P2 | PC-080 |  |
+| VP-compliance-ps | Vertical pack compliance-ps: Engagement letters, conflict checks | registry | Not Started | P3 | PC-081 |  |
+| VP-construction-projects | Vertical pack construction-projects: Projects, phases, site teams | new | Not Started | P3 | PC-081 |  |
+| VP-contracts | Vertical pack contracts: Contracts, clauses, addenda | registry (+ dependency 'compliance-re') | Not Started | P2 | PC-080 |  |
+| VP-couriers | Vertical pack couriers: Couriers, shifts, earnings, incentives | registry | Not Started | P2 | PC-080 |  |
+| VP-courses | Vertical pack courses: Courses, modules, lessons, prerequisites | registry | Not Started | P2 | PC-080 |  |
+| VP-court-calendar | Vertical pack court-calendar: Hearings, filings, reminders | new | Not Started | P3 | PC-081 |  |
+| VP-creator-monetization | Vertical pack creator-monetization: Tips, subscriptions, paid content | new | Not Started | P3 | PC-081 |  |
+| VP-credit-scoring | Vertical pack credit-scoring: Score models, decisions | registry | Not Started | P2 | PC-080 |  |
+| VP-customer-loyalty-pos | Vertical pack customer-loyalty-pos: In-store loyalty and offers | new | Not Started | P3 | PC-081 |  |
+| VP-customer-success | Vertical pack customer-success: Health scores, renewals, churn signals | new | Not Started | P2 | PC-080 |  |
+| VP-customs | Vertical pack customs: Entries, HS classification, duty | registry (+ dependency 'hs-codes') | Not Started | P2 | PC-080 |  |
+| VP-dark-stores | Vertical pack dark-stores: Dark stores, picking, packing | PRD | Not Started | P2 | PC-080 |  |
+| VP-dating-matching | Vertical pack dating-matching: Matching, swipes, safety tools | new | Not Started | P3 | PC-081 |  |
+| VP-dealer-inventory | Vertical pack dealer-inventory: Vehicles for sale, specs, photos | new | Not Started | P3 | PC-081 |  |
+| VP-deliveries | Vertical pack deliveries: Packages, pickups, drop-offs, proof of delivery | registry (+ dependency 'proof-of-delivery') | Not Started | P1 | PC-074 |  |
+| VP-delivery-slots | Vertical pack delivery-slots: Delivery slots and capacity | PRD | Not Started | P2 | PC-080 |  |
+| VP-delivery-tracking | Vertical pack delivery-tracking: Live location, ETA, share links | registry (+ dependency 'tracking') | Not Started | P2 | PC-080 |  |
+| VP-dental-clinic | Vertical pack dental-clinic: Dental charts, treatment plans, recalls | new | Not Started | P1 | PC-074 |  |
+| VP-digital-assets | Vertical pack digital-assets: Wallets, custody, transfers | registry (+ dependency 'custody') | Not Started | P2 | PC-080 |  |
+| VP-donations-fundraising | Vertical pack donations-fundraising: Donations, campaigns, receipts | new | Not Started | P3 | PC-081 |  |
+| VP-editorial-workflow | Vertical pack editorial-workflow: Draft -> review -> scheduled -> published | new | Not Started | P3 | PC-081 |  |
+| VP-employee-onboarding | Vertical pack employee-onboarding: Onboarding checklists, documents | spec | Not Started | P2 | PC-080 |  |
+| VP-enrollments | Vertical pack enrollments: Enrolments, progress, completion | registry | Not Started | P2 | PC-080 |  |
+| VP-entitlements | Vertical pack entitlements: Per-feature and per-seat entitlements | registry | Not Started | P2 | PC-080 |  |
+| VP-escrow | Vertical pack escrow: Escrow accounts, disbursements | registry | Not Started | P2 | PC-080 |  |
+| VP-ev-charging | Vertical pack ev-charging: Chargers, sessions, billing | new | Not Started | P3 | PC-081 |  |
+| VP-events | Vertical pack events: Events, agendas, speakers, venues | new | Not Started | P3 | PC-081 |  |
+| VP-farm-advisory | Vertical pack farm-advisory: Weather, advisories, input orders | new | Not Started | P3 | PC-081 |  |
+| VP-farms-fields | Vertical pack farms-fields: Farms, fields, crops, seasons | new | Not Started | P3 | PC-081 |  |
+| VP-feeds-posts | Vertical pack feeds-posts: Posts, media, feeds, ranking | new | Not Started | P3 | PC-081 |  |
+| VP-field-service | Vertical pack field-service: Technician dispatch, job sheets, signatures | new | Not Started | P3 | PC-081 |  |
+| VP-fleet | Vertical pack fleet: Fleet, vehicles, maintenance, inspections | registry (+ dependencies 'vehicles', 'maintenance') | Not Started | P1 | PC-074 |  |
+| VP-fleet-management | Vertical pack fleet-management: Assets, fuel, utilisation, TCO | registry (+ dependency 'fuel-cards') | Not Started | P2 | PC-080 |  |
+| VP-food-orders | Vertical pack food-orders: Orders, kitchen tickets, timelines | registry ('orders') | Not Started | P2 | PC-080 |  |
+| VP-forums-qa | Vertical pack forums-qa: Forums, Q&A, accepted answers | new | Not Started | P3 | PC-081 |  |
+| VP-freight-forwarding | Vertical pack freight-forwarding: Quotes, bookings, milestones | registry | Not Started | P2 | PC-080 |  |
+| VP-fulfillment | Vertical pack fulfillment: Fulfilment orders, shipments, labels, tracking | registry (+ dependency 'shipping') | Not Started | P1 | PC-074 |  |
+| VP-ghost-kitchens | Vertical pack ghost-kitchens: Virtual brands, capacity | registry | Not Started | P2 | PC-080 |  |
+| VP-grading | Vertical pack grading: Gradebooks, schemes, exports | registry (+ dependency 'gradebook') | Not Started | P2 | PC-080 |  |
+| VP-grants | Vertical pack grants: Grant applications and reporting | new | Not Started | P3 | PC-081 |  |
+| VP-grocery-catalog | Vertical pack grocery-catalog: Grocery catalogue, weights, substitutions | PRD | Not Started | P2 | PC-080 |  |
+| VP-groups-communities | Vertical pack groups-communities: Groups, roles, rules | new | Not Started | P3 | PC-081 |  |
+| VP-gym-memberships | Vertical pack gym-memberships: Memberships, access, freezes | new | Not Started | P3 | PC-081 |  |
+| VP-hipaa-compliance | Vertical pack hipaa-compliance: Access logs, breach reports, risk assessments | registry | Not Started | P1 | PC-074 |  |
+| VP-hotel-pms | Vertical pack hotel-pms: Rooms, reservations, housekeeping, folios | new | Not Started | P3 | PC-081 |  |
+| VP-insurance-commercial | Vertical pack insurance-commercial: Commercial policies, claims | registry (+ dependency 'insurance') | Not Started | P1 | PC-074 |  |
+| VP-inventory | Vertical pack inventory: Stock levels, reservations, reorder points | registry | Not Started | P1 | PC-074 |  |
+| VP-inventory-wms | Vertical pack inventory-wms: Locations, cycle counts, pick paths | registry (+ dependencies 'rfid', 'voice-picking') | Not Started | P2 | PC-080 |  |
+| VP-investment-analysis | Vertical pack investment-analysis: Pro formas, cash flow, IRR | registry | Not Started | P2 | PC-080 |  |
+| VP-invoicing-ps | Vertical pack invoicing-ps: Progress and milestone invoicing | registry | Not Started | P3 | PC-081 |  |
+| VP-itineraries | Vertical pack itineraries: Trips, itineraries, documents | new | Not Started | P3 | PC-081 |  |
+| VP-job-lifecycle | Vertical pack job-lifecycle: Booked -> en route -> in progress -> done | PRD | Not Started | P2 | PC-080 |  |
+| VP-job-quotes | Vertical pack job-quotes: Quotes, estimates, approvals | PRD | Not Started | P2 | PC-080 |  |
+| VP-jobs-ats | Vertical pack jobs-ats: Job posts, applicant tracking | spec | Not Started | P2 | PC-080 |  |
+| VP-kitchen | Vertical pack kitchen: Kitchen display, stations, prep times | registry | Not Started | P2 | PC-080 |  |
+| VP-lab-integration | Vertical pack lab-integration: Lab interfaces, HL7 mapping, QC | registry | Not Started | P1 | PC-074 |  |
+| VP-lab-orders | Vertical pack lab-orders: Lab orders, specimens, results | registry | Not Started | P1 | PC-074 |  |
+| VP-last-mile | Vertical pack last-mile: Route plans, stop sequencing, time windows | registry (+ dependency 'routing') | Not Started | P1 | PC-074 |  |
+| VP-last-mile-logistics | Vertical pack last-mile-logistics: Routes, stops, exceptions | registry | Not Started | P2 | PC-080 |  |
+| VP-ledger-core | Vertical pack ledger-core: Journals, periods, reconciliation | registry | Not Started | P2 | PC-080 |  |
+| VP-legal-documents | Vertical pack legal-documents: Templates, clause library, versions | new | Not Started | P3 | PC-081 |  |
+| VP-lending | Vertical pack lending: Loan origination, underwriting, amortisation | registry | Not Started | P2 | PC-080 |  |
+| VP-listings-re | Vertical pack listings-re: Property listings, price history, disclosures | registry | Not Started | P2 | PC-080 |  |
+| VP-live-classes | Vertical pack live-classes: Live classes, attendance, recordings | new | Not Started | P2 | PC-080 |  |
+| VP-lms-admin | Vertical pack lms-admin: Schools, departments, instructors | registry | Not Started | P2 | PC-080 |  |
+| VP-loyalty | Vertical pack loyalty: Points, tiers, rewards | registry | Not Started | P2 | PC-080 |  |
+| VP-maintenance-cmms | Vertical pack maintenance-cmms: Assets, preventive maintenance | new | Not Started | P3 | PC-081 |  |
+| VP-marketplace-saas | Vertical pack marketplace-saas: App listings, provisioning | registry (+ dependency 'provisioning') | Not Started | P2 | PC-080 |  |
+| VP-marketplace-seo | Vertical pack marketplace-seo: Programmatic SEO, structured data | registry | Not Started | P1 | PC-074 |  |
+| VP-matters-cases | Vertical pack matters-cases: Matters, parties, deadlines | new | Not Started | P3 | PC-081 |  |
+| VP-memberships-packages | Vertical pack memberships-packages: Memberships, packages, prepaid sessions | new | Not Started | P2 | PC-080 |  |
+| VP-mental-health | Vertical pack mental-health: Therapy sessions, journals, assessments | new | Not Started | P1 | PC-074 |  |
+| VP-menus | Vertical pack menus: Menus, modifiers, allergens, nutrition | registry | Not Started | P2 | PC-080 |  |
+| VP-meter-reading | Vertical pack meter-reading: Meters, readings, anomalies | new | Not Started | P3 | PC-081 |  |
+| VP-newsletters | Vertical pack newsletters: Newsletters, subscribers, campaigns | new | Not Started | P3 | PC-081 |  |
+| VP-offers | Vertical pack offers: Offers, counters, contingencies | registry | Not Started | P2 | PC-080 |  |
+| VP-open-banking | Vertical pack open-banking: Consent, data access, payment initiation | registry | Not Started | P2 | PC-080 |  |
+| VP-organizations | Vertical pack organizations: Organisations, memberships, domains | registry | Not Started | P2 | PC-080 |  |
+| VP-outage-management | Vertical pack outage-management: Outages, crews, notifications | new | Not Started | P3 | PC-081 |  |
+| VP-parent-portal | Vertical pack parent-portal: Parent messages, report cards, payments | new | Not Started | P3 | PC-081 |  |
+| VP-parking | Vertical pack parking: Parking spots, bookings, enforcement | new | Not Started | P1 | PC-074 |  |
+| VP-parts-catalog | Vertical pack parts-catalog: Parts catalogue, fitment | new | Not Started | P3 | PC-081 |  |
+| VP-payroll | Vertical pack payroll: Payroll runs, payslips, deductions | spec | Not Started | P2 | PC-080 |  |
+| VP-paywall-membership | Vertical pack paywall-membership: Paywalls, memberships, metered access | new | Not Started | P3 | PC-081 |  |
+| VP-performance-reviews | Vertical pack performance-reviews: Goals, reviews, feedback | spec (+ registry dependencies 'people', 'skills') | Not Started | P2 | PC-080 |  |
+| VP-permits-licensing | Vertical pack permits-licensing: Applications, inspections, licences | new | Not Started | P3 | PC-081 |  |
+| VP-personal-finance | Vertical pack personal-finance: Budgets, expense categorisation, savings goals | new (registry dependencies 'budgeting', 'expenses') | Not Started | P2 | PC-080 |  |
+| VP-personal-training | Vertical pack personal-training: Trainers, sessions, packages | new | Not Started | P3 | PC-081 |  |
+| VP-pet-profiles | Vertical pack pet-profiles: Pets, vaccinations, records | new | Not Started | P3 | PC-081 |  |
+| VP-pet-services | Vertical pack pet-services: Grooming, boarding, walking | new | Not Started | P3 | PC-081 |  |
+| VP-pharmacy-integration | Vertical pack pharmacy-integration: Formulary, dispense, interaction checks | registry | Not Started | P1 | PC-074 |  |
+| VP-podcasts-video | Vertical pack podcasts-video: Episodes, feeds, players | new | Not Started | P3 | PC-081 |  |
+| VP-policies | Vertical pack policies: Policies, coverages, endorsements | new | Not Started | P3 | PC-081 |  |
+| VP-pos-terminal | Vertical pack pos-terminal: Point of sale, receipts, cash drawer | new | Not Started | P3 | PC-081 |  |
+| VP-premium-billing | Vertical pack premium-billing: Premium schedules, collections | new | Not Started | P3 | PC-081 |  |
+| VP-procurement | Vertical pack procurement: Requisitions, POs, three-way match | registry (+ dependency 'spend-analysis') | Not Started | P2 | PC-080 |  |
+| VP-production-orders | Vertical pack production-orders: Work orders, routings | new | Not Started | P3 | PC-081 |  |
+| VP-profiles-social | Vertical pack profiles-social: Profiles, follows, blocks | new | Not Started | P3 | PC-081 |  |
+| VP-projects | Vertical pack projects: Projects, phases, milestones, budgets | registry | Not Started | P3 | PC-081 |  |
+| VP-properties | Vertical pack properties: Properties, units, amenities, valuations | registry | Not Started | P2 | PC-080 |  |
+| VP-property-mgmt | Vertical pack property-mgmt: Leases, tenants, maintenance, rent | registry (+ dependencies 'portals', 'accounting') | Not Started | P2 | PC-080 |  |
+| VP-proposals | Vertical pack proposals: Proposals, SOWs, e-sign | registry (+ dependency 'crm-integration') | Not Started | P3 | PC-081 |  |
+| VP-provider-matching | Vertical pack provider-matching: Match jobs to nearby qualified pros | PRD | Not Started | P2 | PC-080 |  |
+| VP-purchase-orders | Vertical pack purchase-orders: B2B purchase orders and approvals | new (registry dependency) | Not Started | P1 | PC-074 |  |
+| VP-quality-control | Vertical pack quality-control: Inspections, non-conformances | new | Not Started | P3 | PC-081 |  |
+| VP-quizzes-exams | Vertical pack quizzes-exams: Question banks, timed exams, proctoring | new | Not Started | P2 | PC-080 |  |
+| VP-quotes-underwriting | Vertical pack quotes-underwriting: Quotes, rating, underwriting rules | new | Not Started | P3 | PC-081 |  |
+| VP-regulatory-reporting | Vertical pack regulatory-reporting: Regulatory reports and filings | registry | Not Started | P2 | PC-080 |  |
+| VP-resource-planning | Vertical pack resource-planning: Allocations, capacity, skills | registry | Not Started | P3 | PC-081 |  |
+| VP-restaurants | Vertical pack restaurants: Restaurants, hours, locations | registry (+ dependency 'multi-location') | Not Started | P2 | PC-080 |  |
+| VP-retainers | Vertical pack retainers: Retainer balances, drawdowns | registry (+ dependency 'retainer') | Not Started | P3 | PC-081 |  |
+| VP-returns | Vertical pack returns: Returns, inspections, refunds, exchanges | registry | Not Started | P1 | PC-074 |  |
+| VP-reviews | Vertical pack reviews: Verified-purchase reviews, moderation | registry | Not Started | P1 | PC-074 |  |
+| VP-rider-batching | Vertical pack rider-batching: Batching orders per rider | PRD | Not Started | P2 | PC-080 |  |
+| VP-salon-booking | Vertical pack salon-booking: Service booking with staff and chairs | PRD | Not Started | P2 | PC-080 |  |
+| VP-school-admin | Vertical pack school-admin: Students, classes, timetables, fees | new | Not Started | P3 | PC-081 |  |
+| VP-school-transport | Vertical pack school-transport: Bus routes and live tracking | new | Not Started | P3 | PC-081 |  |
+| VP-scim-provisioning | Vertical pack scim-provisioning: SCIM user provisioning | new | Not Started | P2 | PC-080 |  |
+| VP-seating-maps | Vertical pack seating-maps: Seat maps and reservations | new | Not Started | P3 | PC-081 |  |
+| VP-seats | Vertical pack seats: Seats, assignment, true-ups | registry | Not Started | P2 | PC-080 |  |
+| VP-service-catalog | Vertical pack service-catalog: Services, pricing, service areas | PRD | Not Started | P2 | PC-080 |  |
+| VP-service-center | Vertical pack service-center: Service bookings, job cards, parts | new | Not Started | P3 | PC-081 |  |
+| VP-service-menu | Vertical pack service-menu: Services, durations, add-ons | PRD | Not Started | P2 | PC-080 |  |
+| VP-service-warranty | Vertical pack service-warranty: Warranties, callbacks, disputes | new | Not Started | P2 | PC-080 |  |
+| VP-shift-cash-management | Vertical pack shift-cash-management: Shifts, cash-ups, variances | new | Not Started | P3 | PC-081 |  |
+| VP-shipments | Vertical pack shipments: Shipments, legs, bills of lading | registry | Not Started | P2 | PC-080 |  |
+| VP-site-diary | Vertical pack site-diary: Daily logs, photos, safety incidents | new | Not Started | P3 | PC-081 |  |
+| VP-sponsors-exhibitors | Vertical pack sponsors-exhibitors: Sponsors, booths, leads | new | Not Started | P3 | PC-081 |  |
+| VP-sso-oidc | Vertical pack sso-oidc: OIDC SSO | registry | Not Started | P2 | PC-080 |  |
+| VP-sso-saml | Vertical pack sso-saml: SAML SSO, JIT provisioning | registry | Not Started | P2 | PC-080 |  |
+| VP-staff-schedules | Vertical pack staff-schedules: Stylist schedules, commissions | PRD | Not Started | P2 | PC-080 |  |
+| VP-store-inventory | Vertical pack store-inventory: Store stock, transfers, counts | new | Not Started | P3 | PC-081 |  |
+| VP-subcontractors | Vertical pack subcontractors: Subcontractors, compliance, payments | new | Not Started | P3 | PC-081 |  |
+| VP-subscriptions-commerce | Vertical pack subscriptions-commerce: Subscription boxes, physical + digital | registry | Not Started | P1 | PC-074 |  |
+| VP-substitutions | Vertical pack substitutions: Out-of-stock substitution approval | new | Not Started | P2 | PC-080 |  |
+| VP-supply-chain-visibility | Vertical pack supply-chain-visibility: Control tower, ETAs, risk scores | registry | Not Started | P2 | PC-080 |  |
+| VP-surge-pricing | Vertical pack surge-pricing: Demand/supply signals, multipliers | registry | Not Started | P1 | PC-074 |  |
+| VP-table-reservations | Vertical pack table-reservations: Tables, reservations, waitlist | new | Not Started | P2 | PC-080 |  |
+| VP-teams | Vertical pack teams: Teams, members, channels | registry | Not Started | P2 | PC-080 |  |
+| VP-test-drives | Vertical pack test-drives: Test-drive booking | new | Not Started | P3 | PC-081 |  |
+| VP-ticketing | Vertical pack ticketing: Ticket types, sales, QR tickets | new | Not Started | P3 | PC-081 |  |
+| VP-time-tracking | Vertical pack time-tracking: Time entries, timers, approvals | registry | Not Started | P3 | PC-081 |  |
+| VP-tours | Vertical pack tours: Tour scheduling, self-guided, virtual | registry (+ dependency 'virtual-tours') | Not Started | P2 | PC-080 |  |
+| VP-tours-activities | Vertical pack tours-activities: Experiences, guides, capacity | new | Not Started | P3 | PC-081 |  |
+| VP-trade-finance | Vertical pack trade-finance: Letters of credit, guarantees | registry (+ dependency 'letters-of-credit') | Not Started | P2 | PC-080 |  |
+| VP-transfers | Vertical pack transfers: Transfers, ACH/SEPA/UPI, FX | registry (+ dependency 'transactions') | Not Started | P2 | PC-080 |  |
+| VP-transportation | Vertical pack transportation: Loads, carriers, tenders, rates | registry (+ dependency 'compliance-dot') | Not Started | P2 | PC-080 |  |
+| VP-travel-booking | Vertical pack travel-booking: Flights/stays/packages search and booking | new | Not Started | P3 | PC-081 |  |
+| VP-treasury | Vertical pack treasury: Cash positions, forecasts, sweeps | registry | Not Started | P2 | PC-080 |  |
+| VP-usage-metering | Vertical pack usage-metering: Meters, quotas, alerts | registry | Not Started | P2 | PC-080 |  |
+| VP-utility-billing | Vertical pack utility-billing: Tariffs, bills, payments | new | Not Started | P3 | PC-081 |  |
+| VP-vehicle-history | Vertical pack vehicle-history: Ownership and service history | new | Not Started | P3 | PC-081 |  |
+| VP-vehicle-rentals | Vertical pack vehicle-rentals: Car/bike/scooter rental, unlock, trip billing | new | Not Started | P1 | PC-074 |  |
+| VP-vet-clinic | Vertical pack vet-clinic: Vet appointments, treatments | new | Not Started | P3 | PC-081 |  |
+| VP-video-streaming | Vertical pack video-streaming: Video lessons, captions, DRM | registry (+ dependency 'drm') | Not Started | P2 | PC-080 |  |
+| VP-volunteers | Vertical pack volunteers: Volunteer shifts and hours | new | Not Started | P3 | PC-081 |  |
+| VP-warehouses | Vertical pack warehouses: Warehouses, zones, slotting, labour | registry (+ dependencies 'warehouse', 'slotting', 'labor') | Not Started | P2 | PC-080 |  |
+| VP-wealth-management | Vertical pack wealth-management: Portfolios, rebalancing, goals | registry (+ dependency 'portfolio') | Not Started | P2 | PC-080 |  |
+| VP-white-label | Vertical pack white-label: Brands, custom domains, rollouts | registry | Not Started | P2 | PC-080 |  |
+| VP-wishlists-recommendations | Vertical pack wishlists-recommendations: Wishlists, recently viewed, recommendations | new | Not Started | P1 | PC-074 |  |
+| VP-workout-plans | Vertical pack workout-plans: Programs, workouts, progress | new | Not Started | P3 | PC-081 |  |
+| VP-yard-management | Vertical pack yard-management: Yard slots, gate check-in, docks | new | Not Started | P2 | PC-080 |  |
 | GAP-WIREFRAMES | Console wireframes | V6_Review_and_Gap_Analysis section 3 | Superseded |  | R-491 | The console was built directly (R-491..R-497). |
 | R-010 | Native iOS Agent | Execution_Tracker_v6 | Superseded |  | R-576 | Native iOS is built by the R-576 adapter, not a separate agent. |
 | R-011 | Web/Admin Agent | Execution_Tracker_v6 | Superseded |  | R-227 | IR + deterministic adapters replaced per-surface agents. |
@@ -546,7 +831,6 @@ What each tracker phase asks for, and where it is covered:
 | R-209 | Automated provider benchmark suite | Execution_Tracker_v6 | Deferred | P3 |  | Advanced / enterprise: after launch. |
 | R-215 | Runtime provider outage failover | Execution_Tracker_v6 | Deferred | P3 |  |  |
 | R-218 | Local Agent security lifecycle | Execution_Tracker_v6 | Deferred | P3 |  |  |
-| VP-REMAINING | About 70 further vertical packs (the architecture plan's ~80 total) | docs/ARCHITECTURE_MASTER_PLAN.md §5.1 | Deferred | P3 |  | After launch, one domain at a time, driven by what users build. |
 | BP-FLUTTER | Flutter mobile adapter | Platform_Buildout section 8 ('R-529') | Dropped |  |  | Removed by the stack policy. |
 | R-077 | Flutter target (GA baseline) | Execution_Tracker_v6 | Dropped |  |  | Flutter: removed by the stack policy. |
 | R-118 | Flutter Web optional profile | Execution_Tracker_v6 | Dropped |  |  | Flutter Web: removed by the stack policy. |
