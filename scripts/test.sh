@@ -2140,6 +2140,18 @@ if [[ "$(rg -c '^def (forgot|reset)_password_page' "$codegen_dir/auth_pages.py")
   exit 1
 fi
 
+# PC-005 (Vibe / Engineering mode switch): one switch, remembered per project, that gates the
+# machinery. Vibe must hide Files/Code/Problems; storage failures must never break the Studio.
+studio_dir="$repo_root/apps/console-web/app/studio"
+if ! rg -qF 'export function useStudioMode' "$studio_dir/studio-mode.tsx" \
+  || ! rg -qF 'export function ModeSwitcher' "$studio_dir/studio-mode.tsx" \
+  || ! rg -qF '<ModeSwitcher mode={studioMode}' "$studio_dir/studio-chat.tsx" \
+  || ! rg -qF 'mode === "vibe" ? TABS.filter((tab) => tab.key === "preview")' "$studio_dir/studio-tabs.tsx" \
+  || ! rg -qF 'catch {' "$studio_dir/studio-mode.tsx"; then
+  printf 'PC-005 the Studio must have a remembered Vibe/Engineering switch that hides the machinery in Vibe.\n'
+  exit 1
+fi
+
 # Founder, 2026-09-26: every commit carries the task list in its real state (Completed from
 # CHANGELOG, In Progress from .ai/CURRENT_TASK.yaml). A stale MASTER_TASKS.md fails the gate.
 if ! python3 "$repo_root/R_&_D/Platform_Completion/tools/build_master_tasks.py" --check >/dev/null; then

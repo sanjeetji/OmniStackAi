@@ -25,6 +25,7 @@ import { languageForPath, tokenizeCodeLine } from "./code-highlight";
 import { FileTree } from "./file-tree";
 import { StudioPreview } from "./studio-preview";
 import type { WorkspaceSnapshot } from "./studio-workspace";
+import type { StudioMode } from "./studio-mode";
 
 type TabKey = "preview" | "files" | "code" | "problems";
 
@@ -46,11 +47,14 @@ export function StudioTabs({
   previewVersion,
   workspace,
   projectId,
+  mode = "engineering",
 }: {
   buildId: string | null;
   previewVersion: number;
   workspace: WorkspaceSnapshot | null;
   projectId?: string | null;
+  /** PC-005: Vibe shows only the running app; Engineering adds Files, Code and Problems. */
+  mode?: StudioMode;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("preview");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -67,6 +71,11 @@ export function StudioTabs({
     setActiveTab("code");
   }
 
+  // PC-005: in Vibe the machinery is hidden — only the running app. Switching back to Vibe while
+  // on an engineering tab returns to the preview rather than leaving an empty panel.
+  const visibleTabs = mode === "vibe" ? TABS.filter((tab) => tab.key === "preview") : TABS;
+  const currentTab = visibleTabs.some((tab) => tab.key === activeTab) ? activeTab : "preview";
+
   const files = workspace?.files ?? [];
   const query = fileQuery.trim().toLowerCase();
   const visibleFiles = query ? files.filter((path) => path.toLowerCase().includes(query)) : files;
@@ -74,16 +83,16 @@ export function StudioTabs({
 
   return (
     <Tabs
-      value={activeTab}
+      value={currentTab}
       onValueChange={(value) => setActiveTab(value as TabKey)}
       className="gap-3"
     >
       <TabsList
         variant="line"
-        className="w-full justify-start border-b px-0"
+        className={cn("w-full justify-start border-b px-0", visibleTabs.length < 2 && "hidden")}
         aria-label="Workspace views"
       >
-        {TABS.map(({ key, label, icon: Icon }) => (
+        {visibleTabs.map(({ key, label, icon: Icon }) => (
           <TabsTrigger key={key} value={key} className="gap-2">
             <Icon className="size-4" aria-hidden="true" />
             <span>{label}</span>

@@ -163,6 +163,8 @@ export interface BuildJobResponse {
   /** R-559: present only when the requested stack had no adapter and the nearest supported one was
    * built instead. Absent on an ordinary build, so the console renders nothing extra. */
   substitutions?: { layer: string; asked: string; built: string; reason: string }[];
+  /** PC-004: endpoints and screens with no real data behind them, by name. */
+  not_connected?: { kind: string; name: string; reason: string }[];
   /** R-560: present on every build — the outcome of type-checking the generated code. */
   verification?: {
     status: "clean" | "repaired" | "failing" | "skipped";

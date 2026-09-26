@@ -4,6 +4,8 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-005 (2026-09-26): Vibe / Engineering mode switch in the Studio.** Vibe = chat, running app, Publish, plain notes; Engineering = + Files, Code, Problems, entities, type-check, commit, usage, download. Remembered per project.
+
 > **PC-004 (2026-09-26): generated apps never pretend.** No in-memory fake saves, no fake 200s, no invented cart/review data, no dead buttons; unwired parts are honest (501 / not-connected page) and named in every build result and README; no DB internals to clients; malformed ids are 422. Express 5. Live on four backends.
 
 > **R-573 (2026-09-26): every web app and admin console is an installable PWA with a QR.** Manifest, PNG icons, honest service worker (no API caching), offline page, install control, iOS guidance, LAN-aware QR. Chrome: zero installability errors.

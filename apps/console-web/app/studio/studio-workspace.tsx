@@ -6,6 +6,7 @@ import type { BuildJobUsage, ProjectGitStatus } from "@/lib/control-plane";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PublishDialog } from "@/components/publish-dialog";
+import type { StudioMode } from "./studio-mode";
 
 function GithubIcon({ className = "size-3.5" }: { className?: string }) {
   return (
@@ -51,6 +52,8 @@ export interface WorkspaceSnapshot {
    * is present on every build, because "we did not check this, and here is why" is a different
    * message from saying nothing. */
   verification?: BuildVerification;
+  /** PC-004: endpoints and screens with no real data behind them, by name. */
+  notConnected?: { kind: string; name: string; reason: string }[];
 }
 
 /** R-560: the outcome of compiling the generated web app. Mirrors the agent-engine's record. */
@@ -84,11 +87,15 @@ export function StudioWorkspace({
   snapshot,
   buildId,
   projectId,
+  mode = "engineering",
 }: {
   snapshot: WorkspaceSnapshot | null;
   buildId: string | null;
   projectId?: string | null;
+  /** PC-005: Vibe hides the machinery (entities, commit, usage, type-check details). */
+  mode?: StudioMode;
 }) {
+  const engineering = mode === "engineering";
   const [gitStatus, setGitStatus] = useState<ProjectGitStatus | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
 
@@ -172,7 +179,7 @@ export function StudioWorkspace({
           <h1 className="truncate text-xl font-semibold tracking-tight">
             {snapshot.name ?? "Your app"}
           </h1>
-          {gitStatus?.repo_url ? (
+          {engineering && gitStatus?.repo_url ? (
             <a
               href={gitStatus.repo_url}
               target="_blank"
@@ -189,7 +196,7 @@ export function StudioWorkspace({
         {snapshot.description ? (
           <p className="mt-0.5 text-pretty text-sm text-muted-foreground">{snapshot.description}</p>
         ) : null}
-        {snapshot.entities.length > 0 ? (
+        {engineering && snapshot.entities.length > 0 ? (
           <ul aria-label="Entities" className="mt-2 flex flex-wrap gap-1.5">
             {snapshot.entities.slice(0, MAX_ENTITY_BADGES).map((entity) => (
               <li key={entity}>
@@ -224,7 +231,7 @@ export function StudioWorkspace({
             ) : null}
           </div>
         ) : null}
-        {snapshot.verification ? (
+        {snapshot.verification && (engineering || snapshot.verification.status === "failing") ? (
           <div className="mt-3 rounded-lg border border-border/60 bg-muted/40 p-3">
             <p className="text-xs font-medium text-foreground">
               {snapshot.verification.status === "clean"
@@ -257,6 +264,24 @@ export function StudioWorkspace({
             </ul>
           </div>
         ) : null}
+        {snapshot.notConnected && snapshot.notConnected.length > 0 ? (
+          <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+            <p className="text-xs font-medium text-foreground">Not connected to data yet</p>
+            <p className="mt-1 text-pretty text-xs text-muted-foreground">
+              These parts say so in the app instead of pretending. Ask for them in the chat and they are built with a
+              real API and database.
+            </p>
+            <ul aria-label="Not connected to data yet" className="mt-1.5 space-y-1">
+              {snapshot.notConnected.map((gap) => (
+                <li key={`${gap.kind}:${gap.name}`} className="text-pretty text-xs text-muted-foreground">
+                  {/* Text, never HTML. */}
+                  <span className="font-mono text-foreground">{gap.name}</span>
+                  {engineering ? ` — ${gap.reason}` : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-col items-end gap-2 shrink-0">
@@ -271,15 +296,17 @@ export function StudioWorkspace({
               <Globe className="size-3.5" />
               Publish
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-              <a href={`/api/projects/${encodeURIComponent(projectId)}/export`} download>
-                <Download className="size-3.5" />
-                Download code
-              </a>
-            </Button>
+            {engineering ? (
+              <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                <a href={`/api/projects/${encodeURIComponent(projectId)}/export`} download>
+                  <Download className="size-3.5" />
+                  Download code
+                </a>
+              </Button>
+            ) : null}
           </div>
         ) : null}
-        <dl className="grid shrink-0 grid-cols-[auto_auto] gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <dl hidden={!engineering} className="grid shrink-0 grid-cols-[auto_auto] gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <dt>Files</dt>
           <dd className="font-mono tabular-nums text-foreground">{snapshot.fileCount ?? "—"}</dd>
           {snapshot.commitSha ? (

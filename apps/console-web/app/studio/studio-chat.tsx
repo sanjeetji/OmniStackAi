@@ -41,6 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { StudioTabs } from "./studio-tabs";
 import { StudioWorkspace, type WorkspaceSnapshot } from "./studio-workspace";
+import { ModeSwitcher, useStudioMode } from "./studio-mode";
 
 interface BuildStreamResult extends Partial<BuildJobResponse> {
   phase?: string;
@@ -129,6 +130,8 @@ export default function StudioChat({
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null);
   // Bumped after every successful edit so <StudioPreview> (rendered by <StudioTabs>) re-previews
   const [previewVersion, setPreviewVersion] = useState(0);
+  // PC-005: Vibe or Engineering, remembered per project.
+  const [studioMode, setStudioMode] = useStudioMode(projectId);
   const [prompt, setPrompt] = useState(urlPrompt ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [streamChars, setStreamChars] = useState(0);
@@ -850,6 +853,7 @@ export default function StudioChat({
         ecosystemReason: finalResult.ecosystem_reason,
         substitutions: finalResult.substitutions,
         verification: finalResult.verification,
+        notConnected: finalResult.not_connected,
       });
       setPreviewVersion((v) => v + 1);
     } catch (err: unknown) {
@@ -935,6 +939,7 @@ export default function StudioChat({
         ecosystemReason: prev?.ecosystemReason,
         substitutions: prev?.substitutions,
         verification: prev?.verification,
+        notConnected: prev?.notConnected,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);
@@ -996,6 +1001,7 @@ export default function StudioChat({
         ecosystemReason: prev?.ecosystemReason,
         substitutions: prev?.substitutions,
         verification: prev?.verification,
+        notConnected: prev?.notConnected,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);
@@ -1482,12 +1488,17 @@ export default function StudioChat({
             <EmptyWorkspace />
           ) : (
             <>
-              <StudioWorkspace snapshot={workspace} buildId={buildId} projectId={projectId} />
+              {/* PC-005: Vibe hides the machinery; Engineering shows it. */}
+              <div className="flex justify-end">
+                <ModeSwitcher mode={studioMode} onChange={setStudioMode} />
+              </div>
+              <StudioWorkspace snapshot={workspace} buildId={buildId} projectId={projectId} mode={studioMode} />
               <StudioTabs
                 buildId={buildId}
                 previewVersion={previewVersion}
                 workspace={workspace}
                 projectId={projectId}
+                mode={studioMode}
               />
             </>
           )}

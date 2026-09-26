@@ -1,9 +1,9 @@
 task_id: PC-005
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-26"
-completed_at: null
+completed_at: "2026-09-26"
 branch: platform-completion
 objective: >-
   A Vibe / Engineering mode switch in the Studio. Vibe hides the machinery (prompt -> running app
@@ -11,7 +11,8 @@ objective: >-
   code. The mode is remembered per user and per project.
 founder_gate: >-
   Founder, 2026-09-26: two modes, Vibe and Engineering. "Continue task one by one without asking."
-companions: []
+companions:
+  - The PC-004 'Not connected to data yet' list is shown in the Studio in both modes
 allowed_paths:
   - apps/console-web/
   - services/control-plane/
@@ -28,6 +29,12 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+scope_note: >-
+  The spec's Engineering tabs (IR editor, pack selector, multi-app architect, graduation) are their own
+  queue tasks (PC-022, PC-017, PC-028, PC-051). This task delivers the switch and gates what exists:
+  Vibe = chat, live preview, Publish, plain notes; Engineering = + Files, Code, Problems, entities,
+  type-check detail, commit, usage, Download code.
 blockers: []
-deferred: []
+deferred:
+  - "The mode is remembered in the browser; a server-side preference (all devices) can follow with the account settings work." 
 found_and_fixed: []
