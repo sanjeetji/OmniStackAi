@@ -25,9 +25,11 @@ modern UI and the maximum features the prompt implies, customisable afterwards.
 - **Engineering Mode:** see the plan, choose the stack, import a repo, review diffs, see the
   verification report, open GitHub pull requests.
 
-Stack policy: Next.js for web and admin. An app request gets an installable PWA with a QR code by
-default. Native apps are Kotlin + Jetpack Compose and Swift + SwiftUI, taken through to store
-publishing, and come **last** (Phase 5). Flutter and React.js are not offered.
+Stack policy: Next.js for web and admin. An app request gets a React Native (Expo) app ready to
+publish on Google Play and the App Store, **and** an installable PWA with a QR code. Native
+Kotlin + Jetpack Compose and Swift + SwiftUI come **last** (Phase 5). Flutter and React.js are
+not offered. PostgreSQL is the default database, with MongoDB as an option. Builds use NVIDIA
+nemotron-3-ultra; its key lives only in `.env`.
 
 ## Rules for working from this folder
 
