@@ -31,4 +31,12 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed: []
+progress:
+  - "Speed (2026-09-26): preview start 17.7 s -> 9.6 s; live prompt -> running app 12-15 s on Groq (was 18-26 s)."
+  - "Shared warm environment per requirements set for generated Python APIs (localrun/api_env.py), warmed at platform start."
+  - "API, web, admin and mobile readiness probed together every 0.25 s instead of in turn every 1 s."
+  - "Tried and rejected: Turbopack (~0.6 s faster boot, failed to compile generated pages)."
+  - "Next: visual quality of the generated first screen."
+found_and_fixed:
+  - "Groq wrote screen navigation as objects; they became links to /{'target': ...} and pages that did not compile. Objects are unwrapped and links to missing screens dropped."
+  - "The generated .gitignore ignored `.venv/`, which does not match a symlinked .venv; now `.venv`."

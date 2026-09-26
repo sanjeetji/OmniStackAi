@@ -355,6 +355,22 @@ _FIELD_TYPE_ALIASES: dict[str, str] = {
 }
 
 
+
+def _labels(items: Any, keys: tuple[str, ...]) -> list[str]:
+    """Plain strings from a model's list, unwrapping objects to their first named key.
+
+    PC-006, seen live: Groq wrote navigation as ``{"target": "category_editor", "action": "create"}``.
+    ``str()`` of that became a link to ``/{'target': ...}`` and a page that did not compile.
+    """
+    out: list[str] = []
+    for item in items if isinstance(items, (list, tuple)) else ():
+        if isinstance(item, dict):
+            item = next((item[k] for k in keys if isinstance(item.get(k), str) and item[k].strip()), "")
+        if isinstance(item, str) and item.strip():
+            out.append(item.strip())
+    return out
+
+
 def _to_snake(val: str, default: str = "item") -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9_]+", "_", str(val)).strip("_").lower()
     if not cleaned or not cleaned[0].isalpha():
@@ -503,10 +519,16 @@ def _sanitize_ir_dict(data: dict) -> dict:
                 data.setdefault("roles", []).append({"id": s_role, "description": f"{s_role.capitalize()} role"})
                 role_ids.add(s_role)
             s["role"] = s_role
-            s["components"] = [str(c).strip() for c in s.get("components", ()) if str(c).strip()]
-            s["actions"] = [str(a).strip() for a in s.get("actions", ()) if str(a).strip()]
-            s["navigation"] = [str(n).strip() for n in s.get("navigation", ()) if str(n).strip()]
+            s["components"] = _labels(s.get("components", ()), ("name", "type", "id", "component"))
+            s["actions"] = _labels(s.get("actions", ()), ("name", "action", "id", "label"))
+            s["navigation"] = [
+                _to_snake(n) for n in _labels(s.get("navigation", ()), ("target", "screen", "to", "id"))
+            ]
             valid_screens.append(s)
+        # PC-006: a link to a screen that does not exist is a 404 the user finds by clicking it.
+        screen_ids = {s["id"] for s in valid_screens}
+        for s in valid_screens:
+            s["navigation"] = list(dict.fromkeys(n for n in s["navigation"] if n in screen_ids))
         data["screens"] = valid_screens
 
     # Entities

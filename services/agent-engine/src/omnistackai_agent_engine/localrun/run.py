@@ -19,9 +19,12 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from .api_env import link_shared_environment
 from .plan import RunPlan, RunStep, build_run_plan
 
 
@@ -224,6 +227,11 @@ def _launch(step: RunStep, log_callback: Callable[[str], None] | None = None) ->
     return subprocess.Popen([step.program, *step.args], cwd=step.cwd, env=env)
 
 
+#: PC-006: a server that comes up between two checks waits for the next one; at 1 s that was up
+#: to a second per surface, paid in turn by the API, the web app and the admin console.
+_POLL_SECONDS = 0.25
+
+
 def _wait_healthy(url: str, timeout_seconds: float = 45.0) -> bool:
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
@@ -233,7 +241,7 @@ def _wait_healthy(url: str, timeout_seconds: float = 45.0) -> bool:
                     return True
         except (urllib.error.URLError, ConnectionError, OSError):
             pass
-        time.sleep(1.0)
+        time.sleep(_POLL_SECONDS)
     return False
 
 
@@ -255,6 +263,49 @@ def _port_available(url: str) -> bool:
 def _ensure_background_processes_running(session: LocalAppSession) -> None:
     if any(process.poll() is not None for process in session.processes):
         raise LocalAppRunError("a generated-app background process exited during startup")
+
+
+@dataclass(frozen=True)
+class _Probe:
+    name: str
+    url: str
+    #: The session flag it sets, if any.
+    attr: str | None
+    failure: str
+    #: R-545: the mobile app is an extra surface; a slow Expo start must not tear down a working
+    #: web and admin preview, so it is reported as not ready instead.
+    required: bool = True
+    cap: float = float("inf")
+
+
+def _readiness_probes(plan: RunPlan) -> list[_Probe]:
+    probes: list[_Probe] = []
+    if plan.backend_kind != "none":
+        probes.append(_Probe("API", plan.api_url + "/healthz", "api_ready",
+                             f"backend API did not become ready at {plan.api_url}"))
+    if plan.has_web:
+        # R-542: probe where the app actually serves. Under a base path "/" is a 404, so probing
+        # the origin would declare a perfectly healthy app dead.
+        web_probe = plan.web_health_url or plan.web_url
+        probes.append(_Probe("Web", web_probe, "web_ready", f"web app did not become ready at {web_probe}"))
+    if getattr(plan, "has_admin", False):
+        admin_probe = plan.admin_health_url or plan.admin_url
+        probes.append(_Probe("Admin", admin_probe, "admin_ready",
+                             f"admin console did not become ready at {admin_probe}"))
+    # R-553: a surface nobody waits for is reported ready before it can answer, and the first
+    # thing a user does is click it.
+    for app_id, url in getattr(plan, "web_surfaces", ()) or ():
+        if app_id in ("web", "admin"):
+            continue  # already probed above, with their base paths
+        probe = f"{url}{plan.public_base.rstrip('/')}/{app_id}" if plan.multi_app else url
+        probes.append(_Probe(app_id, probe, None, f"{app_id} did not become ready at {probe}"))
+    if getattr(plan, "has_mobile", False):
+        probes.append(_Probe("Mobile (Expo)", plan.mobile_url, "mobile_ready", "", required=False, cap=60.0))
+    return probes
+
+
+def _link_shared_environment(cwd: str | None) -> bool:
+    return bool(cwd) and link_shared_environment(cwd)
 
 
 def start_app(
@@ -295,6 +346,7 @@ def start_app(
                     raise LocalAppRunError(f"local preview port is already in use: {url}")
 
         current_phase = None
+        shared_env_dirs: set[str | None] = set()
         for step in active_plan.steps:
             if step.background:
                 step_phase = "start"
@@ -312,6 +364,14 @@ def start_app(
                 emit(f"-> {step.label}")
                 session.processes.append(_launch(step, log_callback=log_callback))
                 continue
+            # PC-006: a generated Python API reuses the shared, already-installed environment for
+            # its exact requirements instead of creating and installing its own.
+            if step.label.startswith("create backend virtualenv") and _link_shared_environment(step.cwd):
+                shared_env_dirs.add(step.cwd)
+                emit("-  backend environment (shared, already installed)")
+                continue
+            if step.label.startswith("install backend dependencies") and step.cwd in shared_env_dirs:
+                continue
             if _should_skip(step):
                 emit(f"-  {step.label} (already done, skipping)")
                 continue
@@ -323,71 +383,27 @@ def start_app(
             if on_phase is not None:
                 on_phase("start")
 
-        if active_plan.backend_kind != "none":
-            emit("Waiting for the API to be healthy ...")
-            session.api_ready = _wait_healthy(
-                active_plan.api_url + "/healthz", timeout_seconds=health_timeout_seconds
-            )
+        # PC-006: every surface is probed at once. One after another, each `next dev` compiled its
+        # first page only when its turn came, and the preview paid for the API, the web app and the
+        # admin console in sequence.
+        probes = _readiness_probes(active_plan)
+        if probes:
+            for probe in probes:
+                emit(f"Waiting for {probe.name} ...")
+            with ThreadPoolExecutor(max_workers=len(probes)) as pool:
+                futures = [
+                    pool.submit(_wait_healthy, p.url, timeout_seconds=min(health_timeout_seconds, p.cap))
+                    for p in probes
+                ]
+                results = [future.result() for future in futures]
             _ensure_background_processes_running(session)
-            if not session.api_ready and require_ready:
-                raise LocalAppRunError(f"backend API did not become ready at {active_plan.api_url}")
-            emit(
-                f"API ready: {active_plan.api_url}"
-                if session.api_ready
-                else f"API not healthy yet at {active_plan.api_url} (it may still be starting)"
-            )
-
-        if active_plan.has_web:
-            emit("Waiting for the web app to be ready ...")
-            # R-542: probe where the app actually serves. Under a base path "/" is a 404, so
-            # probing the origin would declare a perfectly healthy app dead.
-            web_probe = active_plan.web_health_url or active_plan.web_url
-            session.web_ready = _wait_healthy(web_probe, timeout_seconds=health_timeout_seconds)
-            _ensure_background_processes_running(session)
-            if not session.web_ready and require_ready:
-                raise LocalAppRunError(f"web app did not become ready at {web_probe}")
-            emit(
-                f"Web ready: {web_probe}"
-                if session.web_ready
-                else f"Web not ready yet at {web_probe} (it may still be starting)"
-            )
-
-        if getattr(active_plan, "has_admin", False):
-            emit("Waiting for the admin console to be ready ...")
-            admin_probe = active_plan.admin_health_url or active_plan.admin_url
-            session.admin_ready = _wait_healthy(admin_probe, timeout_seconds=health_timeout_seconds)
-            _ensure_background_processes_running(session)
-            if not session.admin_ready and require_ready:
-                raise LocalAppRunError(f"admin console did not become ready at {admin_probe}")
-            emit(
-                f"Admin ready: {admin_probe}"
-                if session.admin_ready
-                else f"Admin not ready yet at {admin_probe} (it may still be starting)"
-            )
-
-        # R-553: a surface nobody waits for is reported ready before it can answer, and the first
-        # thing a user does is click it.
-        for app_id, url in getattr(active_plan, "web_surfaces", ()) or ():
-            if app_id in ("web", "admin"):
-                continue  # already probed above, with their base paths
-            emit(f"Waiting for {app_id} ...")
-            probe = f"{url}{active_plan.public_base.rstrip('/')}/{app_id}" if active_plan.multi_app else url
-            if not _wait_healthy(probe, timeout_seconds=health_timeout_seconds) and require_ready:
-                raise LocalAppRunError(f"{app_id} did not become ready at {probe}")
-
-        if getattr(active_plan, "has_mobile", False):
-            emit("Waiting for the Expo dev server ...")
-            # R-545: deliberately NOT gated on `require_ready`. The mobile app is an extra surface;
-            # a slow or failed Expo start must not tear down a working web and admin preview. It is
-            # reported as not ready instead, and the rest of the preview stands.
-            session.mobile_ready = _wait_healthy(
-                active_plan.mobile_url, timeout_seconds=min(health_timeout_seconds, 60.0)
-            )
-            emit(
-                f"Mobile ready: {active_plan.expo_url}"
-                if session.mobile_ready
-                else f"Mobile not ready yet at {active_plan.mobile_url} (Expo may still be starting)"
-            )
+            for probe, ready in zip(probes, results):
+                if probe.attr:
+                    setattr(session, probe.attr, ready)
+                emit(f"{probe.name} ready: {probe.url}" if ready else f"{probe.name} not ready yet at {probe.url}")
+            for probe, ready in zip(probes, results):
+                if not ready and probe.required and require_ready:
+                    raise LocalAppRunError(probe.failure)
 
         if on_phase is not None:
             on_phase("ready")

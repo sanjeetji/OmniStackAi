@@ -340,7 +340,7 @@ def assemble_project(
         files.extend(brand_files(ir, _slug(ir.name)))
 
     files.append(GeneratedFile("README.md", _root_readme(ir, apps, skipped, substitutions)))
-    files.append(GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv/\n__pycache__/\nbin/\n.env\n"))
+    files.append(GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv\n__pycache__/\nbin/\n.env\n"))
     # R-549: `pnpm run brand` regenerates what cannot be derived while a page renders — the icons.
     if any(app.target.startswith("nextjs") or app.target == "react-native" for app in apps):
         files.append(

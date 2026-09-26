@@ -85,7 +85,8 @@ class TestLocalAppSession(unittest.TestCase):
             self.assertIsInstance(session, LocalAppSession)
             self.assertTrue(session.api_ready)
             self.assertTrue(session.web_ready)
-            self.assertEqual(health_urls, ["http://127.0.0.1:8000/healthz", "http://127.0.0.1:3000"])
+            # PC-006: probed at the same time, so the order they are asked in is not fixed.
+            self.assertEqual(sorted(health_urls), ["http://127.0.0.1:3000", "http://127.0.0.1:8000/healthz"])
             self.assertEqual(run_sync.call_count, 2)
             self.assertEqual(session.processes, processes)
             session.stop()
@@ -124,7 +125,9 @@ class TestLocalAppSession(unittest.TestCase):
             with (
                 patch("omnistackai_agent_engine.localrun.run._run_sync"),
                 patch("omnistackai_agent_engine.localrun.run._launch", side_effect=processes),
-                patch("omnistackai_agent_engine.localrun.run._wait_healthy", side_effect=[True, False]),
+                # PC-006: keyed by URL, since the surfaces are probed at the same time.
+                patch("omnistackai_agent_engine.localrun.run._wait_healthy",
+                      side_effect=lambda url, timeout_seconds=45.0: url.endswith("/healthz")),
                 patch("omnistackai_agent_engine.localrun.run._port_available", return_value=True),
             ):
                 with self.assertRaisesRegex(LocalAppRunError, "web app did not become ready"):

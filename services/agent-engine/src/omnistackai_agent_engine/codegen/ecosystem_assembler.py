@@ -190,7 +190,7 @@ def assemble_ecosystem(plan, *, provider=None, prompt: str = "") -> GeneratedPro
         files.append(GeneratedFile("contracts/openapi.json", render_openapi_json(shared)))
     files.append(GeneratedFile("README.md", _ecosystem_readme(plan, shared, app_dirs)))
     files.append(
-        GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv/\n__pycache__/\nbin/\n.env\n")
+        GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv\n__pycache__/\nbin/\n.env\n")
     )
     return GeneratedProject("customer-monorepo", tuple(files))
 

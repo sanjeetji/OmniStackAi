@@ -232,6 +232,21 @@ print(len(json.loads(package).get("dependencies", {})), "dependencies")
 PYEOF
     ;;
 
+  warm-api-env)
+    # PC-006: build the shared environment generated Python APIs link to, so no preview pays for it.
+    PYTHONPATH="$source_root" python3 - <<'PYEOF3'
+import pathlib, sys, tempfile
+from omnistackai_agent_engine.application_ir import example_ir
+from omnistackai_agent_engine.codegen.backend_python import PythonBackendAdapter
+from omnistackai_agent_engine.localrun.api_env import link_shared_environment
+
+requirements = PythonBackendAdapter().generate(example_ir("minimal-blog")).get("requirements.txt").content
+with tempfile.TemporaryDirectory() as tmp:
+    pathlib.Path(tmp, "requirements.txt").write_text(requirements, encoding="utf-8")
+    sys.exit(0 if link_shared_environment(tmp) else 1)
+PYEOF3
+    ;;
+
   emit-mobile-package)
     # The generated Expo app's package.json, so one install warms the mobile type-check cache.
     out="${2:?usage: agent-engine.sh emit-mobile-package <dir>}"

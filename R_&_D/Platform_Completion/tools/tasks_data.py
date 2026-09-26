@@ -98,7 +98,10 @@ QUEUE = [
      "From specs/table-stakes/01 and the buildout 'intent card' idea. Measured in PC-084: plan "
      "20-29 s (model) and preview start ~14 s are the stages to cut; model-written pages cost ~80 s "
      "and their admin page failed to compile, so the repair loop must cover the admin app before "
-     "model-written pages return to the default path."),
+     "model-written pages return to the default path. Speed half done 2026-09-26: preview start "
+     "17.7 -> 9.6 s (shared warm API environment, surfaces probed together), live prompt -> running "
+     "app 12-15 s on Groq; fixed model navigation objects breaking pages. Left: visual quality of the "
+     "first screen; starting the preview during verification (~5 s) once node_modules are not shared."),
     ("PC-084", "Speed targets measured on every build and enforced: prompt -> preview under "
      "90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate",
      "1 Vibe Mode live", "Vibe", "Not Started", "P1", "PC-006",

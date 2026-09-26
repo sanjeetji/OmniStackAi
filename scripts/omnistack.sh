@@ -190,6 +190,15 @@ warm_web_modules() {
 # The same for the Expo apps (founder, 2026-09-26: "what about the app side?"): one install shared
 # by every generated mobile app, so builds type-check them instead of reporting "not installed".
 # Its package.json is kept beside it; when the generated dependencies change, it is rebuilt.
+warm_api_env() {
+  step "Warming the generated-API environment (one install, shared by every generated Python API)"
+  if bash "$repo_root/scripts/agent-engine.sh" warm-api-env >/dev/null 2>&1; then
+    ok "generated-API environment ready"
+  else
+    warn "could not prepare the shared API environment - each preview will install its own"
+  fi
+}
+
 warm_mobile_modules() {
   local cache="${OMNISTACKAI_MOBILE_NODE_MODULES:-$HOME/.omnistackai/mobile-typecheck/node_modules}"
   local work
@@ -450,6 +459,7 @@ cmd_up() {
   # every project as "not type-checked" -- correct, but not the point of having the check.
   warm_web_modules
   warm_mobile_modules
+  warm_api_env
 
   step "Agent-engine Studio"
   if service_pid studio >/dev/null; then
