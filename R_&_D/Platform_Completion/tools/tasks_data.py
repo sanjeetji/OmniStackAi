@@ -38,6 +38,8 @@ PHASES = {
     "5 Native mobile (last)": "Kotlin/Compose + Swift/SwiftUI, through to Play Store and App Store.",
     "6 Go-live (credentials last)": "The founder supplies accounts and keys; every live proof "
     "is run; the platform opens to real users.",
+    "7 Win the category": "Measure against every competitor and close each gap until we lead. "
+    "Done last, after native and go-live, by founder decision (2026-09-26).",
     "Post-launch": "Deferred until the platform is live and the queue above is empty.",
     "Delivered": "Already built.",
 }
@@ -59,7 +61,8 @@ QUEUE = [
     ("PC-047", "NVIDIA model provider (nemotron-3-ultra) for builds, configured from .env",
      "0 Foundation", "Platform", "Not Started", "P0", "",
      "Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the "
-     "NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only."),
+     "NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only. Includes a "
+     "first comparison against the providers we already support on the same build prompts."),
     ("PC-003", "Stack policy in code: an app request gets a store-ready React Native app AND "
      "an installable PWA with QR; Flutter and React.js refused with the reason", "0 Foundation",
      "Both", "Pending", "P0", "",
@@ -83,6 +86,15 @@ QUEUE = [
      "polish per page", "1 Vibe Mode live", "Vibe", "Pending", "P0", "",
      "R-558 fixed the design system; still needs speed-to-first-screen and visual quality. "
      "From specs/table-stakes/01 and the buildout 'intent card' idea."),
+    ("PC-084", "Speed targets measured on every build and enforced: prompt -> preview under "
+     "90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate",
+     "1 Vibe Mode live", "Vibe", "Not Started", "P1", "PC-006",
+     "The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26."),
+    ("PC-085", "Model quality evals and best-model routing: score every provider (NVIDIA, "
+     "cloud, local) per task type and route each job to the best one", "1 Vibe Mode live",
+     "Both", "Not Started", "P1", "PC-047",
+     "NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. "
+     "Founder-approved 2026-09-26."),
     ("PC-007", "Instant in-browser preview (no local toolchain needed)", "1 Vibe Mode live",
      "Vibe", "Not Started", "P0", "",
      "From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with "
@@ -167,6 +179,11 @@ QUEUE = [
     ("PC-072", "Blueprint conversion: turn RideNow, Bazaar and CareClinic templates into "
      "blueprints that regenerate them (golden-file test)", "2 Maximum features", "Both",
      "Not Started", "P1", "PC-017, PC-075, PC-076", "From specs/pack-framework/05."),
+    ("PC-088", "Pack quality bar: a pack counts as done only when it builds a working demo app on "
+     "every surface, passes its generated tests and passes a UI review",
+     "2 Maximum features", "Both", "Not Started", "P1", "PC-017, PC-054",
+     "321 packs: a mediocre pack hurts more than a missing one. Applies to every wave. "
+     "Founder-approved 2026-09-26."),
     ("PC-073", "Horizontal packs, wave 1: the P0/P1 universal packs as manifest v2 packs that "
      "work alone and compose (HP-* rows)", "2 Maximum features", "Both", "Pending", "P1",
      "PC-017", "Core first (auth, database, API, design system, admin, payments, notifications, "
@@ -354,6 +371,32 @@ QUEUE = [
     ("PC-015", "Private beta with real users: product KPIs, minimal support tooling, feedback",
      "6 Go-live (credentials last)", "Platform", "Not Started", "P0", "PC-071",
      "Covers R-051, R-107. The platform is not 'live' until strangers use it."),
+    # Phase 7 - Win the category (last, by founder decision 2026-09-26)
+    ("PC-083", "Head-to-head benchmark: the same 20 prompts on OmniStackAI, Lovable, Bolt, v0, "
+     "Emergent and Replit; score UI quality, working features, build success and time",
+     "7 Win the category", "Both", "Not Started", "P1", "PC-015",
+     "Without measurement 'best' is an opinion. Re-run every quarter (PC-087)."),
+    ("PC-089", "Win on UI polish and speed against Lovable, Bolt and v0: iterate on the benchmark "
+     "until we lead it", "7 Win the category", "Vibe", "Not Started", "P1", "PC-083, PC-084",
+     "Their whole focus, improved weekly; matching needs features, beating needs measurement."),
+    ("PC-090", "Engineering Mode positioning and proof: 'designs and builds structured multi-app "
+     "platforms with verification', benchmarked against Cursor, Claude Code, Codex and Devin "
+     "on platform-building tasks", "7 Win the category", "Engineering", "Not Started", "P1",
+     "PC-083", "We do not try to be a better general code editor; we win where they do not "
+     "compete: whole platforms from a plan, verified."),
+    ("PC-091", "Native lead: match or beat the native Swift/Kotlin builders on quality and speed",
+     "7 Win the category", "Both", "Not Started", "P2", "R-575, R-576, PC-083",
+     "Some builders already generate native apps; ours arrives in Phase 5."),
+    ("PC-086", "Public launch: docs site, tutorials and videos, pricing page, community, launch "
+     "campaign", "7 Win the category", "Platform", "Not Started", "P1", "PC-015",
+     "The plan otherwise stops at a private beta."),
+    ("PC-092", "Users and brand: growth loops (referrals, template showcase, made-with gallery), "
+     "partnerships, content, measured activation and retention", "7 Win the category",
+     "Platform", "Not Started", "P1", "PC-086",
+     "Competitors already have millions of users."),
+    ("PC-087", "Quarterly competitor review: re-run the benchmark, update the plan and this queue",
+     "7 Win the category", "Platform", "Not Started", "P2", "PC-083",
+     "Recurring; competitors ship weekly."),
 ]
 
 # --- Tracker items that are not Done in the v6 tracker ----------------------------------------
