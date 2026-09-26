@@ -31,14 +31,14 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 | Completed | 405 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
-| Pending | 41 |
-| Not Started | 239 |
+| Pending | 62 |
+| Not Started | 265 |
 | Superseded | 12 |
-| Deferred | 57 |
+| Deferred | 58 |
 | Dropped | 9 |
-| **Total** | **771** |
+| **Total** | **819** |
 
-Open work queue: **91** tasks (P0: 18, P1: 35, P2: 26, P3: 12).
+Open work queue: **97** tasks (P0: 18, P1: 41, P2: 26, P3: 12).
 
 ## Work queue (do these in order)
 
@@ -80,71 +80,77 @@ Open work queue: **91** tasks (P0: 18, P1: 35, P2: 26, P3: 12).
 | 31 | PC-016 | Edit a workflow by chat (add/rename states and transitions safely) | Not Started | P1 | Both | R-584, R-590 |  |  |
 | 32 | R-572 | Shared contract package: one generated packages/ for types, client, validation | Not Started | P1 | Both |  | R-116, R-127, R-137, R-143, R-152, SPEC-PACK-06D |  |
 | 33 | R-585 | Template customisation as a first-class flow | Not Started | P1 | Both | R-584 |  |  |
-| 34 | PC-017 | Pack framework: manifest v2, composer, horizontal and vertical packs, blueprints | Not Started | P2 | Both | R-572 | ARCH-GENERATORS, ARCH-PACKS, ARCH-VERTICALS, SPEC-PACK-01, SPEC-PACK-02, SPEC-PACK-03, SPEC-PACK-04, SPEC-PACK-05, SPEC-PACK-06B, SPEC-PACK-06C, SPEC-PACK-06E | From specs/pack-framework 01-05, 06b, 06c, 06e. |
-| 35 | PC-018 | Template marketplace v2: blueprint catalog and pack publishing | Not Started | P2 | Vibe | PC-017 | ARCH-TEMPLATES-UX, SPEC-TPL-01 | From specs/template-marketplace/01. |
-| 36 | TPL-POCKET | Template: Pocket, digital wallet (fintech) | Not Started | P2 | Vibe | R-567 |  | Template plan section 6.3. |
-| 37 | TPL-LEARNHUB | Template: LearnHub, LMS + course marketplace | Not Started | P2 | Vibe |  |  | Template plan section 6.4. |
-| 38 | TPL-GLOW | Template: Glow, salon and spa booking | Not Started | P3 | Vibe |  |  | Template plan section 6.5. |
-| 39 | TPL-FRESHCART | Template: FreshCart, quick-commerce grocery | Not Started | P3 | Vibe | R-569 |  | Template plan section 6.6. |
-| 40 | TPL-ESTATELY | Template: Estately, property marketplace + agent CRM | Not Started | P3 | Vibe |  |  | Template plan section 6.7. |
-| 41 | TPL-FIXIT | Template: FixIt, home-services marketplace | Not Started | P3 | Vibe |  |  | Template plan section 6.8. |
-| 42 | TPL-INKWELL | Template: Inkwell Press, blogging/publishing | Not Started | P3 | Vibe |  |  | Template plan section 6.9. |
-| 43 | PC-019 | Visual click-to-edit in the preview (design tokens and copy only) | Not Started | P2 | Vibe |  | BP-CLICKEDIT | Buildout plan idea 'R-520'. |
-| 44 | PC-020 | Brand kit / Style DNA UI across all surfaces | Pending | P2 | Vibe |  | ARCH-COMPONENT-BROWSER, BP-BRANDKIT | brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. |
-| 45 | PC-021 | Screenshot or Figma to app | Not Started | P3 | Vibe |  | BP-FIGMA | Buildout idea 'R-527'. |
-| 46 | PC-048 | Database choice: MongoDB as an option beside PostgreSQL (the default) | Not Started | P2 | Both | R-570 | ARCH-DB-OPTIONS, R-075 | D-8. Every backend adapter needs a Mongo data layer; lifecycle and uniqueness rules move from SQL constraints to schema validation and indexes. Lifts the Phase T 'PostgreSQL only' gate. |
-| 47 | PC-052 | File uploads and storage in generated apps (S3-compatible, presigned URLs, image processing) | Not Started | P1 | Both |  | ARCH-FILES | Local MinIO-style store for dev; any S3 provider on publish. From the architecture plan. |
-| 48 | PC-053 | Notifications in generated apps: email, push (Expo and native), in-app, user preferences | Not Started | P1 | Both | R-568 | ARCH-NOTIFY | R-516 gives email. From the architecture plan. |
-| 49 | PC-054 | Tests generated with every app: API contract, end-to-end (Playwright), unit | Not Started | P1 | Both |  | ARCH-TESTS | Architecture-plan target: over 80% coverage of generated code. |
-| 50 | PC-059 | Form and wizard engine: multi-step, conditional fields, draft autosave | Not Started | P2 | Both |  | ARCH-FORMS | From the architecture plan. |
-| 51 | PC-057 | Generated-app operations: rate limiting, signed webhooks with retries, audit log, error tracking and tracing hooks | Not Started | P2 | Both |  | ARCH-OBSERVABILITY | From the architecture plan (api-gateway, webhooks, audit, observability packs). |
-| 52 | PC-055 | Internationalisation in generated apps (web, admin, mobile) | Not Started | P2 | Both |  | ARCH-I18N | From the architecture plan. |
-| 53 | PC-064 | iOS Simulator preview: Xcode installed and driven from the command line, simulator streamed into the Studio (Mac only) | Not Started | P2 | Both | PC-063 | R-053 | See NATIVE_MOBILE_PREVIEW_PLAN.md. No open-source iOS simulator exists; Xcode is free but Mac-only. |
-| 54 | PC-056 | Feature flags and A/B tests in generated apps | Not Started | P3 | Both |  | ARCH-FLAGS | From the architecture plan. |
-| 55 | PC-058 | Search engine option (Meilisearch or Typesense) beyond keyword search | Not Started | P3 | Both |  | ARCH-SEARCH | From the architecture plan. |
-| 56 | R-583 | Next.js static export mode | Not Started | P3 | Both |  |  | The cheap answer to 'no SSR, no Vercel'. |
+| 34 | PC-017 | Pack framework core: manifest v2 schema, registry/loader, composer (merge, wire, validate, conflict rules) | Pending | P1 | Both | R-572 | ARCH-GENERATORS, SPEC-PACK-01, SPEC-PACK-02 | Solution Pack manifests, registry and application exist (R-434..R-445); v2 adds ir_delta, state machines, page templates, dependencies. From specs/pack-framework 01, 02. |
+| 35 | PC-075 | Role-based app generator: a complete app per role (nav, pages, API scope, permissions) | Pending | P1 | Both | PC-017, R-570 | SPEC-PACK-06B | R-555/R-562 already build one app per role; the spec asks for role-scoped pages and APIs. From specs/pack-framework/06b. |
+| 36 | PC-076 | Page template engine: domain pages from templates with IR slots (dispatch board, SOAP notes ...) | Not Started | P1 | Both | PC-017 | SPEC-PACK-06C | From specs/pack-framework/06c. |
+| 37 | PC-077 | Rich seed data generator: realistic, domain-aware, deterministic demo data | Pending | P2 | Both | PC-017 | SPEC-PACK-06E | Fixture seeds exist (R-248) and must stay deterministic (R-586). From specs/pack-framework/06e. |
+| 38 | PC-072 | Blueprint conversion: turn RideNow, Bazaar and CareClinic templates into blueprints that regenerate them (golden-file test) | Not Started | P1 | Both | PC-017, PC-075, PC-076 | SPEC-PACK-05 | From specs/pack-framework/05. |
+| 39 | PC-073 | Horizontal packs registry: all 31 universal packs as manifest v2 packs that work alone and compose (HP-* rows) | Pending | P1 | Both | PC-017 | ARCH-PACKS, HP-accessibility, HP-admin-crud, HP-analytics, HP-api-docs, HP-audit-compliance, HP-auth-rbac, HP-cache, HP-communications, HP-feature-flags, HP-files-storage, HP-localization, HP-marketplace-core, HP-multi-app, HP-notifications, HP-observability, HP-payments, HP-performance, HP-pwa, HP-queue, HP-ratings-reviews, HP-rbac-advanced, HP-real-time, HP-referrals-affiliates, HP-scheduling, HP-search, HP-secrets, HP-storybook, HP-subscriptions, HP-testing, HP-webhooks, HP-workflows, SPEC-PACK-03 | Each pack packages a capability built by its own task; core 10 first (auth, db, api, design, admin, payments, notifications, files, realtime, workflows). From specs/pack-framework/03. |
+| 40 | PC-074 | Vertical packs: the first 10 domains (VP-* rows) | Pending | P1 | Both | PC-073, PC-072 | ARCH-VERTICALS, SPEC-PACK-04, VP-commerce-core, VP-edtech-core, VP-fintech-core, VP-food-delivery-core, VP-healthcare-core, VP-hr-core, VP-logistics-core, VP-mobility-core, VP-real-estate-core, VP-saas-b2b-core | Healthcare, mobility and commerce come from the three templates; seven are new. From specs/pack-framework/04. |
+| 41 | PC-018 | Template marketplace v2: blueprint catalog and pack publishing | Not Started | P2 | Vibe | PC-017 | ARCH-TEMPLATES-UX, SPEC-TPL-01 | From specs/template-marketplace/01. |
+| 42 | TPL-POCKET | Template: Pocket, digital wallet (fintech) | Not Started | P2 | Vibe | R-567 |  | Template plan section 6.3. |
+| 43 | TPL-LEARNHUB | Template: LearnHub, LMS + course marketplace | Not Started | P2 | Vibe |  |  | Template plan section 6.4. |
+| 44 | TPL-GLOW | Template: Glow, salon and spa booking | Not Started | P3 | Vibe |  |  | Template plan section 6.5. |
+| 45 | TPL-FRESHCART | Template: FreshCart, quick-commerce grocery | Not Started | P3 | Vibe | R-569 |  | Template plan section 6.6. |
+| 46 | TPL-ESTATELY | Template: Estately, property marketplace + agent CRM | Not Started | P3 | Vibe |  |  | Template plan section 6.7. |
+| 47 | TPL-FIXIT | Template: FixIt, home-services marketplace | Not Started | P3 | Vibe |  |  | Template plan section 6.8. |
+| 48 | TPL-INKWELL | Template: Inkwell Press, blogging/publishing | Not Started | P3 | Vibe |  |  | Template plan section 6.9. |
+| 49 | PC-019 | Visual click-to-edit in the preview (design tokens and copy only) | Not Started | P2 | Vibe |  | BP-CLICKEDIT | Buildout plan idea 'R-520'. |
+| 50 | PC-020 | Brand kit / Style DNA UI across all surfaces | Pending | P2 | Vibe |  | ARCH-COMPONENT-BROWSER, BP-BRANDKIT | brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. |
+| 51 | PC-021 | Screenshot or Figma to app | Not Started | P3 | Vibe |  | BP-FIGMA | Buildout idea 'R-527'. |
+| 52 | PC-048 | Database choice: MongoDB as an option beside PostgreSQL (the default) | Not Started | P2 | Both | R-570 | ARCH-DB-OPTIONS, R-075 | D-8. Every backend adapter needs a Mongo data layer; lifecycle and uniqueness rules move from SQL constraints to schema validation and indexes. Lifts the Phase T 'PostgreSQL only' gate. |
+| 53 | PC-052 | File uploads and storage in generated apps (S3-compatible, presigned URLs, image processing) | Not Started | P1 | Both |  | ARCH-FILES | Local MinIO-style store for dev; any S3 provider on publish. From the architecture plan. |
+| 54 | PC-053 | Notifications in generated apps: email, push (Expo and native), in-app, user preferences | Not Started | P1 | Both | R-568 | ARCH-NOTIFY | R-516 gives email. From the architecture plan. |
+| 55 | PC-054 | Tests generated with every app: API contract, end-to-end (Playwright), unit | Not Started | P1 | Both |  | ARCH-TESTS | Architecture-plan target: over 80% coverage of generated code. |
+| 56 | PC-059 | Form and wizard engine: multi-step, conditional fields, draft autosave | Not Started | P2 | Both |  | ARCH-FORMS | From the architecture plan. |
+| 57 | PC-057 | Generated-app operations: rate limiting, signed webhooks with retries, audit log, error tracking and tracing hooks | Not Started | P2 | Both |  | ARCH-OBSERVABILITY | From the architecture plan (api-gateway, webhooks, audit, observability packs). |
+| 58 | PC-055 | Internationalisation in generated apps (web, admin, mobile) | Not Started | P2 | Both |  | ARCH-I18N | From the architecture plan. |
+| 59 | PC-064 | iOS Simulator preview: Xcode installed and driven from the command line, simulator streamed into the Studio (Mac only) | Not Started | P2 | Both | PC-063 | R-053 | See NATIVE_MOBILE_PREVIEW_PLAN.md. No open-source iOS simulator exists; Xcode is free but Mac-only. |
+| 60 | PC-056 | Feature flags and A/B tests in generated apps | Not Started | P3 | Both |  | ARCH-FLAGS | From the architecture plan. |
+| 61 | PC-058 | Search engine option (Meilisearch or Typesense) beyond keyword search | Not Started | P3 | Both |  | ARCH-SEARCH | From the architecture plan. |
+| 62 | R-583 | Next.js static export mode | Not Started | P3 | Both |  |  | The cheap answer to 'no SSR, no Vercel'. |
 | | | **Phase 3 Engineering Mode**: Plan, stack choice, repo import, diffs, verification report, PRs, memory. | | | | | | |
-| 57 | PC-022 | Plan view: see and edit the plan (apps, roles, entities, flows) before building | Not Started | P1 | Engineering | PC-005 | ARCH-ENG-OPTIONS, SPEC-ENG-01 | Buildout idea 'intent cards'; specs/engineering-mode/01. |
-| 58 | PC-023 | Stack chooser: pick web/admin/mobile/backend, refused with a reason when unsupported | Pending | P1 | Engineering | PC-005 | R-135 | R-565 carries the stack in the IR; needs the UI. |
-| 59 | R-577 | Agentic mode core: plan -> edit files -> verify -> repair, bounded, auditable | Not Started | P1 | Engineering |  | R-042, R-176, R-177, R-178, R-179, R-180, R-183, R-184 |  |
-| 60 | R-578 | Import an existing local project (agentic mode, not IR mode) | Not Started | P1 | Engineering | R-577 | ARCH-IMPORT-MODES, R-018, R-076, SPEC-REPO-01, SPEC-STUDIO-02 |  |
-| 61 | R-579 | GitHub import and push-back | Pending | P1 | Engineering | R-578 | ARCH-IMPORT-SOURCES | R-501 can push a generated project; import is missing. |
-| 62 | PC-024 | Diff review per change, with change impact / blast radius | Not Started | P1 | Engineering | R-577 | R-016, R-017, T-5 |  |
-| 63 | PC-025 | Verification report view: per-surface compile, tests, security, in the Studio | Pending | P1 | Engineering |  |  | R-560/R-561/R-508 produce the data; nothing shows it as a report. |
-| 64 | PC-026 | Open GitHub pull requests (branch per change, PR naming) | Not Started | P1 | Engineering | R-579 | R-021, R-125 |  |
-| 65 | R-581 | Memory across sessions: semantic project memory on pgvector | Not Started | P1 | Both |  | R-019, R-027, R-057 |  |
-| 66 | PC-027 | Version timeline and safe, non-destructive rollback | Not Started | P1 | Both |  | BP-TIMELINE, R-022 |  |
-| 67 | PC-051 | Graduation bridge: open a Vibe project in Engineering Mode with nothing lost, and back | Not Started | P1 | Both | PC-005, PC-022 | ARCH-GRADUATION | Projects already keep ir.json, so the IR carries over; custom UI and history must too. From the architecture plan. |
-| 68 | PC-028 | Cloud deploy adapters beyond Vercel/Netlify: containers, Kubernetes (Helm), Terraform | Not Started | P2 | Engineering | PC-008 | ARCH-K8S, SPEC-DEPLOY-01 | From specs/deploy-adapters/01 and the architecture plan. |
-| 69 | PC-029 | Team collaboration: roles, approvals, preview comments | Pending | P2 | Engineering |  | BP-COMMENTS, R-064, R-065 | R-515 gives teams. |
-| 70 | PC-030 | Tool registry and MCP gateway with a tool secret broker | Not Started | P2 | Engineering | R-577 | R-185, R-186, R-187 |  |
+| 63 | PC-022 | Plan view: see and edit the plan (apps, roles, entities, flows) before building | Not Started | P1 | Engineering | PC-005 | ARCH-ENG-OPTIONS, SPEC-ENG-01 | Buildout idea 'intent cards'; specs/engineering-mode/01. |
+| 64 | PC-023 | Stack chooser: pick web/admin/mobile/backend, refused with a reason when unsupported | Pending | P1 | Engineering | PC-005 | R-135 | R-565 carries the stack in the IR; needs the UI. |
+| 65 | R-577 | Agentic mode core: plan -> edit files -> verify -> repair, bounded, auditable | Not Started | P1 | Engineering |  | R-042, R-176, R-177, R-178, R-179, R-180, R-183, R-184 |  |
+| 66 | R-578 | Import an existing local project (agentic mode, not IR mode) | Not Started | P1 | Engineering | R-577 | ARCH-IMPORT-MODES, R-018, R-076, SPEC-REPO-01, SPEC-STUDIO-02 |  |
+| 67 | R-579 | GitHub import and push-back | Pending | P1 | Engineering | R-578 | ARCH-IMPORT-SOURCES | R-501 can push a generated project; import is missing. |
+| 68 | PC-024 | Diff review per change, with change impact / blast radius | Not Started | P1 | Engineering | R-577 | R-016, R-017, T-5 |  |
+| 69 | PC-025 | Verification report view: per-surface compile, tests, security, in the Studio | Pending | P1 | Engineering |  |  | R-560/R-561/R-508 produce the data; nothing shows it as a report. |
+| 70 | PC-026 | Open GitHub pull requests (branch per change, PR naming) | Not Started | P1 | Engineering | R-579 | R-021, R-125 |  |
+| 71 | R-581 | Memory across sessions: semantic project memory on pgvector | Not Started | P1 | Both |  | R-019, R-027, R-057 |  |
+| 72 | PC-027 | Version timeline and safe, non-destructive rollback | Not Started | P1 | Both |  | BP-TIMELINE, R-022 |  |
+| 73 | PC-051 | Graduation bridge: open a Vibe project in Engineering Mode with nothing lost, and back | Not Started | P1 | Both | PC-005, PC-022 | ARCH-GRADUATION | Projects already keep ir.json, so the IR carries over; custom UI and history must too. From the architecture plan. |
+| 74 | PC-028 | Cloud deploy adapters beyond Vercel/Netlify: containers, Kubernetes (Helm), Terraform | Not Started | P2 | Engineering | PC-008 | ARCH-K8S, SPEC-DEPLOY-01 | From specs/deploy-adapters/01 and the architecture plan. |
+| 75 | PC-029 | Team collaboration: roles, approvals, preview comments | Pending | P2 | Engineering |  | BP-COMMENTS, R-064, R-065 | R-515 gives teams. |
+| 76 | PC-030 | Tool registry and MCP gateway with a tool secret broker | Not Started | P2 | Engineering | R-577 | R-185, R-186, R-187 |  |
 | | | **Phase 4 Production ops**: Security audits, backup/recovery, compliance, observability. | | | | | | |
-| 71 | PC-031 | Backup, restore drills and disaster recovery | Not Started | P1 | Platform | PC-009 | PG-08, R-096, R-097 |  |
-| 72 | PC-032 | Security audits: independent pen test, DAST, prompt-injection and MCP isolation tests | Not Started | P1 | Platform | PC-009 | GA-09, PG-04, PG-06, PG-21, R-069, R-098, R-213 |  |
-| 73 | PC-033 | Observability: platform logs, metrics, task trace, SLOs, incident process | Not Started | P1 | Platform | PC-009 | PG-07, PG-10, R-043, R-044, R-094, R-102 |  |
-| 74 | PC-034 | Load and capacity tests | Not Started | P1 | Platform | PC-009 | PG-09, R-103 |  |
-| 75 | PC-035 | Compliance: SOC 2 readiness, SBOM + licence gate, OSS licence review | Not Started | P2 | Platform |  | GA-11, R-070, R-099, R-154, R-190, R-219 |  |
-| 76 | PC-036 | Migration safety checks for generated schema changes | Pending | P1 | Both |  | GA-08, PG-20, R-040 | R-584 flags data loss; needs a real gate. |
-| 77 | PC-037 | Release quality: qualification suite, API contract tests, visual regression, performance budgets | Not Started | P2 | Platform |  | ARCH-PERF, GAP-TESTTOOLS, PG-02, PG-03, R-039, R-059, R-060, R-105 |  |
-| 78 | PC-038 | Reliability of runs: crash-resume, no duplicate side effects, stream replay | Not Started | P2 | Platform | R-577 | R-182, R-210, R-211, R-212, R-216 |  |
-| 79 | PC-039 | Unit economics dashboard | Not Started | P2 | Platform | PC-010 | PG-12, R-110 |  |
-| 80 | PC-040 | Environments per project (dev / preview / prod) | Not Started | P2 | Both |  | GA-07, R-126 |  |
-| 81 | PC-065 | Hosted Android emulators for every user: Linux + KVM pool, per-session isolation, browser streaming, metering | Not Started | P2 | Both | PC-009, PC-063 |  | See NATIVE_MOBILE_PREVIEW_PLAN.md. Built and proven on a local Linux VM; the server account is plugged in at PC-070. |
-| 82 | PC-067 | Production readiness sign-off: every blocking gate PG-01..PG-21 has evidence | Not Started | P1 | Platform | PC-031..PC-041 | GA-10, PG-01, PG-17 | The tracker's Production_Gates sheet. The platform is not called production-ready before this. |
-| 83 | PC-041 | HA control plane and canary platform releases | Not Started | P2 | Platform | PC-009 | GA-12, PG-11, R-095, R-106 |  |
+| 77 | PC-031 | Backup, restore drills and disaster recovery | Not Started | P1 | Platform | PC-009 | PG-08, R-096, R-097 |  |
+| 78 | PC-032 | Security audits: independent pen test, DAST, prompt-injection and MCP isolation tests | Not Started | P1 | Platform | PC-009 | GA-09, PG-04, PG-06, PG-21, R-069, R-098, R-213 |  |
+| 79 | PC-033 | Observability: platform logs, metrics, task trace, SLOs, incident process | Not Started | P1 | Platform | PC-009 | PG-07, PG-10, R-043, R-044, R-094, R-102 |  |
+| 80 | PC-034 | Load and capacity tests | Not Started | P1 | Platform | PC-009 | PG-09, R-103 |  |
+| 81 | PC-035 | Compliance: SOC 2 readiness, SBOM + licence gate, OSS licence review | Not Started | P2 | Platform |  | GA-11, R-070, R-099, R-154, R-190, R-219 |  |
+| 82 | PC-036 | Migration safety checks for generated schema changes | Pending | P1 | Both |  | GA-08, PG-20, R-040 | R-584 flags data loss; needs a real gate. |
+| 83 | PC-037 | Release quality: qualification suite, API contract tests, visual regression, performance budgets | Not Started | P2 | Platform |  | ARCH-PERF, GAP-TESTTOOLS, PG-02, PG-03, R-039, R-059, R-060, R-105 |  |
+| 84 | PC-038 | Reliability of runs: crash-resume, no duplicate side effects, stream replay | Not Started | P2 | Platform | R-577 | R-182, R-210, R-211, R-212, R-216 |  |
+| 85 | PC-039 | Unit economics dashboard | Not Started | P2 | Platform | PC-010 | PG-12, R-110 |  |
+| 86 | PC-040 | Environments per project (dev / preview / prod) | Not Started | P2 | Both |  | GA-07, R-126 |  |
+| 87 | PC-065 | Hosted Android emulators for every user: Linux + KVM pool, per-session isolation, browser streaming, metering | Not Started | P2 | Both | PC-009, PC-063 |  | See NATIVE_MOBILE_PREVIEW_PLAN.md. Built and proven on a local Linux VM; the server account is plugged in at PC-070. |
+| 88 | PC-067 | Production readiness sign-off: every blocking gate PG-01..PG-21 has evidence | Not Started | P1 | Platform | PC-031..PC-041 | GA-10, PG-01, PG-17 | The tracker's Production_Gates sheet. The platform is not called production-ready before this. |
+| 89 | PC-041 | HA control plane and canary platform releases | Not Started | P2 | Platform | PC-009 | GA-12, PG-11, R-095, R-106 |  |
 | | | **Phase 5 Native mobile (last)**: Kotlin/Compose + Swift/SwiftUI, through to Play Store and App Store. | | | | | | |
-| 84 | PC-042 | Native go-ahead gate: founder approval, toolchains, Apple and Google accounts | Not Started | P2 | Both | Phases 1-4 |  | Standing rule: stop and ask before native mobile work. |
-| 85 | R-575 | Native Android: Kotlin + Jetpack Compose, best in class | Not Started | P2 | Both | PC-042 | ARCH-NATIVE, R-035, R-144, R-145, SPEC-NATIVE-01 |  |
-| 86 | R-576 | Native iOS: Swift + SwiftUI, best in class | Not Started | P2 | Both | PC-042 | R-036, R-146, R-147 |  |
-| 87 | PC-043 | Native recommendation: when to offer native instead of PWA | Not Started | P2 | Both | R-575, R-576 | R-120 |  |
-| 88 | PC-044 | Signed native builds (AAB/IPA), signing-key hardening, and store submission through the R-574 pipeline | Not Started | P2 | Both | R-575, R-576 | R-049, R-050, R-101 |  |
-| 89 | PC-045 | Native modules and PWA-to-native migration | Not Started | P3 | Both | R-575, R-576 | R-163, R-165 |  |
-| 90 | PC-066 | Hosted iOS simulators on Mac hosts (on demand, metered) | Not Started | P3 | Both | PC-064 |  | Apple allows macOS only on Apple hardware, so this needs Mac servers. See NATIVE_MOBILE_PREVIEW_PLAN.md. |
-| 91 | PC-046 | Local Mac agent for iOS builds and simulators | Not Started | P3 | Engineering | R-576 | R-054, R-161 |  |
+| 90 | PC-042 | Native go-ahead gate: founder approval, toolchains, Apple and Google accounts | Not Started | P2 | Both | Phases 1-4 |  | Standing rule: stop and ask before native mobile work. |
+| 91 | R-575 | Native Android: Kotlin + Jetpack Compose, best in class | Not Started | P2 | Both | PC-042 | ARCH-NATIVE, R-035, R-144, R-145, SPEC-NATIVE-01 |  |
+| 92 | R-576 | Native iOS: Swift + SwiftUI, best in class | Not Started | P2 | Both | PC-042 | R-036, R-146, R-147 |  |
+| 93 | PC-043 | Native recommendation: when to offer native instead of PWA | Not Started | P2 | Both | R-575, R-576 | R-120 |  |
+| 94 | PC-044 | Signed native builds (AAB/IPA), signing-key hardening, and store submission through the R-574 pipeline | Not Started | P2 | Both | R-575, R-576 | R-049, R-050, R-101 |  |
+| 95 | PC-045 | Native modules and PWA-to-native migration | Not Started | P3 | Both | R-575, R-576 | R-163, R-165 |  |
+| 96 | PC-066 | Hosted iOS simulators on Mac hosts (on demand, metered) | Not Started | P3 | Both | PC-064 |  | Apple allows macOS only on Apple hardware, so this needs Mac servers. See NATIVE_MOBILE_PREVIEW_PLAN.md. |
+| 97 | PC-046 | Local Mac agent for iOS builds and simulators | Not Started | P3 | Engineering | R-576 | R-054, R-161 |  |
 | | | **Phase 6 Go-live (credentials last)**: The founder supplies accounts and keys; every live proof is run; the platform opens to real users. | | | | | | |
-| 92 | PC-070 | Credentials handover: founder supplies cloud, database, payment, email, Apple and Google accounts and keys; each is plugged in without code changes | Not Started | P0 | Platform | Phases 1-5 |  | Everything before this is built so that only keys and secrets are missing. Keys go into the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7. |
-| 93 | PC-071 | Live proof of every 'Completed - needs live proof' item with the real accounts | Not Started | P0 | Platform | PC-070 |  | Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. |
-| 94 | PC-015 | Private beta with real users: product KPIs, minimal support tooling, feedback | Not Started | P0 | Platform | PC-071 | PG-15, R-051, R-107, R-513 | The platform is not 'live' until strangers use it. |
+| 98 | PC-070 | Credentials handover: founder supplies cloud, database, payment, email, Apple and Google accounts and keys; each is plugged in without code changes | Not Started | P0 | Platform | Phases 1-5 |  | Everything before this is built so that only keys and secrets are missing. Keys go into the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7. |
+| 99 | PC-071 | Live proof of every 'Completed - needs live proof' item with the real accounts | Not Started | P0 | Platform | PC-070 |  | Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. |
+| 100 | PC-015 | Private beta with real users: product KPIs, minimal support tooling, feedback | Not Started | P0 | Platform | PC-071 | PG-15, R-051, R-107, R-513 | The platform is not 'live' until strangers use it. |
 
 ## Founder decisions
 
@@ -253,6 +259,18 @@ What each tracker phase asks for, and where it is covered:
 | GA-07 | Environments local -> test -> preview -> staging -> prod with typed config | Tracker RND_Gap_Audit | Pending | P2 | PC-040 |  |
 | GA-11 | Pinned supply chain, SBOM/provenance, patch SLA | Tracker RND_Gap_Audit | Pending | P2 | PC-035 | Lockfiles pinned; SBOM missing. |
 | GAP-TESTTOOLS | Pin the testing toolchain (Playwright, pytest, go test, k6) | V6_Review_and_Gap_Analysis section 3 | Pending | P2 | PC-037 | pytest/unittest, go test and Playwright (templates) are in use; k6 is not. |
+| HP-accessibility | Horizontal pack accessibility: WCAG 2.1 AA, axe-core automated checks | specs/pack-framework/03 | Pending | P2 | PC-073 | Generated UI is accessible (R-296); automated axe checks new. |
+| HP-admin-crud | Horizontal pack admin-crud: Generated admin: tables, filters, bulk actions, audit log, exports | specs/pack-framework/03 | Pending | P1 | PC-073 | Admin app exists (R-542, R-270, R-271). |
+| HP-analytics | Horizontal pack analytics: Event tracking, PostHog/GA4/Mixpanel, dashboards, funnels | specs/pack-framework/03 | Pending | P2 | PC-073 | Published-app analytics exists (R-513). |
+| HP-api-docs | Horizontal pack api-docs: OpenAPI, Swagger UI, Postman collection, SDKs | specs/pack-framework/03 | Pending | P2 | PC-073 | OpenAPI exists (R-260, R-588). |
+| HP-auth-rbac | Horizontal pack auth-rbac: Login, register, roles, permissions, JWT, sessions, passkeys | specs/pack-framework/03 | Pending | P1 | PC-073 | Auth exists (R-461, R-241..R-243, R-591 for Go); passkeys new. |
+| HP-multi-app | Horizontal pack multi-app: Shared API, cross-app auth, preview proxy, deploy coordination | specs/pack-framework/03 | Pending | P1 | PC-073 | Ecosystem monorepo exists (R-554, R-447, R-553). |
+| HP-notifications | Horizontal pack notifications: Email/SMS/push, templates, preferences, in-app centre, digest | specs/pack-framework/03 | Pending | P1 | PC-073 | Email exists (R-516); rest PC-053. |
+| HP-payments | Horizontal pack payments: Stripe/Razorpay checkout, webhooks, subscriptions, invoices, refunds | specs/pack-framework/03 | Pending | P1 | PC-073 | Checkout exists (R-512); ledger/refunds R-567. |
+| HP-pwa | Horizontal pack pwa: Service worker, offline, push, background sync | specs/pack-framework/03 | Pending | P0 | PC-073 | R-573. |
+| HP-search | Horizontal pack search: Meilisearch/Typesense, facets, saved searches, synonyms | specs/pack-framework/03 | Pending | P3 | PC-073 | Keyword search exists (R-261); engine PC-058. |
+| HP-secrets | Horizontal pack secrets: Env/Vault management, rotation, audit | specs/pack-framework/03 | Pending | P2 | PC-073 | Platform secrets exist (R-503); generated-app side new. |
+| HP-workflows | Horizontal pack workflows: State machine engine: transitions, guards, actions, audit | specs/pack-framework/03 | Pending | P1 | PC-073 | Transitions done (R-566, R-588, R-589); guards/actions R-571; buttons R-590. |
 | PG-17 | A fresh AI/developer session resumes the task from Git + durable state | Tracker Production_Gates | Pending | P1 | PC-067 | AGENTS.md, CURRENT_TASK.yaml and this queue exist; the formal drill does not. |
 | PG-19 | Local model endpoint exposure/auth/network policy | Tracker Production_Gates | Pending | P1 | PC-014 | Ollama is loopback-only (R-003). |
 | R-027 | pgvector initially | Execution_Tracker_v6 | Pending | P1 | R-581 | Extension installed, no embeddings table. |
@@ -265,10 +283,14 @@ What each tracker phase asks for, and where it is covered:
 | R-126 | Organization > Workspace > Project > Environment model | Execution_Tracker_v6 | Pending | P2 | PC-040 | Org, workspace and project exist (R-499, R-515). |
 | R-135 | Stack selection wizard | Execution_Tracker_v6 | Pending | P1 | PC-023 |  |
 | R-194 | Hybrid BYOK/local mode | Execution_Tracker_v6 | Pending | P1 | PC-014 |  |
-| SPEC-PACK-06B | Role-based app generator | specs/pack-framework/06b | Pending | P2 | PC-017 | R-555 and R-562 build one app per role; the spec asks for more. |
-| SPEC-PACK-06E | Rich seed data generator | specs/pack-framework/06e | Pending | P2 | PC-017 | Seeds exist (R-248); the spec asks for realistic volume. |
+| SPEC-PACK-01 | Pack manifest v2 schema | specs/pack-framework/01 | Pending | P1 | PC-017 | Draft spec (called R-600 inside). |
+| SPEC-PACK-06B | Role-based app generator | specs/pack-framework/06b | Pending | P1 | PC-075 | R-555 and R-562 build one app per role; the spec asks for more. |
+| SPEC-PACK-06E | Rich seed data generator | specs/pack-framework/06e | Pending | P2 | PC-077 | Seeds exist (R-248); the spec asks for realistic volume. |
 | SPEC-TS-01 | Instant chat -> pretty UI | specs/table-stakes/01 | Pending | P0 | PC-006 | Draft spec. |
 | SPEC-TS-03 | One-click deploy | specs/table-stakes/03 | Pending | P0 | PC-008 | Draft spec. |
+| VP-commerce-core | Vertical pack commerce-core: Listings, cart, checkout, inventory, fulfilment, vendors, commissions | specs/pack-framework/04 | Pending | P1 | PC-074 | From the Bazaar template (PC-072). |
+| VP-healthcare-core | Vertical pack healthcare-core: Patients, providers, appointments, EMR, telehealth, prescriptions, labs | specs/pack-framework/04 | Pending | P1 | PC-074 | From the CareClinic template (PC-072). |
+| VP-mobility-core | Vertical pack mobility-core: Rides, drivers, dispatch, routing, surge, earnings | specs/pack-framework/04 | Pending | P1 | PC-074 | From the RideNow template (PC-072). |
 | ARCH-ALLOWLIST | Expanded LLM UI import allowlist | docs/ARCHITECTURE_MASTER_PLAN.md §4.4 | Not Started | P1 | PC-050 |  |
 | ARCH-COMPONENT-BROWSER | Component library browser | docs/ARCHITECTURE_MASTER_PLAN.md §7.3 | Not Started | P3 | PC-020 |  |
 | ARCH-DB-OPTIONS | Database choice per project (the plan lists PG/MySQL/SQLite) | docs/ARCHITECTURE_MASTER_PLAN.md §7.2 | Not Started | P2 | PC-048 | MongoDB first (D-8); others if they prove best. |
@@ -284,7 +306,7 @@ What each tracker phase asks for, and where it is covered:
 | ARCH-NATIVE | True native mobile (Kotlin/Compose + Swift/SwiftUI) | docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 3 | Not Started | P2 | R-575 | Also R-576. |
 | ARCH-NOTIFY | Notification system: multi-channel, templates, preferences | docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 3 | Not Started | P1 | PC-053 |  |
 | ARCH-OBSERVABILITY | Advanced observability for generated apps (tracing, dashboards) | docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4 | Not Started | P2 | PC-057 |  |
-| ARCH-PACKS | Pack manifest v2, composition engine, ~30 horizontal and ~80 vertical packs | docs/ARCHITECTURE_MASTER_PLAN.md §4.2, §5.1, §10 | Not Started | P2 | PC-017 |  |
+| ARCH-PACKS | Pack manifest v2, composition engine, ~30 horizontal and ~80 vertical packs | docs/ARCHITECTURE_MASTER_PLAN.md §4.2, §5.1, §10 | Not Started | P1 | PC-073 |  |
 | ARCH-PAYMENTS | Payment flow generator: Stripe Connect, webhooks, subscriptions | docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 3 | Not Started | P1 | R-567 |  |
 | ARCH-PERF | Performance: bundle analysis, lazy loading, edge caching | docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4 | Not Started | P2 | PC-037 |  |
 | ARCH-REALTIME | Realtime adapter: hooks, presence, optimistic UI | docs/ARCHITECTURE_MASTER_PLAN.md §5.3 | Not Started | P1 | R-569 |  |
@@ -293,7 +315,7 @@ What each tracker phase asks for, and where it is covered:
 | ARCH-SUPABASE | Real managed database for Vibe apps (Supabase in the plan; any managed PostgreSQL here) | docs/ARCHITECTURE_MASTER_PLAN.md §4.3 | Not Started | P0 | PC-049 | The plan's Supabase Auth/Storage are replaced by the generated backend's own auth and PC-052. |
 | ARCH-TEMPLATES-UX | Template marketplace UX | docs/ARCHITECTURE_MASTER_PLAN.md §10 Phase 4 | Not Started | P2 | PC-018 |  |
 | ARCH-TESTS | Generated tests with over 80% coverage | docs/ARCHITECTURE_MASTER_PLAN.md §12 | Not Started | P1 | PC-054 |  |
-| ARCH-VERTICALS | Vertical packs for 10 domains (healthcare, mobility, commerce, fintech, food, real estate, education, SaaS, logistics, services) | docs/ARCHITECTURE_MASTER_PLAN.md §5.1 | Not Started | P2 | PC-017 |  |
+| ARCH-VERTICALS | Vertical packs for 10 domains (healthcare, mobility, commerce, fintech, food, real estate, education, SaaS, logistics, services) | docs/ARCHITECTURE_MASTER_PLAN.md §5.1 | Not Started | P2 | PC-074 |  |
 | ARCH-WEBCONTAINER | WebContainer instant preview with a local Docker fallback | docs/ARCHITECTURE_MASTER_PLAN.md §4.1, §11 | Not Started | P0 | PC-007 |  |
 | BP-CLICKEDIT | Visual click-to-edit mode | Platform_Buildout section 8 ('R-520') | Not Started | P2 | PC-019 |  |
 | BP-COMMENTS | Preview-pinned comments and @Omni threads | Platform_Buildout section 8 ('R-528') | Not Started | P2 | PC-029 |  |
@@ -308,6 +330,25 @@ What each tracker phase asks for, and where it is covered:
 | GA-12 | Feature flags with owner/expiry, canary/blue-green | Tracker RND_Gap_Audit | Not Started | P2 | PC-041 |  |
 | GAP-EVALS | Model eval and benchmark suite for ai/evals | V6_Review_and_Gap_Analysis section 3 | Not Started | P2 | PC-014 | Needed to recommend a local model honestly. |
 | GAP-LEGAL | Legal layer: ToS, DPA, code-handling agreement | V6_Review_and_Gap_Analysis section 3 | Not Started | P0 | PC-012 |  |
+| HP-audit-compliance | Horizontal pack audit-compliance: Immutable audit log, GDPR export, retention, lineage | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-057, PC-012. |
+| HP-cache | Horizontal pack cache: Redis/Valkey, invalidation | specs/pack-framework/03 | Not Started | P3 | PC-073 | New pack. |
+| HP-communications | Horizontal pack communications: Chat, comments, mentions, threads, attachments, reactions | specs/pack-framework/03 | Not Started | P2 | PC-073 | New pack; needs R-569. |
+| HP-feature-flags | Horizontal pack feature-flags: Rollouts, targeting, experiments, kill switches | specs/pack-framework/03 | Not Started | P3 | PC-073 | PC-056. |
+| HP-files-storage | Horizontal pack files-storage: S3 presigned uploads, progress, preview, PDF generation, CDN | specs/pack-framework/03 | Not Started | P1 | PC-073 | PC-052. |
+| HP-localization | Horizontal pack localization: i18n, RTL, currency, date/number formatting | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-055. |
+| HP-marketplace-core | Horizontal pack marketplace-core: Two-sided matching, commissions, payouts, disputes, escrow | specs/pack-framework/03 | Not Started | P2 | PC-073 | R-567; Bazaar template shows the shape. |
+| HP-observability | Horizontal pack observability: OpenTelemetry, logs, metrics, traces, Sentry, alerting | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-057. |
+| HP-performance | Horizontal pack performance: Bundle analysis, Core Web Vitals, Lighthouse CI | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-037. |
+| HP-queue | Horizontal pack queue: Background jobs, dead letter, priority, scheduling | specs/pack-framework/03 | Not Started | P1 | PC-073 | R-568. |
+| HP-ratings-reviews | Horizontal pack ratings-reviews: Stars, reviews, moderation, aggregates, helpful votes | specs/pack-framework/03 | Not Started | P2 | PC-073 | New pack. |
+| HP-rbac-advanced | Horizontal pack rbac-advanced: ABAC, resource-level permissions, org hierarchies, impersonation | specs/pack-framework/03 | Not Started | P1 | PC-073 | R-570. |
+| HP-real-time | Horizontal pack real-time: Presence, live updates, typing indicators | specs/pack-framework/03 | Not Started | P1 | PC-073 | R-569. |
+| HP-referrals-affiliates | Horizontal pack referrals-affiliates: Codes, tracking, rewards, payouts | specs/pack-framework/03 | Not Started | P3 | PC-073 | New pack; payouts need R-567. |
+| HP-scheduling | Horizontal pack scheduling: Calendars, recurrence, conflicts, time zones, bookings, reminders | specs/pack-framework/03 | Not Started | P1 | PC-073 | New pack; reminders need R-568. |
+| HP-storybook | Horizontal pack storybook: Component docs, visual tests, design playground | specs/pack-framework/03 | Not Started | P3 | PC-073 | New pack. |
+| HP-subscriptions | Horizontal pack subscriptions: Plans, trials, up/downgrades, proration, dunning | specs/pack-framework/03 | Not Started | P2 | PC-073 | R-567. |
+| HP-testing | Horizontal pack testing: Playwright E2E, contract, visual regression | specs/pack-framework/03 | Not Started | P1 | PC-073 | PC-054. |
+| HP-webhooks | Horizontal pack webhooks: Outgoing webhooks, retry, signatures, dead letter | specs/pack-framework/03 | Not Started | P2 | PC-073 | PC-057. |
 | MULTI-TENANT | Per-user backend multi-tenancy of the Studio server | Commercial_Platform_Kickoff section 3 | Not Started | P0 | PC-009 | 'A single trusted operator's tool that looks like a SaaS.' |
 | PG-01 | All P0 MVP architecture requirements complete | Tracker Production_Gates | Not Started | P1 | PC-067 |  |
 | PG-02 | Critical flows have automated E2E and regression tests | Tracker Production_Gates | Not Started | P1 | PC-037 |  |
@@ -416,12 +457,11 @@ What each tracker phase asks for, and where it is covered:
 | SPEC-DEPLOY-01 | Cloud deploy adapters | specs/deploy-adapters/01 | Not Started | P2 | PC-028 | Draft spec. |
 | SPEC-ENG-01 | Multi-app architect (Engineering Mode core) | specs/engineering-mode/01 | Not Started | P1 | PC-022 | Draft spec. |
 | SPEC-NATIVE-01 | True native mobile (Kotlin/Compose + Swift/SwiftUI) | specs/native-mobile/01 | Not Started | P2 | R-575 | Draft spec. Covers R-575 and R-576. |
-| SPEC-PACK-01 | Pack manifest v2 schema | specs/pack-framework/01 | Not Started | P2 | PC-017 | Draft spec (called R-600 inside). |
-| SPEC-PACK-02 | Pack composer: merge, wire, validate | specs/pack-framework/02 | Not Started | P2 | PC-017 | Draft spec. |
-| SPEC-PACK-03 | Horizontal packs registry (30 packs) | specs/pack-framework/03 | Not Started | P2 | PC-017 | Draft spec. |
-| SPEC-PACK-04 | MVP vertical packs (first 10) | specs/pack-framework/04 | Not Started | P2 | PC-017 | Draft spec. |
-| SPEC-PACK-05 | Blueprint structure and template-to-blueprint conversion | specs/pack-framework/05 | Not Started | P2 | PC-017 | Draft spec. |
-| SPEC-PACK-06C | Page template engine | specs/pack-framework/06c | Not Started | P2 | PC-017 | Draft spec. |
+| SPEC-PACK-02 | Pack composer: merge, wire, validate | specs/pack-framework/02 | Not Started | P1 | PC-017 | Draft spec. |
+| SPEC-PACK-03 | Horizontal packs registry (the spec says 30; its table lists 31) | specs/pack-framework/03 | Not Started | P1 | PC-073 | Draft spec. |
+| SPEC-PACK-04 | MVP vertical packs (first 10) | specs/pack-framework/04 | Not Started | P1 | PC-074 | Draft spec. |
+| SPEC-PACK-05 | Blueprint structure and template-to-blueprint conversion | specs/pack-framework/05 | Not Started | P1 | PC-072 | Draft spec. |
+| SPEC-PACK-06C | Page template engine | specs/pack-framework/06c | Not Started | P1 | PC-076 | Draft spec. |
 | SPEC-PACK-06D | Shared package generator | specs/pack-framework/06d | Not Started | P1 | R-572 | Draft spec. |
 | SPEC-REPO-01 | Repo intelligence: import, analyse, edit | specs/repo-intelligence/01 | Not Started | P1 | R-578 | Draft spec. |
 | SPEC-STUDIO-01 | Unified Studio UX: mode-aware interface | specs/studio-ux/01 | Not Started | P0 | PC-005 | Draft spec. |
@@ -430,6 +470,13 @@ What each tracker phase asks for, and where it is covered:
 | SPEC-TS-02 | Live in-browser preview | specs/table-stakes/02 | Not Started | P0 | PC-007 | Draft spec. |
 | SPEC-VIBE-01 | Vibe Mode Pro: AI builds it with a real backend | specs/vibe-mode-pro/01 | Not Started | P0 | PC-004 | Draft spec. |
 | T-5 | Workspace upgrades: editable code, diff per edit, API explorer | Template_Marketplace_Plan section 7 | Not Started | P1 | PC-024 |  |
+| VP-edtech-core | Vertical pack edtech-core: Courses, enrolments, assignments, grades, certificates, video | specs/pack-framework/04 | Not Started | P2 | PC-074 | Showcase template TPL-LEARNHUB. |
+| VP-fintech-core | Vertical pack fintech-core: Accounts, ledger, transfers, KYC, cards, lending, compliance | specs/pack-framework/04 | Not Started | P2 | PC-074 | Needs R-567; showcase template TPL-POCKET. |
+| VP-food-delivery-core | Vertical pack food-delivery-core: Restaurants, menus, orders, kitchen, couriers, dark stores | specs/pack-framework/04 | Not Started | P2 | PC-074 | Showcase template TPL-FRESHCART. |
+| VP-hr-core | Vertical pack hr-core: Hiring, onboarding, payroll, performance, attendance | specs/pack-framework/04 | Not Started | P3 | PC-074 | New. |
+| VP-logistics-core | Vertical pack logistics-core: Shipments, warehouses, tracking, route optimisation, customs | specs/pack-framework/04 | Not Started | P2 | PC-074 | Also fixes 'a logistics prompt yields one app' with R-580. |
+| VP-real-estate-core | Vertical pack real-estate-core: Properties, listings, tours, offers, contracts, escrow | specs/pack-framework/04 | Not Started | P2 | PC-074 | Showcase template TPL-ESTATELY. |
+| VP-saas-b2b-core | Vertical pack saas-b2b-core: Orgs, teams, seats, entitlements, SSO, usage metering | specs/pack-framework/04 | Not Started | P2 | PC-074 | New. |
 | GAP-WIREFRAMES | Console wireframes | V6_Review_and_Gap_Analysis section 3 | Superseded |  | R-491 | The console was built directly (R-491..R-497). |
 | R-010 | Native iOS Agent | Execution_Tracker_v6 | Superseded |  | R-576 | Native iOS is built by the R-576 adapter, not a separate agent. |
 | R-011 | Web/Admin Agent | Execution_Tracker_v6 | Superseded |  | R-227 | IR + deterministic adapters replaced per-surface agents. |
@@ -499,6 +546,7 @@ What each tracker phase asks for, and where it is covered:
 | R-209 | Automated provider benchmark suite | Execution_Tracker_v6 | Deferred | P3 |  | Advanced / enterprise: after launch. |
 | R-215 | Runtime provider outage failover | Execution_Tracker_v6 | Deferred | P3 |  |  |
 | R-218 | Local Agent security lifecycle | Execution_Tracker_v6 | Deferred | P3 |  |  |
+| VP-REMAINING | About 70 further vertical packs (the architecture plan's ~80 total) | docs/ARCHITECTURE_MASTER_PLAN.md §5.1 | Deferred | P3 |  | After launch, one domain at a time, driven by what users build. |
 | BP-FLUTTER | Flutter mobile adapter | Platform_Buildout section 8 ('R-529') | Dropped |  |  | Removed by the stack policy. |
 | R-077 | Flutter target (GA baseline) | Execution_Tracker_v6 | Dropped |  |  | Flutter: removed by the stack policy. |
 | R-118 | Flutter Web optional profile | Execution_Tracker_v6 | Dropped |  |  | Flutter Web: removed by the stack policy. |
