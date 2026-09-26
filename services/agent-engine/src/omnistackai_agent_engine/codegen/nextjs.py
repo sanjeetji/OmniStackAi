@@ -4822,305 +4822,10 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
     return "\n".join(lines)
 
 
-def _cart_fallback_page(screen: Screen, ir: ApplicationIR) -> str:
-    page_name = f"{_pascal(screen.id)}Page"
-    title = _title_case(screen.id)
-    components = ", ".join(screen.components) or "none"
-    actions = ", ".join(screen.actions) or "none"
-    return f'''"use client";
-
-import {{ useState }} from "react";
-import Link from "next/link";
-
-interface CartLineItem {{
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  color: string;
-}}
-
-const INITIAL_ITEMS: CartLineItem[] = [
-  {{ id: "1", name: "Premium Noise-Cancelling Headphones", price: 199.99, quantity: 1, color: "#6366f1" }},
-  {{ id: "2", name: "Smart Fitness Watch Ultra", price: 149.50, quantity: 1, color: "#0ea5e9" }},
-  {{ id: "3", name: "Fast Wireless Charging Pad", price: 39.00, quantity: 2, color: "#10b981" }},
-];
-
-export default function {page_name}() {{
-  const [items, setItems] = useState<CartLineItem[]>(INITIAL_ITEMS);
-  const [coupon, setCoupon] = useState("");
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [checkedOut, setCheckedOut] = useState(false);
-
-  const updateQuantity = (id: string, delta: number) => {{
-    setItems((prev) =>
-      prev
-        .map((item) => (item.id === id ? {{ ...item, quantity: Math.max(0, item.quantity + delta) }} : item))
-        .filter((item) => item.quantity > 0)
-    );
-  }};
-
-  const applyCoupon = (e: React.FormEvent) => {{
-    e.preventDefault();
-    if (coupon.trim().toUpperCase() === "SAVE20") {{
-      setDiscountPercent(0.20);
-      setCouponApplied(true);
-    }} else if (coupon.trim().length > 0) {{
-      setDiscountPercent(0.10);
-      setCouponApplied(true);
-    }}
-  }};
-
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const discountAmount = subtotal * discountPercent;
-  const shipping = subtotal > 50 || subtotal === 0 ? 0 : 9.99;
-  const total = Math.max(0, subtotal - discountAmount + shipping);
-
-  return (
-    <main style={{{{ minHeight: "100vh", background: "radial-gradient(1200px 500px at 50% 0px, rgba(99, 102, 241, 0.08), rgba(248, 250, 252, 0) 70%), #f8fafc", padding: "40px 24px 80px", fontFamily: "system-ui, -apple-system, sans-serif" }}}}>
-      <div style={{{{ maxWidth: 1040, margin: "0 auto" }}}}>
-        <header style={{{{ marginBottom: 32 }}}}>
-          <div style={{{{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}}}>
-            <Link href="/" style={{{{ color: "#4f46e5", textDecoration: "none", fontSize: 13, fontWeight: 600 }}}}>&larr; Overview</Link>
-            <span style={{{{ color: "#94a3b8" }}}}>/</span>
-            <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#eef2ff", color: "#4338ca", borderRadius: 4, fontWeight: 600 }}}}><strong>Role:</strong> {screen.role}</span>
-            <span style={{{{ fontSize: 12, color: "#64748b" }}}}><strong>Components:</strong> {components}</span>
-            <span style={{{{ fontSize: 12, color: "#64748b" }}}}><strong>Actions:</strong> {actions}</span>
-          </div>
-          <h1 style={{{{ margin: 0, fontSize: 30, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.03em" }}}}>{title}</h1>
-        </header>
-
-        {{checkedOut ? (
-          <div style={{{{ background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(12px)", borderRadius: 16, padding: "48px 32px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}}}>
-            <div style={{{{ width: 64, height: 64, borderRadius: "50%", background: "#ecfdf5", color: "#059669", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 16 }}}}>&#10003;</div>
-            <h2 style={{{{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}}}>Order Confirmed!</h2>
-            <p style={{{{ color: "#64748b", margin: "0 0 24px" }}}}>Thank you for your purchase. Your order has been placed into the processing queue.</p>
-            <button type="button" onClick={{() => {{ setItems(INITIAL_ITEMS); setCheckedOut(false); setCouponApplied(false); setDiscountPercent(0); }}}} style={{{{ padding: "11px 24px", background: "linear-gradient(135deg, #4f46e5, #4338ca)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}}}>Continue Shopping</button>
-          </div>
-        ) : items.length === 0 ? (
-          <div style={{{{ background: "#fff", borderRadius: 16, padding: "48px 32px", textAlign: "center", border: "1px solid #e2e8f0" }}}}>
-            <p style={{{{ fontSize: 18, fontWeight: 600, color: "#475569", margin: "0 0 16px" }}}}>Your shopping cart is empty</p>
-            <button type="button" onClick={{() => setItems(INITIAL_ITEMS)}} style={{{{ padding: "10px 20px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}}}>Reset Cart Items</button>
-          </div>
-        ) : (
-          <div style={{{{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 32, alignItems: "start" }}}}>
-            <div style={{{{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", borderRadius: 16, border: "1px solid #e2e8f0", padding: 24, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)" }}}}>
-              <h2 style={{{{ fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 20px" }}}}>Shopping Bag ({{items.reduce((a, b) => a + b.quantity, 0)}} items)</h2>
-              <div style={{{{ display: "flex", flexDirection: "column", gap: 16 }}}}>
-                {{items.map((item) => (
-                  <div key={{item.id}} style={{{{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 0", borderBottom: "1px solid #f1f5f9" }}}}>
-                    <div style={{{{ display: "flex", alignItems: "center", gap: 16 }}}}>
-                      <div style={{{{ width: 48, height: 48, borderRadius: 10, background: item.color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 18 }}}}>{{item.name[0]}}</div>
-                      <div>
-                        <p style={{{{ margin: "0 0 4px", fontWeight: 600, color: "#1e293b", fontSize: 15 }}}}>{{item.name}}</p>
-                        <p style={{{{ margin: 0, color: "#64748b", fontSize: 13 }}}}>${{item.price.toFixed(2)}} each</p>
-                      </div>
-                    </div>
-                    <div style={{{{ display: "flex", alignItems: "center", gap: 12 }}}}>
-                      <div style={{{{ display: "inline-flex", alignItems: "center", border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc" }}}}>
-                        <button type="button" onClick={{() => updateQuantity(item.id, -1)}} style={{{{ padding: "4px 10px", border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 600, color: "#475569" }}}}>-</button>
-                        <span style={{{{ minWidth: 28, textAlign: "center", fontSize: 14, fontWeight: 600, color: "#0f172a" }}}}>{{item.quantity}}</span>
-                        <button type="button" onClick={{() => updateQuantity(item.id, 1)}} style={{{{ padding: "4px 10px", border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 600, color: "#475569" }}}}>+</button>
-                      </div>
-                      <span style={{{{ minWidth: 70, textAlign: "right", fontWeight: 700, color: "#0f172a", fontSize: 15 }}}}>${{(item.price * item.quantity).toFixed(2)}}</span>
-                    </div>
-                  </div>
-                ))}}
-              </div>
-            </div>
-
-            <div style={{{{ display: "flex", flexDirection: "column", gap: 20 }}}}>
-              <div style={{{{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", borderRadius: 16, border: "1px solid #e2e8f0", padding: 24, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)" }}}}>
-                <h3 style={{{{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 16px" }}}}>Promo Code</h3>
-                <form onSubmit={{applyCoupon}} style={{{{ display: "flex", gap: 8 }}}}>
-                  <input type="text" placeholder="Try SAVE20" value={{coupon}} onChange={{(e) => setCoupon(e.target.value)}} style={{{{ flex: 1, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13 }}}} />
-                  <button type="submit" style={{{{ padding: "8px 14px", background: "#0f172a", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}}}>Apply</button>
-                </form>
-                {{couponApplied && (
-                  <p style={{{{ margin: "8px 0 0", fontSize: 12, color: "#16a34a", fontWeight: 600 }}}}>Coupon applied: {{(discountPercent * 100).toFixed(0)}}% off</p>
-                )}}
-              </div>
-
-              <div style={{{{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 24, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}}}>
-                <h3 style={{{{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 16px" }}}}>Order Summary</h3>
-                <div style={{{{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14, color: "#64748b", marginBottom: 16 }}}}>
-                  <div style={{{{ display: "flex", justifyContent: "space-between" }}}}>
-                    <span>Subtotal</span>
-                    <span style={{{{ color: "#0f172a", fontWeight: 600 }}}}>${{subtotal.toFixed(2)}}</span>
-                  </div>
-                  {{discountAmount > 0 && (
-                    <div style={{{{ display: "flex", justifyContent: "space-between", color: "#16a34a" }}}}>
-                      <span>Discount</span>
-                      <span>-${{discountAmount.toFixed(2)}}</span>
-                    </div>
-                  )}}
-                  <div style={{{{ display: "flex", justifyContent: "space-between" }}}}>
-                    <span>Shipping</span>
-                    <span style={{{{ color: "#0f172a", fontWeight: 600 }}}}>{{shipping === 0 ? "FREE" : `$${{shipping.toFixed(2)}}`}}</span>
-                  </div>
-                  <div style={{{{ height: 1, background: "#f1f5f9", margin: "4px 0" }}}} />
-                  <div style={{{{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, color: "#0f172a" }}}}>
-                    <span>Total</span>
-                    <span>${{total.toFixed(2)}}</span>
-                  </div>
-                </div>
-                <button type="button" onClick={{() => setCheckedOut(true)}} style={{{{ width: "100%", padding: "12px 0", background: "linear-gradient(135deg, #4f46e5, #4338ca)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(79, 70, 229, 0.3)" }}}}>Proceed to Checkout</button>
-              </div>
-            </div>
-          </div>
-        )}}
-      </div>
-    </main>
-  );
-}}
-'''
-
-
-def _reviews_fallback_page(screen: Screen, ir: ApplicationIR) -> str:
-    page_name = f"{_pascal(screen.id)}Page"
-    title = _title_case(screen.id)
-    components = ", ".join(screen.components) or "none"
-    actions = ", ".join(screen.actions) or "none"
-    return f'''"use client";
-
-import {{ useState }} from "react";
-import Link from "next/link";
-import {{ Rating }} from "@/components/rating";
-
-interface ReviewItem {{
-  id: string;
-  author: string;
-  rating: number;
-  date: string;
-  title: string;
-  comment: string;
-  verified: boolean;
-}}
-
-const INITIAL_REVIEWS: ReviewItem[] = [
-  {{ id: "1", author: "Alex Morgan", rating: 5, date: "2 days ago", title: "Exceptional quality and fast shipping", comment: "The build quality exceeded my expectations. Smooth checkout and arrived ahead of schedule.", verified: true }},
-  {{ id: "2", author: "Priya Sharma", rating: 5, date: "1 week ago", title: "Highly recommend!", comment: "Very well packaged and customer service answered my inquiries immediately.", verified: true }},
-  {{ id: "3", author: "Marcus Vance", rating: 4, date: "2 weeks ago", title: "Great value for money", comment: "Solid product overall. Fits my setup nicely and setup was a breeze.", verified: false }},
-];
-
-export default function {page_name}() {{
-  const [reviews, setReviews] = useState<ReviewItem[]>(INITIAL_REVIEWS);
-  const [showForm, setShowForm] = useState(false);
-  const [newRating, setNewRating] = useState(5);
-  const [newAuthor, setNewAuthor] = useState("");
-  const [newTitle, setNewTitle] = useState("");
-  const [newComment, setNewComment] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {{
-    e.preventDefault();
-    if (!newAuthor.trim() || !newComment.trim()) return;
-    const item: ReviewItem = {{
-      id: String(Date.now()),
-      author: newAuthor,
-      rating: newRating,
-      date: "Just now",
-      title: newTitle || "Verified Review",
-      comment: newComment,
-      verified: true,
-    }};
-    setReviews([item, ...reviews]);
-    setNewAuthor("");
-    setNewTitle("");
-    setNewComment("");
-    setShowForm(false);
-  }};
-
-  const avgRating = (reviews.reduce((acc, r) => acc + r.rating, 0) / (reviews.length || 1)).toFixed(1);
-
-  return (
-    <main style={{{{ minHeight: "100vh", background: "radial-gradient(1200px 500px at 50% 0px, rgba(234, 179, 8, 0.08), rgba(248, 250, 252, 0) 70%), #f8fafc", padding: "40px 24px 80px", fontFamily: "system-ui, -apple-system, sans-serif" }}}}>
-      <div style={{{{ maxWidth: 960, margin: "0 auto" }}}}>
-        <header style={{{{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}}}>
-          <div>
-            <div style={{{{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}}}>
-              <Link href="/" style={{{{ color: "#4f46e5", textDecoration: "none", fontSize: 13, fontWeight: 600 }}}}>&larr; Overview</Link>
-              <span style={{{{ color: "#94a3b8" }}}}>/</span>
-              <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#fef9c3", color: "#854d0e", borderRadius: 4, fontWeight: 600 }}}}><strong>Role:</strong> {screen.role}</span>
-              <span style={{{{ fontSize: 12, color: "#64748b" }}}}><strong>Components:</strong> {components}</span>
-              <span style={{{{ fontSize: 12, color: "#64748b" }}}}><strong>Actions:</strong> {actions}</span>
-            </div>
-            <h1 style={{{{ margin: 0, fontSize: 30, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.03em" }}}}>{title}</h1>
-          </div>
-          <button type="button" onClick={{() => setShowForm(!showForm)}} style={{{{ padding: "10px 20px", background: "linear-gradient(135deg, #4f46e5, #4338ca)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer", boxShadow: "0 2px 8px rgba(79, 70, 229, 0.25)" }}}}>
-            {{showForm ? "Close Form" : "+ Write a Review"}}
-          </button>
-        </header>
-
-        <div style={{{{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 32, alignItems: "start" }}}}>
-          <div style={{{{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", borderRadius: 16, border: "1px solid #e2e8f0", padding: 24, textAlign: "center" }}}}>
-            <p style={{{{ fontSize: 48, fontWeight: 800, color: "#0f172a", margin: "0 0 6px" }}}}>{{avgRating}}</p>
-            <div style={{{{ display: "flex", justifyContent: "center", marginBottom: 8 }}}}>
-              <Rating value={{Math.round(Number(avgRating))}} readOnly />
-            </div>
-            <p style={{{{ margin: 0, fontSize: 13, color: "#64748b" }}}}>Based on {{reviews.length}} customer reviews</p>
-          </div>
-
-          <div>
-            {{showForm && (
-              <form onSubmit={{handleSubmit}} style={{{{ background: "#fff", borderRadius: 16, border: "1px solid #cbd5e1", padding: 24, marginBottom: 24, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}}}>
-                <h3 style={{{{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: "#0f172a" }}}}>Share Your Feedback</h3>
-                <div style={{{{ display: "flex", flexDirection: "column", gap: 14 }}}}>
-                  <div>
-                    <label style={{{{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}}}>Rating</label>
-                    <Rating value={{newRating}} onChange={{setNewRating}} />
-                  </div>
-                  <div>
-                    <label style={{{{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}}}>Your Name</label>
-                    <input type="text" required value={{newAuthor}} onChange={{(e) => setNewAuthor(e.target.value)}} style={{{{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 }}}} />
-                  </div>
-                  <div>
-                    <label style={{{{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}}}>Review Title</label>
-                    <input type="text" value={{newTitle}} onChange={{(e) => setNewTitle(e.target.value)}} style={{{{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 }}}} />
-                  </div>
-                  <div>
-                    <label style={{{{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}}}>Comments</label>
-                    <textarea required rows={{3}} value={{newComment}} onChange={{(e) => setNewComment(e.target.value)}} style={{{{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 }}}} />
-                  </div>
-                  <button type="submit" style={{{{ padding: "10px 18px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}}}>Post Review</button>
-                </div>
-              </form>
-            )}}
-
-            <div style={{{{ display: "flex", flexDirection: "column", gap: 16 }}}}>
-              {{reviews.map((r) => (
-                <div key={{r.id}} style={{{{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}}}>
-                  <div style={{{{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}}}>
-                    <div style={{{{ display: "flex", alignItems: "center", gap: 10 }}}}>
-                      <span style={{{{ fontWeight: 700, color: "#1e293b", fontSize: 14 }}}}>{{r.author}}</span>
-                      {{r.verified && <span style={{{{ fontSize: 11, padding: "1px 6px", background: "#ecfdf5", color: "#059669", borderRadius: 4, fontWeight: 600 }}}}>Verified Buyer</span>}}
-                    </div>
-                    <span style={{{{ fontSize: 12, color: "#94a3b8" }}}}>{{r.date}}</span>
-                  </div>
-                  <div style={{{{ marginBottom: 8 }}}}>
-                    <Rating value={{r.rating}} readOnly />
-                  </div>
-                  <p style={{{{ margin: "0 0 6px", fontWeight: 700, color: "#0f172a", fontSize: 15 }}}}>{{r.title}}</p>
-                  <p style={{{{ margin: 0, color: "#475569", fontSize: 14, lineHeight: 1.5 }}}}>{{r.comment}}</p>
-                </div>
-              ))}}
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
-}}
-'''
-
-
 def _fallback_screen_page(screen: Screen, ir: ApplicationIR, entity: Entity | None = None) -> str:
-    s_lower = screen.id.lower()
-    if "cart" in s_lower:
-        return _cart_fallback_page(screen, ir)
-    if "review" in s_lower:
-        return _reviews_fallback_page(screen, ir)
-
+    # PC-004: "cart" and "review" screens used to get pages full of invented products and reviews
+    # — a working-looking feature with nothing behind it. A screen the plan has not connected to
+    # data now says so, and the build report names it.
     page_name = f"{_pascal(screen.id)}Page"
     title = _title_case(screen.id)
     components = ", ".join(screen.components) or "none"
@@ -5154,18 +4859,25 @@ def _fallback_screen_page(screen: Screen, ir: ApplicationIR, entity: Entity | No
         '          </div>',
     ]
 
+    # PC-004: these were buttons with no handler — they looked like features and did nothing. The
+    # actions are listed as what the screen will do once it is connected, not offered as controls.
+    lines.extend([
+        '          <div role="status" style={{ marginTop: 8, padding: "14px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, color: "#92400e", fontSize: 14 }}>',
+        '            <strong>Not connected to data yet.</strong> The plan for this app has no data behind this screen, so it cannot show or change anything. Ask for it in the chat and it will be built with a real API and database.',
+        '          </div>',
+    ])
     if screen.actions:
         lines.extend([
             '          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid #f1f5f9" }}>',
-            '            <h3 style={{ fontSize: 14, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px" }}>Screen Actions</h3>',
-            '            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>',
+            '            <h3 style={{ fontSize: 14, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px" }}>Planned actions</h3>',
+            '            <ul style={{ display: "flex", flexWrap: "wrap", gap: 10, listStyle: "none", margin: 0, padding: 0 }}>',
         ])
         for act in screen.actions:
             lines.append(
-                f'              <button type="button" style={{{{ padding: "10px 20px", background: "linear-gradient(135deg, #4f46e5, #6366f1)", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 12px rgba(79, 70, 229, 0.25)" }}}}>{_title_case(act)}</button>'
+                f'              <li style={{{{ padding: "6px 12px", background: "#f1f5f9", color: "#475569", borderRadius: 999, fontSize: 13, fontWeight: 600 }}}}>{_title_case(act)}</li>'
             )
         lines.extend([
-            '            </div>',
+            '            </ul>',
             '          </div>',
         ])
 

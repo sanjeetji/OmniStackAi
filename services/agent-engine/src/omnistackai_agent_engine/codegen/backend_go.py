@@ -171,13 +171,28 @@ def _handlers_shared_file(has_filters: bool = False) -> str:
         "import (\n"
         '\t"database/sql"\n'
         '\t"encoding/json"\n'
+        '\t"errors"\n'
+        '\t"log"\n'
         '\t"net/http"\n'
         '\t"strconv"\n'
-        '\t"strings"\n'
+        '\t"strings"\n\n'
+        '\t"github.com/jackc/pgx/v5/pgconn"\n'
         ")\n\n"
         "// Handlers carries the shared dependencies for the HTTP handlers.\n"
         "type Handlers struct {\n\tDB *sql.DB\n}\n\n"
         "func New(db *sql.DB) *Handlers {\n\treturn &Handlers{DB: db}\n}\n\n"
+        "// dbError answers a database error without echoing it (PC-004). The raw text used to go to the\n"
+        "// client — SQL state and all. A value the database cannot read (SQLSTATE class 22, e.g. a\n"
+        "// malformed id) is the caller's mistake and answers 422; anything else is logged and is a 500.\n"
+        "func dbError(w http.ResponseWriter, err error) {\n"
+        "\tvar pgErr *pgconn.PgError\n"
+        '\tif errors.As(err, &pgErr) && strings.HasPrefix(pgErr.Code, "22") {\n'
+        '\t\twriteJSON(w, http.StatusUnprocessableEntity, map[string]string{"detail": "invalid_value"})\n'
+        "\t\treturn\n"
+        "\t}\n"
+        '\tlog.Printf("database error: %v", err)\n'
+        '\twriteJSON(w, http.StatusInternalServerError, map[string]string{"detail": "internal_error"})\n'
+        "}\n\n"
         "func writeJSON(w http.ResponseWriter, status int, v any) {\n"
         '\tw.Header().Set("Content-Type", "application/json")\n'
         "\tw.WriteHeader(status)\n"
@@ -289,9 +304,9 @@ def _handlers_file_wired(
                 count_call = f"store.Count{wiring.entity}(r.Context(), h.DB, q)"
                 list_call = f"store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q)"
             lines.append(f"\ttotal, err := {count_call}")
-            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append(f"\titems, err := {list_call}")
-            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append('\tw.Header().Set("X-Total-Count", strconv.Itoa(total))')
             lines.append("\twriteJSON(w, http.StatusOK, items)")
         elif wiring.op is Op.LIST_BY:
@@ -307,14 +322,14 @@ def _handlers_file_wired(
                 count_call = f'store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q)'
                 list_call = f'store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q)'
             lines.append(f"\ttotal, err := {count_call}")
-            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append(f"\titems, err := {list_call}")
-            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append('\tw.Header().Set("X-Total-Count", strconv.Itoa(total))')
             lines.append("\twriteJSON(w, http.StatusOK, items)")
         elif wiring.op is Op.GET:
             lines.append(f'\titem, err := store.Get{wiring.entity}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
-            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append("\tif item == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
             lines.append("\twriteJSON(w, http.StatusOK, item)")
         elif wiring.op is Op.CREATE:
@@ -324,7 +339,7 @@ def _handlers_file_wired(
             if wiring.entity in validated_entities:
                 lines.append("\tif !validateStruct(w, m) {\n\t\treturn\n\t}")
             lines.append(f"\tid, err := store.Create{wiring.entity}(r.Context(), h.DB, m)")
-            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append('\twriteJSON(w, http.StatusCreated, map[string]string{"id": id})')
         elif wiring.op is Op.UPDATE:
             lines.append(f'\tid := r.PathValue("{wiring.id_param}")')
@@ -334,12 +349,12 @@ def _handlers_file_wired(
             if wiring.entity in validated_entities:
                 lines.append("\tif !validateStruct(w, m) {\n\t\treturn\n\t}")
             lines.append(f"\tupdated, err := store.Update{wiring.entity}(r.Context(), h.DB, id, m)")
-            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append("\tif updated == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
             lines.append("\twriteJSON(w, http.StatusOK, updated)")
         else:  # Op.DELETE
             lines.append(f'\tok, err := store.Delete{wiring.entity}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
-            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append("\tif !ok {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
             lines.append("\tw.WriteHeader(http.StatusNoContent)")
         lines.append("}")
@@ -354,14 +369,14 @@ def _handlers_file_wired(
         allowed_go = ", ".join(f'"{state}"' for state in allowed)
         lines.append(f"func (h *Handlers) {_transition_handler_name(route)}(w http.ResponseWriter, r *http.Request) {{")
         lines.append(f'\titem, err := store.Get{route.workflow.entity}(r.Context(), h.DB, r.PathValue("{route.id_param}"))')
-        lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+        lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
         lines.append("\tif item == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
         lines.append(f"\tallowed := map[string]bool{{{', '.join(f'{s}: true' for s in allowed_go.split(', '))}}}")
         lines.append(f"\tif !allowed[item.{field_pascal}] {{")
         lines.append(f'\t\thttp.Error(w, "cannot {route.transition.name} from "+item.{field_pascal}+"; allowed from: {", ".join(allowed)}", http.StatusConflict)')
         lines.append("\t\treturn\n\t}")
         lines.append(f'\tupdated, err := store.Set{route.workflow.entity}{field_pascal}(r.Context(), h.DB, r.PathValue("{route.id_param}"), "{route.transition.to}")')
-        lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+        lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
         lines.append("\twriteJSON(w, http.StatusOK, updated)")
         lines.append("}")
         lines.append("")

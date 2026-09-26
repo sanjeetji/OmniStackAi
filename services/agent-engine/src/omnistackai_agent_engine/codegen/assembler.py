@@ -217,6 +217,11 @@ def _root_readme(
         lines.append("")
         for note in skipped:
             lines.append(f"- {note}")
+    # PC-004: what is real and what is not, named, so nobody finds out by clicking.
+    from .wiring_report import readme_section
+
+    lines.append("")
+    lines.append(readme_section(ir).rstrip("\n"))
     lines.append("")
     return "\n".join(lines) + "\n"
 

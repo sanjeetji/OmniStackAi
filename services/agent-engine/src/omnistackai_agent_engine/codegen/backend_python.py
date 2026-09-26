@@ -251,7 +251,7 @@ def _router_file(
     return "\n".join(lines) + "\n"
 
 
-def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False) -> str:
+def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False, has_db: bool = False) -> str:
     imports = "".join(f"from app.routers import {seg}\n" for seg in segments)
     includes = "".join(f"app.include_router({seg}.router)\n" for seg in segments)
     auth_import = "from app.routers import auth\n" if has_auth else ""
@@ -276,9 +276,22 @@ def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False) -
         + '@app.get("/healthz")\n'
         + "async def healthz() -> dict:\n"
         + '    return {"status": "ok"}\n\n'
+        + (_DATA_ERROR_HANDLER if has_db else "")
         + auth_include
         + includes
     )
+
+
+#: PC-004: a value the database cannot read — `GET /posts/not-a-uuid`, a malformed foreign key in a
+#: body — used to surface as an unexplained 500. It is the caller's mistake, so it answers 422.
+_DATA_ERROR_HANDLER = (
+    "from fastapi import Request\n"
+    "from fastapi.responses import JSONResponse\n"
+    "from psycopg import errors as _pg_errors\n\n\n"
+    "@app.exception_handler(_pg_errors.DataError)\n"
+    "async def _invalid_value(request: Request, exc: _pg_errors.DataError) -> JSONResponse:\n"
+    '    return JSONResponse(status_code=422, content={"detail": "invalid_value"})\n\n\n'
+)
 
 
 def _escape(value: str) -> str:
@@ -321,7 +334,7 @@ class PythonBackendAdapter:
             GeneratedFile("app/__init__.py", ""),
             GeneratedFile("app/config.py", _CONFIG % (_escape(ir.name),)),
             GeneratedFile("app/models.py", _models_file(ir)),
-            GeneratedFile("app/main.py", _main_file(ir, segments, has_auth=has_auth)),
+            GeneratedFile("app/main.py", _main_file(ir, segments, has_auth=has_auth, has_db=has_db)),
             GeneratedFile("app/routers/__init__.py", ""),
             GeneratedFile(".gitignore", "__pycache__/\n.venv/\n*.pyc\n.env\n"),
             GeneratedFile(".env.example", env_example),

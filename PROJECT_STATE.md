@@ -4,6 +4,8 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-004 (2026-09-26): generated apps never pretend.** No in-memory fake saves, no fake 200s, no invented cart/review data, no dead buttons; unwired parts are honest (501 / not-connected page) and named in every build result and README; no DB internals to clients; malformed ids are 422. Express 5. Live on four backends.
+
 > **R-573 (2026-09-26): every web app and admin console is an installable PWA with a QR.** Manifest, PNG icons, honest service worker (no API caching), offline page, install control, iOS guidance, LAN-aware QR. Chrome: zero installability errors.
 
 > **R-590 (2026-09-26): lifecycles operable from every screen, and only through transitions.** List rows, detail pages and the mobile detail screen show state + legal moves; create/update can no longer write the state on any backend. Live 32/32 on four backends.

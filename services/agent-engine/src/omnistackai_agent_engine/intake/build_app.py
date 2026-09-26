@@ -59,6 +59,9 @@ class AppBuildResult:
     #: or skipped with a reason. Always present, because "we did not check this, and here is why" is
     #: a different message from saying nothing.
     verification: dict = field(default_factory=dict)
+    #: PC-004: endpoints and screens with no real data behind them, by name. Shown to the user so
+    #: "is this real?" never has to be answered by clicking.
+    not_connected: tuple[dict, ...] = ()
 
 
 def build_app_from_ir(
@@ -123,7 +126,14 @@ def build_app_from_ir(
         active_skills=active_skills,
         truncated_skills=truncated_skills,
         substitutions=_substitutions_for(ir, prompt),
+        not_connected=_not_connected(ir),
     )
+
+
+def _not_connected(ir: ApplicationIR) -> tuple[dict, ...]:
+    from ..codegen.wiring_report import wiring_gaps
+
+    return wiring_gaps(ir)
 
 
 def _substitutions_for(ir: ApplicationIR, prompt: str = "") -> tuple[dict, ...]:
@@ -191,6 +201,7 @@ def app_build_result_to_dict(
         ),
         # R-559: absent when nothing was substituted, so an ordinary build renders nothing extra.
         **({"substitutions": [dict(s) for s in result.substitutions]} if result.substitutions else {}),
+        **({"not_connected": [dict(g) for g in result.not_connected]} if result.not_connected else {}),
         # R-560: always present, unlike the two above. A build that was not type-checked has to say
         # so; silence would read as "checked and fine", which is the impression that let a
         # non-compiling app ship for nine tasks.
@@ -266,6 +277,7 @@ def build_ecosystem_from_plan(
         ecosystem_apps=tuple(directories),
         ecosystem_reason=reason,
         substitutions=_substitutions_for(shared, prompt),
+        not_connected=_not_connected(shared),
     )
 
 
