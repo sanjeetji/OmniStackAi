@@ -97,11 +97,25 @@ def _models_file(ir: ApplicationIR) -> str:
     if not ir.entities:
         lines.append("# No entities in the IR.")
         return "\n".join(lines) + "\n"
+    from ..application_ir.workflow import workflows_of
+
+    lifecycle_fields = {(w.entity, w.field) for w in workflows_of(ir)}
     for entity in ir.entities:
         declared_names = {field.name for field in entity.fields}
         lines.append("")
         lines.append(f"class {entity.name}(BaseModel):")
         for field in entity.fields:
+            if field.name == "id":
+                # R-590 (found live): the database assigns the id (DEFAULT gen_random_uuid()), but the
+                # model required one in every request body, so a create through the API answered 422
+                # to every client that did not invent its own id — the web and mobile apps included.
+                lines.append("    id: Optional[str] = None  # assigned by the database")
+                continue
+            if (entity.name, field.name) in lifecycle_fields:
+                # R-590: returned, never required or written from a request — only a transition
+                # moves it, so a create/update body without it is valid and one with it changes nothing.
+                lines.append(f"    {field.name}: Optional[str] = None  # lifecycle; changed by its transitions")
+                continue
             lines.append(_py_field_line(field, rules_by_field[id(field)]))
         # R-502: audit timestamp fields — omitted if the IR already declares them.
         if "created_at" not in declared_names:

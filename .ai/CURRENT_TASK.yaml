@@ -1,9 +1,9 @@
 task_id: R-590
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-26"
-completed_at: null
+completed_at: "2026-09-26"
 branch: platform-completion
 objective: >-
   A lifecycle is operable from the screens, and only through its transitions. Web app and admin
@@ -36,6 +36,21 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+live_proof: >-
+  32/32 against PostgreSQL on Python, Go, Node/Express and Node/Hono: create -> initial state even
+  when the request says 'live'; an ordinary PUT changes the title but not the state; a role that may
+  not move it -> 403; an illegal move -> 409; submit draft->review and publish review->live; the
+  database holds the new state. Web app (list rows + detail panel), mobile app, Go, Express and Hono
+  all type-check/build.
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "PC-004: Node repositories fall back to an in-memory map on any database error and report success; Python answers 500 for a malformed id."
+  - "PC-011: self-registered users get role 'user', not a plan role; the admin console needs a role manager."
+found_and_fixed:
+  - "Create/update wrote the lifecycle field on every backend, so the transition rules could be skipped; the web and mobile forms offered it as free text."
+  - "Node transitions moved state through update(); they now use a dedicated setter (otherwise they would have become no-ops)."
+  - "Node update built SQL column names from the request's keys; now an explicit allow-list."
+  - "Python could not create anything through its API: the model required a client-invented id, and the repository called a generator-only helper (NameError)."
+  - "The mobile app called /api/<entity>s, a path no backend serves; every data screen got 404."
+  - "Hono routes did not type-check: c.req.param() typed string|undefined, and R-589's c.get('user') typed never."
+  - "Plans without a detail page could not operate a lifecycle anywhere; list rows now carry the moves." 

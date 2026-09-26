@@ -114,6 +114,9 @@ def _models_file(ir: ApplicationIR) -> str:
     if not ir.entities:
         lines.append("// No entities in the IR.")
         return "\n".join(lines) + "\n"
+    from ..application_ir.workflow import workflows_of
+
+    lifecycle_fields = {(w.entity, w.field) for w in workflows_of(ir)}
     for entity in ir.entities:
         declared_names = {field.name for field in entity.fields}
         lines.append(f"type {entity.name} struct {{")
@@ -125,7 +128,9 @@ def _models_file(ir: ApplicationIR) -> str:
         for field in entity.fields:
             go = _GO_TYPE[field.type]
             go_name = _pascal(field.name)
-            tag = go_validate_tag(field, parse_field_rules(field))
+            # R-590: the lifecycle field is not validated on input — it is never written from a
+            # request (only transitions move it), so a create that omits it must not be rejected.
+            tag = "" if (entity.name, field.name) in lifecycle_fields else go_validate_tag(field, parse_field_rules(field))
             validate = f' validate:"{tag}"' if tag else ""
             if field.required:
                 rows.append((go_name, go, f'`json:"{field.name}"{validate}`'))

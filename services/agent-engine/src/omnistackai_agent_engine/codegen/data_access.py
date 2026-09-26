@@ -28,9 +28,16 @@ def _pascal(value: str) -> str:
 _AUTO_COLUMNS: frozenset[str] = frozenset({"id", "created_at", "updated_at"})
 
 
-def _insert_columns(entity: Entity) -> list[str]:
-    """Columns written by INSERT/UPDATE. Excludes auto-managed columns (id, created_at, updated_at)."""
-    return [field.name for field in entity.fields if field.name not in _AUTO_COLUMNS]
+def _insert_columns(entity: Entity, workflow=None) -> list[str]:
+    """Columns written by INSERT/UPDATE. Excludes auto-managed columns (id, created_at, updated_at).
+
+    R-590: and the lifecycle field, when the entity has one. Writing it through create/update let
+    anybody set any state and skipped the role and from-state rules the transitions enforce
+    (R-566, R-589). A new row takes the workflow's initial state from the column DEFAULT; after that
+    only a transition moves it.
+    """
+    skip = _AUTO_COLUMNS | ({workflow.field} if workflow is not None else set())
+    return [field.name for field in entity.fields if field.name not in skip]
 
 
 def _fk_relation_names(entity: Entity) -> list[str]:
@@ -78,7 +85,7 @@ def _python_db(slug: str) -> str:
 def _python_repository(entity: Entity, workflow=None) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
-    insert_cols = _insert_columns(entity)
+    insert_cols = _insert_columns(entity, workflow)
     if insert_cols:
         create_body = (
             f"    columns = [c for c in {insert_cols!r} if c in data]\n"
@@ -91,7 +98,7 @@ def _python_repository(entity: Entity, workflow=None) -> str:
             "        values = []\n"
             "    else:\n"
             '        placeholders = ", ".join(["%s"] * len(columns))\n'
-            '        sql = f\'INSERT INTO {TABLE} ({", ".join(SQL_COLUMNS.get(c, sql_identifier(c)) for c in columns)}) VALUES ({placeholders}) RETURNING *\'\n'
+            '        sql = f\'INSERT INTO {TABLE} ({", ".join(_quoted(c) for c in columns)}) VALUES ({placeholders}) RETURNING *\'\n'
         )
     else:
         create_body = (
@@ -180,6 +187,11 @@ def _python_repository(entity: Entity, workflow=None) -> str:
         f"TABLE = {sql_table!r}\n"
         f"SQL_COLUMNS = {dict((name, sql_identifier(name)) for name in cols)!r}\n"
         f"ALLOWED_SORT_FIELDS = {cols!r}\n\n\n"
+        # R-590 (found live): create called `sql_identifier`, a helper of the *generator* that does
+        # not exist in the generated app, so every create through the API raised NameError.
+        "def _quoted(column: str) -> str:\n"
+        "    # Columns come from the fixed lists above, never from a request.\n"
+        "    return SQL_COLUMNS.get(column) or '\"' + column + '\"'\n\n\n"
         f"{filters_helper}"
         f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}) -> list[dict[str, Any]]:\n'
         '    sort_col = SQL_COLUMNS.get(sort, SQL_COLUMNS["id"])\n'
@@ -205,7 +217,7 @@ def _python_repository(entity: Entity, workflow=None) -> str:
         f"{count_body}"
         "        row = await cur.fetchone()\n"
         "        return int(row[\"count\"]) if row else 0\n"
-        + _python_update(entity, table)
+        + _python_update(entity, table, workflow)
         + _python_state_setter(table, workflow)
         + _python_filtered_lists(entity, table, cols)
     )
@@ -231,9 +243,9 @@ def _python_state_setter(table: str, workflow) -> str:
     )
 
 
-def _python_update(entity: Entity, table: str) -> str:
+def _python_update(entity: Entity, table: str, workflow=None) -> str:
     """Emit update_<table>(id, data) — parameterized UPDATE RETURNING *."""
-    update_cols = _insert_columns(entity)  # every column except id
+    update_cols = _insert_columns(entity, workflow)  # every writable column
     if update_cols:
         set_clause = ", ".join(f"{sql_identifier(c)} = %s" for c in update_cols)
         values_expr = ", ".join(f"data['{c}']" for c in update_cols)
@@ -405,7 +417,7 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
     go_col_list = _go_string_fragment(col_list)
     go_sql_table = _go_string_fragment(sql_table)
     scan_targets = ", ".join(f"&m.{_pascal(c)}" for c in cols)
-    insert_cols = _insert_columns(entity)
+    insert_cols = _insert_columns(entity, workflow)
 
     if insert_cols:
         insert_col_list = _sql_columns(insert_cols)
@@ -536,7 +548,7 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
         f"\terr := db.QueryRowContext(ctx, {create_sql}).Scan(&id)\n"
         "\treturn id, err\n"
         "}\n\n"
-        + _go_update(entity, table, pascal, col_list, scan_targets)
+        + _go_update(entity, table, pascal, col_list, scan_targets, workflow)
         + _go_set_field(table, pascal, col_list, scan_targets, workflow)
         + f"func Delete{pascal}(ctx context.Context, db *sql.DB, id string) (bool, error) {{\n"
         f"\tres, err := db.ExecContext(ctx, `DELETE FROM {sql_table} WHERE {sql_identifier('id')} = $1`, id)\n"
@@ -578,10 +590,10 @@ def _go_set_field(table: str, pascal: str, col_list: str, scan_targets: str, wor
     )
 
 
-def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targets: str) -> str:
+def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targets: str, workflow=None) -> str:
     """Emit Update<Entity>(ctx, db, id, m) — parameterized UPDATE RETURNING full row."""
     sql_table = sql_identifier(table)
-    update_cols = _insert_columns(entity)  # every column except id
+    update_cols = _insert_columns(entity, workflow)  # every writable column
     if update_cols:
         set_clause = ", ".join(f"{sql_identifier(c)} = ${i + 1}" for i, c in enumerate(update_cols))
         set_args = ", ".join(f"m.{_pascal(c)}" for c in update_cols)

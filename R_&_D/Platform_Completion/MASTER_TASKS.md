@@ -28,9 +28,9 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 409 |
+| Completed | 410 |
 | Completed - needs live proof | 8 |
-| In Progress | 1 |
+| In Progress | 0 |
 | Pending | 100 |
 | Not Started | 518 |
 | Superseded | 12 |
@@ -38,7 +38,7 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 | Dropped | 9 |
 | **Total** | **1114** |
 
-Open work queue: **109** tasks (P0: 15, P1: 49, P2: 31, P3: 14).
+Open work queue: **108** tasks (P0: 14, P1: 49, P2: 31, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -53,9 +53,9 @@ Open work queue: **109** tasks (P0: 15, P1: 49, P2: 31, P3: 14).
 | 6 | PC-003 | Stack policy in code: an app request gets a store-ready React Native app AND an installable PWA with QR; Flutter and React.js refused with the reason | Completed | P0 | Both |  |  | R-562 already builds the React Native app; the PWA + QR half is R-573. Native Kotlin/Swift only after Phase 5. Uses the R-559 'nearest thing we can build, with a reason' path. |
 | | | **Phase 1 Vibe Mode live**: Prompt -> running app with real API + DB -> live URL, for real users. | | | | | | |
 | 7 | R-591 | Complete auth for the Go backend: register, login, logout, me, forgot password, reset password | Completed | P0 | Both |  |  | A Go app with auth has no way for a real user to sign in. Parity with the Python backend's auth (R-461, R-463), companions included. |
-| 8 | R-590 | Workflow transitions as buttons on the generated screens | In Progress | P0 | Both | R-588 |  | The user-visible half of R-566. |
+| 8 | R-590 | Workflow transitions as buttons on the generated screens | Completed | P0 | Both | R-588 |  | The user-visible half of R-566. |
 | 9 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | Pending | P0 | Vibe | PC-003 | ARCH-PWA | Works for templates only today; generated projects must install on a real phone. |
-| 10 | PC-004 | Real API + DB for every feature: a Vibe build fails if any screen or action is not wired to a real endpoint and table | Not Started | P0 | Vibe | R-590 | ARCH-PIPELINE, SPEC-VIBE-01 | No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro. |
+| 10 | PC-004 | Real API + DB for every feature: a Vibe build fails if any screen or action is not wired to a real endpoint and table | Not Started | P0 | Vibe | R-590 | ARCH-PIPELINE, SPEC-VIBE-01 | No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro. Found in R-590: the Node repositories silently fall back to an in-memory map on any database error and report success; a malformed id answers 500 instead of 404 on the Python backend. |
 | 11 | PC-005 | Vibe / Engineering mode switch in the Studio | Not Started | P0 | Both |  | ARCH-STUDIO-MODES, BP-INTENT, SPEC-STUDIO-01 | From specs/studio-ux/01. Vibe hides the machinery; Engineering shows plan, stack, diffs, report, PRs. |
 | 12 | PC-006 | 'Wow in 30 seconds': first screen streams fast, latest modern UI, maximum polish per page | Pending | P0 | Vibe |  | BP-SWITCHER, SPEC-TS-01 | R-558 fixed the design system; still needs speed-to-first-screen and visual quality. From specs/table-stakes/01 and the buildout 'intent card' idea. |
 | 13 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Not Started | P1 | Vibe | PC-006 |  | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
@@ -64,7 +64,7 @@ Open work queue: **109** tasks (P0: 15, P1: 49, P2: 31, P3: 14).
 | 16 | PC-008 | One-click publish to a live URL: web, admin, API and database together, code complete and proven against local stand-ins | Pending | P0 | Vibe | PC-049 | BP-SHIPCHECK, R-048, R-509, R-510, SPEC-TS-03 | R-509/R-510 publish the web app only and were never run for real. From specs/table-stakes/03. Real accounts are plugged in at PC-070. |
 | 17 | PC-009 | Hosted multi-tenant service: per-user isolation of builds, sessions and previews; quotas; egress policy | Not Started | P0 | Platform |  | MULTI-TENANT, PG-05, R-071, R-100, R-175, R-214 | Today the Studio is one trusted operator's tool. Built cloud-neutral and proven locally (Colima); the cloud account (D-2) is plugged in at PC-070. |
 | 18 | PC-010 | Credit fairness: estimate before a build, no charge for internal retries, per-task budgets, cost guardrails | Not Started | P0 | Platform |  | PG-13, R-025, R-046, R-047, R-104 |  |
-| 19 | PC-011 | Plans, entitlements, credit top-up and super_admin console (Phase E) | Not Started | P0 | Platform |  | PG-16, PHASE-E, R-109 | Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at PC-070. |
+| 19 | PC-011 | Plans, entitlements, credit top-up and super_admin console (Phase E) | Not Started | P0 | Platform |  | PG-16, PHASE-E, R-109 | Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at PC-070. Found in R-590: self-registered users get role 'user', which is not one of the plan's roles, so role-guarded actions need an admin to assign roles — include a role manager in the generated admin console. |
 | 20 | PC-012 | Legal and account basics: ToS, privacy, retention, deletion/export, email verification | Not Started | P0 | Platform |  | GAP-LEGAL, PG-14, R-108, R-516 |  |
 | 21 | PC-013 | Verified integrations catalog with health tests | Pending | P1 | Vibe |  | R-055, R-056, R-511 | R-511 Connectors v1 exists. |
 | 22 | PC-014 | Local/offline models as a first-class path: build fully on Ollama, recommend a model per machine | Pending | P1 | Both |  | GA-03, GA-04, GA-05, GAP-EVALS, PG-18, PG-19, R-080, R-194 | Ollama adapter exists (R-003/R-006). |
@@ -1273,6 +1273,7 @@ What each tracker phase asks for, and where it is covered:
 | R-587 | Generated Go is gofmt-clean. | Completed | 2026-09-25 |  |
 | R-588 | A transition is describable and callable, not only implemented. | Completed | 2026-09-26 |  |
 | R-589 | A lifecycle runs on every backend, not only the default one. | Completed | 2026-09-26 |  |
+| R-590 | Workflow transitions as buttons on the generated screens | Completed | 2026-09-26 | The user-visible half of R-566. |
 | R-591 | Complete auth for the Go backend: register, login, logout, me, forgot password, reset password | Completed | 2026-09-26 | A Go app with auth has no way for a real user to sign in. Parity with the Python backend's auth (R-461, R-463), companions included. |
 
 ## Legend

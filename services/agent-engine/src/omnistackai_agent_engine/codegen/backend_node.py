@@ -28,6 +28,7 @@ from ..application_ir import (
 )
 from .adapter import FrameworkAdapter, GenerationTarget
 from .auth_guard import needs_auth
+from ..application_ir.workflow import workflows_of
 from .auth_templates import (
     EMAIL_ENV_EXAMPLE,
     NODE_AUTH_CORE,
@@ -117,7 +118,15 @@ def _models_file(ir: ApplicationIR) -> str:
         lines.append("")
 
         # Create input type (omits auto id / created_at / updated_at)
-        lines.append(f"export type Create{entity.name}Input = Omit<{entity.name}, 'id' | 'created_at' | 'updated_at'>;")
+        lifecycle = next((w.field for w in workflows_of(ir) if w.entity == entity.name), None)
+        if lifecycle:
+            # R-590: the lifecycle field is optional on input and ignored on write.
+            lines.append(
+                f"export type Create{entity.name}Input = Omit<{entity.name}, 'id' | 'created_at' | 'updated_at' | '{lifecycle}'>"
+                f" & {{ {lifecycle}?: string }};"
+            )
+        else:
+            lines.append(f"export type Create{entity.name}Input = Omit<{entity.name}, 'id' | 'created_at' | 'updated_at'>;")
         lines.append(f"export type Update{entity.name}Input = Partial<Create{entity.name}Input>;")
         lines.append("")
 
@@ -170,10 +179,17 @@ def _validation_file(ir: ApplicationIR) -> str:
         lines.append("// No entity validation required.")
         return "\n".join(lines) + "\n"
 
+    from ..application_ir.workflow import workflows_of
+
+    lifecycle_fields = {(w.entity, w.field) for w in workflows_of(ir)}
     for entity in ir.entities:
         lines.append(f"export const create{entity.name}Schema = z.object({{")
         for field in entity.fields:
             if field.name in ("id", "created_at", "updated_at"):
+                continue
+            if (entity.name, field.name) in lifecycle_fields:
+                # R-590: accepted and ignored — only a transition moves the lifecycle field.
+                lines.append(f"  {field.name}: z.string().optional(),")
                 continue
             rules = parse_field_rules(field)
             zod_expr = _zod_field_schema(field, rules)
@@ -304,9 +320,12 @@ export async function checkDbHealth(): Promise<boolean> {
 """
 
 
-def _db_repository_file(entity: Entity) -> str:
+def _db_repository_file(entity: Entity, workflow=None) -> str:
     tbl = table_name(entity.name)
-    ins_cols = [f.name for f in entity.fields if f.name not in ("id", "created_at", "updated_at")]
+    # R-590: the lifecycle field is never written here; a new row takes the initial state from the
+    # column DEFAULT and only a transition moves it after that.
+    skip = {"id", "created_at", "updated_at"} | ({workflow.field} if workflow is not None else set())
+    ins_cols = [f.name for f in entity.fields if f.name not in skip]
     col_list = ", ".join(sql_identifier(f.name) for f in entity.fields)
     ins_col_list = ", ".join(sql_identifier(c) for c in ins_cols)
     placeholders = ", ".join(f"${i+1}" for i in range(len(ins_cols)))
@@ -317,6 +336,7 @@ import type {{ {entity.name}, Create{entity.name}Input, Update{entity.name}Input
 
 // In-memory store fallback when PostgreSQL database is unavailable
 const memoryStore = new Map<string, {entity.name}>();
+const WRITABLE: string[] = {json.dumps(ins_cols)};
 
 export class {entity.name}Repository {{
   static async list(options: {{ limit?: number; offset?: number; search?: string }} = {{}}): Promise<{entity.name}[]> {{
@@ -366,7 +386,9 @@ export class {entity.name}Repository {{
     if (!existing) return null;
 
     try {{
-      const keys = Object.keys(input);
+      // R-590: only known, writable columns. Column names used to come straight from the request's
+      // keys, so a validator's key-stripping was all that stood between a body and the SQL text.
+      const keys = Object.keys(input).filter((k) => WRITABLE.includes(k));
       if (keys.length === 0) return existing;
       const setClauses = keys.map((k, idx) => `"${{k}}" = $${{idx + 2}}`).join(', ');
       const values = keys.map((k) => (input as any)[k]);
@@ -380,6 +402,7 @@ export class {entity.name}Repository {{
     }}
   }}
 
+{_node_lifecycle_setter(tbl, col_list, entity.name, workflow)}
   static async delete(id: string): Promise<boolean> {{
     try {{
       const query = 'DELETE FROM {sql_identifier(tbl)} WHERE id = $1';
@@ -522,7 +545,7 @@ def _express_router_file(
         lines.append("  if (!item) return res.status(404).json({ error: 'not_found', message: 'Item not found' });")
         lines.append(f"  const allowed = [{allowed_js}];")
         lines.append(f"  if (!allowed.includes((item as any).{route.workflow.field})) return res.status(409).json({{ error: 'conflict', message: `cannot {route.transition.name} from ${{(item as any).{route.workflow.field}}}; allowed from: {', '.join(allowed)}` }});")
-        lines.append(f"  const updated = await {route.workflow.entity}Repository.update(req.params.{route.id_param}, {{ {route.workflow.field}: '{route.transition.to}' }} as any);")
+        lines.append(f"  const updated = await {route.workflow.entity}Repository.setLifecycle(req.params.{route.id_param}, '{route.transition.to}');")
         lines.append("  res.json(updated);")
         lines.append("});")
         lines.append("")
@@ -586,7 +609,7 @@ def _hono_router_file(
         elif wiring.op is Op.GET:
             param = wiring.id_param or "id"
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
-            lines.append(f"  const item = await {ent}Repository.getById(c.req.param('{param}'));")
+            lines.append(f"  const item = await {ent}Repository.getById(c.req.param('{param}') ?? '');")
             lines.append("  if (!item) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
             lines.append("  return c.json(item);")
             lines.append("});")
@@ -608,14 +631,14 @@ def _hono_router_file(
             lines.append("  if (!parsed.success) {")
             lines.append("    return c.json({ error: 'validation_error', details: parsed.error.format() }, 400);")
             lines.append("  }")
-            lines.append(f"  const updated = await {ent}Repository.update(c.req.param('{param}'), parsed.data);")
+            lines.append(f"  const updated = await {ent}Repository.update(c.req.param('{param}') ?? '', parsed.data);")
             lines.append("  if (!updated) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
             lines.append("  return c.json(updated);")
             lines.append("});")
         elif wiring.op is Op.DELETE:
             param = wiring.id_param or "id"
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
-            lines.append(f"  const ok = await {ent}Repository.delete(c.req.param('{param}'));")
+            lines.append(f"  const ok = await {ent}Repository.delete(c.req.param('{param}') ?? '');")
             lines.append("  if (!ok) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
             lines.append("  return c.body(null, 204);")
             lines.append("});")
@@ -623,7 +646,7 @@ def _hono_router_file(
             param = wiring.id_param or "id"
             fk_col = f"{wiring.relation}_id" if wiring.relation else "parent_id"
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
-            lines.append(f"  const items = await {ent}Repository.listBy('{fk_col}', c.req.param('{param}'));")
+            lines.append(f"  const items = await {ent}Repository.listBy('{fk_col}', c.req.param('{param}') ?? '');")
             lines.append("  return c.json(items);")
             lines.append("});")
 
@@ -638,13 +661,13 @@ def _hono_router_file(
         lines.append(f"router.post('{param}', requireAuth, async (c) => {{")
         if route.roles:
             roles_js = ", ".join(f"'{r}'" for r in route.roles)
-            lines.append("  const held: string[] = ((c.get('user') as any)?.roles as string[] | undefined) ?? [];")
+            lines.append("  const held: string[] = (((c as any).get('user') as any)?.roles as string[] | undefined) ?? [];")
             lines.append(f"  if (![{roles_js}].some((r) => held.includes(r))) return c.json({{ error: 'forbidden' }}, 403);")
-        lines.append(f"  const item = await {route.workflow.entity}Repository.getById(c.req.param('{route.id_param}'));")
+        lines.append(f"  const item = await {route.workflow.entity}Repository.getById(c.req.param('{route.id_param}') ?? '');")
         lines.append("  if (!item) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
         lines.append(f"  const allowed = [{allowed_js}];")
         lines.append(f"  if (!allowed.includes((item as any).{route.workflow.field})) return c.json({{ error: 'conflict', message: `cannot {route.transition.name} from ${{(item as any).{route.workflow.field}}}; allowed from: {', '.join(allowed)}` }}, 409);")
-        lines.append(f"  const updated = await {route.workflow.entity}Repository.update(c.req.param('{route.id_param}'), {{ {route.workflow.field}: '{route.transition.to}' }} as any);")
+        lines.append(f"  const updated = await {route.workflow.entity}Repository.setLifecycle(c.req.param('{route.id_param}') ?? '', '{route.transition.to}');")
         lines.append("  return c.json(updated);")
         lines.append("});")
         lines.append("")
@@ -939,7 +962,10 @@ class NodeBackendAdapter:
         files.append(GeneratedFile("src/db/pool.ts", _db_pool_file()))
         repo_entities = frozenset(e.name for e in ir.entities)
         for entity in ir.entities:
-            files.append(GeneratedFile(f"src/db/{table_name(entity.name)}.ts", _db_repository_file(entity)))
+            files.append(GeneratedFile(
+            f"src/db/{table_name(entity.name)}.ts",
+            _db_repository_file(entity, next((w for w in workflows_of(ir) if w.entity == entity.name), None)),
+        ))
 
         # 5. Auth Middleware
         has_auth = needs_auth(ir)
@@ -1007,3 +1033,21 @@ class HonoBackendAdapter(NodeBackendAdapter):
 
     def __init__(self) -> None:
         super().__init__(framework="hono")
+
+
+def _node_lifecycle_setter(table: str, col_list: str, entity_name: str, workflow) -> str:
+    """R-590: the one way to change a lifecycle field, used only by the transition routes.
+
+    Transitions used to call the ordinary `update`, which no longer writes the lifecycle field —
+    it would have made every Node transition a silent no-op. Python and Go already had a setter.
+    """
+    if workflow is None:
+        return ""
+    field = sql_identifier(workflow.field)
+    return (
+        f"  static async setLifecycle(id: string, value: string): Promise<{entity_name} | null> {{\n"
+        f"    const query = `UPDATE {sql_identifier(table)} SET {field} = $2 WHERE id = $1 RETURNING {col_list}`;\n"
+        f"    const result = await pool.query(query, [id, value]);\n"
+        f"    return (result.rows[0] as {entity_name}) ?? null;\n"
+        f"  }}\n"
+    )

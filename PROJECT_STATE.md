@@ -4,6 +4,9 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-590 (2026-09-26): lifecycles operable from every screen, and only through transitions.** List rows, detail pages and the mobile detail screen show state + legal moves; create/update can no longer write the state on any backend. Live 32/32 on four backends.
+> **Found and fixed:** the default Python backend could not create records through its API at all (two separate bugs); mobile called /api/ paths nobody serves; Node transitions/update and Hono typing fixed. **Recorded:** Node in-memory fallback + Python 500 on bad id (PC-004); self-registered role not a plan role (PC-011).
+
 > **R-591 (2026-09-26): complete account flow on every backend and surface.** Register/login/me/logout/forgot/reset identical on Python, Go, Node Express/Hono; one password format (accounts cross backends); safe one-time reset links (Resend when keyed, dev log otherwise); web forgot + reset pages; mobile sign-in/up/recovery screens with SecureStore. Live 84/84 on PostgreSQL.
 > **Found and fixed:** Python /me read the query string (401 for everyone); forgot-password lied; web forgot page set passwords from an email alone; Node admin-for-everyone without JWT_SECRET, tokens never expired, routes under /api/ unreachable; Go would panic on a plan's own /auth/login; mobile Input failed strict tsc.
 

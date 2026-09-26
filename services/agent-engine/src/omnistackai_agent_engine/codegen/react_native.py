@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from ..application_ir import ApplicationIR, Entity, FieldType, MobileProfile
 from .auth_guard import needs_auth
 from .auth_templates import RN_AUTH_CONTEXT, RN_AUTH_SCREENS
+from .lifecycle_ui import mobile_lifecycle_panel
 from .adapter import GenerationTarget
 from .files import GeneratedFile, GeneratedProject
 from .brand_project import app_config_js
@@ -683,7 +684,7 @@ class ReactNativeAdapter:
         api_template = """import { apiClient } from '../../../shared/api/client';
 import { __PASCAL__, Create__PASCAL__Input, Update__PASCAL__Input } from '../model/types';
 
-const ENDPOINT = '/api/__SLUG__s';
+const ENDPOINT = '__ENDPOINT__';
 
 export const __SLUG__Api = {
   list: () => apiClient.get<__PASCAL__[]>(ENDPOINT),
@@ -697,6 +698,7 @@ export const __SLUG__Api = {
             api_template
             .replace("__PASCAL__", pascal)
             .replace("__SLUG__", slug)
+            .replace("__ENDPOINT__", _collection_path(entity, ir))
         )
         files.append(GeneratedFile(f"src/features/{slug}/api/client.ts", api_content))
 
@@ -920,9 +922,14 @@ const styles = StyleSheet.create({
         form_inputs: list[str] = []
         state_inits: list[str] = []
         payload_assignments: list[str] = []
+        from ..application_ir.workflow import workflow_for_entity
+
+        lifecycle = workflow_for_entity(ir, entity.name)
         for f in entity.fields:
             if f.name.lower() == "id":
                 continue
+            if lifecycle is not None and f.name == lifecycle.field:
+                continue  # R-590: moved only by its transitions, from the panel below
             state_inits.append(f"  const [{f.name}, set{_to_pascal(f.name)}] = useState(initial?.{f.name} ? String(initial.{f.name}) : '');")
             form_inputs.append(
                 f'        <Input\n'
@@ -947,9 +954,10 @@ import { Button } from '../../../design-system/components/Button';
 import { Input } from '../../../design-system/components/Input';
 import { tokens } from '../../../design-system/tokens';
 import { __SLUG__Api } from '../api/client';
-
+__LIFECYCLE_IMPORT__
 export const __PASCAL__DetailScreen = ({ route, navigation }: any) => {
   const { id, initial } = route.params || {};
+  const [record, setRecord] = useState<any>(initial ?? null);
   const isEditing = Boolean(id);
   const [loading, setLoading] = useState(false);
 __STATE_INITS__
@@ -975,6 +983,7 @@ __PAYLOAD_ASSIGNMENTS__
   return (
     <ScreenContainer scrollable={true}>
       <Text style={styles.title}>{isEditing ? 'Edit' : 'Create'} __ENTITY_NAME__</Text>
+__LIFECYCLE_PANEL__
       <Card style={styles.formCard}>
 __FORM_INPUTS__
         <Button
@@ -1011,7 +1020,20 @@ const styles = StyleSheet.create({
             .replace("__STATE_INITS__", "\n".join(state_inits))
             .replace("__PAYLOAD_ASSIGNMENTS__", "\n".join(payload_assignments))
             .replace("__FORM_INPUTS__", "\n".join(form_inputs))
+            .replace(
+                "__LIFECYCLE_IMPORT__",
+                f"import {{ {entity.name}Lifecycle }} from './{entity.name}Lifecycle';\n" if lifecycle else "",
+            )
+            .replace(
+                "__LIFECYCLE_PANEL__",
+                f"      {{isEditing && record && <{entity.name}Lifecycle record={{record}} onChanged={{setRecord}} />}}"
+                if lifecycle else "",
+            )
         )
+        if lifecycle is not None:
+            files.append(GeneratedFile(
+                f"src/features/{slug}/ui/{entity.name}Lifecycle.tsx", mobile_lifecycle_panel(ir, lifecycle)
+            ))
         files.append(GeneratedFile(f"src/features/{slug}/ui/{pascal}DetailScreen.tsx", detail_screen_content))
 
         return files
@@ -1214,3 +1236,19 @@ const styles = StyleSheet.create({
             "}\n"
         )
         return GeneratedFile("src/app/App.tsx", content)
+
+
+def _collection_path(entity: Entity, ir: ApplicationIR) -> str:
+    """The path the backends serve for this entity's collection, from the IR's own LIST endpoint.
+
+    R-590: the mobile app used to call `/api/<entity>s`, a path no generated backend serves, so every
+    data screen on the phone failed with 404. The contract path comes from the plan, like the web's.
+    """
+    from .route_wiring import Op, table_name, wire_endpoint
+
+    entities = frozenset(e.name for e in ir.entities)
+    for api in ir.apis:
+        wiring = wire_endpoint(api, entities)
+        if wiring is not None and wiring.op is Op.LIST and wiring.entity == entity.name:
+            return api.path
+    return f"/{table_name(entity.name)}s"

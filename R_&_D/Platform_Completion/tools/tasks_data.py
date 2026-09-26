@@ -86,7 +86,9 @@ QUEUE = [
      "Works for templates only today; generated projects must install on a real phone."),
     ("PC-004", "Real API + DB for every feature: a Vibe build fails if any screen or action is "
      "not wired to a real endpoint and table", "1 Vibe Mode live", "Vibe", "Not Started", "P0",
-     "R-590", "No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro."),
+     "R-590", "No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro. Found in R-590: "
+     "the Node repositories silently fall back to an in-memory map on any database error and report "
+     "success; a malformed id answers 500 instead of 404 on the Python backend."),
     ("PC-005", "Vibe / Engineering mode switch in the Studio", "1 Vibe Mode live", "Both",
      "Not Started", "P0", "", "From specs/studio-ux/01. Vibe hides the machinery; "
      "Engineering shows plan, stack, diffs, report, PRs."),
@@ -122,7 +124,9 @@ QUEUE = [
     ("PC-011", "Plans, entitlements, credit top-up and super_admin console (Phase E)",
      "1 Vibe Mode live", "Platform", "Not Started", "P0", "",
      "Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at "
-     "PC-070. Covers R-109."),
+     "PC-070. Covers R-109. Found in R-590: self-registered users get role 'user', which is not one "
+     "of the plan's roles, so role-guarded actions need an admin to assign roles — include a role "
+     "manager in the generated admin console."),
     ("PC-012", "Legal and account basics: ToS, privacy, retention, deletion/export, email "
      "verification", "1 Vibe Mode live", "Platform", "Not Started", "P0", "", "Covers R-108."),
     ("PC-013", "Verified integrations catalog with health tests", "1 Vibe Mode live", "Vibe",

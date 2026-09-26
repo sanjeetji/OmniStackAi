@@ -2194,6 +2194,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "@/lib/hooks";')
 
     lines.append(f'import type {{ {name} }} from "@/lib/types";')
+    from ..application_ir.workflow import workflow_for_entity as _wf_import
+    from .lifecycle_ui import lifecycle_component_name as _lc_import_name, lifecycle_component_path as _lc_path
+
+    if (_wf := _wf_import(ir, entity.name)) is not None:  # R-590
+        lines.append(f'import {{ {_lc_import_name(_wf)} }} from "@/{_lc_path(_wf).removesuffix(".tsx")}";')
 
     if has_subcollections:
         child_type_names = list(dict.fromkeys(sub.child_entity.name for sub in subcollections if sub.child_entity.name != name))
@@ -2786,7 +2791,12 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         ])
 
     can_edit = (Op.UPDATE in ops) and (form_screen is not None)
-    has_actions_col = can_delete or has_subcollections or can_edit or (detail_screen is not None)
+    # R-590: a lifecycle is operable from the list too — many plans have no detail page at all.
+    from ..application_ir.workflow import workflow_for_entity as _wf_for_list
+    from .lifecycle_ui import lifecycle_component_name as _lc_name
+
+    _list_lifecycle = _wf_for_list(ir, entity.name)
+    has_actions_col = can_delete or has_subcollections or can_edit or (detail_screen is not None) or _list_lifecycle is not None
     if has_actions_col:
         actions_header = "Actions" if (can_delete or can_edit or detail_screen is not None) else "Details"
         lines.append(
@@ -2959,6 +2969,10 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 '                    {selectedId === (item as any).id ? "Hide Details" : "View Details"}',
                 '                  </button>',
             ])
+        if _list_lifecycle is not None:
+            lines.append(
+                f"                  <{_lc_name(_list_lifecycle)} record={{item as {entity.name}}} compact onChanged={{() => refetch()}} />"
+            )
         if can_edit and form_screen:
             margin_style = " marginRight: 8," if can_delete else ""
             lines.extend([
@@ -3276,9 +3290,15 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                     detail_screen = s
 
     # Fields to include in form
-    editable_fields = [f for f in entity.fields if f.name not in ("id", "created_at", "updated_at")]
+    # R-590: the lifecycle field is not a form input — only its transitions move it, from the
+    # detail page. A free-text box for it let anyone set any state and skip the rules.
+    from ..application_ir.workflow import workflow_for_entity
+
+    _lifecycle = workflow_for_entity(ir, entity.name)
+    _skip = {"id", "created_at", "updated_at"} | ({_lifecycle.field} if _lifecycle else set())
+    editable_fields = [f for f in entity.fields if f.name not in _skip]
     if not editable_fields:
-        editable_fields = list(entity.fields)
+        editable_fields = [f for f in entity.fields if not (_lifecycle and f.name == _lifecycle.field)] or list(entity.fields)
 
     parent_relations = _parent_relations_for_entity(entity, ir)
     parent_rel_by_field: dict[str, ParentRelationInfo] = {r.field_name: r for r in parent_relations}
@@ -4092,6 +4112,14 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                     subcol_hook_names.append(del_hook)
         lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "@/lib/hooks";')
 
+    # R-590: the lifecycle panel, when this entity has one.
+    from ..application_ir.workflow import workflow_for_entity as _wf_for
+    from .lifecycle_ui import lifecycle_component_name, lifecycle_component_path
+
+    _detail_lifecycle = _wf_for(ir, name) if Op.GET in ops else None
+    if _detail_lifecycle is not None:
+        _comp_path = lifecycle_component_path(_detail_lifecycle).removesuffix(".tsx")
+        lines.append(f'import {{ {lifecycle_component_name(_detail_lifecycle)} }} from "@/{_comp_path}";')
     lines.append(f'import type {{ {name} }} from "@/lib/types";')
 
     if has_subcollections:
@@ -4524,6 +4552,11 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "            </div>",
             "          </div>",
         ])
+
+        if _detail_lifecycle is not None:
+            lines.append(
+                f"          <{lifecycle_component_name(_detail_lifecycle)} record={{item}} onChanged={{() => refetch()}} />"
+            )
 
         if can_delete:
             lines.extend([
@@ -74212,6 +74245,12 @@ class NextjsWebAdapter:
                     ),
                 )
             )
+
+        # R-590: one lifecycle panel per workflow, used by the detail pages.
+        from .lifecycle_ui import web_lifecycle_files
+
+        for _path, _content in web_lifecycle_files(ir, has_auth=needs_auth(ir)):
+            files.append(GeneratedFile(_path, _content))
 
         if needs_auth(ir):
             files.append(GeneratedFile("components/auth-provider.tsx", _auth_provider_component(ir)))
