@@ -1,25 +1,23 @@
-task_id: R-591
-status: complete
+task_id: R-590
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-26"
-completed_at: "2026-09-26"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Complete, identical account flow on every generated backend and every surface: register, login,
-  me, logout, forgot-password and reset-password on Python, Go, Node/Express and Node/Hono; safe
-  password recovery pages on the web app and admin console; sign-in, sign-up and recovery screens
-  with a securely stored session on the mobile app.
+  A lifecycle is operable from the screens, and only through its transitions. Web app and admin
+  console detail pages and the mobile detail screen show the record's state and offer exactly the
+  moves legal from it (hidden when the signed-in role cannot make them). The ordinary create/update
+  endpoints stop writing the lifecycle field on every backend, and the forms stop offering it, so the
+  role and from-state rules (R-566, R-589) cannot be bypassed.
 founder_gate: >-
-  Founder, 2026-09-26: "while talking about real sign-up and login, then based on case also coming
-  forget password — these type small things should be handled automatically"; "continue task one
-  by one without asking".
+  Founder, 2026-09-26: "continue task one by one without asking"; small companion things are
+  handled automatically.
 companions:
-  - Forgot and reset password on every backend (real one-time emailed links, Resend when keyed)
-  - Web forgot-password + reset-password pages; admin console inherits them
-  - Mobile Login, Register, ForgotPassword screens, sign in/out header button, SecureStore session
-  - Schema columns for reset links, with ADD COLUMN IF NOT EXISTS for existing databases
-  - .env.example entries for APP_BASE_URL, RESEND_API_KEY, EMAIL_FROM (keys last)
+  - The lifecycle field is no longer writable through create/update on Python, Go and Node
+  - Web and mobile forms stop offering the lifecycle field as free text
+  - Mobile entity calls use the contract paths (they called /api/<entity>s, which no backend serves)
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/tests/
@@ -28,39 +26,16 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - A reset token is never returned in an HTTP response; only its SHA-256 is stored
-  - Forgot-password answers identically for known and unknown emails
-  - Self-registration cannot choose a role
+  - A project without a workflow is unchanged
   - task verify stays offline with 0 model calls
 required_gates:
-  - Every backend compiles (go build/vet/gofmt, tsc strict for Express and Hono, Python compiles)
-  - Mobile app type-checks strictly with Expo SDK 51 installed
-  - Live run against PostgreSQL on all four backends, including cross-backend sign-in
+  - Generated web and mobile apps type-check; generated backends build
+  - Live run against PostgreSQL showing the bypass closed and transitions working
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-live_proof: >-
-  84/84 checks against PostgreSQL across Python, Go, Node/Express and Node/Hono sharing one
-  database: short password refused, register 201, role escalation ignored, duplicate 409, wrong
-  password 401, login 200, /me from header + database, forged token 401, forgot 200 for unknown and
-  known emails with no token in the response, reset link found in the dev-mode server log, reset
-  200, same link again 400, old password 401, new password 200, logout 204; every backend's account
-  signs in through every other backend; the seeded dev admin signs in everywhere. Node with no
-  JWT_SECRET and dev mode off: a tokenless POST now gets 500 auth_not_configured (before: accepted
-  as admin). Generated Go builds, vets and is gofmt-clean; Express and Hono pass tsc; the mobile app
-  passes strict tsc with Expo SDK 51 installed.
 blockers: []
-deferred:
-  - "Opening the reset link inside the mobile app needs deep links (HP-deep-links); it opens the web reset page today."
-  - "The /auth routes are not yet in the generated OpenAPI contract; folded into R-572 (shared contract package)."
-found_and_fixed:
-  - "Python /auth/me read `authorization` from the query string (no Header()), so every signed-in profile call answered 401."
-  - "Python forgot-password answered 'link dispatched' and sent nothing; reset-password always answered 501."
-  - "The web forgot-password page set a new password from an email address alone; only the backend's 501 prevented account takeover."
-  - "Node: a missing JWT_SECRET fell back to a default containing 'dev-secret', which switched on the no-token admin bypass — every visitor was admin."
-  - "Node: tokens never expired (exp unchecked) and signatures were compared with !== rather than in constant time."
-  - "Node mounted every route under /api/... while the web app and the OpenAPI contract use /...; a web app on a Node backend got 404 on every call."
-  - "A plan's own /auth/login would have been registered twice: a Go start-up panic, and two auth modules written over each other in Python and Node."
-  - "The mobile Input component put \"\" into a style array; strict tsc rejected every generated mobile app."
+deferred: []
+found_and_fixed: []

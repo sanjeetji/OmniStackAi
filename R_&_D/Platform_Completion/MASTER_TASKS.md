@@ -30,9 +30,9 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 |---|---|
 | Completed | 409 |
 | Completed - needs live proof | 8 |
-| In Progress | 0 |
+| In Progress | 1 |
 | Pending | 100 |
-| Not Started | 519 |
+| Not Started | 518 |
 | Superseded | 12 |
 | Deferred | 57 |
 | Dropped | 9 |
@@ -53,7 +53,7 @@ Open work queue: **109** tasks (P0: 15, P1: 49, P2: 31, P3: 14).
 | 6 | PC-003 | Stack policy in code: an app request gets a store-ready React Native app AND an installable PWA with QR; Flutter and React.js refused with the reason | Completed | P0 | Both |  |  | R-562 already builds the React Native app; the PWA + QR half is R-573. Native Kotlin/Swift only after Phase 5. Uses the R-559 'nearest thing we can build, with a reason' path. |
 | | | **Phase 1 Vibe Mode live**: Prompt -> running app with real API + DB -> live URL, for real users. | | | | | | |
 | 7 | R-591 | Complete auth for the Go backend: register, login, logout, me, forgot password, reset password | Completed | P0 | Both |  |  | A Go app with auth has no way for a real user to sign in. Parity with the Python backend's auth (R-461, R-463), companions included. |
-| 8 | R-590 | Workflow transitions as buttons on the generated screens | Not Started | P0 | Both | R-588 |  | The user-visible half of R-566. |
+| 8 | R-590 | Workflow transitions as buttons on the generated screens | In Progress | P0 | Both | R-588 |  | The user-visible half of R-566. |
 | 9 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | Pending | P0 | Vibe | PC-003 | ARCH-PWA | Works for templates only today; generated projects must install on a real phone. |
 | 10 | PC-004 | Real API + DB for every feature: a Vibe build fails if any screen or action is not wired to a real endpoint and table | Not Started | P0 | Vibe | R-590 | ARCH-PIPELINE, SPEC-VIBE-01 | No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro. |
 | 11 | PC-005 | Vibe / Engineering mode switch in the Studio | Not Started | P0 | Both |  | ARCH-STUDIO-MODES, BP-INTENT, SPEC-STUDIO-01 | From specs/studio-ux/01. Vibe hides the machinery; Engineering shows plan, stack, diffs, report, PRs. |
