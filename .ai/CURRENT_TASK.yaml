@@ -1,47 +1,41 @@
-task_id: R-589
+task_id: PC-001
 status: complete
-phase: MVP
-tracker_row: 37
+phase: Platform Completion
+tracker_row: null
 started_at: "2026-09-26"
 completed_at: "2026-09-26"
-branch: ai/R-589-go-node-transitions
+branch: ai/PC-001-master-tasks
 objective: >-
-  R-566 implemented lifecycle transitions for the Python backend. Go and Node emitted the 501
-  scaffold for them, so a user who chose Go got a lifecycle that did not run. Each backend now
-  enforces the same two rules — the role and the from-state — and writes only the lifecycle column.
+  One master task list for finishing the platform. Every open task in R_&_D and its sub-folders
+  (v6 tracker, roadmap, draft specs, template plan, commercial kickoff, buildout plan, V6 gap
+  analysis) is reconciled into R_&_D/Platform_Completion/ with a status, a priority and the
+  queue item that covers it. That folder is now the only work queue.
 founder_gate: >-
-  Founder on 2026-09-26: do all of them, one by one.
+  Founder on 2026-09-26 asked for the document. They then changed the stack policy: an app request
+  gets a store-ready React Native app plus a PWA with QR; MongoDB is an option beside
+  PostgreSQL; NVIDIA nemotron-3-ultra is the build LLM. "All other things are okay."
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/
-  - services/agent-engine/tests/
+  - R_&_D/Platform_Completion/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - Every backend refuses a transition for the wrong role and from the wrong state
-  - A transition writes only the lifecycle column
-  - Generated Go stays gofmt-clean and builds
-  - A project without a workflow is unchanged
-  - task verify stays offline with 0 model calls
+  - No product code changes
+  - No secret values in any document (the NVIDIA key stays in .env)
 required_gates:
-  - Go and Node (both Express and Hono) generate working transitions
-  - Each is verified by running the generated server against PostgreSQL
-  - task verify passes offline with 0 model calls
+  - Every non-Done tracker row is classified, or the generator refuses to run
+  - Every "tracked in" pointer resolves to a real task
+  - The Markdown is identical with and without openpyxl
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "R-591: the generated Go backend verifies tokens but never issues one. There is no login or register endpoint, so a Go app with auth has no way for a real user to sign in apart from a dev bypass. Found while testing role guards; it is a feature of its own, not a fix to this task."
+deferred: []
 found_and_fixed:
   - >-
-    `Update<Entity>` in every generated Go backend returned a blank record. It declared `var out`,
-    scanned the RETURNING row into `m`, and returned `&out` — never written. So every PATCH/PUT
-    answered with empty fields while the database held the right row. Found because the new setter,
-    built on the same scaffold, hit the same mismatch the other way round and failed to compile.
-    Proven fixed over HTTP: a PATCH now returns the edited title and the real id.
+    The v6 tracker understated progress: about 40 rows marked "Not Started" were already built and
+    12 had been replaced by another approach. Each now says which task did the work.
   - >-
-    An existing test pinned that bug as the expected behaviour — it asserted `return &out, nil`,
-    the exact line returning the blank struct. The R-549 pattern again: a test asserting on text
-    where the text was the defect. It now asserts the scanned row is the returned row.
+    The draft specs and the buildout plan reuse task numbers already taken (R-519..R-529,
+    R-600+). They are listed under SPEC-* and BP-* ids so nothing collides.

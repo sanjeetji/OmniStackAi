@@ -1,5 +1,11 @@
 # OmniStackAI — Roadmap after R-558
 
+> **Superseded as the work queue on 2026-09-26 (PC-001).** The ordered queue now lives in
+> `R_&_D/Platform_Completion/` (`MASTER_TASKS.md` / `OmniStackAI_Master_Tasks.xlsx`). Every open
+> task below is carried there with its status and priority, and the stack policy changed: apps
+> default to a PWA with a QR code, native is Kotlin/Compose and Swift/SwiftUI (last), and
+> Flutter and React.js are not offered. This file remains the reasoning behind R-559..R-591.
+
 Written for the founder and for whoever (human or agent) picks this up in a later session. It is
 the durable answer to "what do we build next, in what order, and why" so that work can stop and
 resume without losing the thread.

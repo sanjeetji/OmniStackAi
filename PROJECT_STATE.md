@@ -1,8 +1,12 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-24
+Last updated: 2026-09-26
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
+
+> **PC-001 (2026-09-26): one master task list; `R_&_D/Platform_Completion/` is now the only work queue.**
+> 688 tasks from every R_&_D source, each with status, priority and the queue item covering it; 75 open in order. Next: PC-047 (NVIDIA provider), then PC-003 and R-591.
+> Stack policy: Next.js web/admin; app request → store-ready React Native app + PWA with QR; Kotlin/Swift native last; no Flutter or React.js; PostgreSQL default, MongoDB option; NVIDIA nemotron-3-ultra for builds.
 
 > **R-589 (2026-09-26): a lifecycle runs on every backend, not only the default one.**
 > Go and Node emitted a 501 for transitions, so choosing Go meant a lifecycle that did not run. Both now enforce role and from-state and write only the lifecycle column.
