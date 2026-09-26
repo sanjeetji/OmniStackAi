@@ -30,8 +30,8 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 |---|---|
 | Completed | 415 |
 | Completed - needs live proof | 8 |
-| In Progress | 0 |
-| Pending | 99 |
+| In Progress | 1 |
+| Pending | 98 |
 | Not Started | 516 |
 | Superseded | 12 |
 | Deferred | 57 |
@@ -57,7 +57,7 @@ Open work queue: **105** tasks (P0: 11, P1: 49, P2: 31, P3: 14).
 | 9 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | Completed | P0 | Vibe | PC-003 | ARCH-PWA | Works for templates only today; generated projects must install on a real phone. |
 | 10 | PC-004 | Real API + DB for every feature: a Vibe build fails if any screen or action is not wired to a real endpoint and table | Completed | P0 | Vibe | R-590 | ARCH-PIPELINE, SPEC-VIBE-01 | No mock data, no 501 stubs, no dead buttons. From specs/vibe-mode-pro. Found in R-590: the Node repositories silently fall back to an in-memory map on any database error and report success; a malformed id answers 500 instead of 404 on the Python backend. |
 | 11 | PC-005 | Vibe / Engineering mode switch in the Studio | Completed | P0 | Both |  | ARCH-STUDIO-MODES, BP-INTENT, SPEC-STUDIO-01 | From specs/studio-ux/01. Vibe hides the machinery; Engineering shows plan, stack, diffs, report, PRs. |
-| 12 | PC-006 | 'Wow in 30 seconds': first screen streams fast, latest modern UI, maximum polish per page | Pending | P0 | Vibe |  | BP-SWITCHER, SPEC-TS-01 | R-558 fixed the design system; still needs speed-to-first-screen and visual quality. From specs/table-stakes/01 and the buildout 'intent card' idea. Measured in PC-084: plan 20-29 s (model) and preview start ~14 s are the stages to cut; model-written pages cost ~80 s and their admin page failed to compile, so the repair loop must cover the admin app before model-written pages return to the default path. |
+| 12 | PC-006 | 'Wow in 30 seconds': first screen streams fast, latest modern UI, maximum polish per page | In Progress | P0 | Vibe |  | BP-SWITCHER, SPEC-TS-01 | R-558 fixed the design system; still needs speed-to-first-screen and visual quality. From specs/table-stakes/01 and the buildout 'intent card' idea. Measured in PC-084: plan 20-29 s (model) and preview start ~14 s are the stages to cut; model-written pages cost ~80 s and their admin page failed to compile, so the repair loop must cover the admin app before model-written pages return to the default path. |
 | 13 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | P1 | Vibe | PC-006 |  | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
 | 14 | PC-085 | Model quality evals and best-model routing: score every provider (NVIDIA, cloud, local) per task type and route each job to the best one | Not Started | P1 | Both | PC-047 |  | NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. Founder-approved 2026-09-26. |
 | 15 | PC-095 | Build fallback chain: Groq -> Gemini -> OpenRouter (free) -> NVIDIA -> local Ollama | Completed | P1 | Platform | PC-085 |  | Founder, 2026-09-26. A rate-limited or failing provider hands the build to the next one. |

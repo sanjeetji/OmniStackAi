@@ -1,21 +1,17 @@
-task_id: PC-084
-status: complete
+task_id: PC-006
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-26"
-completed_at: "2026-09-26"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Speed is measured on every build and held to the Vibe target (prompt -> running app under 90 s):
-  per-stage timings in every build result and the Studio, a speed report across builds, an offline
-  regression gate on the deterministic stages, and a 90 s check in the live smoke.
+  "Wow in 30 seconds": the first screen of a running app appears fast, and it looks like a modern
+  product. Measured first (PC-084): plan ~7-9 s on Groq, assemble ~1 s, checks ~6 s, preview start
+  ~14 s. Cut the preview start, and raise the visual quality of the generated first screen.
 founder_gate: >-
-  Founder-approved 2026-09-26 (queued as a win-the-category task). Done before PC-006 because
-  "wow in 30 seconds" cannot be pursued without knowing where the seconds go.
-companions:
-  - Mobile apps are type-checked on every build from a shared Expo cache (founder asked "what about
-    the app side?"); the link is removed after the check so the cache is never written
-  - Studio shows "Ready in N s" (Vibe) and the stage breakdown (Engineering)
+  Founder: "modern, cool, latest UI with maximum features per app"; "continue".
+companions: []
 allowed_paths:
   - services/agent-engine/
   - apps/console-web/
@@ -27,23 +23,12 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live builds through the console, timed per stage
+  - Live build through the console, timed per stage
   - scripts/verify.sh passes
 model_tool_trace:
-  routing: live measurement outside task verify
+  routing: deterministic_only
   local_calls: 0
-  cloud_calls: 5  # smoke build+edit (Gemini), 2 timed builds (Gemini), 1 NVIDIA-pinned build that timed out
-live_proof: >-
-  Baseline smoke: build 61 s + preview 8 s. First timed build: plan 20.7 s, assemble 0.9, repo 0.3,
-  checks 4.3, and ~17 s preview inside the request — web app not type-checked. With the provider
-  passed naively: assemble 82 s (model-written pages), admin failed to compile, total 165 s. Final:
-  deterministic pages, provider for checks only; on the same real plan assemble 0.95 s, repo 0.29 s,
-  checks 5.5 s with admin clean and mobile clean (new). Expected prompt -> running app ~45-55 s on
-  Gemini. Gemini free-tier quota (20/day) was exhausted by testing; NVIDIA exceeded the 120 s limit.
+  cloud_calls: 0
 blockers: []
-deferred:
-  - "PC-006: cut plan (model) and preview-start time; extend repair to the admin app before model-written pages return."
-  - "PC-014: local model setting names an uninstalled model; pinned models the adapter was not configured with are refused."
-found_and_fixed:
-  - "The console's streaming build never passed the provider to verification, so no console build was type-checked (R-560's loop was inactive on the main path)."
-  - "Generated mobile apps were never type-checked in the build path (dependencies never installed)."
+deferred: []
+found_and_fixed: []
