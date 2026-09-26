@@ -1,45 +1,34 @@
-task_id: R-573
-status: complete
+task_id: PC-004
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-26"
-completed_at: "2026-09-26"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Every generated web app installs on a phone: a web app manifest from the brand, icons, a service
-  worker with an offline shell that never serves stale API data, registration, an install prompt,
-  and a QR code wherever the app's address is shown, so a phone can open and install it.
+  Real API + DB behind every feature. A generated app has no mock data on its pages, no endpoint
+  answering 501, no button that does nothing, and no backend that pretends to save when the
+  database is down. What cannot be wired is reported to the user by name instead of shipped fake.
 founder_gate: >-
-  Founder, 2026-09-26: an app request gets a store-ready React Native app AND an installable PWA
-  with a QR code by default. "Continue task one by one without asking."
-companions:
-  - Admin console inherits the same PWA support
-  - Stack policy: a PWA request is honoured as asked (no substitution note)
-  - Run plan passes NEXT_PUBLIC_LAN_HOST so the QR works from a phone
+  Founder: "API + DB should be real for each feature, not just only modern UI"; "continue task one
+  by one without asking".
+companions: []
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/
   - services/agent-engine/tests/
-  - apps/console-web/
+  - scripts/test.sh
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - The service worker never caches API responses (a stale order status is worse than none)
   - task verify stays offline with 0 model calls
 required_gates:
-  - A generated web app builds and its manifest and service worker are served
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-live_proof: >-
-  A generated project assembled, built with `next build` and served with `next start`; opened in
-  headless Google Chrome (persistent profile): installability errors [], manifest errors [], service
-  worker activated at scope /, "Get the app" control with QR present, and with the network cut a
-  navigation answered 200 with the offline page. Manifest, theme-color, apple-touch-icon and
-  apple-mobile-web-app tags present; icons are real PNGs at 192/512/512-maskable/180.
 blockers: []
 deferred: []
 found_and_fixed: []
