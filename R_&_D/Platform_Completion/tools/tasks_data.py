@@ -100,8 +100,9 @@ QUEUE = [
      "and their admin page failed to compile, so the repair loop must cover the admin app before "
      "model-written pages return to the default path. Speed half done 2026-09-26: preview start "
      "17.7 -> 9.6 s (shared warm API environment, surfaces probed together), live prompt -> running "
-     "app 12-15 s on Groq; fixed model navigation objects breaking pages. Left: visual quality of the "
-     "first screen; starting the preview during verification (~5 s) once node_modules are not shared."),
+     "app 12-15 s on Groq; fixed model navigation objects breaking pages. First screen done: tracker "
+     "home, readable names, cards that say what you can do, header fits a phone. Follow-ups: preview "
+     "during verification (~5 s), detail screens out of the top bar, auth User entity off home cards."),
     ("PC-084", "Speed targets measured on every build and enforced: prompt -> preview under "
      "90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate",
      "1 Vibe Mode live", "Vibe", "Not Started", "P1", "PC-006",

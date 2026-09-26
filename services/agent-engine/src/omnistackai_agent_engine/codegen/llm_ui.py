@@ -140,6 +140,13 @@ Design a product site that explains a tool and gets a signup, using shadcn ui/ c
 4. Social proof: logos or testimonial <Card>s.
 5. Pricing teaser and Footer."""
 
+_TRACKER_ARCHETYPE = """ARCHETYPE: PERSONAL TRACKER (habits, tasks, goals, expenses, journal)
+Design a calm, focused home for something people check every day, using shadcn ui/ components and Tailwind:
+1. Sticky Header: brand, the main lists, one "+ New" <Button>, sign-in.
+2. Hero: what it helps the person keep up with, and one primary CTA to add their first item.
+3. What you'll track: <Card>s with a Lucide icon, the item name and what they can do with it.
+4. A friendly empty-state hint for day one, then Footer. No blog or storefront language."""
+
 _MARKETING_ARCHETYPE = """ARCHETYPE: MARKETING SITE / LANDING PAGE
 Design a page that explains a product and invites one action, using shadcn ui/ components and Tailwind:
 1. Sticky Header: brand, section links, one primary <Button>.
@@ -152,6 +159,7 @@ Design a page that explains a product and invites one action, using shadcn ui/ c
 #: than a guess; `_detect_ui_archetype` remains only as the fallback for direct callers.
 _ARCHETYPE_INSTRUCTIONS: dict[str, str] = {
     "storefront": _STOREFRONT_ARCHETYPE,
+    "tracker": _TRACKER_ARCHETYPE,
     "publication": _PUBLICATION_ARCHETYPE,
     "booking": _BOOKING_ARCHETYPE,
     "directory": _DIRECTORY_ARCHETYPE,

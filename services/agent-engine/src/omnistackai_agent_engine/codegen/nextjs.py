@@ -1626,7 +1626,28 @@ def _route_file(apis: list[ApiEndpoint]) -> str:
 
 
 def _title_case(value: str) -> str:
-    return " ".join(part.capitalize() for part in re.split(r"[_-]+", value)) or "Page"
+    # PC-006: "HabitCategory".capitalize() is "Habitcategory"; split CamelCase and keep acronyms.
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", value)
+    parts = [p for p in re.split(r"[_\s-]+", spaced) if p]
+    return " ".join(p if p.isupper() and len(p) > 1 else p[:1].upper() + p[1:].lower() for p in parts) or "Page"
+
+
+def _plural(word: str) -> str:
+    if word.endswith("y") and word[-2:-1] not in ("a", "e", "i", "o", "u"):
+        return word[:-1] + "ies"
+    if word.endswith(("s", "x", "ch", "sh")):
+        return word + "es"
+    return word + "s"
+
+
+def _nav_label(screen_id: str) -> str:
+    """PC-006: a list screen is named for what it lists ("habit_list" -> "Habits")."""
+    base = re.sub(r"_(list|index|overview|table|grid|browse)$", "", screen_id)
+    title = _title_case(base)
+    if base == screen_id:
+        return title
+    head, _, last = title.rpartition(" ")
+    return f"{head} {_plural(last)}".strip()
 
 
 def _pascal(value: str) -> str:
@@ -5256,6 +5277,20 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
     return "\n".join(lines)
 
 
+def _offering_detail(entity, ops) -> str:
+    """PC-006: what a visitor can do with this, e.g. "Add, browse and update your habits."
+
+    The cards used to list the first three columns ("Id, Title, Description"): table design, not
+    something a user wants to read on a home page.
+    """
+    verbs = [v for op, v in ((Op.CREATE, "add"), (Op.LIST, "browse"), (Op.UPDATE, "update")) if op in ops]
+    noun = _plural(_title_case(entity.name).lower())
+    if not verbs:
+        return f"Everything about your {noun}, in one place."
+    said = verbs[0] if len(verbs) == 1 else ", ".join(verbs[:-1]) + " and " + verbs[-1]
+    return f"{said[:1].upper()}{said[1:]} your {noun}."
+
+
 def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -> str:  # noqa: PLR0912, PLR0915
     """Generate the public-facing home page (app/page.tsx) for the customer-facing web app.
 
@@ -5282,7 +5317,7 @@ def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -
     browse: list[tuple[str, str]] = []
     for s in ir.screens:
         if _screen_intent(s) == "collection":
-            browse.append((f"/{s.id}", _title_case(s.id)))
+            browse.append((f"/{s.id}", _nav_label(s.id)))
 
     highlights = [e for e in ir.entities if Op.LIST in ops_by_entity.get(e.name, set())][:6]
 
@@ -5319,8 +5354,7 @@ def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -
         out: list[str] = []
         for index, entity in enumerate(highlights, start=1):
             label = _escape_ts(_title_case(entity.name))
-            detail = ", ".join(_title_case(f.name) for f in entity.fields[:3])
-            detail = _escape_ts(detail) if detail else "Managed from your dashboard."
+            detail = _escape_ts(_offering_detail(entity, ops_by_entity.get(entity.name, set())))
             if kind == "rows":
                 out += [
                     f'{indent}<li className="{PREFIX}-row">',
@@ -5464,18 +5498,13 @@ def _navbar_component(ir: ApplicationIR) -> str:
         '            </Link>',
     ]
 
-    for s in primary_screens:
-        s_title = _title_case(s.id)
-        s_role = s.role.strip()
-        role_badge = ""
-        if s_role and s_role.lower() not in ("public", "anon", "anonymous", ""):
-            role_badge = (
-                f' <span style={{{{ fontSize: 10, padding: "1px 5px", background: "#f1f5f9", '
-                f'color: "#64748b", borderRadius: 4, fontWeight: 600 }}}}>{s_role}</span>'
-            )
+    # PC-006: the top bar carries the lists people browse, named for what they list; forms sit
+    # behind "+ New" and in the sidebar. Every screen with a role badge made it wrap in two lines.
+    top_screens = [s for s in primary_screens if _screen_intent(s) == "collection"][:5] or primary_screens[:5]
+    for s in top_screens:
         nav_links_jsx.extend([
             f'            <Link href="/{s.id}" style={{navLinkStyle(isLinkActive("/{s.id}"))}}>',
-            f'              {s_title}{role_badge}',
+            f'              {_escape_ts(_nav_label(s.id))}',
             '            </Link>',
         ])
 
@@ -5555,12 +5584,13 @@ def _navbar_component(ir: ApplicationIR) -> str:
     if create_form:
         entity = _match_entity(create_form, ir)
         if entity:
-            cta_label = f"+ New {entity.name}"
+            cta_label = f"+ New {_title_case(entity.name)}"
         else:
             cta_label = f"+ {_title_case(create_form.id)}"
         create_button_jsx = (
             f'          <Link\n'
             f'            href="/{create_form.id}"\n'
+            '            className="omni-create"\n'
             '            style={{\n'
             '              display: "inline-flex",\n'
             '              alignItems: "center",\n'
@@ -5604,6 +5634,7 @@ def _navbar_component(ir: ApplicationIR) -> str:
         '        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>\n'
         '          <button\n'
         '            type="button"\n'
+        '            className="omni-shortcuts"\n'
         '            onClick={() => setShortcutsOpen(true)}\n'
         '            title="Keyboard shortcuts (?)"\n'
         '            aria-label="View keyboard shortcuts"\n'
@@ -5683,6 +5714,7 @@ def _navbar_component(ir: ApplicationIR) -> str:
         '    textDecoration: "none",\n'
         '    border: active ? "1px solid #bfdbfe" : "1px solid transparent",\n'
         '    transition: "all 0.15s ease",\n'
+        '    whiteSpace: "nowrap" as const,\n'
         '  });\n\n'
         '  return (\n'
         '    <header\n'
@@ -5696,6 +5728,9 @@ def _navbar_component(ir: ApplicationIR) -> str:
         '        boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",\n'
         '      }}\n'
         '    >\n'
+        '      <style>{`@media (max-width: 1024px) { .omni-shortcuts { display: none !important; } }'
+        ' @media (max-width: 860px) { .omni-topnav { display: none !important; } }'
+        ' @media (max-width: 640px) { .omni-create, .omni-brand-name { display: none !important; } }`}</style>\n'
         '      <div\n'
         '        style={{\n'
         '          maxWidth: 1200,\n'
@@ -5761,6 +5796,7 @@ def _navbar_component(ir: ApplicationIR) -> str:
         f'              {brand_initial}\n'
         '            </span>\n'
         '            <span\n'
+        '              className="omni-brand-name"\n'
         '              style={{\n'
         '                fontWeight: 700,\n'
         '                fontSize: 15,\n'
@@ -5772,6 +5808,7 @@ def _navbar_component(ir: ApplicationIR) -> str:
         '            </span>\n'
         '          </Link>\n\n'
         '          <nav\n'
+        '            className="omni-topnav"\n'
         '            role="navigation"\n'
         '            aria-label="Main Navigation"\n'
         '            style={{\n'

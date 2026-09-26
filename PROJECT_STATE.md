@@ -4,7 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **PC-006 (in progress, 2026-09-26): wow in 30 seconds.** Speed half done: preview start 17.7 -> 9.6 s, live prompt -> running app 12-15 s on Groq. Fixed: model navigation objects broke generated pages. Next: first-screen visual quality.
+> **PC-006 (2026-09-26): wow in 30 seconds.** Live prompt -> running app 12-15 s on Groq (was 18-26 s); preview start 17.7 -> 9.6 s. First screen fixed: tracker home instead of a blog's, readable names, cards that say what you can do, header fits a phone. Next: PC-085.
 > **PC-095 (2026-09-26): build fallback chain.** Groq -> Gemini -> OpenRouter free -> NVIDIA -> local 7b; moves on only for fixable failures, never mid-stream. Fixed: a keyless fallback made builds silently use the local model. Live: wrong Groq key -> Gemini answered in 2.2 s.
 
 > **PC-084 follow-up (2026-09-26): Groq gpt-oss-120b is the build model (fallback Gemini, NVIDIA).** Prompt -> running app 18 s live; median 25.7 s. Fixed: web + mobile projects (no admin) previewed as 404 in the Studio.

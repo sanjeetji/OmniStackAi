@@ -1,9 +1,9 @@
 task_id: PC-006
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-26"
-completed_at: null
+completed_at: "2026-09-26"
 branch: platform-completion
 objective: >-
   "Wow in 30 seconds": the first screen of a running app appears fast, and it looks like a modern
@@ -36,7 +36,8 @@ progress:
   - "Shared warm environment per requirements set for generated Python APIs (localrun/api_env.py), warmed at platform start."
   - "API, web, admin and mobile readiness probed together every 0.25 s instead of in turn every 1 s."
   - "Tried and rejected: Turbopack (~0.6 s faster boot, failed to compile generated pages)."
-  - "Next: visual quality of the generated first screen."
+  - "First screen: tracker archetype, CamelCase names split, home cards say what you can do, top bar lists browsable screens without role badges, header fits a phone (390/390 px live)."
+  - "Next queue task: PC-085 (model quality evals and best-model routing)."
 found_and_fixed:
   - "Groq wrote screen navigation as objects; they became links to /{'target': ...} and pages that did not compile. Objects are unwrapped and links to missing screens dropped."
   - "The generated .gitignore ignored `.venv/`, which does not match a symlinked .venv; now `.venv`."

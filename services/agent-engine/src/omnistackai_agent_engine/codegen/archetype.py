@@ -35,6 +35,7 @@ class Archetype(StrEnum):
     """The kinds of product the generator knows how to shape a home page for."""
 
     STOREFRONT = "storefront"
+    TRACKER = "tracker"
     PUBLICATION = "publication"
     BOOKING = "booking"
     DIRECTORY = "directory"
@@ -46,6 +47,7 @@ class Archetype(StrEnum):
 #: The archetypes a public, visitor-facing app can be. `admin_panel` is deliberate, never inferred.
 PUBLIC_ARCHETYPES = (
     Archetype.STOREFRONT,
+    Archetype.TRACKER,
     Archetype.PUBLICATION,
     Archetype.BOOKING,
     Archetype.DIRECTORY,
@@ -78,13 +80,24 @@ _SIGNALS: dict[Archetype, _Signals] = {
                  "buy and sell", "add to cart", "checkout"),
         screens=("cart", "checkout", "product", "catalog", "catalogue", "orders"),
     ),
+    Archetype.TRACKER: _Signals(
+        entities=("habit", "checkin", "streak", "goal", "todo", "task", "reminder", "journal",
+                  "mood", "workout", "exercise", "expense", "budget", "meal", "medication",
+                  "routine", "milestone"),
+        phrases=("habit tracker", "track my", "keep track", "to-do", "todo", "task list",
+                 "expense tracker", "budget tracker", "fitness tracker", "workout log", "journal",
+                 "personal tracker", "daily check", "goal tracker"),
+        screens=("habits", "tasks", "today", "goals", "streaks", "checkins"),
+    ),
     Archetype.PUBLICATION: _Signals(
         entities=("post", "article", "story", "author", "category", "tag", "comment", "issue",
                   "newsletter", "publication", "editorial"),
         phrases=("blog", "news site", "news website", "magazine", "publish articles",
                  "publishing platform", "newsletter", "editorial", "cms", "write posts",
                  "publish posts"),
-        screens=("posts", "articles", "editor", "feed", "archive"),
+        # PC-006: not "editor" — every generated CRUD app has `*_editor` screens, so a habit
+        # tracker with no other evidence became a blog ("Start reading", "What we cover").
+        screens=("posts", "articles", "feed", "archive"),
     ),
     Archetype.BOOKING: _Signals(
         entities=("appointment", "booking", "reservation", "slot", "schedule", "session",
@@ -123,7 +136,9 @@ _WORD_RE = re.compile(r"[a-z0-9]+")
 def _words(text: str) -> set[str]:
     """Lowercase word set, with a naive singular so `products` matches `product`."""
     found = set()
-    for word in _WORD_RE.findall(text.lower()):
+    # PC-006: entity names are CamelCase ("DailyCheckIn"); read them as words, and joined.
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", text)
+    for word in _WORD_RE.findall(spaced.lower()) + _WORD_RE.findall(text.lower()):
         found.add(word)
         if len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
             found.add(word[:-1])
@@ -187,6 +202,14 @@ HOME_COPY: dict[Archetype, dict[str, str]] = {
         "section_lede": "Everything available to buy right now.",
         "cta": "Start shopping",
         "explore": "Shop by",
+    },
+    Archetype.TRACKER: {
+        "eyebrow": "Stay on track",
+        "lede": "Everything you track, in one calm place — add it once, check in every day.",
+        "section": "What you'll track",
+        "section_lede": "Start with one, and build the rest as you go.",
+        "cta": "Get started",
+        "explore": "Go to",
     },
     Archetype.PUBLICATION: {
         "eyebrow": "Latest",
