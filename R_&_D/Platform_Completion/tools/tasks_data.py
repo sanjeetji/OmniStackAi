@@ -126,6 +126,12 @@ QUEUE = [
      "Vibe", "Not Started", "P0", "",
      "From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with "
      "an open-source engine first; a paid engine licence (D-6) is only a key at the end."),
+    ("PC-096", "In-browser WebContainer preview engine behind the PC-007 engine switch (Node in "
+     "the visitor's browser; licence key supplied at PC-070)", "1 Vibe Mode live", "Vibe",
+     "Not Started", "P2", "PC-007",
+     "Split out of PC-007 on 2026-09-27: PC-007 delivers the engine switch and the open-source "
+     "container engine; WebContainer needs StackBlitz's commercial licence (D-6) and runs Node only, "
+     "so Python/Go APIs still need a server-side engine behind it."),
     ("PC-008", "One-click publish to a live URL: web, admin, API and database together, code "
      "complete and proven against local stand-ins", "1 Vibe Mode live", "Vibe", "Pending", "P0",
      "PC-049", "R-509/R-510 publish the web app only and were never run for real. From "

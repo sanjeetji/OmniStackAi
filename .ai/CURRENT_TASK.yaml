@@ -1,36 +1,37 @@
-task_id: PC-094
-status: complete
+task_id: PC-007
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: null
+tracker_row: R-174
 started_at: "2026-09-27"
-completed_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Intake repairs, round 2. Weaker models' plans failed intake in ways PC-093-style repair can fix:
-  a role declared twice (qwen2.5-coder:7b), a lifecycle for an entity the plan never declared
-  (nemotron), and malformed plan parts that crashed intake with an AttributeError (qwen3.8-27b)
-  instead of a clean error the fallback chain and the user can act on.
+  Preview a generated app with no local toolchain. A preview-engine switch (local | container |
+  webcontainer, auto by default) and an open-source container engine that runs the whole app — API,
+  web app, admin console — in one container, needing only Docker on the machine, under gVisor where
+  registered. The in-browser WebContainer engine (paid licence, D-6) is split out as PC-096.
 founder_gate: >-
-  Founder: continue the queue one by one.
-companions: []
+  D-6: open source first; a paid engine licence is only a key at the end (PC-070).
+companions:
+  - "The Studio reports which engine ran the preview and what each engine needs"
 allowed_paths:
   - services/agent-engine/
+  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
   - task verify stays offline with 0 model calls
+  - no paid service or licence
 required_gates:
-  - Live intake with the weakest configured model
+  - A live preview with node, pnpm and python removed from PATH
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
+deferred:
+  - "PC-096: WebContainer in-browser engine (licence at PC-070)"
 found_and_fixed: []
-progress:
-  - "Live plan eval after repairs: qwen2.5-coder:7b 0/3 -> 2/3 valid; OpenRouter free nemotron 1/3 -> 2/3 (remaining miss a timeout)."
-  - "Next queue task: PC-007 (instant in-browser preview)."
