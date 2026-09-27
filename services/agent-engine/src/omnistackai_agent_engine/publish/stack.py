@@ -32,6 +32,7 @@ import json
 import os
 import re
 import secrets as token_source
+import shutil
 import socket
 import subprocess
 import threading
@@ -478,6 +479,11 @@ class StackPublisher:
         if compose_env.is_file() and (Path(repo_dir) / "deploy" / "compose.yaml").is_file():
             args = [*self._compose(Path(repo_dir), project, compose_env), "down", "--remove-orphans"]
             self._docker(args + (["-v"] if delete_data else []), timeout=300.0)
+        if delete_data:
+            # PC-012: nothing of a deleted app stays behind - not its release history, and not the
+            # secrets its compose.env and secrets.env hold.
+            shutil.rmtree(self._dir(app_id), ignore_errors=True)
+            return self.status(app_id) | {"message": "Unpublished. Its data is deleted."}
         state.update(status="unpublished", url=None, surfaces=None,
                      message="Unpublished." + ("" if delete_data else " The database is kept."))
         self._save(app_id, state)

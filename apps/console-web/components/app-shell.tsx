@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ControlPlaneUser } from "@/lib/control-plane";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ResendButton } from "./account-actions";
 import AppNav from "./app-nav";
 import BrandMark from "./brand-mark";
 import UserMenu from "./user-menu";
@@ -72,6 +73,22 @@ export default function AppShell({
           </div>
         </div>
       </header>
+      {user && user.email_verified === false ? (
+        <div role="status" className="border-b border-border/60 bg-muted/50">
+          <div
+            className={cn(
+              "flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2 text-sm",
+              layout === "contained" ? "mx-auto max-w-[1180px] px-6" : "px-4",
+            )}
+          >
+            <span>
+              Confirm your email to build and publish. We sent a link to{" "}
+              <span className="font-medium">{user.email}</span>.
+            </span>
+            <ResendButton email={user.email} size="xs" />
+          </div>
+        </div>
+      ) : null}
       <main
         id="main"
         tabIndex={-1}

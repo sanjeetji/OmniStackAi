@@ -248,7 +248,7 @@ func (s *fakeProjectStore) DeleteProject(_ context.Context, id, userID string) e
 const testBearer = "Bearer test-session-token"
 
 func testUser(id string) auth.User {
-	return auth.User{ID: id, Email: id + "@example.com", Name: "User " + id, Role: "user", Plan: "free", CreditBalance: 1000}
+	return auth.User{EmailVerified: true, ID: id, Email: id + "@example.com", Name: "User " + id, Role: "user", Plan: "free", CreditBalance: 1000}
 }
 
 func setupTestServer(t *testing.T, authStore auth.Store, projectStore Store, agentEngineURL string) *httptest.Server {
@@ -521,8 +521,8 @@ func TestProjectBuildStreamRelayAndDebiting(t *testing.T) {
 
 func TestProjectPreview_Endpoints(t *testing.T) {
 	pStore := newFakeProjectStore()
-	userA := auth.User{ID: "usr-a", Email: "a@example.com"}
-	userB := auth.User{ID: "usr-b", Email: "b@example.com"}
+	userA := auth.User{EmailVerified: true, ID: "usr-a", Email: "a@example.com"}
+	userB := auth.User{EmailVerified: true, ID: "usr-b", Email: "b@example.com"}
 	authStore := fakeAuthStore{user: userA}
 
 	projA, _ := pStore.CreateProject(context.Background(), userA.ID, "Alpha App", "")
@@ -625,8 +625,8 @@ func TestProjectPreview_Endpoints(t *testing.T) {
 }
 
 func TestProjectLogsAndCancellation(t *testing.T) {
-	userA := auth.User{ID: "usr_logs_a", Email: "owner@test.com", Name: "Owner"}
-	userB := auth.User{ID: "usr_logs_b", Email: "other@test.com", Name: "Other"}
+	userA := auth.User{EmailVerified: true, ID: "usr_logs_a", Email: "owner@test.com", Name: "Owner"}
+	userB := auth.User{EmailVerified: true, ID: "usr_logs_b", Email: "other@test.com", Name: "Other"}
 	authStore := fakeAuthStore{user: userA}
 	pStore := newFakeProjectStore()
 
@@ -709,8 +709,8 @@ func TestProjectLogsAndCancellation(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestProjectDatabaseExplorer(t *testing.T) {
-	userA := auth.User{ID: "usr_db_a", Email: "owner@test.com", Name: "Owner"}
-	userB := auth.User{ID: "usr_db_b", Email: "other@test.com", Name: "Other"}
+	userA := auth.User{EmailVerified: true, ID: "usr_db_a", Email: "owner@test.com", Name: "Owner"}
+	userB := auth.User{EmailVerified: true, ID: "usr_db_b", Email: "other@test.com", Name: "Other"}
 	authStore := fakeAuthStore{user: userA}
 	pStore := newFakeProjectStore()
 
@@ -861,8 +861,8 @@ func TestProjectDatabaseExplorer(t *testing.T) {
 }
 
 func TestProjectSecurityAndTests(t *testing.T) {
-	userA := auth.User{ID: "usr-sec-a", Email: "owner-sec@example.com"}
-	userB := auth.User{ID: "usr-sec-b", Email: "foreign-sec@example.com"}
+	userA := auth.User{EmailVerified: true, ID: "usr-sec-a", Email: "owner-sec@example.com"}
+	userB := auth.User{EmailVerified: true, ID: "usr-sec-b", Email: "foreign-sec@example.com"}
 
 	mockAgentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -1029,8 +1029,8 @@ func TestProjectBuildStreamRelaysSlowUpstreamCompletely(t *testing.T) {
 // only the delete-data choice.
 func TestProjectLive_Endpoints(t *testing.T) {
 	pStore := newFakeProjectStore()
-	userA := auth.User{ID: "usr-live-a", Email: "a@example.com"}
-	userB := auth.User{ID: "usr-live-b", Email: "b@example.com"}
+	userA := auth.User{EmailVerified: true, ID: "usr-live-a", Email: "a@example.com"}
+	userB := auth.User{EmailVerified: true, ID: "usr-live-b", Email: "b@example.com"}
 	projA, _ := pStore.CreateProject(context.Background(), userA.ID, "Live App", "")
 
 	var gotUnpublish map[string]any

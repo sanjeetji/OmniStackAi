@@ -198,6 +198,17 @@ class ThePublisher(TestCase):
         self.assertEqual(down["status"], "unpublished")
         self.assertNotIn("-v", docker.calls[-1], "the database is kept unless asked")
 
+    def test_deleting_the_data_leaves_nothing_behind(self) -> None:
+        # PC-012: a deleted account's app keeps no release history and no secrets on disk.
+        docker = _FakeDocker()
+        publisher = self._publisher(docker)
+        self._publish(publisher)
+        self.assertTrue(publisher._dir("ws1").is_dir())
+        down = publisher.unpublish("ws1", str(self.repo), delete_data=True)
+        self.assertIn("-v", docker.calls[-1])
+        self.assertFalse(publisher._dir("ws1").exists())
+        self.assertEqual((down["status"], down["admin"]), ("unpublished", None))
+
     def test_a_domain_goes_through_the_shared_https_proxy(self) -> None:
         docker = _FakeDocker()
         publisher = StackPublisher(self.state, target=Target(domain="apps.example.com"), runner=docker,

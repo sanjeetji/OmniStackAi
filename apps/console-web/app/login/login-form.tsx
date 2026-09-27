@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,6 +124,13 @@ export default function LoginForm() {
           </Button>
         </div>
       </Field>
+
+      <Link
+        href="/forgot-password"
+        className="-mt-2 justify-self-end text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        Forgot password?
+      </Link>
 
       <Button type="submit" size="lg" className="mt-2 w-full" disabled={submitting}>
         {submitting ? (

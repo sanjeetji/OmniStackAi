@@ -16,7 +16,7 @@ import (
 func creditServer(t *testing.T, balance int64, studio string) (*httptest.Server, string) {
 	t.Helper()
 	pStore := newFakeProjectStore()
-	user := auth.User{ID: "usr-credit", Email: "c@example.com", CreditBalance: balance}
+	user := auth.User{EmailVerified: true, ID: "usr-credit", Email: "c@example.com", CreditBalance: balance}
 	project, _ := pStore.CreateProject(context.Background(), user.ID, "Credits", "")
 	guard := credits.Guard{CreditsPerUSD: 1000, TaskBudgetCredits: 200}
 	mux := http.NewServeMux()
@@ -98,5 +98,29 @@ func TestTheEstimateComesBeforeTheBuild(t *testing.T) {
 		if got["can_start"] != tc.canStart {
 			t.Errorf("balance %d: can_start %v, want %v (%v)", tc.balance, got["can_start"], tc.canStart, got["reason"])
 		}
+	}
+}
+
+// PC-012 (D-4): building waits for a verified email address; nothing reaches the Studio before.
+func TestAnUnverifiedAccountCannotBuildYet(t *testing.T) {
+	called := false
+	studio := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true }))
+	defer studio.Close()
+	pStore := newFakeProjectStore()
+	user := auth.User{ID: "usr-unverified", Email: "new@example.com", CreditBalance: 100}
+	project, _ := pStore.CreateProject(context.Background(), user.ID, "New", "")
+	mux := http.NewServeMux()
+	Register(mux, Deps{AuthStore: fakeAuthStore{user: user}, ProjectStore: pStore, AgentEngineURL: studio.URL, CreditsPerUSD: 1000})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	resp := postBuild(t, server, project.ID, `{"prompt":"a blog"}`)
+	defer resp.Body.Close()
+	var body map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&body)
+	if resp.StatusCode != http.StatusForbidden || body["verify_email"] != true {
+		t.Fatalf("got %d %v, want 403 with verify_email", resp.StatusCode, body)
+	}
+	if called {
+		t.Error("the Studio was called for an unverified account")
 	}
 }

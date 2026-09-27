@@ -17,6 +17,7 @@ import {
 import { getProviderStatus, type ProviderInfo, type ProviderStatus } from "@/lib/control-plane";
 import { revealStyle } from "@/lib/motion";
 import { getCurrentUser, getSessionToken } from "@/lib/session";
+import { AccountActions } from "@/components/account-actions";
 import { AccountUsageViewer } from "@/components/account-usage-viewer";
 import { AIKeysManager } from "@/components/ai-keys-manager";
 import { HostingKeysManager } from "@/components/hosting-keys-manager";
@@ -125,6 +126,7 @@ export default async function SettingsPage() {
                 <p className="mt-5 text-xs text-muted-foreground">
                   Profile editing isn&rsquo;t available yet.
                 </p>
+                <AccountActions email={user.email} verified={user.email_verified !== false} />
               </CardContent>
             </Card>
           </section>

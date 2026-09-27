@@ -286,3 +286,29 @@ func TestARazorpaySubscriptionGrantsEachMonthOnce(t *testing.T) {
 		t.Errorf("after the second month: %d, want 4000", store.balance[userID])
 	}
 }
+
+// PC-012: deleting an account cancels its paid plan at the provider first.
+func TestCancellingAPlanReachesTheProvider(t *testing.T) {
+	var seen []string
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen = append(seen, r.Method+" "+r.URL.Path)
+		_, _ = w.Write([]byte(`{"id":"x","status":"cancelled"}`))
+	}))
+	defer api.Close()
+	stripe := &Stripe{SecretKey: "sk_test_x", BaseURL: api.URL}
+	razorpay := &Razorpay{KeyID: "rzp_test", KeySecret: "s", BaseURL: api.URL}
+	ctx := context.Background()
+	if err := CancelSubscription(ctx, stripe, razorpay, "stripe", "sub_1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := CancelSubscription(ctx, stripe, razorpay, "razorpay", "sub_2"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"DELETE /v1/subscriptions/sub_1", "POST /v1/subscriptions/sub_2/cancel"}
+	if strings.Join(seen, ",") != strings.Join(want, ",") {
+		t.Fatalf("calls = %v", seen)
+	}
+	if CancelSubscription(ctx, &Stripe{}, razorpay, "stripe", "sub_1") == nil {
+		t.Fatal("an unconfigured provider cannot report a cancellation")
+	}
+}

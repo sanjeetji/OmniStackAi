@@ -1,9 +1,9 @@
 task_id: PC-012
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: R-108
 started_at: "2026-09-27"
-completed_at: null
+completed_at: "2026-09-27"
 branch: platform-completion
 objective: >-
   Legal and account basics for a beta strangers sign up to (D-4). Email verification (building and
@@ -38,5 +38,10 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "Cancelling a paid plan from Settings (PC-070, billing go-live)"
+found_and_fixed:
+  - "Deleting a workspace purged its folder while the preview kept running; the dev server wrote .next/ and logs back. The Studio now stops the preview first (project delete had the same fault)."
+  - "Unpublish with delete_data left the app's publish folder, including compose.env and secrets.env; it is now removed."
+  - "An account with an active paid plan could be deleted and still be charged; deletion now cancels the plan at the provider first and deletes nothing if that fails."
+

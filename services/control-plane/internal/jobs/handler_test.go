@@ -90,7 +90,7 @@ func (s *fakeCreditStore) callCount() int {
 const validToken = "Bearer session-token-for-tests"
 
 func newTestUser() auth.User {
-	return auth.User{ID: "user-1", Email: "person@example.com", Name: "Person", Role: "user", Plan: "free", CreditBalance: 1000}
+	return auth.User{EmailVerified: true, ID: "user-1", Email: "person@example.com", Name: "Person", Role: "user", Plan: "free", CreditBalance: 1000}
 }
 
 func newTestServer(t *testing.T, agentEngineURL string, authStore fakeAuthStore, creditStore CreditStore, creditsPerUSD float64) *httptest.Server {

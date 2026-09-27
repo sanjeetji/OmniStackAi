@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/account"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/plans"
 	"io"
@@ -682,6 +683,9 @@ func writeError(w http.ResponseWriter, status int, message string) {
 // applyCreditGuard (PC-010) refuses paid work the caller may not start and sets the task's budget.
 // The budget is the control plane's alone: whatever the caller sent is replaced or removed.
 func applyCreditGuard(w http.ResponseWriter, r *http.Request, deps Deps, user auth.User, billedToPlatform bool, body []byte) ([]byte, bool) {
+	if !account.RequireVerified(w, user) { // PC-012
+		return body, true
+	}
 	var payload map[string]any
 	if err := json.Unmarshal(body, &payload); err != nil || payload == nil {
 		payload = map[string]any{}

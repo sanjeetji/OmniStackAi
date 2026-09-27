@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/account"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/plans"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/studioauth"
@@ -418,6 +419,10 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 		if resolved.APIKey != "" {
 			upstreamPayload["api_key"] = resolved.APIKey
 		}
+		// PC-012: building and editing wait for a verified email address.
+		if !account.RequireVerified(w, user) {
+			return
+		}
 		// PC-010: the budget is the control plane's to set, never the caller's.
 		delete(upstreamPayload, "budget_micros")
 		if deps.CreditGuard != nil {
@@ -647,6 +652,10 @@ func handleProjectEdit(deps Deps) http.HandlerFunc {
 		}
 		if resolved.APIKey != "" {
 			upstreamPayload["api_key"] = resolved.APIKey
+		}
+		// PC-012: building and editing wait for a verified email address.
+		if !account.RequireVerified(w, user) {
+			return
 		}
 		// PC-010: the budget is the control plane's to set, never the caller's.
 		delete(upstreamPayload, "budget_micros")
@@ -955,6 +964,10 @@ func handleProjectLive(deps Deps, suffix, method string) http.HandlerFunc {
 			return
 		}
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/live" + suffix
+		// PC-012: nothing goes public from an unverified account.
+		if method == http.MethodPost && suffix == "" && !account.RequireVerified(w, user) {
+			return
+		}
 		if method == http.MethodGet {
 			proxyGet(w, r, deps, target)
 			return

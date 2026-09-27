@@ -6,6 +6,7 @@ interface RegisterRequestBody {
   email?: unknown;
   name?: unknown;
   password?: unknown;
+  accept_terms?: unknown;
 }
 
 export async function POST(request: NextRequest) {
@@ -28,7 +29,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { token, ...profile } = await registerAccount(body.email, body.name, body.password);
+    const { token, ...profile } = await registerAccount(
+      body.email,
+      body.name,
+      body.password,
+      body.accept_terms === true,
+    );
     const response = NextResponse.json(profile, { status: 201 });
     response.cookies.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,

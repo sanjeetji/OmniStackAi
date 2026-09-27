@@ -21,6 +21,8 @@ export interface ControlPlaneUser {
   plan: string;
   byok_enabled: boolean;
   credit_balance: number;
+  /** PC-012: building and publishing wait for a verified address. */
+  email_verified?: boolean;
 }
 
 export interface ControlPlaneAuthResponse extends ControlPlaneUser {
@@ -79,11 +81,12 @@ export function registerAccount(
   email: string,
   name: string,
   password: string,
+  acceptTerms: boolean,
 ): Promise<ControlPlaneAuthResponse> {
   return callControlPlane<ControlPlaneAuthResponse>("/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, name, password }),
+    body: JSON.stringify({ email, name, password, accept_terms: acceptTerms }),
   });
 }
 

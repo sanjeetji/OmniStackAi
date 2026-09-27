@@ -64,6 +64,14 @@ services:
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
       OMNISTACKAI_CREDITS_PER_USD: ${OMNISTACKAI_CREDITS_PER_USD:-1000}
+      # PC-012: account email (Resend when keyed). This stack is local-only, so without Resend the
+      # confirmation and reset emails (with their links) go to this container's log.
+      OMNISTACKAI_DEV_MODE: ${OMNISTACKAI_DEV_MODE:-1}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      OMNISTACKAI_TERMS_VERSION: ${OMNISTACKAI_TERMS_VERSION:-}
+      OMNISTACKAI_REQUIRE_EMAIL_VERIFICATION: ${OMNISTACKAI_REQUIRE_EMAIL_VERIFICATION:-}
+      OMNISTACKAI_MODEL_CALL_RETENTION_DAYS: ${OMNISTACKAI_MODEL_CALL_RETENTION_DAYS:-}
       # A local model needs far longer than a cloud one for a build or a chat edit (R-530).
       OMNISTACKAI_AGENT_CALL_TIMEOUT: ${OMNISTACKAI_AGENT_CALL_TIMEOUT:-5m}
     extra_hosts:

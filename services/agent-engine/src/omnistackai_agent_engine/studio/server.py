@@ -1973,6 +1973,9 @@ def _make_handler(
                     self._send_json(404, {"error": "workspaces are not enabled"})
                     return
                 try:
+                    # PC-012: stop the preview first, or its dev server writes the folder back.
+                    if workspace_preview_stop_fn is not None:
+                        workspace_preview_stop_fn(ws_id)
                     workspace_store.purge(ws_id)
                     self._send_json(200, {"status": "purged", "id": ws_id})
                 except Exception as error:

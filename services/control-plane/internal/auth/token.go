@@ -27,3 +27,6 @@ func hashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }
+
+// ValidatePassword applies registration's password rules (PC-012: resets use the same rules).
+func ValidatePassword(plain string) error { return validatePassword(plain) }

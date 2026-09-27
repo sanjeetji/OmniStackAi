@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/account"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/admin"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/billing"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/mail"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/studioauth"
 	"log/slog"
 	"net"
@@ -15,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -71,6 +74,8 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	}
 
 	mux := newMux(pool, runtimeConfig, logger)
+	// PC-012: expired sessions and links, and usage records past retention, removed hourly.
+	account.StartSweeper(ctx, pool, logger)
 
 	server := &http.Server{
 		Addr:              runtimeConfig.HTTPAddress,
@@ -116,12 +121,34 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 
 	mux := http.NewServeMux()
 	health.Register(mux, pool, runtimeConfig.DatabasePingTimeout)
+	// PC-012: verification, password reset, export, deletion and retention for platform accounts.
+	termsVersion := strings.TrimSpace(os.Getenv("OMNISTACKAI_TERMS_VERSION"))
+	if termsVersion == "" {
+		termsVersion = "2026-09-27"
+	}
+	stripe, razorpay := billing.StripeFromEnv(), billing.RazorpayFromEnv()
+	accountDeps := account.Deps{
+		Pool:           pool,
+		AuthStore:      userStore,
+		Hasher:         passwordHasher{},
+		Mailer:         mail.FromEnv(logger),
+		PublicURL:      billing.PublicURLFromEnv(),
+		TermsVersion:   termsVersion,
+		AgentEngineURL: runtimeConfig.AgentEngineURL,
+		Logger:         logger,
+		CancelSubscription: func(ctx context.Context, provider, subscriptionID string) error {
+			return billing.CancelSubscription(ctx, stripe, razorpay, provider, subscriptionID)
+		},
+	}
+	account.Register(mux, accountDeps)
 	auth.Register(mux, auth.Deps{
 		Store:         userStore,
 		Hasher:        passwordHasher{},
 		SessionTTL:    runtimeConfig.SessionTTL,
 		SignupCredits: runtimeConfig.SignupCreditGrant,
 		Logger:        logger,
+		TermsVersion:  termsVersion,
+		OnRegistered:  accountDeps.OnRegistered,
 	})
 	ai.Register(mux, ai.Deps{
 		AuthStore:      userStore,
@@ -179,8 +206,8 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 	billing.Register(mux, billing.Deps{
 		AuthStore: userStore,
 		Store:     billing.NewPgStore(pool),
-		Stripe:    billing.StripeFromEnv(),
-		Razorpay:  billing.RazorpayFromEnv(),
+		Stripe:    stripe,
+		Razorpay:  razorpay,
 		CountProjects: func(ctx context.Context, userID string) int {
 			list, err := projectStore.ListProjects(ctx, userID, "active", 1000)
 			if err != nil {

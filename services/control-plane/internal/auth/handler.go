@@ -27,6 +27,8 @@ type registerRequest struct {
 	Email    string `json:"email"`
 	Name     string `json:"name"`
 	Password string `json:"password"`
+	// AcceptTerms (PC-012): the Terms of Service and Privacy Policy, when a version is in force.
+	AcceptTerms bool `json:"accept_terms"`
 }
 
 type loginRequest struct {
@@ -42,6 +44,7 @@ type userResponse struct {
 	Plan          string `json:"plan"`
 	BYOKEnabled   bool   `json:"byok_enabled"`
 	CreditBalance int64  `json:"credit_balance"`
+	EmailVerified bool   `json:"email_verified"`
 }
 
 type authResponse struct {
@@ -57,6 +60,7 @@ func toUserResponse(user User) userResponse {
 		Role:          user.Role,
 		Plan:          user.Plan,
 		BYOKEnabled:   user.BYOKEnabled,
+		EmailVerified: user.EmailVerified,
 		CreditBalance: user.CreditBalance,
 	}
 }
@@ -80,6 +84,10 @@ func handleRegister(deps Deps) http.HandlerFunc {
 		}
 		if err := validatePassword(req.Password); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if deps.TermsVersion != "" && !req.AcceptTerms {
+			writeError(w, http.StatusBadRequest, "please accept the Terms of Service and Privacy Policy")
 			return
 		}
 
@@ -106,6 +114,10 @@ func handleRegister(deps Deps) http.HandlerFunc {
 			deps.logger().Error("issue session", "error", err)
 			writeError(w, http.StatusInternalServerError, "could not create session")
 			return
+		}
+		// PC-012: record the terms accepted and send the verification email.
+		if deps.OnRegistered != nil {
+			deps.OnRegistered(r.Context(), user)
 		}
 
 		writeJSON(w, http.StatusCreated, authResponse{userResponse: toUserResponse(user), Token: token})

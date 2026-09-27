@@ -21,6 +21,8 @@ type User struct {
 	Plan          string
 	BYOKEnabled   bool
 	CreditBalance int64
+	// EmailVerified (PC-012): building and publishing wait for a verified address.
+	EmailVerified bool
 	CreatedAt     time.Time
 }
 
@@ -64,6 +66,10 @@ type Deps struct {
 	SessionTTL    time.Duration
 	SignupCredits int64
 	Logger        *slog.Logger
+	// TermsVersion (PC-012): when set, registration requires accept_terms.
+	TermsVersion string
+	// OnRegistered (PC-012) runs after an account is created: terms recorded, verification sent.
+	OnRegistered func(ctx context.Context, user User)
 	// Clock returns the current time; defaults to time.Now. Overridable so tests can assert an
 	// exact session expiry without flakiness.
 	Clock func() time.Time

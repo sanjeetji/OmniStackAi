@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,8 @@ export default function RegisterForm() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [termsError, setTermsError] = useState<string | undefined>();
 
   function update(field: keyof Values) {
     return (event: ChangeEvent<HTMLInputElement>) => {
@@ -48,8 +51,12 @@ export default function RegisterForm() {
       email: validateEmail(values.email),
       password: validatePassword(values.password, { enforceLength: true }),
     };
-    if (nextErrors.name || nextErrors.email || nextErrors.password) {
+    const nextTermsError = acceptTerms
+      ? undefined
+      : "Please accept the Terms of Service and Privacy Policy.";
+    if (nextErrors.name || nextErrors.email || nextErrors.password || nextTermsError) {
       setErrors(nextErrors);
+      setTermsError(nextTermsError);
       return;
     }
 
@@ -63,6 +70,7 @@ export default function RegisterForm() {
           email: values.email.trim(),
           name: values.name.trim(),
           password: values.password,
+          accept_terms: acceptTerms,
         }),
       });
       if (!response.ok) {
@@ -149,6 +157,40 @@ export default function RegisterForm() {
           </Button>
         </div>
       </Field>
+
+      <div className="grid gap-1.5">
+        <label htmlFor="accept-terms" className="flex items-start gap-2.5 text-sm text-muted-foreground">
+          <input
+            id="accept-terms"
+            name="accept_terms"
+            type="checkbox"
+            className="mt-0.5 size-4 shrink-0 accent-[var(--brand)]"
+            checked={acceptTerms}
+            onChange={(event) => {
+              setAcceptTerms(event.target.checked);
+              setTermsError(undefined);
+            }}
+            aria-invalid={termsError ? true : undefined}
+            aria-describedby={termsError ? "accept-terms-error" : undefined}
+          />
+          <span>
+            I agree to the{" "}
+            <Link href="/terms" target="_blank" className="font-medium text-foreground underline underline-offset-4 hover:text-brand">
+              Terms of Service
+            </Link>{" "}
+            and the{" "}
+            <Link href="/privacy" target="_blank" className="font-medium text-foreground underline underline-offset-4 hover:text-brand">
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+        {termsError ? (
+          <p id="accept-terms-error" className="text-xs text-destructive">
+            {termsError}
+          </p>
+        ) : null}
+      </div>
 
       <Button type="submit" size="lg" className="mt-2 w-full" disabled={submitting}>
         {submitting ? (

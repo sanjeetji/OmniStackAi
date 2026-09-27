@@ -28,9 +28,9 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 423 |
+| Completed | 424 |
 | Completed - needs live proof | 8 |
-| In Progress | 1 |
+| In Progress | 0 |
 | Pending | 97 |
 | Not Started | 511 |
 | Superseded | 12 |
@@ -38,7 +38,7 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 | Dropped | 9 |
 | **Total** | **1118** |
 
-Open work queue: **99** tasks (P0: 5, P1: 48, P2: 32, P3: 14).
+Open work queue: **98** tasks (P0: 4, P1: 48, P2: 32, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -69,7 +69,7 @@ Open work queue: **99** tasks (P0: 5, P1: 48, P2: 32, P3: 14).
 | 21 | PC-009 | Hosted multi-tenant service: per-user isolation of builds, sessions and previews; quotas; egress policy | Completed | P0 | Platform |  | MULTI-TENANT, PG-05, R-071, R-100, R-175, R-214 | Today the Studio is one trusted operator's tool. Built cloud-neutral and proven locally (Colima); the cloud account (D-2) is plugged in at PC-070. Done 2026-09-27; left: per-user disk quotas, cloud account. |
 | 22 | PC-010 | Credit fairness: estimate before a build, no charge for internal retries, per-task budgets, cost guardrails | Completed | P0 | Platform |  | PG-13, R-025, R-046, R-047, R-104 | Done 2026-09-27; model prices beyond Groq are PC-011. |
 | 23 | PC-011 | Plans, entitlements, credit top-up and super_admin console (Phase E) | Completed | P0 | Platform |  | PG-16, PHASE-E, R-109 | Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at PC-070. Found in R-590: self-registered users get role 'user', which is not one of the plan's roles, so role-guarded actions need an admin to assign roles — include a role manager in the generated admin console. Done 2026-09-27; prices and live keys at PC-070. |
-| 24 | PC-012 | Legal and account basics: ToS, privacy, retention, deletion/export, email verification | In Progress | P0 | Platform |  | GAP-LEGAL, PG-14, R-108, R-516 |  |
+| 24 | PC-012 | Legal and account basics: ToS, privacy, retention, deletion/export, email verification | Completed | P0 | Platform |  | GAP-LEGAL, PG-14, R-108, R-516 | Done 2026-09-27; emails go through Resend once keyed (PC-070), legal texts are drafts for counsel. Not built: cancelling a paid plan from Settings (deleting the account cancels it) — with billing go-live at PC-070. |
 | 25 | PC-013 | Verified integrations catalog with health tests | Pending | P1 | Vibe |  | R-055, R-056, R-511 | R-511 Connectors v1 exists. |
 | 26 | PC-014 | Local/offline models as a first-class path: build fully on Ollama, recommend a model per machine | Pending | P1 | Both |  | GA-03, GA-04, GA-05, GAP-EVALS, PG-18, PG-19, R-080, R-194 | Ollama adapter exists (R-003/R-006). Found in PC-084: .env names qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not configured with — detect installed models instead of trusting the setting. |
 | 27 | R-574 | Store publishing for React Native apps: EAS build and submit to Play Store and App Store, proven with real accounts | Pending | P1 | Both | PC-003 | R-062, R-063, R-546 | R-546/R-547 generate the EAS config. Everything up to the upload is built and tested; the Apple and Google accounts (D-7) are plugged in at PC-070. |
@@ -877,6 +877,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-009 | Hosted multi-tenant service: per-user isolation of builds, sessions and previews; quotas; egress policy | Completed | 2026-09-27 | Today the Studio is one trusted operator's tool. Built cloud-neutral and proven locally (Colima); the cloud account (D-2) is plugged in at PC-070. Done 2026-09-27; left: per-user disk quotas, cloud account. |
 | PC-010 | Credit fairness: estimate before a build, no charge for internal retries, per-task budgets, cost guardrails | Completed | 2026-09-27 | Done 2026-09-27; model prices beyond Groq are PC-011. |
 | PC-011 | Plans, entitlements, credit top-up and super_admin console (Phase E) | Completed | 2026-09-27 | Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at PC-070. Found in R-590: self-registered users get role 'user', which is not one of the plan's roles, so role-guarded actions need an admin to assign roles — include a role manager in the generated admin console. Done 2026-09-27; prices and live keys at PC-070. |
+| PC-012 | Legal and account basics: ToS, privacy, retention, deletion/export, email verification | Completed | 2026-09-27 | Done 2026-09-27; emails go through Resend once keyed (PC-070), legal texts are drafts for counsel. Not built: cancelling a paid plan from Settings (deleting the account cancels it) — with billing go-live at PC-070. |
 | PC-047 | NVIDIA model provider (nemotron-3-ultra) for builds, configured from .env | Completed | 2026-09-26 | Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only. Includes a first comparison against the providers we already support on the same build prompts. |
 | PC-062 | Native mobile preview: R&D and plan (open source first) | Completed | 2026-09-26 | NATIVE_MOBILE_PREVIEW_PLAN.md in this folder. |
 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | 2026-09-26 | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |

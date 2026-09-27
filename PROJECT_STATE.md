@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-012 (2026-09-27): legal and account basics.** Terms/Privacy consent recorded at sign-up; email verification gates build and publish (existing accounts grandfathered); password reset signs out every session; export and delete in Settings (paid plan cancelled first); retention sweeper. Emails via Resend at PC-070, logged locally. Next: PC-013.
 > **PC-011 (2026-09-27): plans, billing, admin.** Plans enforced everywhere; Stripe + Razorpay top-ups and plans (once-only signed webhooks, keys at PC-070); /admin console with live kill switch and audit; role manager in every generated app. Next: PC-012.
 > **PC-010 (2026-09-27): credit fairness.** Estimate before every build; discarded retries free; per-task budget (never above the balance); 402 at zero credits; per-user and platform caps; kill switch. Found: empty accounts built free and the build model was unpriced. Next: PC-011.
 > **PC-009 (2026-09-27): safe to host for many users.** Per-project database + role, Studio service token, per-workspace previews, per-user quotas + idle stop; multi-tenant mode sandboxes previews (no route out, egress allowlist, limits). All proven live. Next: PC-010.

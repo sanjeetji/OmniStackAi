@@ -79,6 +79,20 @@ func (s *Stripe) CreateCheckout(ctx context.Context, subscriptionPriceID, name s
 	return out, doJSON(s.client(), req, &out)
 }
 
+// CancelSubscription ends a Stripe subscription now (PC-012: an account being deleted must not be
+// charged again).
+func (s *Stripe) CancelSubscription(ctx context.Context, subscriptionID string) error {
+	if !s.Configured() {
+		return ErrNotConfigured
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, s.BaseURL+"/v1/subscriptions/"+url.PathEscape(subscriptionID), nil)
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(s.SecretKey, "")
+	return doJSON(s.client(), req, nil)
+}
+
 func (s *Stripe) client() *http.Client {
 	if s.Client != nil {
 		return s.Client
@@ -175,6 +189,22 @@ func (r *Razorpay) CreateSubscription(ctx context.Context, planID string, notes 
 	return out.ID, err
 }
 
+// CancelSubscription ends a Razorpay subscription now.
+func (r *Razorpay) CancelSubscription(ctx context.Context, subscriptionID string) error {
+	return r.post(ctx, "/v1/subscriptions/"+url.PathEscape(subscriptionID)+"/cancel", map[string]any{"cancel_at_cycle_end": 0}, nil)
+}
+
+// CancelSubscription ends whichever provider's subscription the platform recorded.
+func CancelSubscription(ctx context.Context, stripe *Stripe, razorpay *Razorpay, provider, subscriptionID string) error {
+	switch provider {
+	case "stripe":
+		return stripe.CancelSubscription(ctx, subscriptionID)
+	case "razorpay":
+		return razorpay.CancelSubscription(ctx, subscriptionID)
+	}
+	return fmt.Errorf("billing: unknown provider %q", provider)
+}
+
 // VerifyRazorpayPayment checks the signature Razorpay Checkout returns to the browser: the HMAC of
 // "<order or subscription id>|<payment id>" (payment id first for subscriptions) with the key secret.
 func VerifyRazorpayPayment(first, second, signature, keySecret string) bool {
@@ -221,6 +251,9 @@ func doJSON(client *http.Client, req *http.Request, out any) error {
 			msg = failure.Error.Description
 		}
 		return fmt.Errorf("billing: provider answered %d: %s", resp.StatusCode, msg)
+	}
+	if out == nil {
+		return nil
 	}
 	return json.Unmarshal(body, out)
 }

@@ -160,7 +160,10 @@ QUEUE = [
      "of the plan's roles, so role-guarded actions need an admin to assign roles — include a role "
      "manager in the generated admin console. Done 2026-09-27; prices and live keys at PC-070."),
     ("PC-012", "Legal and account basics: ToS, privacy, retention, deletion/export, email "
-     "verification", "1 Vibe Mode live", "Platform", "Not Started", "P0", "", "Covers R-108."),
+     "verification", "1 Vibe Mode live", "Platform", "Not Started", "P0", "",
+     "Covers R-108. Done 2026-09-27; emails go through Resend once keyed (PC-070), legal texts are "
+     "drafts for counsel. Not built: cancelling a paid plan from Settings (deleting the account "
+     "cancels it) — with billing go-live at PC-070."),
     ("PC-013", "Verified integrations catalog with health tests", "1 Vibe Mode live", "Vibe",
      "Pending", "P1", "", "R-511 Connectors v1 exists. Covers R-055, R-056."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
