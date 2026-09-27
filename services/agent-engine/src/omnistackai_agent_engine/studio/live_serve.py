@@ -24,6 +24,7 @@ PostgreSQL/toolchain and is not a tenant-isolated sandbox.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import threading
 import time
@@ -53,6 +54,7 @@ from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt, 
 from ..model_gateway.accounting import UsageLedger
 from .files import BuildNotFoundError, list_build_files, read_build_file
 from .history import StudioBuildHistory
+from .quotas import QuotaExceeded, Quotas, current_user
 from .preview import StudioPreviewManager
 from .problems import ProblemsNotCheckedError, StudioProblemsStore, check_build_problems
 from .server import create_studio_server
@@ -701,7 +703,13 @@ async def _build_stream(
         }
     else:
         preview_started = time.perf_counter()
-        payload["preview"] = preview_manager.replace(payload["target_dir"])
+        # PC-009: a workspace build previews in that workspace's own slot. `replace` keeps one
+        # preview for the whole server and stops every other, so one user's build ended another
+        # user's preview.
+        payload["preview"] = (
+            _start_workspace_preview(preview_manager, workspace_id, payload["target_dir"])
+            if workspace_id else preview_manager.replace(payload["target_dir"])
+        )
         # PC-084: starting the preview happens before "done" is sent, so it is part of what the
         # user waits for and is measured with the rest.
         payload.setdefault("timings", {})["preview"] = round(time.perf_counter() - preview_started, 3)
@@ -713,6 +721,24 @@ async def _build_stream(
         log_mgr.append_build_log(workspace_id, "info", "done", f"Built {payload.get('name', 'the app')} ({payload.get('file_count', 0)} files)")
 
     yield {"phase": "done", **payload}
+
+
+logger = logging.getLogger(__name__)
+
+#: PC-009: per-user fair shares for builds and previews (see quotas.py).
+_QUOTAS = Quotas()
+
+
+def _start_workspace_preview(preview_manager: StudioPreviewManager, ws_id: str, repo_dir: str, **options) -> dict:
+    """Start one workspace's preview within the user's and the host's preview limits."""
+    try:
+        evicted = _QUOTAS.admit_preview(current_user.get(), ws_id)
+    except QuotaExceeded as exceeded:
+        return {"status": "error", "phase": "error", "message": str(exceeded), "quota": True,
+                "retry_after": exceeded.retry_after}
+    for old in evicted:
+        preview_manager.stop_workspace(old)
+    return preview_manager.start_workspace(ws_id, repo_dir, **options)
 
 
 def _preview_recorded_build(
@@ -1266,9 +1292,24 @@ def main() -> None:
         return asyncio.run(_edit(build_id, prompt, history=history, session_store=session_store, **options))
 
     def workspace_build(ws_id: str, prompt: str, **options) -> dict:
+        try:
+            _QUOTAS.admit_build(current_user.get())  # PC-009
+        except QuotaExceeded as exceeded:
+            return {"error": str(exceeded), "quota": True, "retry_after": exceeded.retry_after}
         return _workspace_build(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)
 
     def workspace_build_stream(ws_id: str, prompt: str, **options) -> AsyncIterator[dict]:
+        try:
+            _QUOTAS.admit_build(current_user.get())  # PC-009
+        except QuotaExceeded as exceeded:
+            # Captured now: Python clears `exceeded` when this block ends, before the stream runs
+            # (found live — the refusal itself crashed).
+            refusal = {"phase": "error", "error": str(exceeded), "quota": True, "retry_after": exceeded.retry_after}
+
+            async def refused() -> AsyncIterator[dict]:
+                yield refusal
+
+            return refused()
         return _workspace_build_stream(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)
 
     def workspace_edit(ws_id: str, prompt: str, **options) -> dict:
@@ -1287,7 +1328,7 @@ def main() -> None:
         repo_dir = str(workspace_store.repo_path(ws_id))
         if not os.path.isdir(repo_dir):
             raise BuildNotFoundError(f"workspace '{ws_id}' has no repo to preview")
-        return preview_manager.start_workspace(ws_id, repo_dir, on_phase=on_phase, env=env)
+        return _start_workspace_preview(preview_manager, ws_id, repo_dir, on_phase=on_phase, env=env)
 
     def workspace_preview_status(ws_id: str) -> dict:
         if preview_manager is None:
@@ -1295,6 +1336,7 @@ def main() -> None:
                 "status": "disabled",
                 "message": "This server runs in build-only mode. Restart it with ./scripts/omnistack.sh up to run your app.",
             }
+        _QUOTAS.touch(ws_id)  # PC-009: the console asks on every request, so this is "in use"
         return preview_manager.workspace_status(ws_id)
 
     def workspace_preview_stop(ws_id: str) -> dict:
@@ -1303,6 +1345,7 @@ def main() -> None:
                 "status": "disabled",
                 "message": "This server runs in build-only mode. Restart it with ./scripts/omnistack.sh up to run your app.",
             }
+        _QUOTAS.stopped(ws_id)
         return preview_manager.stop_workspace(ws_id)
 
     def workspace_problems_check(ws_id: str) -> dict:
@@ -1359,6 +1402,19 @@ def main() -> None:
 
     from .logs import StudioLogManager
     log_manager = StudioLogManager()
+
+    if preview_manager is not None:
+        # PC-009: previews nobody has opened for the idle limit are stopped, on a timer.
+        def reap() -> None:
+            while True:
+                time.sleep(60)
+                try:
+                    for ws_id in preview_manager.reap_idle():
+                        _QUOTAS.stopped(ws_id)
+                except Exception:  # noqa: BLE001 - the reaper must outlive any one failure
+                    logger.exception("idle preview reaper")
+
+        threading.Thread(target=reap, name="preview-reaper", daemon=True).start()
 
     def workspace_cancel(ws_id: str) -> dict:
         workspace_store.set_cancelled(ws_id)

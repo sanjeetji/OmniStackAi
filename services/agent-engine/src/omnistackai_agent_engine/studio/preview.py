@@ -941,6 +941,24 @@ class StudioPreviewManager:
             session.last_active_at = now
             return session.to_dict()
 
+    def reap_idle(self) -> list[str]:
+        """PC-009: stop every workspace preview nobody has opened within the idle limit.
+
+        ``workspace_status`` already stopped an idle preview, but only when someone asked about it
+        again; one nobody came back to ran for ever. The Studio calls this on a timer."""
+        stopped: list[str] = []
+        now = time.time()
+        with self._lock:
+            for ws_id, session in self._workspaces.items():
+                if (session.session is not None and session.status == "ready"
+                        and now - session.last_active_at > self._idle_timeout_seconds()):
+                    session.session.stop()
+                    session.session = None
+                    session.status = session.phase = "stopped"
+                    session.message = "Stopped after a while unused — start it again any time."
+                    stopped.append(ws_id)
+        return stopped
+
     def start_workspace(
         self,
         ws_id: str,

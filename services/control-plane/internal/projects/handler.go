@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/studioauth"
 	"io"
 	"log/slog"
 	"math"
@@ -402,6 +403,9 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 			return
 		}
 		upstreamRequest.Header.Set("Content-Type", "application/json")
+		// PC-009: whose build this is, for the Studio's per-user quotas. Set from the session, never
+		// from the caller's own headers.
+		upstreamRequest.Header.Set(studioauth.UserHeader, user.ID)
 
 		upstreamResponse, err := deps.httpClient().Do(upstreamRequest)
 		if err != nil {
@@ -921,6 +925,13 @@ func proxyUpstreamWithin(w http.ResponseWriter, r *http.Request, deps Deps, meth
 	}
 	if body != nil {
 		upstreamRequest.Header.Set("Content-Type", "application/json")
+	}
+	// PC-009: whose request this is, for the Studio's per-user quotas. From the session only — the
+	// upstream request is new, so nothing the browser sent can set it.
+	if deps.AuthStore != nil {
+		if user, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err == nil {
+			upstreamRequest.Header.Set(studioauth.UserHeader, user.ID)
+		}
 	}
 
 	upstreamResponse, err := deps.httpClient().Do(upstreamRequest)

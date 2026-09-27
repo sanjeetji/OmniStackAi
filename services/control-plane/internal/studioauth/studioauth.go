@@ -20,6 +20,10 @@ import (
 // Header is the request header the Studio checks.
 const Header = "X-OmniStack-Studio-Token"
 
+// UserHeader names the signed-in user a request acts for, so the Studio can apply per-user quotas.
+// Only requests carrying the token are believed, and the control plane sets it from the session.
+const UserHeader = "X-OmniStack-User"
+
 type transport struct {
 	base   http.RoundTripper
 	origin string

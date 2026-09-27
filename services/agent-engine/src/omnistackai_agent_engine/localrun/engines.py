@@ -43,6 +43,11 @@ def docker_available() -> bool:
 
 def resolve_engine(requested: str | None = None) -> str:
     """The engine to use now. ``webcontainer`` runs in the browser, so the server previews locally."""
+    from .sandbox import multi_tenant
+
+    if multi_tenant():
+        # PC-009: on a shared host a generated app never runs on the host itself.
+        return CONTAINER
     choice = (requested or os.environ.get(ENGINE_ENV, "") or "auto").strip().lower()
     if choice in (LOCAL, CONTAINER):
         return choice

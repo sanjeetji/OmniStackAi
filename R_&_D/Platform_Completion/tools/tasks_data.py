@@ -149,7 +149,7 @@ QUEUE = [
      "previews; quotas; egress policy", "1 Vibe Mode live", "Platform", "Not Started", "P0",
      "", "Today the Studio is one trusted operator's tool. Built cloud-neutral and proven "
      "locally (Colima); the cloud account (D-2) is plugged in at PC-070. "
-     "Covers R-100, R-214, R-071, R-175."),
+     "Covers R-100, R-214, R-071, R-175. Done 2026-09-27; left: per-user disk quotas, cloud account."),
     ("PC-010", "Credit fairness: estimate before a build, no charge for internal retries, "
      "per-task budgets, cost guardrails", "1 Vibe Mode live", "Platform", "Not Started", "P0",
      "", "Covers R-046, R-047, R-025, R-104."),

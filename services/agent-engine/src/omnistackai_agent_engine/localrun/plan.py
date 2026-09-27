@@ -310,7 +310,9 @@ def build_run_plan(
     mobile_ids = discover_mobile_apps(root)
     has_mobile = bool(mobile_ids)
 
-    api_url = f"http://{db_host}:{api_port}"
+    # The API's own address. It used to borrow the database host, which only worked while the two
+    # were the same machine; a preview's database now lives on its own server (PC-009).
+    api_url = f"http://127.0.0.1:{api_port}"
     web_url = f"http://127.0.0.1:{web_port}"
     admin_url = f"http://127.0.0.1:{admin_port}" if has_admin else ""
     # R-545: Expo binds on the LAN so a phone can reach it; the QR encodes the exp:// form.

@@ -86,15 +86,18 @@ def _plan_from_env(
     extra_app_ports: tuple[int, ...] = (),
     public_base: str = "",
     extra_env: Mapping[str, str] | None = None,
+    db: Mapping[str, str] | None = None,
 ) -> RunPlan:
+    # PC-009: a multi-tenant preview uses its own database server (`db`), never the platform's.
+    db = db or {}
     return build_run_plan(
         repo_dir,
-        db_container=os.environ.get("OMNISTACKAI_POSTGRES_CONTAINER", "omnistackai-local-postgres-1"),
-        db_user=os.environ.get("OMNISTACKAI_POSTGRES_USER", "omnistackai"),
-        db_password=os.environ.get("OMNISTACKAI_POSTGRES_PASSWORD", ""),
-        db_host=os.environ.get("OMNISTACKAI_POSTGRES_HOST", "127.0.0.1"),
-        db_port=int(os.environ.get("OMNISTACKAI_POSTGRES_PORT", "5432")),
-        maintenance_db=os.environ.get("OMNISTACKAI_POSTGRES_DB", "omnistackai"),
+        db_container=db.get("container") or os.environ.get("OMNISTACKAI_POSTGRES_CONTAINER", "omnistackai-local-postgres-1"),
+        db_user=db.get("user") or os.environ.get("OMNISTACKAI_POSTGRES_USER", "omnistackai"),
+        db_password=db.get("password") or os.environ.get("OMNISTACKAI_POSTGRES_PASSWORD", ""),
+        db_host=db.get("host") or os.environ.get("OMNISTACKAI_POSTGRES_HOST", "127.0.0.1"),
+        db_port=int(db.get("port") or os.environ.get("OMNISTACKAI_POSTGRES_PORT", "5432")),
+        maintenance_db=db.get("maintenance_db") or os.environ.get("OMNISTACKAI_POSTGRES_DB", "omnistackai"),
         api_port=api_port if api_port is not None else int(os.environ.get("OMNISTACKAI_APP_API_PORT", "8000")),
         web_port=web_port if web_port is not None else int(os.environ.get("OMNISTACKAI_APP_WEB_PORT", "3000")),
         admin_port=admin_port if admin_port is not None else int(os.environ.get("OMNISTACKAI_APP_ADMIN_PORT", "3100")),

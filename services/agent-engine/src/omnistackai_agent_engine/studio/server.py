@@ -20,6 +20,7 @@ from typing import Callable
 from urllib.parse import parse_qs, unquote, urlparse
 
 from ..intake.ecosystem import propose_ecosystem
+from .quotas import current_user
 from ..solution_packs import (
     DEFAULT_ECOSYSTEM_PACK_REGISTRY,
     DEFAULT_SOLUTION_PACK_REGISTRY,
@@ -63,6 +64,7 @@ from .workspace import StudioWorkspaceStore, WorkspaceLockedError, WorkspaceNotF
 #: PC-009: the control plane's service token (see the control plane's internal/studioauth).
 STUDIO_TOKEN_ENV = "OMNISTACKAI_STUDIO_TOKEN"
 STUDIO_TOKEN_HEADER = "X-OmniStack-Studio-Token"
+STUDIO_USER_HEADER = "X-OmniStack-User"
 
 BuildFn = Callable[..., dict]
 ControlFn = Callable[..., dict]
@@ -227,9 +229,12 @@ def _make_handler(
             Ownership is checked in the control plane; the Studio acts on any workspace it is asked
             about, so on a shared host it must know who is asking. The health check stays open.
             """
+            # Whose request this is, for per-user quotas — believed only alongside the token.
+            current_user.set(None)
             if not studio_token or urlparse(self.path).path == "/healthz":
                 return True
             if hmac.compare_digest(self.headers.get(STUDIO_TOKEN_HEADER, ""), studio_token):
+                current_user.set((self.headers.get(STUDIO_USER_HEADER) or "").strip()[:128] or None)
                 return True
             self._send_json(401, {"error": "unauthorized"})
             return False

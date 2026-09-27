@@ -34,6 +34,7 @@ import uuid
 from pathlib import Path
 from typing import Callable, Mapping
 
+from . import sandbox
 from .plan import RunPlan, RunStep
 from .run import (
     LocalAppRunError,
@@ -202,12 +203,16 @@ class ContainerAppSession(LocalAppSession):
         self.engine = "container"
         self.container = container
         self._script_dir = script_dir
+        #: The inbound gateway of an isolated (multi-tenant) preview, if any.
+        self.gateway: str | None = None
 
     def stop(self) -> None:
         if self._stopped:
             return
         super().stop()
         _docker("rm", "-f", "-v", self.container, timeout=60.0)
+        if self.gateway:
+            _docker("rm", "-f", self.gateway, timeout=60.0)
         try:
             for child in Path(self._script_dir).iterdir():
                 child.unlink()
@@ -238,15 +243,22 @@ def start_container_preview(
     extra_count = max(0, len(discover_web_apps(root)) - 2)
     ports = allocate_free_ports(4 + extra_count, host)
     api_port, web_port, admin_port, mobile_port = ports[:4]
+    # PC-009: multi-tenant previews use their own database server and a network with no way out.
+    isolated = sandbox.multi_tenant()
+    preview_db = sandbox.prepare() if isolated else None
     plan = _plan_from_env(str(root), api_port=api_port, web_port=web_port, admin_port=admin_port,
                           mobile_port=mobile_port, extra_app_ports=ports[4:], public_base=public_base,
-                          extra_env=extra_env)
+                          extra_env=extra_env, db=preview_db)
 
     ensure_image(emit)
-    network, db_name_host = _db_network_and_host(plan)
-    db_from = (f"@{os.environ.get('OMNISTACKAI_POSTGRES_HOST', '127.0.0.1')}:"
-               f"{os.environ.get('OMNISTACKAI_POSTGRES_PORT', '5432')}/")
-    db_to = f"@{db_name_host}:5432/"
+    if isolated:
+        network = sandbox.NETWORK
+        db_from = db_to = ""  # the plan already names the preview database server
+    else:
+        network, db_name_host = _db_network_and_host(plan)
+        db_from = (f"@{os.environ.get('OMNISTACKAI_POSTGRES_HOST', '127.0.0.1')}:"
+                   f"{os.environ.get('OMNISTACKAI_POSTGRES_PORT', '5432')}/")
+        db_to = f"@{db_name_host}:5432/"
 
     # Under the home folder: Docker Desktop, Colima and Linux hosts all share it with the daemon;
     # the system temp folder is not shared on a Mac.
@@ -276,14 +288,22 @@ def start_container_preview(
         runtime = _gvisor_runtime()
         if runtime:
             run += ["--runtime", runtime]
-        for port in published:
-            run += ["-p", f"{host}:{port}:{port}"]
+        if isolated:
+            run += sandbox.limits()
+            for key, value in sandbox.proxy_env().items():
+                run += ["-e", f"{key}={value}"]
+        else:
+            for port in published:
+                run += ["-p", f"{host}:{port}:{port}"]
         run += _mounts(plan, script_dir)
         run += [IMAGE, "bash", "/omni-run/run.sh"]
         started = _docker(*run, timeout=120.0)
         if started.returncode != 0:
             raise LocalAppRunError(f"the preview container did not start: {started.stderr.strip()[-400:]}")
-        emit(f"-> container {container}" + (f" (runtime {runtime})" if runtime else ""))
+        emit(f"-> container {container}" + (f" (runtime {runtime})" if runtime else "")
+             + (" on the isolated preview network" if isolated else ""))
+        if isolated:
+            session.gateway = sandbox.start_gateway(container, published, host)
 
         # Following the container's output is the session's child process: it ends when the
         # container does, which is how a crashed app is noticed, exactly as with a local server.

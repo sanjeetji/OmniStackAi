@@ -1,9 +1,9 @@
 task_id: PC-009
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: R-100
 started_at: "2026-09-27"
-completed_at: null
+completed_at: "2026-09-27"
 branch: platform-completion
 objective: >-
   Make the platform safe to host for many users. Per-project isolation of builds, sessions and
@@ -39,12 +39,18 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
+deferred:
+  - "Per-user disk quotas for workspaces"
+  - "The hosting cloud account and region (D-2, PC-070)"
 found_and_fixed:
   - "Every generated app received the platform database owner's credentials, which could read the control plane's accounts and secrets; each app now has its own unprivileged role (live: A cannot open B's or the platform's database, cannot create databases, is not a superuser)."
   - "Every workspace previewed into one database named 'repo', so starting one project's preview dropped another's; databases are now per project."
   - "The Studio accepted any caller; it now requires the control plane's service token (live: direct call 401)."
+  - "A build's preview used one server-wide slot that stopped every other preview; builds now preview per workspace."
+  - "The quota refusal itself crashed (exception variable cleared before the stream ran)."
   - "test_ecosystem_deployment ran real database steps against this machine's PostgreSQL inside the offline suite; it no longer starts anything."
 progress:
   - "Done: per-project database + role; Studio service token (control plane sends it on every call via one transport wrapper)."
-  - "Next: container-only previews with resource limits and an egress allowlist in multi-tenant mode; quotas and idle stop."
+  - "Done: multi-tenant sandbox (internal network, preview DB server, inbound gateway, allowlist egress proxy, limits); per-user quotas and idle reaper; builds preview per workspace."
+  - "Live: escape attempts from inside a preview all blocked; two users' previews independent; B gets 404 for A's project; quota refusal message; console serves an isolated preview."
+  - "Next queue task: PC-010 (credit fairness)."
