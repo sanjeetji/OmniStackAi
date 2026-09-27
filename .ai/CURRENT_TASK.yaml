@@ -1,28 +1,25 @@
-task_id: PC-009
-status: complete
+task_id: PC-010
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: R-100
+tracker_row: R-046
 started_at: "2026-09-27"
-completed_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Make the platform safe to host for many users. Per-project isolation of builds, sessions and
-  previews: the Studio accepts calls only from the control plane (service token); every preview
-  gets its own database and database role, never the platform's credentials; a multi-tenant mode
-  runs previews in containers (gVisor where registered) with CPU/memory/process limits, no route to
-  platform services, and outbound traffic only through an allowlist proxy; per-user quotas on
-  concurrent previews and builds, with idle previews stopped. A tenant-isolation test suite proves
-  it (R-100, R-214, PG-05). Cloud-neutral, proven locally on Colima; the cloud account is PC-070.
+  Credit fairness. A user sees what a build or edit will cost before starting it; is never charged
+  for model answers the platform threw away and retried; each task has a budget it cannot exceed,
+  and never more than the user's balance; and the platform has guardrails: no work at zero
+  credits, per-user hourly and daily caps, a platform daily cap, and a kill switch that pauses all
+  paid model work (R-046, R-047, R-025, R-104, PG-13).
 founder_gate: >-
-  Queue order (founder: continue one by one). No paid service or new cloud infrastructure.
+  Queue order (founder: continue one by one).
 companions:
-  - "Idle previews are stopped and their resources released"
-  - "The Studio reports each quota and why a request was refused"
+  - "The console shows the estimate and the balance before a build"
+  - "Every refusal says why and when it can be tried again"
 allowed_paths:
   - services/agent-engine/
   - services/control-plane/
   - apps/console-web/
-  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -30,27 +27,13 @@ allowed_paths:
   - .env.example
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - no secret in logs, client payloads or the repository
 required_gates:
-  - Live isolation checks on this machine (token, database roles, container network, egress)
+  - Live: estimate shown, a zero-balance build refused, a budget respected, a discarded retry not charged
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Per-user disk quotas for workspaces"
-  - "The hosting cloud account and region (D-2, PC-070)"
-found_and_fixed:
-  - "Every generated app received the platform database owner's credentials, which could read the control plane's accounts and secrets; each app now has its own unprivileged role (live: A cannot open B's or the platform's database, cannot create databases, is not a superuser)."
-  - "Every workspace previewed into one database named 'repo', so starting one project's preview dropped another's; databases are now per project."
-  - "The Studio accepted any caller; it now requires the control plane's service token (live: direct call 401)."
-  - "A build's preview used one server-wide slot that stopped every other preview; builds now preview per workspace."
-  - "The quota refusal itself crashed (exception variable cleared before the stream ran)."
-  - "test_ecosystem_deployment ran real database steps against this machine's PostgreSQL inside the offline suite; it no longer starts anything."
-progress:
-  - "Done: per-project database + role; Studio service token (control plane sends it on every call via one transport wrapper)."
-  - "Done: multi-tenant sandbox (internal network, preview DB server, inbound gateway, allowlist egress proxy, limits); per-user quotas and idle reaper; builds preview per workspace."
-  - "Live: escape attempts from inside a preview all blocked; two users' previews independent; B gets 404 for A's project; quota refusal message; console serves an isolated preview."
-  - "Next queue task: PC-010 (credit fairness)."
+deferred: []
+found_and_fixed: []
