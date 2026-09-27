@@ -164,7 +164,10 @@ class GeneratedPythonAuthRouterTests(unittest.TestCase):
     def test_password_reset_by_email_alone_is_refused(self) -> None:
         # R-521 refused every reset until emailed links existed; R-591 added them. The property is
         # unchanged: a reset redeems the one-time token from the link and never trusts an email.
-        reset = self.source[self.source.index("async def reset_password"):]
+        start = self.source.index("async def reset_password")
+        # Just this function: PC-011 appends the role manager after it in the same file.
+        end = self.source.find("\n# ──", start)
+        reset = self.source[start:end if end != -1 else None]
         self.assertIn("WHERE reset_token_hash = %s AND reset_token_expires_at > NOW()", reset)
         self.assertNotIn("email", reset)
 

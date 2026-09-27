@@ -468,6 +468,9 @@ _AUTH_ROUTES = (
     ("AuthLogout", AUTH_CONTRACT["logout"]),
     ("AuthForgotPassword", AUTH_CONTRACT["forgot"]),
     ("AuthResetPassword", AUTH_CONTRACT["reset"]),
+    # PC-011: the admin's role manager.
+    ("AuthListUsers", ("GET", "/auth/users")),
+    ("AuthSetUserRole", ("PUT", "/auth/users/{id}/role")),
 )
 
 
@@ -548,6 +551,9 @@ class GoBackendAdapter:
             files.append(GeneratedFile("internal/handlers/auth.go", go_auth_file(ir)))
             if has_db:
                 files.append(GeneratedFile("internal/handlers/auth_routes.go", GO_AUTH_HANDLERS))
+                from .role_manager import GO_ROLE_MANAGER
+
+                files.append(GeneratedFile("internal/handlers/auth_roles.go", GO_ROLE_MANAGER))
         if has_validation:
             files.append(GeneratedFile("internal/handlers/validate.go", go_validate_file()))
 

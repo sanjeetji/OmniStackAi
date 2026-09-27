@@ -158,7 +158,7 @@ QUEUE = [
      "Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at "
      "PC-070. Covers R-109. Found in R-590: self-registered users get role 'user', which is not one "
      "of the plan's roles, so role-guarded actions need an admin to assign roles — include a role "
-     "manager in the generated admin console."),
+     "manager in the generated admin console. Done 2026-09-27; prices and live keys at PC-070."),
     ("PC-012", "Legal and account basics: ToS, privacy, retention, deletion/export, email "
      "verification", "1 Vibe Mode live", "Platform", "Not Started", "P0", "", "Covers R-108."),
     ("PC-013", "Verified integrations catalog with health tests", "1 Vibe Mode live", "Vibe",

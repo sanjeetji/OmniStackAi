@@ -5486,7 +5486,7 @@ def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -
     return "\n".join(lines)
 
 
-def _navbar_component(ir: ApplicationIR) -> str:
+def _navbar_component(ir: ApplicationIR, extra_links: tuple[tuple[str, str], ...] = ()) -> str:
     """Generate a responsive application navigation header shell (components/navbar.tsx)."""
     brand_initial = ir.name[:1].upper() if ir.name else "O"
     escaped_name = _escape_ts(ir.name)
@@ -5518,6 +5518,13 @@ def _navbar_component(ir: ApplicationIR) -> str:
             '            </Link>',
         ])
 
+    # PC-011: links only one flavour has (the admin console's "Users and roles").
+    for href, label in extra_links:
+        nav_links_jsx.extend([
+            f'            <Link href="{href}" style={{navLinkStyle(isLinkActive("{href}"))}}>',
+            f"              {_escape_ts(label)}",
+            "            </Link>",
+        ])
     nav_links_str = "\n".join(nav_links_jsx)
 
     # ── Sidebar domain-grouped links ──────────────────────────────────────────
@@ -74039,6 +74046,13 @@ class NextjsWebAdapter:
         # PC-008, found live: a plan that declared its own POST /login got a proxy route at
         # app/login/route.ts beside the sign-in page, and `next build` refuses a page and a route at
         # one path. A page wins; the API stays reachable under /api.
+        # PC-011: an admin console with accounts gets the page where roles are given.
+        if self._flavour == "admin" and needs_auth(ir):
+            from .role_manager import ADMIN_USERS_PAGE
+
+            files = [GeneratedFile(f.path, _navbar_component(ir, (("/users", "Users and roles"),)))
+                     if f.path == "components/navbar.tsx" else f for f in files]
+            files.append(GeneratedFile("app/users/page.tsx", ADMIN_USERS_PAGE))
         page_dirs = {f.path[len("app/"):-len("/page.tsx")] for f in files
                      if f.path.startswith("app/") and f.path.endswith("/page.tsx")}
         for route_dir, apis in by_dir.items():

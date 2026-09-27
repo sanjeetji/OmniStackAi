@@ -948,12 +948,16 @@ class NodeBackendAdapter:
 
         # 5. Auth Middleware
         has_auth = needs_auth(ir)
-        files.append(GeneratedFile("src/auth/core.ts", NODE_AUTH_CORE))
+        from .role_manager import NODE_ROLE_ROUTES_EXPRESS, NODE_ROLE_ROUTES_HONO, node_role_manager_core
+
+        # PC-011: the core and the account routes carry the admin's role manager.
+        files.append(GeneratedFile("src/auth/core.ts", NODE_AUTH_CORE + node_role_manager_core(ir)))
         files.append(GeneratedFile("src/middleware/auth.ts", _auth_file(ir, framework)))
         if has_auth:
             files.append(GeneratedFile(
                 "src/routes/account.ts",
-                NODE_AUTH_ROUTER_HONO if framework == "hono" else NODE_AUTH_ROUTER_EXPRESS,
+                NODE_AUTH_ROUTER_HONO + NODE_ROLE_ROUTES_HONO if framework == "hono"
+                else NODE_AUTH_ROUTER_EXPRESS + NODE_ROLE_ROUTES_EXPRESS,
             ))
 
         # 6. Routing Layer

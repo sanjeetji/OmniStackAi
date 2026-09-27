@@ -182,7 +182,7 @@ def go_auth_file(ir: ApplicationIR) -> str:
     )
 
 
-def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
+def python_auth_router_file(ir: ApplicationIR) -> str:
     """Generate app/routers/auth.py — the complete account flow for a FastAPI backend.
 
     R-461 shipped register / login / me / logout. R-591 made it complete and correct: `/me` read
@@ -192,4 +192,7 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
     all three backends share.
     """
 
-    return PYTHON_AUTH_ROUTER
+    from .role_manager import python_role_manager
+
+    # PC-011: plus the admin's role manager (GET /auth/users, PUT /auth/users/{id}/role).
+    return PYTHON_AUTH_ROUTER + python_role_manager(ir)
