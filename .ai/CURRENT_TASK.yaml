@@ -1,34 +1,28 @@
-task_id: PC-085
-status: complete
+task_id: PC-094
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-27"
-completed_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Model quality evals and best-model routing. Score every configured provider (Groq, Gemini,
-  OpenRouter free, NVIDIA, local Ollama) per job type — planning an app from a prompt, and repairing
-  code the compiler rejected — and route each job to the best-scoring provider first, keeping the
-  rest of the chain as fallbacks. Quality stays independent of any one vendor.
+  Intake repairs, round 2. Weaker models' plans failed intake in ways PC-093-style repair can fix:
+  a role declared twice (qwen2.5-coder:7b), a lifecycle for an entity the plan never declared
+  (nemotron), and malformed plan parts that crashed intake with an AttributeError (qwen3.8-27b)
+  instead of a clean error the fallback chain and the user can act on.
 founder_gate: >-
-  Founder-approved 2026-09-26 ("Groq is best; fallback Gemini, OpenRouter, NVIDIA, Ollama").
-companions:
-  - "A scorecard the Studio's provider status can show"
-  - "An opt-in live eval command; task verify stays offline with 0 model calls"
+  Founder: continue the queue one by one.
+companions: []
 allowed_paths:
   - services/agent-engine/
-  - scripts/
-  - docs/MODEL_PROVIDER.md
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - OpenRouter uses free models only
-  - a project that pinned a model is never re-routed
 required_gates:
-  - Live eval across every configured provider, scorecard recorded
+  - Live intake with the weakest configured model
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
@@ -36,9 +30,4 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed:
-  - "A free tier's quota (Gemini 429) would have scored as poor quality and routed that provider last for good; unavailable runs are now not scored."
-  - "Back-to-back eval cases measured Groq's rate-limit waits as slowness; cases are now spaced out, untimed."
-progress:
-  - "Live scorecard 2026-09-27: plan Groq 0.99 > NVIDIA 0.66 > OpenRouter free 0.38 > local 7b 0; code OpenRouter free 1.0 = NVIDIA 1.0 > Groq 0.97 > local 7b 0.63; Gemini unscored (quota)."
-  - "Next queue task: PC-094 (intake repairs round 2)."
+found_and_fixed: []
