@@ -113,6 +113,11 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("GET /projects/{id}/preview", handleProjectPreviewGet(deps))
 	mux.HandleFunc("POST /projects/{id}/preview", handleProjectPreview(deps))
 	mux.HandleFunc("POST /projects/{id}/preview/stop", handleProjectPreviewStop(deps))
+	// PC-008: the whole app (database, API, web, admin) at a live URL.
+	mux.HandleFunc("GET /projects/{id}/live", handleProjectLive(deps, "", http.MethodGet))
+	mux.HandleFunc("POST /projects/{id}/live", handleProjectLive(deps, "", http.MethodPost))
+	mux.HandleFunc("POST /projects/{id}/live/rollback", handleProjectLive(deps, "/rollback", http.MethodPost))
+	mux.HandleFunc("POST /projects/{id}/live/unpublish", handleProjectLive(deps, "/unpublish", http.MethodPost))
 	mux.HandleFunc("POST /projects/{id}/problems", handleProjectProblemsCheck(deps))
 	mux.HandleFunc("GET /projects/{id}/problems", handleProjectProblemsGet(deps))
 	// POST /projects/{id}/seo/audit and POST /projects/{id}/seo/suggest are owned by the seo
@@ -789,6 +794,50 @@ func handleProjectPreview(deps Deps) http.HandlerFunc {
 
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/preview"
 		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, bodyReader, defaultPreviewTimeout)
+	}
+}
+
+// handleProjectLive forwards a live-publish request for a project the user owns (PC-008).
+// Publishing starts the project's own secrets with it, exactly as the preview does; the reply
+// never carries them back.
+func handleProjectLive(deps Deps, suffix, method string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/live" + suffix
+		if method == http.MethodGet {
+			proxyGet(w, r, deps, target)
+			return
+		}
+		var bodyReader io.Reader
+		if suffix == "" {
+			payload := map[string]any{}
+			if deps.SecretsStore != nil {
+				if sec, err := deps.SecretsStore.ForProject(r.Context(), id); err == nil && len(sec) > 0 {
+					payload["env"] = sec
+				}
+			}
+			if bodyBytes, err := json.Marshal(payload); err == nil {
+				bodyReader = bytes.NewReader(bodyBytes)
+			}
+		} else if suffix == "/unpublish" {
+			var in struct {
+				DeleteData bool `json:"delete_data"`
+			}
+			_ = json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&in)
+			if bodyBytes, err := json.Marshal(map[string]bool{"delete_data": in.DeleteData}); err == nil {
+				bodyReader = bytes.NewReader(bodyBytes)
+			}
+		}
+		proxyUpstream(w, r, deps, http.MethodPost, target, bodyReader)
 	}
 }
 

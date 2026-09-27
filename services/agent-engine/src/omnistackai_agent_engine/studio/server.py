@@ -129,6 +129,7 @@ def _make_handler(
     workspace_preview_fn: PreviewBuildFn | None = None,
     workspace_preview_status_fn: PreviewBuildFn | None = None,
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
+    workspace_live_fn: Callable[[str, str, dict], dict] | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
     workspace_cancel_fn: Callable[[str], dict] | None = None,
@@ -350,6 +351,22 @@ def _make_handler(
             try:
                 res = workspace_preview_status_fn(ws_id)
                 self._send_json(200, res)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_live(self, ws_id: str, action: str) -> None:
+            """PC-008: publish the whole app to its live URL, report it, roll it back, remove it."""
+            if workspace_live_fn is None:
+                self._send_json(404, {"error": "publishing is not enabled"})
+                return
+            body = {}
+            if action != "status" and int(self.headers.get("Content-Length", 0) or 0) > 0:
+                body = self._read_json_body()
+            try:
+                self._send_json(202 if action == "publish" else 200,
+                                workspace_live_fn(ws_id, action, body if isinstance(body, dict) else {}))
+            except KeyError:
+                self._send_json(404, {"error": "workspace not found"})
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
 
@@ -1398,6 +1415,10 @@ def _make_handler(
                 if ws_preview_id is not None:
                     self._handle_workspace_preview_status(ws_preview_id)
                     return
+                ws_live_id = self._workspace_id_for_suffix(path_only, "/live")
+                if ws_live_id is not None:
+                    self._handle_workspace_live(ws_live_id, "status")
+                    return
                 ws_logs_id = self._workspace_id_for_suffix(path_only, "/logs")
                 if ws_logs_id is not None:
                     self._handle_workspace_logs(ws_logs_id, urlparse(self.path).query)
@@ -1790,6 +1811,12 @@ def _make_handler(
             if ws_edit_id is not None:
                 self._handle_workspace_edit(ws_edit_id)
                 return
+            for suffix, action in (("/live/rollback", "rollback"), ("/live/unpublish", "unpublish"),
+                                   ("/live", "publish")):
+                ws_live_id = self._workspace_id_for_suffix(path_only, suffix)
+                if ws_live_id is not None:
+                    self._handle_workspace_live(ws_live_id, action)
+                    return
             ws_preview_stop_id = self._workspace_id_for_suffix(path_only, "/preview/stop")
             if ws_preview_stop_id is not None:
                 self._handle_workspace_preview_stop(ws_preview_stop_id)
@@ -1966,6 +1993,7 @@ def create_studio_server(
     workspace_preview_fn: PreviewBuildFn | None = None,
     workspace_preview_status_fn: PreviewBuildFn | None = None,
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
+    workspace_live_fn: Callable[[str, str, dict], dict] | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
     workspace_cancel_fn: Callable[[str], dict] | None = None,
@@ -2056,6 +2084,7 @@ def create_studio_server(
             workspace_preview_fn=workspace_preview_fn,
             workspace_preview_status_fn=workspace_preview_status_fn,
             workspace_preview_stop_fn=workspace_preview_stop_fn,
+            workspace_live_fn=workspace_live_fn,
             workspace_problems_check_fn=workspace_problems_check_fn,
             workspace_problems_get_fn=workspace_problems_get_fn,
             workspace_cancel_fn=workspace_cancel_fn,

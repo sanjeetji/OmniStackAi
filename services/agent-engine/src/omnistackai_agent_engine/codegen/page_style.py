@@ -184,6 +184,10 @@ def page_stylesheet() -> str:
 .{PREFIX}-btn-secondary:hover {{ border-color: var(--color-primary); color: var(--color-primary); }}
 .{PREFIX}-band .{PREFIX}-btn-primary {{ background: var(--color-surface); color: var(--color-primary); }}
 .{PREFIX}-band .{PREFIX}-btn-secondary {{ background: transparent; color: inherit; border-color: currentColor; }}
+/* Muted text is tuned for a light page; on the brand band it was grey on blue and unreadable. */
+.{PREFIX}-band .{PREFIX}-lede,
+.{PREFIX}-band .{PREFIX}-sub {{ color: inherit; opacity: 0.9; }}
+.{PREFIX}-band .{PREFIX}-eyebrow {{ color: var(--color-primary); }}
 
 .{PREFIX}-pill {{
   display: inline-flex;

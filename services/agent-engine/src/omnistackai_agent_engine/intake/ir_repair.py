@@ -54,6 +54,14 @@ _SCHEMA_SUFFIXES = (
 #: Last path segments that mean "change this record's state".
 _STATUS_SEGMENTS = frozenset({"status", "state", "transition", "transitions", "stage"})
 
+#: Endpoints every app with accounts already has (R-591's /auth/* contract). A plan that declares
+#: its own collides with them: seen live, POST /login became a route beside the sign-in page and the
+#: production build failed.
+_ACCOUNT_PATHS = frozenset({"/login", "/logout", "/signup", "/sign-up", "/register", "/signin", "/sign-in",
+                            "/auth/login", "/auth/logout", "/auth/register", "/auth/signup", "/auth/me",
+                            "/me", "/forgot-password", "/reset-password", "/auth/forgot-password",
+                            "/auth/reset-password"})
+
 _STATUS_PATH = re.compile(r"^/(?P<collection>[A-Za-z0-9_-]+)/\{[^/{}]+\}/(?P<action>[A-Za-z0-9_-]+)$")
 
 
@@ -233,11 +241,15 @@ def repair_ir_dict(data: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...
     role_ids = {str(r.get("id")) for r in data.get("roles") or () if isinstance(r, dict)}
     with_workflow = _existing_workflow_entities(data)
 
+    has_accounts = any(isinstance(a, dict) and a.get("auth") for a in apis)
     kept: list[dict[str, Any]] = []
     for api in apis:
         if not isinstance(api, dict):
             continue
         location = f"{api.get('method', '?')} {api.get('path', '?')}"
+        if has_accounts and str(api.get("path", "")).rstrip("/").lower() in _ACCOUNT_PATHS:
+            notes.append(f"{location}: removed; sign-up and sign-in are built in under /auth")
+            continue
 
         # Repair 2 first: a status-change endpoint may be replaced outright.
         match = _STATUS_PATH.match(str(api.get("path", "")))

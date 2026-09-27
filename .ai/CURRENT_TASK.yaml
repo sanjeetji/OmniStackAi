@@ -1,9 +1,9 @@
 task_id: PC-008
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: R-048
 started_at: "2026-09-27"
-completed_at: null
+completed_at: "2026-09-27"
 branch: platform-completion
 objective: >-
   One-click publish of the whole generated app to a live URL: web app, admin console, API and a
@@ -39,5 +39,20 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "Follow-on migrations for schema changes after first publish; hosted databases; backups (PC-049)"
+  - "Row ownership: a published notes app saved notes with created_by null (R-570)"
+  - "Repair of model-written pages on role surfaces (PC-097)"
+  - "A real server and domain (PC-070/PC-071)"
+found_and_fixed:
+  - "Every published app accepted admin@example.local / changeme and its sign-in page offered to fill it in; the password is replaced on publish (owner-only) and production builds drop the button."
+  - "Model-declared created_at/updated_at had no DB default, so the first saved record failed (NOT NULL)."
+  - "A plan's POST /login became app/login/route.ts beside the sign-in page; next build refused it. Pages win; intake removes duplicate account endpoints."
+  - "List pages used the delete confirmation without declaring it when only child rows were deletable."
+  - "Role surfaces were never type-checked; now every Next surface is."
+  - "An Expo app with app.config.js was treated as a web app."
+  - "Web apps import brand files from the project root; their images now build from the root."
+  - "Brand-banner description text was grey on blue."
+progress:
+  - "Live via console: notes app built 14 s, live 61 s after Publish; visitor sign-up, note saved, survived a republish; changeme rejected (401), owner password 200; rollback and unpublish on live stacks."
+  - "Next queue task: PC-009 (hosted multi-tenant service)."

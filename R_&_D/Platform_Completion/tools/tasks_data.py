@@ -137,7 +137,14 @@ QUEUE = [
     ("PC-008", "One-click publish to a live URL: web, admin, API and database together, code "
      "complete and proven against local stand-ins", "1 Vibe Mode live", "Vibe", "Pending", "P0",
      "PC-049", "R-509/R-510 publish the web app only and were never run for real. From "
-     "specs/table-stakes/03. Real accounts are plugged in at PC-070."),
+     "specs/table-stakes/03. Real accounts are plugged in at PC-070. Done 2026-09-27 against the "
+     "local stand-in; a real server + domain is proven at PC-071."),
+    ("PC-097", "Compile repair covers every Next surface (admin console and ecosystem role "
+     "surfaces), not only the main web app", "1 Vibe Mode live", "Both", "Not Started", "P1",
+     "PC-008", "Found publishing a clinic app on 2026-09-27: the `provider` role surface shipped a "
+     "model-written page with an invented import and misused components; the build never checked it. "
+     "PC-008 now type-checks every Next surface and publish refuses a broken app with the "
+     "compiler's reason; this task makes the repair loop fix or revert those pages as it does for web."),
     ("PC-009", "Hosted multi-tenant service: per-user isolation of builds, sessions and "
      "previews; quotas; egress policy", "1 Vibe Mode live", "Platform", "Not Started", "P0",
      "", "Today the Studio is one trusted operator's tool. Built cloud-neutral and proven "
@@ -168,7 +175,10 @@ QUEUE = [
     ("PC-049", "Managed database for published apps: provision PostgreSQL (Neon, Supabase or "
      "self-hosted) and run migrations and seeds on publish", "1 Vibe Mode live", "Vibe",
      "Not Started", "P0", "", "A live URL needs a live database. Provider interface with a "
-     "local Docker implementation; MongoDB Atlas once PC-048 exists. From the architecture plan."),
+     "local Docker implementation; MongoDB Atlas once PC-048 exists. From the architecture plan. "
+     "PC-008 (2026-09-27) delivered the per-app PostgreSQL in Docker with a migration ledger; left: "
+     "hosted providers (Neon/Supabase), backups, and follow-on migrations for schema changes after "
+     "first publish (today a changed 0001_init.sql is not re-applied to a live database)."),
     ("PC-050", "Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, "
      "command menu, drawer, toasts, tables, forms, maps, uploads)", "1 Vibe Mode live", "Vibe",
      "Not Started", "P1", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
@@ -184,7 +194,8 @@ QUEUE = [
     ("R-580", "Domain knowledge in ecosystem detection ('logistics' implies drivers)",
      "2 Maximum features", "Both", "Not Started", "P1", "", ""),
     ("R-570", "Permissions beyond role: ownership and row-level rules", "2 Maximum features",
-     "Both", "Not Started", "P1", "", "'A driver sees only their own orders'."),
+     "Both", "Not Started", "P1", "", "'A driver sees only their own orders'. Seen live 2026-09-27 (PC-008): a published "
+     "notes app saved notes with created_by null, so private notes were not private."),
     ("R-567", "Money: ledgers, payments, payouts, refunds, commission", "2 Maximum features",
      "Both", "Not Started", "P1", "", "R-512 gives Stripe/Razorpay checkout; this is the ledger."),
     ("R-568", "Background jobs and scheduling", "2 Maximum features", "Both", "Not Started", "P1",

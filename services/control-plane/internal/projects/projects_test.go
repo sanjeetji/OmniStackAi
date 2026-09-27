@@ -1024,3 +1024,71 @@ func TestProjectBuildStreamRelaysSlowUpstreamCompletely(t *testing.T) {
 		t.Fatalf("missing done frame; body=%s", body)
 	}
 }
+
+// PC-008: the whole app at a live URL — owner only, forwarded to the Studio, unpublish carries
+// only the delete-data choice.
+func TestProjectLive_Endpoints(t *testing.T) {
+	pStore := newFakeProjectStore()
+	userA := auth.User{ID: "usr-live-a", Email: "a@example.com"}
+	userB := auth.User{ID: "usr-live-b", Email: "b@example.com"}
+	projA, _ := pStore.CreateProject(context.Background(), userA.ID, "Live App", "")
+
+	var gotUnpublish map[string]any
+	seen := map[string]bool{}
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		base := "/api/workspaces/" + projA.ID + "/live"
+		seen[r.Method+" "+r.URL.Path] = true
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == base && r.Method == http.MethodGet:
+			_, _ = w.Write([]byte(`{"status":"live","url":"http://127.0.0.1:41999"}`))
+		case r.URL.Path == base && r.Method == http.MethodPost:
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = w.Write([]byte(`{"status":"publishing"}`))
+		case r.URL.Path == base+"/rollback" && r.Method == http.MethodPost:
+			_, _ = w.Write([]byte(`{"status":"live","release":1}`))
+		case r.URL.Path == base+"/unpublish" && r.Method == http.MethodPost:
+			_ = json.NewDecoder(r.Body).Decode(&gotUnpublish)
+			_, _ = w.Write([]byte(`{"status":"unpublished"}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer mock.Close()
+
+	server := setupTestServer(t, fakeAuthStore{user: userA}, pStore, mock.URL)
+	do := func(srv string, method, path, body string) int {
+		req, _ := http.NewRequest(method, srv+"/projects/"+projA.ID+path, strings.NewReader(body))
+		req.Header.Set("Authorization", testBearer)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("%s %s: %v", method, path, err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	if code := do(server.URL, http.MethodGet, "/live", ""); code != http.StatusOK {
+		t.Errorf("GET live = %d, want 200", code)
+	}
+	if code := do(server.URL, http.MethodPost, "/live", ""); code != http.StatusAccepted {
+		t.Errorf("POST live = %d, want 202 (publishing runs in the background)", code)
+	}
+	if code := do(server.URL, http.MethodPost, "/live/rollback", ""); code != http.StatusOK {
+		t.Errorf("POST live/rollback = %d, want 200", code)
+	}
+	if code := do(server.URL, http.MethodPost, "/live/unpublish", `{"delete_data":true,"extra":"x"}`); code != http.StatusOK {
+		t.Errorf("POST live/unpublish = %d, want 200", code)
+	}
+	if gotUnpublish["delete_data"] != true || len(gotUnpublish) != 1 {
+		t.Errorf("unpublish forwarded %v, want only delete_data=true", gotUnpublish)
+	}
+
+	other := setupTestServer(t, fakeAuthStore{user: userB}, pStore, mock.URL)
+	before := len(seen)
+	if code := do(other.URL, http.MethodPost, "/live", ""); code != http.StatusNotFound {
+		t.Errorf("foreign user POST live = %d, want 404", code)
+	}
+	if len(seen) != before {
+		t.Error("a foreign user's publish reached the Studio")
+	}
+}

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import threading
 import time
 import re
 import signal
@@ -1321,6 +1322,41 @@ def main() -> None:
             raise ProblemsNotCheckedError(f"workspace '{ws_id}' has not been checked for problems yet")
         return report
 
+    from ..publish.stack import StackPublisher
+
+    publisher = StackPublisher()
+
+    def workspace_live(ws_id: str, action: str, body: dict) -> dict:
+        """PC-008: the whole app at a live URL. Publishing runs in the background; poll the status."""
+        if not workspace_store.exists(ws_id):
+            raise KeyError(ws_id)
+        repo_dir = str(workspace_store.repo_path(ws_id))
+        if action == "status":
+            return publisher.status(ws_id)
+        if action == "rollback":
+            return publisher.rollback(ws_id, repo_dir)
+        if action == "unpublish":
+            return publisher.unpublish(ws_id, repo_dir, delete_data=bool(body.get("delete_data")))
+        if not os.path.isdir(repo_dir):
+            raise BuildNotFoundError(f"workspace '{ws_id}' has no app to publish yet")
+        ir = workspace_store.load_ir(ws_id)
+        name = ir.name if ir is not None else "app"
+        env = body.get("env") if isinstance(body.get("env"), dict) else {}
+        app_env = {str(k): str(v) for k, v in env.items()}
+
+        def commit(repo: Path, message: str) -> str | None:
+            from ..git_service.materialize import commit_all
+
+            try:
+                return commit_all(repo, author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
+                                  message=message).commit_sha
+            except Exception:  # noqa: BLE001 - a publish never fails for want of a commit
+                return None
+
+        threading.Thread(target=publisher.publish, args=(ws_id, repo_dir),
+                         kwargs={"name": name, "app_env": app_env, "commit": commit}, daemon=True).start()
+        return publisher.status(ws_id) | {"status": "publishing", "message": "Publishing started."}
+
     from .logs import StudioLogManager
     log_manager = StudioLogManager()
 
@@ -1368,6 +1404,7 @@ def main() -> None:
         "workspace_preview_fn": workspace_preview,
         "workspace_preview_status_fn": workspace_preview_status,
         "workspace_preview_stop_fn": workspace_preview_stop,
+        "workspace_live_fn": workspace_live,
         "workspace_problems_check_fn": workspace_problems_check,
         "workspace_problems_get_fn": workspace_problems_get,
         "workspace_cancel_fn": workspace_cancel,

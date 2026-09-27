@@ -2555,3 +2555,45 @@ export function getProjectTemplate(token: string, projectId: string): Promise<Te
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+// ── PC-008: the whole app (database, API, web, admin) at a live URL ────────────────────────────
+
+export type LiveRelease = { release: number; commit: string | null; at: string; status: string };
+
+export type LiveStatus = {
+  status: "unpublished" | "publishing" | "live" | "failed";
+  step?: string | null;
+  message?: string | null;
+  url?: string | null;
+  release?: number | null;
+  surfaces?: { name: string; url: string }[] | null;
+  target?: string | null;
+  published_at?: string | null;
+  error?: { step: string; reason: string } | null;
+  log?: string[] | null;
+  /** The published app's admin sign-in (its seeded password is replaced on publish). Owner only. */
+  admin?: { email: string; password: string } | null;
+  releases: LiveRelease[];
+};
+
+export type LiveAction = "publish" | "rollback" | "unpublish";
+
+export function getProjectLive(token: string, projectId: string): Promise<LiveStatus> {
+  return callControlPlane<LiveStatus>(`/projects/${encodeURIComponent(projectId)}/live`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function actOnProjectLive(
+  token: string,
+  projectId: string,
+  action: LiveAction,
+  options: { deleteData?: boolean } = {}
+): Promise<LiveStatus> {
+  const suffix = action === "publish" ? "" : `/${action}`;
+  return callControlPlane<LiveStatus>(`/projects/${encodeURIComponent(projectId)}/live${suffix}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(action === "unpublish" ? { delete_data: Boolean(options.deleteData) } : {}),
+  });
+}

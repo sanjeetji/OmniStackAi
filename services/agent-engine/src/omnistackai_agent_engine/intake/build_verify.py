@@ -226,6 +226,18 @@ import subprocess
 _SHARES_WEB_DEPENDENCIES = ("apps/admin",)
 
 
+def _next_surfaces(root: Path) -> list[str]:
+    """Every Next.js app besides the main web app (which the repair loop checks itself)."""
+    found = list(_SHARES_WEB_DEPENDENCIES) if (root / "apps" / "admin").is_dir() else []
+    apps_root = root / "apps"
+    for app_dir in sorted(apps_root.iterdir()) if apps_root.is_dir() else ():
+        relative = f"apps/{app_dir.name}"
+        deps = _dependency_set(app_dir / "package.json") or {}
+        if app_dir.name != "web" and relative not in found and "next" in deps and "expo" not in deps:
+            found.append(relative)
+    return found
+
+
 def _dependency_set(package_json: Path) -> dict | None:
     try:
         data = json.loads(package_json.read_text(encoding="utf-8"))
@@ -265,7 +277,10 @@ def verify_other_surfaces(target_dir: str | os.PathLike[str]) -> dict[str, dict[
     source = os.environ.get(NODE_MODULES_ENV) or None
     shared_ok = source is not None and Path(source).name == "node_modules"
 
-    for relative in _SHARES_WEB_DEPENDENCIES:
+    # PC-008, found live: only apps/admin was checked, so a role surface an ecosystem plan produced
+    # (a clinic's `provider` app) shipped a page importing a component that does not exist, and
+    # the first anyone heard of it was a failed production build. Every Next app is checked now.
+    for relative in _next_surfaces(root):
         app_dir = root / relative
         if not app_dir.is_dir():
             continue

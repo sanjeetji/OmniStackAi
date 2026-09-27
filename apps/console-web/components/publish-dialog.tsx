@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { LivePublishPanel } from "@/components/live-publish-panel";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -222,9 +223,13 @@ export function PublishDialog({
             <DialogTitle>Publish {projectName}</DialogTitle>
           </div>
           <DialogDescription>
-            Deploy your repository directly to your connected Vercel or Netlify account.
+            Put the whole app online at one address, or send just the web app to your own Vercel or
+            Netlify account.
           </DialogDescription>
         </DialogHeader>
+
+        <LivePublishPanel projectId={projectId} />
+        <p className="text-xs font-medium text-muted-foreground">Or: web app only, to Vercel or Netlify</p>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 text-sm text-muted-foreground gap-3">

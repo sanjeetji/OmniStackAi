@@ -182,7 +182,12 @@ def _column_lines(entity: Entity, has_auth: bool = False) -> list[str]:
                 if rules.maximum is not None:
                     checks.append(f"{column} <= {rules.maximum}")
             check = "".join(f" CHECK ({clause})" for clause in checks)
-            lines.append(f"    {column} {pg}{null}{unique}{check}")
+            # PC-008, found live: every repository leaves created_at/updated_at out of INSERT as
+            # database-managed, but a model-declared timestamp column had no default — so the first
+            # record anyone saved failed with a NOT NULL violation. The database fills them now.
+            default = (" DEFAULT now()" if field.name in ("created_at", "updated_at")
+                       and field.type is FieldType.DATETIME else "")
+            lines.append(f"    {column} {pg}{null}{default}{unique}{check}")
 
     for relation in entity.relations:
         if relation.kind in _FK_KINDS:

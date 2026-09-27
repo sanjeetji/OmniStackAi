@@ -214,6 +214,9 @@ def _login_page(ir: ApplicationIR) -> str:
         f'          <h1 className="text-2xl font-bold tracking-tight text-foreground">Sign in to {app_name}</h1>\n'
         '          <p className="mt-1 text-sm text-muted-foreground">Welcome back! Please enter your credentials.</p>\n'
         "        </div>\n\n"
+        # PC-008, found live: this shipped in production builds, advertising the seeded admin's
+        # password on every published app. Next inlines NODE_ENV, so production drops it.
+        '        {process.env.NODE_ENV !== "production" && (\n'
         "        <Button\n"
         '          id="login-demo-fill"\n'
         '          type="button"\n'
@@ -223,7 +226,8 @@ def _login_page(ir: ApplicationIR) -> str:
         "        >\n"
         '          <Zap className="h-3.5 w-3.5" />\n'
         "          Fill Demo Admin (admin@example.local / changeme)\n"
-        "        </Button>\n\n"
+        "        </Button>\n"
+        "        )}\n\n"
         "        {error && (\n"
         '          <Alert id="login-error-banner" variant="destructive" className="mb-4">\n'
         "            <AlertDescription>{error}</AlertDescription>\n"
@@ -2347,13 +2351,19 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "  };",
     ])
 
+    if uses_confirm:
+        # PC-008, found live: declared only when the entity itself can be deleted, while a child
+        # row's delete (a Service list's Bookings) also asks for confirmation — so the page did not
+        # compile whenever the parent was not deletable and a child was.
+        lines.extend([
+            "  // R-304: accessible async confirmation dialog.",
+            "  const { confirmAsync, confirmProps } = useConfirm();",
+        ])
     if can_delete:
         lines.extend([
             f"  const {{ remove }} = useDelete{name}();",
             "  const [batchDeleting, setBatchDeleting] = useState<boolean>(false);",
             "  const [batchDeleteError, setBatchDeleteError] = useState<string | null>(null);",
-            "  // R-304: accessible async confirmation dialog.",
-            "  const { confirmAsync, confirmProps } = useConfirm();",
             "",
             "  const handleDelete = async (id: string) => {",
             f'    const ok = await confirmAsync("Delete {name}", "Are you sure you want to delete this {name}? This action cannot be undone.");',
@@ -4208,11 +4218,11 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
     if Op.GET in ops:
         lines.append(f"  const {{ data: item, loading, error, refetch }} = use{name}(selectedId);")
 
+    if uses_confirm_detail:
+        lines.append("  const { confirmAsync, confirmProps } = useConfirm();  // R-304")
     if can_delete:
         lines.extend([
             f"  const {{ remove: removeMain, loading: deletingMain, error: deleteMainError }} = useDelete{name}();",
-            "  // R-304: accessible async confirmation dialog.",
-            "  const { confirmAsync, confirmProps } = useConfirm();",
             "  const handleDelete = async () => {",
             "    if (!selectedId) return;",
             f'    const ok = await confirmAsync("Delete {name}", "Are you sure you want to delete this {name}? This action cannot be undone.");',
@@ -74026,7 +74036,14 @@ class NextjsWebAdapter:
         for api in ir.apis:
             route_dir = _route_dir(api.path) or "api"
             by_dir.setdefault(route_dir, []).append(api)
+        # PC-008, found live: a plan that declared its own POST /login got a proxy route at
+        # app/login/route.ts beside the sign-in page, and `next build` refuses a page and a route at
+        # one path. A page wins; the API stays reachable under /api.
+        page_dirs = {f.path[len("app/"):-len("/page.tsx")] for f in files
+                     if f.path.startswith("app/") and f.path.endswith("/page.tsx")}
         for route_dir, apis in by_dir.items():
+            if route_dir in page_dirs:
+                continue
             files.append(GeneratedFile(f"app/{route_dir}/route.ts", _route_file(apis)))
 
         return GeneratedProject(self.target.value, tuple(files))
