@@ -1,23 +1,23 @@
-task_id: PC-012
-status: completed
+task_id: PC-013
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: R-108
+tracker_row: R-055
 started_at: "2026-09-27"
-completed_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Legal and account basics for a beta strangers sign up to (D-4). Email verification (building and
-  publishing wait for a verified address; existing accounts are grandfathered), password reset
-  (one-time hashed links, same answer for unknown addresses, every session signed out after a
-  reset), data export and account deletion from Settings, a retention sweeper with the periods the
-  privacy policy states, and Terms of Service and Privacy Policy pages with consent recorded at
-  sign-up. Email is sent through Resend when keyed (PC-070) and logged in dev mode otherwise.
-founder_gate: >-
-  D-4 (email verification and password reset required for beta). The legal texts are drafts for
-  counsel to review before launch.
+  A verified integrations catalog with health tests (R-055, R-056, proves R-511). One catalog of
+  every integration a project or account can add (email, analytics, payments, AI keys, hosting),
+  each saying how it is verified. "Test" makes a real, free call to the provider with the saved
+  credentials (no model is run, nothing is charged, no email is sent) instead of checking the
+  format and claiming success; the result and time are recorded, shown in the console, and saved
+  integrations are re-checked daily so an expired key is noticed. Connector secrets are stored
+  encrypted like every other secret. A user-supplied mail server cannot be used to probe the
+  platform's private network.
+founder_gate: none (live provider accounts arrive at PC-070; proven here with real failing keys and a local SMTP server)
 companions:
-  - "Settings shows verification status, export and delete"
-  - "Sign-up records which terms version was accepted"
+  - "Connector secrets (Resend key, SMTP password) encrypted at rest; existing rows re-encrypted"
+  - "SMTP test refuses private, loopback and link-local addresses outside dev mode"
 allowed_paths:
   - services/control-plane/
   - apps/console-web/
@@ -28,20 +28,16 @@ allowed_paths:
   - CHANGELOG.md
   - .env.example
 forbidden_changes:
-  - no secret or token in logs outside dev mode, client payloads or the repository
+  - no secret in logs, test responses, client payloads or the repository
+  - a health test never runs a model, sends an email or charges anything
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: sign-up, verify by link, build allowed only after; reset by link signs out old sessions; export; delete
+  - Live: each health test gives a true answer for a good and a bad credential where one can be had offline, and for a local SMTP server
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Cancelling a paid plan from Settings (PC-070, billing go-live)"
-found_and_fixed:
-  - "Deleting a workspace purged its folder while the preview kept running; the dev server wrote .next/ and logs back. The Studio now stops the preview first (project delete had the same fault)."
-  - "Unpublish with delete_data left the app's publish folder, including compose.env and secrets.env; it is now removed."
-  - "An account with an active paid plan could be deleted and still be charged; deletion now cancels the plan at the provider first and deletes nothing if that fails."
-
+deferred: []
+found_and_fixed: []
