@@ -3,6 +3,8 @@ package workspaces
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/plans"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -231,6 +233,22 @@ func handleCreateInvite(deps Deps) http.HandlerFunc {
 		role := Role(req.Role)
 		if role == "" {
 			role = RoleMember
+		}
+
+		// PC-011: a workspace holds as many people as the inviter's plan includes (members plus
+		// invitations still open).
+		if plan := plans.For(user.Plan); plan.TeamMembers > 0 {
+			members, _ := deps.WorkspaceStore.ListMembers(r.Context(), id, user.ID)
+			invites, _ := deps.WorkspaceStore.ListInvites(r.Context(), id, user.ID)
+			if seats := len(members) + len(invites); !plans.Within(seats, plan.TeamMembers) {
+				what := fmt.Sprintf("more than %d people in a workspace", plan.TeamMembers)
+				if plan.TeamMembers == 1 {
+					what = "inviting anyone else to a workspace"
+				}
+				plans.Refuse(w, plan, what,
+					func(p plans.Plan) bool { return p.TeamMembers == 0 || p.TeamMembers > seats })
+				return
+			}
 		}
 
 		inv, err := deps.WorkspaceStore.InviteMember(r.Context(), id, user.ID, req.Email, role)

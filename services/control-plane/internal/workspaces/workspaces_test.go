@@ -272,7 +272,7 @@ func TestSlugify(t *testing.T) {
 }
 
 func TestWorkspaceHandlers(t *testing.T) {
-	user := auth.User{ID: "usr-1", Email: "alice@example.com", Name: "Alice"}
+	user := auth.User{ID: "usr-1", Email: "alice@example.com", Name: "Alice", Plan: "pro"} // PC-011: teams are a plan feature
 	authStore := fakeAuthStore{user: user}
 
 	wsStore := &fakeWorkspaceStore{

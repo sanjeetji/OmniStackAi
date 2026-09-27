@@ -77,3 +77,26 @@ func TestConversionsNeverOverspend(t *testing.T) {
 		t.Errorf("round trip gave %d credits, more than the 7 budgeted", got)
 	}
 }
+
+func TestAPlanCanOnlyTightenTheOperatorsCeiling(t *testing.T) {
+	g := Guard{TaskBudgetCredits: 300, UserDailyCap: 0}
+	if got := g.ForPlan(100, 500); got.TaskBudgetCredits != 100 || got.UserDailyCap != 500 {
+		t.Errorf("stricter plan: %+v", got)
+	}
+	if got := g.ForPlan(2000, 0); got.TaskBudgetCredits != 300 || got.UserDailyCap != 0 {
+		t.Errorf("looser plan must not lift the operator's ceiling: %+v", got)
+	}
+}
+
+func TestTheConsoleSwitchPausesPaidWorkLive(t *testing.T) {
+	paused := false
+	g := guard(fakeSpend{})
+	g.PausedNow = func(context.Context) bool { return paused }
+	if d := g.Admit(context.Background(), "u1", 100, true); !d.Allowed {
+		t.Fatal("running: refused")
+	}
+	paused = true
+	if d := g.Admit(context.Background(), "u1", 100, true); d.Status != http.StatusServiceUnavailable {
+		t.Errorf("paused from the console: got %+v", d)
+	}
+}

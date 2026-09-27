@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Coins, Layers, Loader2, LogOut, Settings2 } from "lucide-react";
+import { ChevronDown, Coins, CreditCard, Layers, Loader2, LogOut, Settings2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import type { ControlPlaneUser } from "@/lib/control-plane";
 import { Badge } from "@/components/ui/badge";
@@ -96,11 +96,25 @@ export default function UserMenu({ user }: Readonly<{ user: ControlPlaneUser }>)
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
+            <Link href="/settings/billing">
+              <CreditCard aria-hidden="true" />
+              Plan and billing
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link href="/fabric">
               <Layers aria-hidden="true" />
               Model fabric
             </Link>
           </DropdownMenuItem>
+          {user.role === "super_admin" && (
+            <DropdownMenuItem asChild>
+              <Link href="/admin">
+                <ShieldCheck aria-hidden="true" />
+                Admin console
+              </Link>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem

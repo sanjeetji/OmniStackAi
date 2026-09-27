@@ -39,8 +39,10 @@ type Guard struct {
 	UserDailyCap      int64
 	PlatformDailyCap  int64
 	Paused            bool
-	Spend             SpendReader
-	Now               func() time.Time
+	// PausedNow (PC-011) reads the super_admin console's live switch; nil means only Paused.
+	PausedNow func(ctx context.Context) bool
+	Spend     SpendReader
+	Now       func() time.Time
 }
 
 // Decision is the answer for one task.
@@ -50,6 +52,25 @@ type Decision struct {
 	Message      string
 	RetryAfter   int   // seconds, when known
 	BudgetMicros int64 // USD micros the task may bill; -1 when not limited (BYO key)
+}
+
+// ForPlan narrows the guard to a plan's task budget and daily cap (PC-011). The operator's own
+// settings stay a ceiling over every plan: the stricter of the two applies, and 0 means no limit.
+func (g Guard) ForPlan(taskBudgetCredits, dailyCreditCap int64) Guard {
+	g.TaskBudgetCredits = stricter(g.TaskBudgetCredits, taskBudgetCredits)
+	g.UserDailyCap = stricter(g.UserDailyCap, dailyCreditCap)
+	return g
+}
+
+func stricter(a, b int64) int64 {
+	switch {
+	case a <= 0:
+		return b
+	case b <= 0 || a < b:
+		return a
+	default:
+		return b
+	}
 }
 
 // FromEnv reads the limits from the process environment.
@@ -84,7 +105,7 @@ func (g Guard) Admit(ctx context.Context, userID string, balance int64, billedTo
 	if !billedToPlatform {
 		return Decision{Allowed: true, BudgetMicros: -1}
 	}
-	if g.Paused {
+	if g.Paused || (g.PausedNow != nil && g.PausedNow(ctx)) {
 		return Decision{Status: http.StatusServiceUnavailable, RetryAfter: 900,
 			Message: "Building is paused for a short while by the platform operator. Please try again later."}
 	}

@@ -55,7 +55,7 @@ from ..model_gateway.accounting import bind_ledger, UsageLedger
 from .files import BuildNotFoundError, list_build_files, read_build_file
 from .history import StudioBuildHistory
 from . import estimates
-from .quotas import QuotaExceeded, Quotas, current_user
+from .quotas import QuotaExceeded, Quotas, current_limits, current_user
 from .preview import StudioPreviewManager
 from .problems import ProblemsNotCheckedError, StudioProblemsStore, check_build_problems
 from .server import create_studio_server
@@ -1418,6 +1418,15 @@ def main() -> None:
             return publisher.unpublish(ws_id, repo_dir, delete_data=bool(body.get("delete_data")))
         if not os.path.isdir(repo_dir):
             raise BuildNotFoundError(f"workspace '{ws_id}' has no app to publish yet")
+        # PC-011: published apps per user are a plan limit.
+        owner = current_user.get()
+        limits = current_limits.get() or {}
+        allowed = limits.get("max_published_apps", 0)
+        if owner and allowed and publisher.live_apps(owner, excluding=ws_id) >= allowed:
+            return publisher.status(ws_id) | {
+                "status": "failed", "error": {"step": "plan", "reason": "published app limit"},
+                "message": f"Your plan includes {allowed} published app{'s' if allowed != 1 else ''}. "
+                           "Unpublish one, or upgrade your plan to publish more."}
         ir = workspace_store.load_ir(ws_id)
         name = ir.name if ir is not None else "app"
         env = body.get("env") if isinstance(body.get("env"), dict) else {}
@@ -1433,7 +1442,8 @@ def main() -> None:
                 return None
 
         threading.Thread(target=publisher.publish, args=(ws_id, repo_dir),
-                         kwargs={"name": name, "app_env": app_env, "commit": commit}, daemon=True).start()
+                         kwargs={"name": name, "app_env": app_env, "commit": commit, "owner": owner},
+                         daemon=True).start()
         return publisher.status(ws_id) | {"status": "publishing", "message": "Publishing started."}
 
     from .logs import StudioLogManager

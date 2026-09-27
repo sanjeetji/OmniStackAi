@@ -6,7 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/plans"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/studioauth"
 	"io"
 	"log/slog"
@@ -201,6 +203,24 @@ func handleCreateProject(deps Deps) http.HandlerFunc {
 		}
 		if r.Body != nil {
 			_ = json.NewDecoder(r.Body).Decode(&req)
+		}
+
+		// PC-011: projects this user owns count against their plan.
+		plan := plans.For(user.Plan)
+		if plan.MaxProjects > 0 {
+			owned := 0
+			if list, err := deps.ProjectStore.ListProjects(r.Context(), user.ID, "active", plan.MaxProjects+1); err == nil {
+				for _, existing := range list {
+					if existing.UserID == user.ID {
+						owned++
+					}
+				}
+			}
+			if !plans.Within(owned, plan.MaxProjects) {
+				plans.Refuse(w, plan, fmt.Sprintf("more than %d projects", plan.MaxProjects),
+					func(p plans.Plan) bool { return p.MaxProjects == 0 || p.MaxProjects > owned })
+				return
+			}
 		}
 
 		var p Project
@@ -401,7 +421,8 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 		// PC-010: the budget is the control plane's to set, never the caller's.
 		delete(upstreamPayload, "budget_micros")
 		if deps.CreditGuard != nil {
-			decision := deps.CreditGuard.Admit(r.Context(), user.ID, user.CreditBalance, resolved.BilledTo == "platform")
+			plan := plans.For(user.Plan)
+			decision := deps.CreditGuard.ForPlan(plan.TaskBudgetCredits, plan.DailyCreditCap).Admit(r.Context(), user.ID, user.CreditBalance, resolved.BilledTo == "platform")
 			if !decision.Allowed {
 				credits.Refuse(w, decision, user.CreditBalance)
 				return
@@ -425,6 +446,7 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 		// PC-009: whose build this is, for the Studio's per-user quotas. Set from the session, never
 		// from the caller's own headers.
 		upstreamRequest.Header.Set(studioauth.UserHeader, user.ID)
+		upstreamRequest.Header.Set(plans.LimitsHeader, plans.StudioLimits(plans.For(user.Plan)))
 
 		upstreamResponse, err := deps.httpClient().Do(upstreamRequest)
 		if err != nil {
@@ -629,7 +651,8 @@ func handleProjectEdit(deps Deps) http.HandlerFunc {
 		// PC-010: the budget is the control plane's to set, never the caller's.
 		delete(upstreamPayload, "budget_micros")
 		if deps.CreditGuard != nil {
-			decision := deps.CreditGuard.Admit(r.Context(), user.ID, user.CreditBalance, resolved.BilledTo == "platform")
+			plan := plans.For(user.Plan)
+			decision := deps.CreditGuard.ForPlan(plan.TaskBudgetCredits, plan.DailyCreditCap).Admit(r.Context(), user.ID, user.CreditBalance, resolved.BilledTo == "platform")
 			if !decision.Allowed {
 				credits.Refuse(w, decision, user.CreditBalance)
 				return
@@ -1046,6 +1069,7 @@ func proxyUpstreamWithin(w http.ResponseWriter, r *http.Request, deps Deps, meth
 	if deps.AuthStore != nil {
 		if user, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err == nil {
 			upstreamRequest.Header.Set(studioauth.UserHeader, user.ID)
+			upstreamRequest.Header.Set(plans.LimitsHeader, plans.StudioLimits(plans.For(user.Plan)))
 		}
 	}
 

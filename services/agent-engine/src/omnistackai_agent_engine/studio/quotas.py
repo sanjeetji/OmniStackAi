@@ -26,6 +26,29 @@ from dataclasses import dataclass, field
 
 #: The user the current request acts for, set by the server from X-OmniStack-User.
 current_user: contextvars.ContextVar[str | None] = contextvars.ContextVar("omnistack_user", default=None)
+#: PC-011: that user's plan limits, from X-OmniStack-Limits ("previews_per_user=2;builds_per_hour=30;...").
+current_limits: contextvars.ContextVar[dict[str, int] | None] = contextvars.ContextVar("omnistack_limits", default=None)
+
+
+def parse_limits(header: str | None) -> dict[str, int] | None:
+    if not header:
+        return None
+    out: dict[str, int] = {}
+    for part in header.split(";"):
+        key, _, value = part.partition("=")
+        try:
+            out[key.strip()] = max(0, int(value))
+        except ValueError:
+            continue
+    return out or None
+
+
+def _plan_limit(key: str, env_name: str, default: int) -> int:
+    """The user's plan limit when the control plane sent one (0 = unlimited), else the host's."""
+    limits = current_limits.get()
+    if limits is not None and key in limits:
+        return limits[key]
+    return _int(env_name, default)
 
 
 class QuotaExceeded(Exception):
@@ -59,7 +82,7 @@ class Quotas:
     def admit_build(self, user: str | None) -> None:
         if not user:
             return
-        limit = _int("OMNISTACKAI_BUILDS_PER_HOUR", 30)
+        limit = _plan_limit("builds_per_hour", "OMNISTACKAI_BUILDS_PER_HOUR", 30)
         now = self._clock()
         with self._lock:
             window = self._builds.setdefault(user, deque())
@@ -82,7 +105,7 @@ class Quotas:
             evict: list[str] = []
             if user:
                 mine = sorted((p.started, ws) for ws, p in others.items() if p.user == user)
-                per_user = _int("OMNISTACKAI_MAX_PREVIEWS_PER_USER", 2)
+                per_user = _plan_limit("previews_per_user", "OMNISTACKAI_MAX_PREVIEWS_PER_USER", 2)
                 while per_user and len(mine) >= per_user:
                     evict.append(mine.pop(0)[1])
             if host_limit and len(others) - len(evict) >= host_limit:

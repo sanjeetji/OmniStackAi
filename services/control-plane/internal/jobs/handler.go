@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/plans"
 	"io"
 	"math"
 	"net/http"
@@ -689,7 +690,8 @@ func applyCreditGuard(w http.ResponseWriter, r *http.Request, deps Deps, user au
 	delete(payload, "budget_micros")
 	changed := callerSetBudget
 	if deps.CreditGuard != nil {
-		decision := deps.CreditGuard.Admit(r.Context(), user.ID, user.CreditBalance, billedToPlatform)
+		plan := plans.For(user.Plan)
+		decision := deps.CreditGuard.ForPlan(plan.TaskBudgetCredits, plan.DailyCreditCap).Admit(r.Context(), user.ID, user.CreditBalance, billedToPlatform)
 		if !decision.Allowed {
 			credits.Refuse(w, decision, user.CreditBalance)
 			return body, true

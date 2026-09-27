@@ -186,19 +186,35 @@ class StackPublisher:
                 "--env-file", str(env_file)]
 
     # ── publish ────────────────────────────────────────────────────────────────────────────────
+    def live_apps(self, owner: str, *, excluding: str | None = None) -> int:
+        """How many of this owner's apps are live (PC-011: a plan limit)."""
+        count = 0
+        for state_file in self._root.glob("*/state.json"):
+            if state_file.parent.name == excluding:
+                continue
+            try:
+                state = json.loads(state_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if state.get("owner") == owner and state.get("status") == "live":
+                count += 1
+        return count
+
     def publish(self, app_id: str, repo_dir: str, *, name: str, app_env: dict[str, str] | None = None,
-                commit: Callable[[Path, str], str | None] | None = None) -> dict:
+                commit: Callable[[Path, str], str | None] | None = None, owner: str | None = None) -> dict:
         lock = self._lock(app_id)
         if not lock.acquire(blocking=False):
             return self.status(app_id) | {"status": "publishing", "message": "A publish is already running."}
         try:
-            return self._publish(app_id, Path(repo_dir), name=name, app_env=app_env or {}, commit=commit)
+            return self._publish(app_id, Path(repo_dir), name=name, app_env=app_env or {}, commit=commit, owner=owner)
         finally:
             lock.release()
 
     def _publish(self, app_id: str, repo: Path, *, name: str, app_env: dict[str, str],
-                 commit: Callable[[Path, str], str | None] | None) -> dict:
+                 commit: Callable[[Path, str], str | None] | None, owner: str | None = None) -> dict:
         state = self._state(app_id)
+        if owner:
+            state["owner"] = owner
         target = self._target_now()
         state.update(status="publishing", error=None, target=target.label, log=state.get("log", [])[-50:])
         project = f"omni-{''.join(c for c in app_id.lower() if c.isalnum())[:12]}"

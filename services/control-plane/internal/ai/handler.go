@@ -3,6 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"errors"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/plans"
 	"io"
 	"log/slog"
 	"net/http"
@@ -183,6 +184,12 @@ func handleSetUserKey(deps Deps) http.HandlerFunc {
 		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+
+		// PC-011: using your own model key is a plan feature (or granted per account by an admin).
+		if plan := plans.For(user.Plan); !plan.OwnModelKeys && !user.BYOKEnabled {
+			plans.Refuse(w, plan, "using your own model keys", func(p plans.Plan) bool { return p.OwnModelKeys })
 			return
 		}
 

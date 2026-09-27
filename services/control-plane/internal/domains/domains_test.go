@@ -286,7 +286,7 @@ func TestCalculateExpectedRecord(t *testing.T) {
 
 func TestDomainEndpointsLifecycle(t *testing.T) {
 	authStore := fakeAuthStore{
-		user: auth.User{ID: "usr-123", Email: "founder@example.com"},
+		user: auth.User{ID: "usr-123", Email: "founder@example.com", Plan: "pro"}, // PC-011: custom domains are a plan feature
 	}
 	projectStore := fakeProjectStore{
 		project: projects.Project{ID: "proj-123", UserID: "usr-123"},

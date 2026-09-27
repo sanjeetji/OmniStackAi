@@ -3,6 +3,7 @@ package domains
 import (
 	"encoding/json"
 	"errors"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/plans"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -118,6 +119,10 @@ func handleAddDomain(deps Deps) http.HandlerFunc {
 		user, _, err := checkProjectAccess(r, deps, projectID)
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "unauthorized or project not found")
+			return
+		}
+		if plan := plans.For(user.Plan); !plan.CustomDomains { // PC-011
+			plans.Refuse(w, plan, "custom domains", func(p plans.Plan) bool { return p.CustomDomains })
 			return
 		}
 

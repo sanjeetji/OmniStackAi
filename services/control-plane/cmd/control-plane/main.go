@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/admin"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/billing"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/studioauth"
 	"log/slog"
@@ -129,6 +131,10 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 	})
 	// PC-010: no paid model work at zero credits; per-task budgets; per-user and platform caps.
 	creditGuard := credits.FromEnv(runtimeConfig.CreditsPerUSD, projectStore)
+	creditGuard.PausedNow = func(ctx context.Context) bool {
+		paused, _ := admin.PaidModelWorkPaused(ctx, pool)
+		return paused
+	}
 	jobs.Register(mux, jobs.Deps{
 		AuthStore:      userStore,
 		CreditStore:    userStore,
@@ -166,6 +172,30 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
 		CreditGuard:    &creditGuard,
 		Logger:         logger,
+	})
+	// PC-011: the super_admin console's API.
+	admin.Register(mux, admin.Deps{AuthStore: userStore, Pool: pool, Logger: logger})
+	// PC-011: plans, credit top-ups and plan purchases (Stripe, Razorpay; keys at PC-070).
+	billing.Register(mux, billing.Deps{
+		AuthStore: userStore,
+		Store:     billing.NewPgStore(pool),
+		Stripe:    billing.StripeFromEnv(),
+		Razorpay:  billing.RazorpayFromEnv(),
+		CountProjects: func(ctx context.Context, userID string) int {
+			list, err := projectStore.ListProjects(ctx, userID, "active", 1000)
+			if err != nil {
+				return 0
+			}
+			owned := 0
+			for _, p := range list {
+				if p.UserID == userID {
+					owned++
+				}
+			}
+			return owned
+		},
+		PublicURL: billing.PublicURLFromEnv(),
+		Logger:    logger,
 	})
 	// Template marketplace (Phase T, T-1 / R-519)
 	templates.Register(mux, templates.Deps{

@@ -20,7 +20,7 @@ from typing import Callable
 from urllib.parse import parse_qs, unquote, urlparse
 
 from ..intake.ecosystem import propose_ecosystem
-from .quotas import current_user
+from .quotas import current_limits, current_user, parse_limits
 from ..solution_packs import (
     DEFAULT_ECOSYSTEM_PACK_REGISTRY,
     DEFAULT_SOLUTION_PACK_REGISTRY,
@@ -232,10 +232,12 @@ def _make_handler(
             """
             # Whose request this is, for per-user quotas — believed only alongside the token.
             current_user.set(None)
+            current_limits.set(None)
             if not studio_token or urlparse(self.path).path == "/healthz":
                 return True
             if hmac.compare_digest(self.headers.get(STUDIO_TOKEN_HEADER, ""), studio_token):
                 current_user.set((self.headers.get(STUDIO_USER_HEADER) or "").strip()[:128] or None)
+                current_limits.set(parse_limits(self.headers.get("X-OmniStack-Limits")))  # PC-011
                 return True
             self._send_json(401, {"error": "unauthorized"})
             return False

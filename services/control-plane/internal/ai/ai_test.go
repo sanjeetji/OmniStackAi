@@ -197,7 +197,7 @@ func TestCryptoAADProtection(t *testing.T) {
 func TestAIHandlers(t *testing.T) {
 	mockStore := newMockAIStore()
 	mockAuth := &mockAuthStore{
-		user: auth.User{ID: "test-user-1", Name: "Test User", Email: "test@example.com"},
+		user: auth.User{ID: "test-user-1", Name: "Test User", Email: "test@example.com", Plan: "pro"}, // PC-011: own keys are a plan feature
 	}
 
 	mux := http.NewServeMux()
@@ -288,7 +288,7 @@ func TestAIHandlers(t *testing.T) {
 func TestNvidiaProvider(t *testing.T) {
 	mux := http.NewServeMux()
 	Register(mux, Deps{
-		AuthStore: &mockAuthStore{user: auth.User{ID: "test-user-1", Name: "Test User", Email: "test@example.com"}},
+		AuthStore: &mockAuthStore{user: auth.User{ID: "test-user-1", Name: "Test User", Email: "test@example.com", Plan: "pro"}}, // PC-011: own keys are a plan feature
 		AIStore:   newMockAIStore(),
 	})
 	do := func(method, path, body string) *httptest.ResponseRecorder {
