@@ -1,29 +1,34 @@
-task_id: PC-006
-status: complete
+task_id: PC-085
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
-started_at: "2026-09-26"
-completed_at: "2026-09-26"
+started_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  "Wow in 30 seconds": the first screen of a running app appears fast, and it looks like a modern
-  product. Measured first (PC-084): plan ~7-9 s on Groq, assemble ~1 s, checks ~6 s, preview start
-  ~14 s. Cut the preview start, and raise the visual quality of the generated first screen.
+  Model quality evals and best-model routing. Score every configured provider (Groq, Gemini,
+  OpenRouter free, NVIDIA, local Ollama) per job type — planning an app from a prompt, and repairing
+  code the compiler rejected — and route each job to the best-scoring provider first, keeping the
+  rest of the chain as fallbacks. Quality stays independent of any one vendor.
 founder_gate: >-
-  Founder: "modern, cool, latest UI with maximum features per app"; "continue".
-companions: []
+  Founder-approved 2026-09-26 ("Groq is best; fallback Gemini, OpenRouter, NVIDIA, Ollama").
+companions:
+  - "A scorecard the Studio's provider status can show"
+  - "An opt-in live eval command; task verify stays offline with 0 model calls"
 allowed_paths:
   - services/agent-engine/
-  - apps/console-web/
   - scripts/
+  - docs/MODEL_PROVIDER.md
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
   - task verify stays offline with 0 model calls
+  - OpenRouter uses free models only
+  - a project that pinned a model is never re-routed
 required_gates:
-  - Live build through the console, timed per stage
+  - Live eval across every configured provider, scorecard recorded
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
@@ -31,13 +36,4 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-progress:
-  - "Speed (2026-09-26): preview start 17.7 s -> 9.6 s; live prompt -> running app 12-15 s on Groq (was 18-26 s)."
-  - "Shared warm environment per requirements set for generated Python APIs (localrun/api_env.py), warmed at platform start."
-  - "API, web, admin and mobile readiness probed together every 0.25 s instead of in turn every 1 s."
-  - "Tried and rejected: Turbopack (~0.6 s faster boot, failed to compile generated pages)."
-  - "First screen: tracker archetype, CamelCase names split, home cards say what you can do, top bar lists browsable screens without role badges, header fits a phone (390/390 px live)."
-  - "Next queue task: PC-085 (model quality evals and best-model routing)."
-found_and_fixed:
-  - "Groq wrote screen navigation as objects; they became links to /{'target': ...} and pages that did not compile. Objects are unwrapped and links to missing screens dropped."
-  - "The generated .gitignore ignored `.venv/`, which does not match a symlinked .venv; now `.venv`."
+found_and_fixed: []

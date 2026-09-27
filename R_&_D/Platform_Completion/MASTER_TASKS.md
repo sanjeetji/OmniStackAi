@@ -30,9 +30,9 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 |---|---|
 | Completed | 416 |
 | Completed - needs live proof | 8 |
-| In Progress | 0 |
+| In Progress | 1 |
 | Pending | 98 |
-| Not Started | 516 |
+| Not Started | 515 |
 | Superseded | 12 |
 | Deferred | 57 |
 | Dropped | 9 |
@@ -59,7 +59,7 @@ Open work queue: **104** tasks (P0: 10, P1: 49, P2: 31, P3: 14).
 | 11 | PC-005 | Vibe / Engineering mode switch in the Studio | Completed | P0 | Both |  | ARCH-STUDIO-MODES, BP-INTENT, SPEC-STUDIO-01 | From specs/studio-ux/01. Vibe hides the machinery; Engineering shows plan, stack, diffs, report, PRs. |
 | 12 | PC-006 | 'Wow in 30 seconds': first screen streams fast, latest modern UI, maximum polish per page | Completed | P0 | Vibe |  | BP-SWITCHER, SPEC-TS-01 | R-558 fixed the design system; still needs speed-to-first-screen and visual quality. From specs/table-stakes/01 and the buildout 'intent card' idea. Measured in PC-084: plan 20-29 s (model) and preview start ~14 s are the stages to cut; model-written pages cost ~80 s and their admin page failed to compile, so the repair loop must cover the admin app before model-written pages return to the default path. Speed half done 2026-09-26: preview start 17.7 -> 9.6 s (shared warm API environment, surfaces probed together), live prompt -> running app 12-15 s on Groq; fixed model navigation objects breaking pages. First screen done: tracker home, readable names, cards that say what you can do, header fits a phone. Follow-ups: preview during verification (~5 s), detail screens out of the top bar, auth User entity off home cards. |
 | 13 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | P1 | Vibe | PC-006 |  | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
-| 14 | PC-085 | Model quality evals and best-model routing: score every provider (NVIDIA, cloud, local) per task type and route each job to the best one | Not Started | P1 | Both | PC-047 |  | NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. Founder-approved 2026-09-26. |
+| 14 | PC-085 | Model quality evals and best-model routing: score every provider (NVIDIA, cloud, local) per task type and route each job to the best one | In Progress | P1 | Both | PC-047 |  | NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. Founder-approved 2026-09-26. |
 | 15 | PC-095 | Build fallback chain: Groq -> Gemini -> OpenRouter (free) -> NVIDIA -> local Ollama | Completed | P1 | Platform | PC-085 |  | Founder, 2026-09-26. A rate-limited or failing provider hands the build to the next one. |
 | 16 | PC-094 | Intake repairs, round 2: duplicate roles, a lifecycle for a missing entity, and a clean error (not a crash) for malformed plan parts | Not Started | P1 | Both | PC-093 |  | Found testing weaker models on 2026-09-26: qwen3.8-27b crashed intake with an AttributeError; nemotron named a lifecycle for an entity it did not declare; qwen2.5-coder:7b declared the role 'user' twice. Each is repairable the way PC-093 repairs endpoints. |
 | 17 | PC-007 | Instant in-browser preview (no local toolchain needed) | Not Started | P0 | Vibe |  | ARCH-WEBCONTAINER, BP-TURBO, R-174, SPEC-TS-02 | From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with an open-source engine first; a paid engine licence (D-6) is only a key at the end. |
