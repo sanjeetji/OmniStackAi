@@ -30,8 +30,8 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 |---|---|
 | Completed | 419 |
 | Completed - needs live proof | 8 |
-| In Progress | 0 |
-| Pending | 98 |
+| In Progress | 1 |
+| Pending | 97 |
 | Not Started | 514 |
 | Superseded | 12 |
 | Deferred | 57 |
@@ -64,7 +64,7 @@ Open work queue: **102** tasks (P0: 9, P1: 47, P2: 32, P3: 14).
 | 16 | PC-094 | Intake repairs, round 2: duplicate roles, a lifecycle for a missing entity, and a clean error (not a crash) for malformed plan parts | Completed | P1 | Both | PC-093 |  | Found testing weaker models on 2026-09-26: qwen3.8-27b crashed intake with an AttributeError; nemotron named a lifecycle for an entity it did not declare; qwen2.5-coder:7b declared the role 'user' twice. Each is repairable the way PC-093 repairs endpoints. |
 | 17 | PC-007 | Instant in-browser preview (no local toolchain needed) | Completed | P0 | Vibe |  | ARCH-WEBCONTAINER, BP-TURBO, R-174, SPEC-TS-02 | From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with an open-source engine first; a paid engine licence (D-6) is only a key at the end. Done 2026-09-27: engine switch + container engine (Docker only, gVisor where registered); the WebContainer engine is PC-096. |
 | 18 | PC-096 | In-browser WebContainer preview engine behind the PC-007 engine switch (Node in the visitor's browser; licence key supplied at PC-070) | Not Started | P2 | Vibe | PC-007 |  | Split out of PC-007 on 2026-09-27: PC-007 delivers the engine switch and the open-source container engine; WebContainer needs StackBlitz's commercial licence (D-6) and runs Node only, so Python/Go APIs still need a server-side engine behind it. |
-| 19 | PC-008 | One-click publish to a live URL: web, admin, API and database together, code complete and proven against local stand-ins | Pending | P0 | Vibe | PC-049 | BP-SHIPCHECK, R-048, R-509, R-510, SPEC-TS-03 | R-509/R-510 publish the web app only and were never run for real. From specs/table-stakes/03. Real accounts are plugged in at PC-070. |
+| 19 | PC-008 | One-click publish to a live URL: web, admin, API and database together, code complete and proven against local stand-ins | In Progress | P0 | Vibe | PC-049 | BP-SHIPCHECK, R-048, R-509, R-510, SPEC-TS-03 | R-509/R-510 publish the web app only and were never run for real. From specs/table-stakes/03. Real accounts are plugged in at PC-070. |
 | 20 | PC-009 | Hosted multi-tenant service: per-user isolation of builds, sessions and previews; quotas; egress policy | Not Started | P0 | Platform |  | MULTI-TENANT, PG-05, R-071, R-100, R-175, R-214 | Today the Studio is one trusted operator's tool. Built cloud-neutral and proven locally (Colima); the cloud account (D-2) is plugged in at PC-070. |
 | 21 | PC-010 | Credit fairness: estimate before a build, no charge for internal retries, per-task budgets, cost guardrails | Not Started | P0 | Platform |  | PG-13, R-025, R-046, R-047, R-104 |  |
 | 22 | PC-011 | Plans, entitlements, credit top-up and super_admin console (Phase E) | Not Started | P0 | Platform |  | PG-16, PHASE-E, R-109 | Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at PC-070. Found in R-590: self-registered users get role 'user', which is not one of the plan's roles, so role-guarded actions need an admin to assign roles — include a role manager in the generated admin console. |

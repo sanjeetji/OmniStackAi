@@ -1,44 +1,43 @@
-task_id: PC-007
-status: complete
+task_id: PC-008
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: R-174
+tracker_row: R-048
 started_at: "2026-09-27"
-completed_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Preview a generated app with no local toolchain. A preview-engine switch (local | container |
-  webcontainer, auto by default) and an open-source container engine that runs the whole app — API,
-  web app, admin console — in one container, needing only Docker on the machine, under gVisor where
-  registered. The in-browser WebContainer engine (paid licence, D-6) is split out as PC-096.
+  One-click publish of the whole generated app to a live URL: web app, admin console, API and a
+  dedicated production PostgreSQL together, behind one address (/ web, /admin, /api), built in
+  production mode, migrated, smoke-tested, with rollback. The production bundle (Dockerfiles and a
+  compose file) is generated into the project so the owner can run it anywhere. Proven against a
+  local stand-in (this machine's Docker); the same stack publishes to any server over
+  DOCKER_HOST=ssh://..., with automatic HTTPS for a real domain (Caddy). Only the server and
+  domain are supplied at go-live (PC-070). Managed clouds stay in PC-028; hosted databases in PC-049.
 founder_gate: >-
-  D-6: open source first; a paid engine licence is only a key at the end (PC-070).
+  Keys last (founder, 2026-09-26): code and integrations complete, accounts plugged in at PC-070.
 companions:
-  - "The Studio reports which engine ran the preview and what each engine needs"
+  - "Rollback to the previous release"
+  - "Unpublish"
+  - "Publish status and log in the Studio"
 allowed_paths:
   - services/agent-engine/
+  - apps/console-web/
   - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - .env.example
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - no paid service or licence
+  - no paid service; no secrets in the repo, logs or client payloads
 required_gates:
-  - A live preview with node, pnpm and python removed from PATH
+  - A live publish to the local stand-in, with sign-up, sign-in and a record saved through the published URL
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "PC-096: WebContainer in-browser engine (licence at PC-070)"
-found_and_fixed:
-  - "A dead preview server was noticed only after every readiness probe timed out (180 s); now detected every 0.5 s on both engines."
-  - "pnpm ignores PNPM_STORE_DIR and created .pnpm-store inside the project; npm_config_store_dir is set and .pnpm-store/ is gitignored."
-  - "A virtualenv made under one project's path does not run under another; the container venv lives at a fixed path."
-  - "A unique column that also had a unique index produced a migration that could never apply (duplicate user_email_key); the redundant index is skipped."
-progress:
-  - "Live, node/pnpm/python3 removed from PATH: blog app API/web/admin 200; cold 135 s, warm 10-14 s. Console habit tracker in container: preview 8.9 s, total 20 s."
-  - "Next queue task: PC-008 (one-click publish)."
+deferred: []
+found_and_fixed: []
