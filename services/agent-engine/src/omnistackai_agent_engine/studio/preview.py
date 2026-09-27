@@ -161,6 +161,10 @@ class WorkspacePreviewSession:
         if self.api_port is not None:
             res["api_port"] = self.api_port
         res["kind"] = self.kind
+        # PC-007: which engine runs it (local toolchain, or a container needing only Docker).
+        engine = getattr(self.session, "engine", None) if self.session is not None else None
+        if isinstance(engine, str):
+            res["engine"] = engine
         if self.apps is not None:
             res["apps"] = [dict(app) for app in self.apps]
         if self.demo_users is not None:
@@ -255,6 +259,8 @@ class StudioPreviewManager:
                 "web_url": session.plan.web_url,
                 "message": "The generated web application is running locally.",
             }
+            if isinstance(getattr(session, "engine", None), str):
+                payload["engine"] = session.engine  # PC-007
             if session.plan.backend_kind != "none" and session.api_ready:
                 payload["api_url"] = session.plan.api_url
             # R-541: a prompt-built project can carry a staff console beside the public app.

@@ -19,7 +19,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
+from concurrent.futures import wait as wait_for
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -41,6 +42,8 @@ class LocalAppSession:
         self.api_ready = False
         self.web_ready = False
         self.admin_ready = False
+        #: PC-007: which preview engine runs this session.
+        self.engine = "local"
         self.mobile_ready = False
         self._stopped = False
 
@@ -304,6 +307,43 @@ def _readiness_probes(plan: RunPlan) -> list[_Probe]:
     return probes
 
 
+def await_ready(session: LocalAppSession, plan: RunPlan, health_timeout_seconds: float,
+                require_ready: bool, emit: Callable[[str], None]) -> None:
+    """Wait for every surface of ``plan`` at once and record which came up (shared by every engine).
+
+    PC-006: every surface is probed at once. One after another, each `next dev` compiled its first
+    page only when its turn came, and the preview paid for the API, the web app and the admin
+    console in sequence.
+    """
+    probes = _readiness_probes(plan)
+    if not probes:
+        return
+    for probe in probes:
+        emit(f"Waiting for {probe.name} ...")
+    pool = ThreadPoolExecutor(max_workers=len(probes))
+    try:
+        futures = [
+            pool.submit(_wait_healthy, p.url, timeout_seconds=min(health_timeout_seconds, p.cap))
+            for p in probes
+        ]
+        # PC-007: a server that dies while we wait is reported at once, not after every probe has
+        # used up its whole timeout (seen live: 180 s spent waiting on a container that had exited).
+        while not all(future.done() for future in futures):
+            _ensure_background_processes_running(session)
+            wait_for(futures, timeout=0.5, return_when=FIRST_COMPLETED)
+        results = [future.result() for future in futures]
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+    _ensure_background_processes_running(session)
+    for probe, ready in zip(probes, results):
+        if probe.attr:
+            setattr(session, probe.attr, ready)
+        emit(f"{probe.name} ready: {probe.url}" if ready else f"{probe.name} not ready yet at {probe.url}")
+    for probe, ready in zip(probes, results):
+        if not ready and probe.required and require_ready:
+            raise LocalAppRunError(probe.failure)
+
+
 def _link_shared_environment(cwd: str | None) -> bool:
     return bool(cwd) and link_shared_environment(cwd)
 
@@ -383,27 +423,7 @@ def start_app(
             if on_phase is not None:
                 on_phase("start")
 
-        # PC-006: every surface is probed at once. One after another, each `next dev` compiled its
-        # first page only when its turn came, and the preview paid for the API, the web app and the
-        # admin console in sequence.
-        probes = _readiness_probes(active_plan)
-        if probes:
-            for probe in probes:
-                emit(f"Waiting for {probe.name} ...")
-            with ThreadPoolExecutor(max_workers=len(probes)) as pool:
-                futures = [
-                    pool.submit(_wait_healthy, p.url, timeout_seconds=min(health_timeout_seconds, p.cap))
-                    for p in probes
-                ]
-                results = [future.result() for future in futures]
-            _ensure_background_processes_running(session)
-            for probe, ready in zip(probes, results):
-                if probe.attr:
-                    setattr(session, probe.attr, ready)
-                emit(f"{probe.name} ready: {probe.url}" if ready else f"{probe.name} not ready yet at {probe.url}")
-            for probe, ready in zip(probes, results):
-                if not ready and probe.required and require_ready:
-                    raise LocalAppRunError(probe.failure)
+        await_ready(session, active_plan, health_timeout_seconds, require_ready, emit)
 
         if on_phase is not None:
             on_phase("ready")
@@ -434,6 +454,17 @@ def start_preview_app(
     root = Path(repo_dir).expanduser().resolve()
     if not root.is_dir():
         raise LocalAppRunError(f"not a directory: {root}")
+    # PC-007: the preview engine. `local` runs on this machine's toolchain; `container` needs only
+    # Docker. `auto` (the default) keeps local where the toolchain exists.
+    from .engines import CONTAINER, resolve_engine
+
+    if resolve_engine() == CONTAINER:
+        from .container_engine import start_container_preview
+
+        return start_container_preview(
+            str(root), log=log, health_timeout_seconds=max(health_timeout_seconds, 180.0), host=host,
+            on_phase=on_phase, extra_env=extra_env, log_callback=log_callback, public_base=public_base,
+        )
     # R-553: an ecosystem has as many web surfaces as its plan produced, so count them before
     # allocating rather than assuming two.
     from .plan import discover_web_apps

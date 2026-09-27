@@ -1,9 +1,9 @@
 task_id: PC-007
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: R-174
 started_at: "2026-09-27"
-completed_at: null
+completed_at: "2026-09-27"
 branch: platform-completion
 objective: >-
   Preview a generated app with no local toolchain. A preview-engine switch (local | container |
@@ -34,4 +34,11 @@ model_tool_trace:
 blockers: []
 deferred:
   - "PC-096: WebContainer in-browser engine (licence at PC-070)"
-found_and_fixed: []
+found_and_fixed:
+  - "A dead preview server was noticed only after every readiness probe timed out (180 s); now detected every 0.5 s on both engines."
+  - "pnpm ignores PNPM_STORE_DIR and created .pnpm-store inside the project; npm_config_store_dir is set and .pnpm-store/ is gitignored."
+  - "A virtualenv made under one project's path does not run under another; the container venv lives at a fixed path."
+  - "A unique column that also had a unique index produced a migration that could never apply (duplicate user_email_key); the redundant index is skipped."
+progress:
+  - "Live, node/pnpm/python3 removed from PATH: blog app API/web/admin 200; cold 135 s, warm 10-14 s. Console habit tracker in container: preview 8.9 s, total 20 s."
+  - "Next queue task: PC-008 (one-click publish)."

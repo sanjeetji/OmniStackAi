@@ -125,7 +125,9 @@ QUEUE = [
     ("PC-007", "Instant in-browser preview (no local toolchain needed)", "1 Vibe Mode live",
      "Vibe", "Not Started", "P0", "",
      "From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with "
-     "an open-source engine first; a paid engine licence (D-6) is only a key at the end."),
+     "an open-source engine first; a paid engine licence (D-6) is only a key at the end. Done "
+     "2026-09-27: engine switch + container engine (Docker only, gVisor where registered); the "
+     "WebContainer engine is PC-096."),
     ("PC-096", "In-browser WebContainer preview engine behind the PC-007 engine switch (Node in "
      "the visitor's browser; licence key supplied at PC-070)", "1 Vibe Mode live", "Vibe",
      "Not Started", "P2", "PC-007",

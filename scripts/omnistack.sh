@@ -190,6 +190,22 @@ warm_web_modules() {
 # The same for the Expo apps (founder, 2026-09-26: "what about the app side?"): one install shared
 # by every generated mobile app, so builds type-check them instead of reporting "not installed".
 # Its package.json is kept beside it; when the generated dependencies change, it is rebuilt.
+warm_preview_image() {
+  # PC-007: the container preview engine needs one runtime image; build it before the first preview.
+  local engine="${OMNISTACKAI_PREVIEW_ENGINE:-auto}"
+  if [[ "$engine" == "auto" ]] && command -v node >/dev/null 2>&1 && command -v pnpm >/dev/null 2>&1; then
+    return 0  # auto keeps the local engine where the toolchain exists
+  fi
+  [[ "$engine" == "local" ]] && return 0
+  step "Preparing the container preview engine (one image, reused by every preview)"
+  if PYTHONPATH="$repo_root/services/agent-engine/src" python3 -c \
+      "from omnistackai_agent_engine.localrun.container_engine import ensure_image; ensure_image()" >/dev/null 2>&1; then
+    ok "container preview engine ready"
+  else
+    warn "could not build the preview runtime image - previews will fall back to the local toolchain"
+  fi
+}
+
 warm_api_env() {
   step "Warming the generated-API environment (one install, shared by every generated Python API)"
   if bash "$repo_root/scripts/agent-engine.sh" warm-api-env >/dev/null 2>&1; then
@@ -460,6 +476,7 @@ cmd_up() {
   warm_web_modules
   warm_mobile_modules
   warm_api_env
+  warm_preview_image
 
   step "Agent-engine Studio"
   if service_pid studio >/dev/null; then

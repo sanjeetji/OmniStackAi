@@ -236,7 +236,14 @@ def _index_statements(ir: ApplicationIR) -> list[str]:
     statements: list[str] = []
     for entity in ir.entities:
         table = _table(entity.name)
+        unique_columns = {field.name for field in entity.fields if field.unique}
         for index in entity.indexes:
+            # PC-007, found live: a unique index on one column that is already UNIQUE repeats the
+            # constraint, and its default name `<table>_<column>_key` is the very name PostgreSQL
+            # gives that constraint — so the migration failed with "relation already exists" and
+            # the app never started. The column's own constraint already does the job.
+            if index.unique and len(index.fields) == 1 and index.fields[0] in unique_columns:
+                continue
             columns = ", ".join(sql_identifier(field) for field in index.fields)
             default_name = f"{table}_{'_'.join(index.fields)}_{'key' if index.unique else 'idx'}"
             name = index.name or default_name
