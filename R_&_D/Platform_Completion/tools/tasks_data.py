@@ -102,7 +102,7 @@ QUEUE = [
      "17.7 -> 9.6 s (shared warm API environment, surfaces probed together), live prompt -> running "
      "app 12-15 s on Groq; fixed model navigation objects breaking pages. First screen done: tracker "
      "home, readable names, cards that say what you can do, header fits a phone. Follow-ups: preview "
-     "during verification (~5 s), detail screens out of the top bar, auth User entity off home cards."),
+     "during verification (~5 s), detail screens out of the top bar, auth User entity off home cards. The 'latest modern UI' half was not delivered: pages stayed template-only; carried by PC-097 to PC-101."),
     ("PC-084", "Speed targets measured on every build and enforced: prompt -> preview under "
      "90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate",
      "1 Vibe Mode live", "Vibe", "Not Started", "P1", "PC-006",
@@ -139,12 +139,6 @@ QUEUE = [
      "PC-049", "R-509/R-510 publish the web app only and were never run for real. From "
      "specs/table-stakes/03. Real accounts are plugged in at PC-070. Done 2026-09-27 against the "
      "local stand-in; a real server + domain is proven at PC-071."),
-    ("PC-097", "Compile repair covers every Next surface (admin console and ecosystem role "
-     "surfaces), not only the main web app", "1 Vibe Mode live", "Both", "Not Started", "P1",
-     "PC-008", "Found publishing a clinic app on 2026-09-27: the `provider` role surface shipped a "
-     "model-written page with an invented import and misused components; the build never checked it. "
-     "PC-008 now type-checks every Next surface and publish refuses a broken app with the "
-     "compiler's reason; this task makes the repair loop fix or revert those pages as it does for web."),
     ("PC-009", "Hosted multi-tenant service: per-user isolation of builds, sessions and "
      "previews; quotas; egress policy", "1 Vibe Mode live", "Platform", "Not Started", "P0",
      "", "Today the Studio is one trusted operator's tool. Built cloud-neutral and proven "
@@ -167,6 +161,51 @@ QUEUE = [
     ("PC-013", "Verified integrations catalog with health tests", "1 Vibe Mode live", "Vibe",
      "Pending", "P1", "", "R-511 Connectors v1 exists. Covers R-055, R-056. Done 2026-09-27 (also "
      "proves R-511 live); real-account checks of Resend/Stripe/Razorpay pass at PC-070."),
+    ("PC-097", "Compile repair covers every Next surface (admin console and ecosystem role "
+     "surfaces), not only the main web app", "1 Vibe Mode live", "Both", "Not Started", "P1",
+     "PC-008", "Found publishing a clinic app on 2026-09-27: the `provider` role surface shipped a "
+     "model-written page with an invented import and misused components; the build never checked it. "
+     "PC-008 now type-checks every Next surface and publish refuses a broken app with the "
+     "compiler's reason; this task makes the repair loop fix or revert those pages as it does for web. First of the modern-UI block (added 2026-09-27, founder-approved): PC-098 turns model-written pages back on only once this holds, so no surface can ship a page that does not compile."),
+    ("PC-098", "Model-written pages back on for every Vibe build: fast template first, modern pages "
+     "upgraded in the background, safe under chat edits", "1 Vibe Mode live", "Both", "Not Started",
+     "P0", "PC-097", "PC-084 switched them off (80 s per build; its admin page did not compile), so every "
+     "console build is template pages only: 1 model-written page across 33 projects on 2026-09-27. "
+     "Must: (1) show the template preview as today, then replace pages one by one with model-written "
+     "ones, each type-checked and repaired (PC-097) or kept as the template - never a broken page; "
+     "(2) include the page-writing cost in the estimate before the build (PC-010); (3) chat edits "
+     "update a model-written page instead of regenerating it from the template, so an edit never "
+     "throws the modern page away; (4) pages still use only the app's real data hooks (PC-004); "
+     "(5) say plainly which pages were upgraded and which kept the template; (6) task verify stays "
+     "offline (templates only, 0 model calls); (7) a weak local model (PC-014) falls back cleanly."),
+    ("PC-099", "A design direction per project: colours, type, radius, density and layout style "
+     "chosen from the prompt and the product's archetype", "1 Vibe Mode live", "Both", "Not Started",
+     "P0", "PC-098", "Every project on 2026-09-27 shared one byte-identical tokens.css, so all apps look "
+     "alike. Pick a coherent direction (palette with checked contrast, type pairing, shape, spacing, "
+     "light/dark) from the prompt ('modern', 'playful', 'luxury', named brand colours) and the "
+     "archetype; write it to brand.json and the tokens, and give it to the page writer. A "
+     "deterministic default without a model; the same prompt gives the same direction. Shown and "
+     "editable in the Plan view (PC-022) and later the brand kit (PC-020)."),
+    ("PC-050", "Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, "
+     "command menu, drawer, toasts, tables, forms, maps, uploads)", "1 Vibe Mode live", "Vibe",
+     "Not Started", "P0", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
+     "tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, "
+     "repaired like today's allowlist. From the architecture plan."),
+    ("PC-100", "A modern admin panel: redesign the generated admin console (dashboard with real "
+     "metrics and charts, rich data tables, forms, filters, bulk actions, command menu) in the "
+     "project's design direction", "1 Vibe Mode live", "Both", "Not Started", "P0", "PC-099, PC-050",
+     "The admin console is one template for every project (21 of 27 admin layouts byte-identical on "
+     "2026-09-27). Keep every existing admin capability (roles manager, CRUD on every entity, auth) "
+     "and its API wiring; model-written admin pages go through the same repair and fallback as the "
+     "web app (PC-097, PC-098)."),
+    ("PC-101", "UI quality gate for ordinary prompts: every Vibe build is screenshotted and checked "
+     "(layout, contrast, spacing, phone width, empty/loading/error states) before it is called done",
+     "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-098, PC-099, PC-100",
+     "PC-088's UI review covers packs only. Headless screenshots at phone and desktop widths of every "
+     "surface; deterministic checks (contrast, overflow, broken images, console errors) always, a "
+     "model review when a provider is set; a failing page is repaired or reported, never hidden. A "
+     "fixed set of benchmark prompts (food delivery, clinic, store, SaaS, blog) is re-run so the UI "
+     "is shown to improve and never regress."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "
@@ -183,11 +222,6 @@ QUEUE = [
      "PC-008 (2026-09-27) delivered the per-app PostgreSQL in Docker with a migration ledger; left: "
      "hosted providers (Neon/Supabase), backups, and follow-on migrations for schema changes after "
      "first publish (today a changed 0001_init.sql is not re-applied to a live database)."),
-    ("PC-050", "Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, "
-     "command menu, drawer, toasts, tables, forms, maps, uploads)", "1 Vibe Mode live", "Vibe",
-     "Not Started", "P1", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
-     "tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, "
-     "repaired like today's allowlist. From the architecture plan."),
     ("PC-063", "Android emulator preview without Android Studio: SDK command-line bootstrap, "
      "headless emulator, auto-install, streamed into the Studio", "1 Vibe Mode live", "Both",
      "Not Started", "P1", "", "See NATIVE_MOBILE_PREVIEW_PLAN.md. Open source first; local "
@@ -280,7 +314,7 @@ QUEUE = [
     ("PC-019", "Visual click-to-edit in the preview (design tokens and copy only)",
      "2 Maximum features", "Vibe", "Not Started", "P2", "", "Buildout plan idea 'R-520'."),
     ("PC-020", "Brand kit / Style DNA UI across all surfaces", "2 Maximum features", "Vibe",
-     "Pending", "P2", "", "brand.json exists (R-548); needs the UI. Buildout idea 'R-526'."),
+     "Pending", "P2", "", "brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. Edits the per-project design direction PC-099 creates."),
     ("PC-021", "Screenshot or Figma to app", "2 Maximum features", "Vibe", "Not Started", "P3",
      "", "Buildout idea 'R-527'."),
     ("PC-048", "Database choice: MongoDB as an option beside PostgreSQL (the default)",
@@ -317,7 +351,7 @@ QUEUE = [
     # Phase 3 - Engineering Mode
     ("PC-022", "Plan view: see and edit the plan (apps, roles, entities, flows) before building",
      "3 Engineering Mode", "Engineering", "Not Started", "P1", "PC-005",
-     "Buildout idea 'intent cards'; specs/engineering-mode/01."),
+     "Buildout idea 'intent cards'; specs/engineering-mode/01. Shows the design direction (PC-099) with the plan."),
     ("PC-023", "Stack chooser: pick web/admin/mobile/backend, refused with a reason when "
      "unsupported", "3 Engineering Mode", "Engineering", "Pending", "P1", "PC-005",
      "R-565 carries the stack in the IR; needs the UI. Covers R-135."),
@@ -343,7 +377,7 @@ QUEUE = [
      "Both", "Not Started", "P1", "", "Covers R-022 and buildout idea 'R-524'."),
     ("PC-051", "Graduation bridge: open a Vibe project in Engineering Mode with nothing lost, "
      "and back", "3 Engineering Mode", "Both", "Not Started", "P1", "PC-005, PC-022",
-     "Projects already keep ir.json, so the IR carries over; custom UI and history must too. "
+     "Projects already keep ir.json, so the IR carries over; custom UI and history must too - model-written pages (PC-098) are kept as the project's own code, never regenerated. "
      "From the architecture plan."),
     ("PC-028", "Cloud deploy adapters beyond Vercel/Netlify: containers, Kubernetes (Helm), "
      "Terraform", "3 Engineering Mode",
