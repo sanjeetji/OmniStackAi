@@ -121,6 +121,9 @@ class ResolutionBuildsTheChainFromSettings(TestCase):
         "OMNISTACKAI_FALLBACK_PROVIDERS": "google,openrouter,nvidia,ollama",
         "OMNISTACKAI_OLLAMA_BASE_URL": "http://127.0.0.1:11434",
         "OMNISTACKAI_OLLAMA_MODEL": "qwen2.5-coder:7b",
+        # PC-085 orders the chain by this machine's model scorecard; this test is about configured
+        # order, so it must never read the real one (it broke the gate once the local 7b scored).
+        "OMNISTACKAI_MODEL_SCORECARD": "/nonexistent/omnistack-test-scorecard.json",
     }
 
     def test_in_order_skipping_providers_without_a_key(self) -> None:
