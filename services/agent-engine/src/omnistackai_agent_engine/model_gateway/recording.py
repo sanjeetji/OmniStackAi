@@ -20,6 +20,7 @@ import time
 from collections.abc import AsyncIterator
 
 from .accounting import UsageLedger
+from .errors import BudgetExceededError
 from .contracts import (
     GenerateRequest,
     GenerateResponse,
@@ -53,7 +54,13 @@ class RecordingProvider:
     async def discover_models(self) -> tuple[ModelDescriptor, ...]:
         return await self._inner.discover_models()
 
+    def _check_budget(self) -> None:
+        # PC-010: a task that has spent its budget makes no further paid call.
+        if self._ledger.over_budget():
+            raise BudgetExceededError("this task has used its credit budget")
+
     async def generate(self, request: GenerateRequest) -> GenerateResponse:
+        self._check_budget()
         tier = "local" if self._inner.provider_id == OLLAMA_PROVIDER_ID else "cloud"
         started = time.monotonic()
         try:
@@ -89,6 +96,7 @@ class RecordingProvider:
         """R-484: streaming twin of ``generate`` - forwards every event from ``inner`` unchanged
         and records exactly one ledger entry per call, on the final (``done=True``) event's usage
         or on a failure, mirroring ``generate``'s own success/failure recording shape."""
+        self._check_budget()
         tier = "local" if self._inner.provider_id == OLLAMA_PROVIDER_ID else "cloud"
         started = time.monotonic()
         try:

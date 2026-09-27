@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/studioauth"
 	"io"
 	"log/slog"
@@ -56,8 +57,11 @@ type Deps struct {
 	AIStore        ai.Store
 	AgentEngineURL string
 	CreditsPerUSD  float64
-	Logger         *slog.Logger
-	HTTPClient     *http.Client
+	// CreditGuard (PC-010) decides whether paid model work may start and its budget; nil in tests
+	// that are not about credits.
+	CreditGuard *credits.Guard
+	Logger      *slog.Logger
+	HTTPClient  *http.Client
 }
 
 func (d Deps) logger() *slog.Logger {
@@ -114,6 +118,9 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("GET /projects/{id}/preview", handleProjectPreviewGet(deps))
 	mux.HandleFunc("POST /projects/{id}/preview", handleProjectPreview(deps))
 	mux.HandleFunc("POST /projects/{id}/preview/stop", handleProjectPreviewStop(deps))
+	// PC-010: what a build or edit will cost, before it starts.
+	mux.HandleFunc("GET /projects/{id}/estimate", handleProjectEstimate(deps))
+	mux.HandleFunc("GET /estimate", handleProjectEstimate(deps))
 	// PC-008: the whole app (database, API, web, admin) at a live URL.
 	mux.HandleFunc("GET /projects/{id}/live", handleProjectLive(deps, "", http.MethodGet))
 	mux.HandleFunc("POST /projects/{id}/live", handleProjectLive(deps, "", http.MethodPost))
@@ -391,6 +398,18 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 		if resolved.APIKey != "" {
 			upstreamPayload["api_key"] = resolved.APIKey
 		}
+		// PC-010: the budget is the control plane's to set, never the caller's.
+		delete(upstreamPayload, "budget_micros")
+		if deps.CreditGuard != nil {
+			decision := deps.CreditGuard.Admit(r.Context(), user.ID, user.CreditBalance, resolved.BilledTo == "platform")
+			if !decision.Allowed {
+				credits.Refuse(w, decision, user.CreditBalance)
+				return
+			}
+			if decision.BudgetMicros >= 0 {
+				upstreamPayload["budget_micros"] = decision.BudgetMicros
+			}
+		}
 		reqBody, _ := json.Marshal(upstreamPayload)
 
 		upstreamURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/build/stream"
@@ -607,6 +626,18 @@ func handleProjectEdit(deps Deps) http.HandlerFunc {
 		if resolved.APIKey != "" {
 			upstreamPayload["api_key"] = resolved.APIKey
 		}
+		// PC-010: the budget is the control plane's to set, never the caller's.
+		delete(upstreamPayload, "budget_micros")
+		if deps.CreditGuard != nil {
+			decision := deps.CreditGuard.Admit(r.Context(), user.ID, user.CreditBalance, resolved.BilledTo == "platform")
+			if !decision.Allowed {
+				credits.Refuse(w, decision, user.CreditBalance)
+				return
+			}
+			if decision.BudgetMicros >= 0 {
+				upstreamPayload["budget_micros"] = decision.BudgetMicros
+			}
+		}
 		reqBody, _ := json.Marshal(upstreamPayload)
 
 		targetURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/edit"
@@ -798,6 +829,90 @@ func handleProjectPreview(deps Deps) http.HandlerFunc {
 
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/preview"
 		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, bodyReader, defaultPreviewTimeout)
+	}
+}
+
+// handleProjectEstimate (PC-010) answers "what will this cost?" before a build or edit: the likely
+// range in credits for the model this project would use, the balance, and whether it may start
+// now (and if not, why). Work billed to the user's own model key costs no credits.
+func handleProjectEstimate(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		// A new chat has no project yet: /estimate answers for the account's default model.
+		id := r.PathValue("id")
+		if id != "" {
+			if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+				writeError(w, http.StatusNotFound, "project not found")
+				return
+			}
+		}
+		kind := r.URL.Query().Get("kind")
+		if kind != "edit" {
+			kind = "build"
+		}
+		resolved := ai.ResolveModel(r.Context(), deps.AIStore, user.ID, id)
+		out := map[string]any{"kind": kind, "credit_balance": user.CreditBalance, "billed_to": resolved.BilledTo}
+		if resolved.BilledTo != "platform" {
+			out["credits_low"], out["credits_high"] = 0, 0
+			out["can_start"] = true
+			out["note"] = "Billed to your own model key: no credits are used."
+			writeJSON(w, http.StatusOK, out)
+			return
+		}
+		query := url.Values{"kind": {kind}}
+		if resolved.ProviderID != "" {
+			query.Set("provider_id", resolved.ProviderID)
+			query.Set("model_id", resolved.ModelID)
+		}
+		ctx, cancel := upstreamContext(r.Context(), defaultProxyTimeout)
+		defer cancel()
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, deps.AgentEngineURL+"/api/estimate?"+query.Encode(), nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "could not build the estimate request")
+			return
+		}
+		resp, err := deps.httpClient().Do(req)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "could not reach the build service")
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+		var est struct {
+			Priced   bool   `json:"priced"`
+			Low      int64  `json:"cost_micros_low"`
+			High     int64  `json:"cost_micros_high"`
+			Basis    string `json:"basis"`
+			Provider string `json:"provider_id"`
+			Model    string `json:"model_id"`
+		}
+		if resp.StatusCode != http.StatusOK || json.NewDecoder(resp.Body).Decode(&est) != nil {
+			writeError(w, http.StatusBadGateway, "the build service could not estimate")
+			return
+		}
+		out["credits_low"] = credits.MicrosToCredits(est.Low, deps.CreditsPerUSD)
+		out["credits_high"] = credits.MicrosToCredits(est.High, deps.CreditsPerUSD)
+		out["model"] = est.Provider + ":" + est.Model
+		out["basis"] = est.Basis
+		out["priced"] = est.Priced
+		if !est.Priced {
+			out["note"] = "This model has no configured price, so it uses no credits."
+		}
+		out["can_start"] = true
+		if deps.CreditGuard != nil {
+			decision := deps.CreditGuard.Admit(r.Context(), user.ID, user.CreditBalance, true)
+			out["can_start"] = decision.Allowed
+			if !decision.Allowed {
+				out["reason"] = decision.Message
+				out["retry_after"] = decision.RetryAfter
+			} else {
+				out["budget_credits"] = credits.MicrosToCredits(decision.BudgetMicros, deps.CreditsPerUSD)
+			}
+		}
+		writeJSON(w, http.StatusOK, out)
 	}
 }
 
@@ -1003,7 +1118,12 @@ func creditsForUsage(raw any, creditsPerUSD float64) int64 {
 	if !ok || usageMap == nil {
 		return 0
 	}
-	rawCost, ok := usageMap["cost_micros_usd"]
+	// PC-010: the billable cost leaves out answers the platform threw away and is capped at the
+	// task's budget; older payloads only carry the total.
+	rawCost, ok := usageMap["billable_cost_micros_usd"]
+	if !ok || rawCost == nil {
+		rawCost, ok = usageMap["cost_micros_usd"]
+	}
 	if !ok || rawCost == nil {
 		return 0
 	}

@@ -10,6 +10,9 @@ platform can optimize cost per successful accepted change (Brief 18.4, 68, 92.15
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
+
 import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -105,6 +108,8 @@ DEFAULT_PRICE_BOOK = PriceBook(
         ("openai", "gpt-4o"): ModelPrice("2.5", "10"),
         ("google-gemini", "gemini-1.5-pro"): ModelPrice("1.25", "5"),
         ("groq", "llama-3.3-70b-versatile"): ModelPrice("0.59", "0.79"),
+        # PC-010: the build model since 2026-09-26. Groq's published price; verify before launch.
+        ("groq", "openai/gpt-oss-120b"): ModelPrice("0.15", "0.75"),
         ("deepseek", "deepseek-chat"): ModelPrice("0.27", "1.10"),
         ("xai", "grok-2-latest"): ModelPrice("2", "10"),
         ("mistral", "mistral-large-latest"): ModelPrice("2", "6"),
@@ -113,6 +118,35 @@ DEFAULT_PRICE_BOOK = PriceBook(
         # openrouter and custom providers are intentionally unpriced (they vary by model).
     }
 )
+
+
+def price_book_from_env(base: PriceBook = DEFAULT_PRICE_BOOK) -> PriceBook:
+    """PC-010: the operator's own prices, over the defaults.
+
+    ``OMNISTACKAI_MODEL_PRICES='{"groq:openai/gpt-oss-120b": [0.15, 0.75], "nvidia:*": [0, 0]}'`` —
+    USD per million input and output tokens; ``provider:*`` prices every model of a provider. A
+    model with no price is billed nothing and reported as unpriced, never guessed.
+    """
+    import json
+    import os
+
+    raw = os.environ.get("OMNISTACKAI_MODEL_PRICES", "").strip()
+    if not raw:
+        return base
+    try:
+        overrides = json.loads(raw)
+    except ValueError:
+        return base
+    prices = {(provider, model): price for provider, model, price in base.entries()}
+    for key, value in overrides.items() if isinstance(overrides, dict) else ():
+        provider, _, model = str(key).partition(":")
+        if not provider or not isinstance(value, (list, tuple)) or len(value) != 2:
+            continue
+        try:
+            prices[(provider, None if model in ("", "*") else model)] = ModelPrice(str(value[0]), str(value[1]))
+        except (ValueError, TypeError):
+            continue
+    return PriceBook(prices)
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,12 +226,40 @@ def _percentile(sorted_values: list[int], percentile: int) -> int:
 
 
 class UsageLedger:
-    """Thread-safe append-only ledger of :class:`UsageRecord` with deterministic aggregation."""
+    """Thread-safe append-only ledger of :class:`UsageRecord` with deterministic aggregation.
 
-    def __init__(self, price_book: PriceBook | None = None) -> None:
-        self._price_book = price_book if price_book is not None else DEFAULT_PRICE_BOOK
+    PC-010 adds what a user is charged, which is not always what the platform spent:
+
+    * ``discard(request_id)`` — an answer the platform threw away and retried (invalid code, a
+      rejected edit proposal) is never billed; the user pays for answers that were used;
+    * ``budget_usd`` — the most this task may bill. Once reached, further calls are refused
+      (:class:`BudgetExceededError`) and the build finishes on deterministic templates.
+    """
+
+    def __init__(self, price_book: PriceBook | None = None, *, budget_usd: Decimal | None = None) -> None:
+        self._price_book = price_book if price_book is not None else price_book_from_env()
         self._records: list[UsageRecord] = []
+        self._discarded: set[str] = set()
         self._lock = threading.Lock()
+        self.budget_usd = budget_usd
+
+    def discard(self, request_id: str) -> None:
+        with self._lock:
+            self._discarded.add(request_id)
+
+    def discarded(self) -> frozenset[str]:
+        with self._lock:
+            return frozenset(self._discarded)
+
+    def billable_cost_usd(self) -> Decimal:
+        """What the user is charged: used answers only, never more than the budget."""
+        with self._lock:
+            cost = sum((r.cost_usd for r in self._records
+                        if r.success and r.cost_usd is not None and r.request_id not in self._discarded), Decimal("0"))
+        return min(cost, self.budget_usd) if self.budget_usd is not None else cost
+
+    def over_budget(self) -> bool:
+        return self.budget_usd is not None and self.billable_cost_usd() >= self.budget_usd
 
     def record_call(
         self,
@@ -288,3 +350,32 @@ def _breakdown(provider_id: str, model_id: str, group: list[UsageRecord]) -> Usa
         cost_usd=sum((r.cost_usd for r in group if r.cost_usd is not None), Decimal("0")),
         unpriced_calls=sum(1 for r in successful if r.cost_usd is None),
     )
+
+
+# ── PC-010: the ledger of the task running now, for code that retries without holding it ────────
+
+_current_ledger: contextvars.ContextVar[UsageLedger | None] = contextvars.ContextVar(
+    "omnistack_usage_ledger", default=None)
+
+
+@contextlib.contextmanager
+def billing_scope(ledger: UsageLedger | None):
+    """Make ``ledger`` the one ``discard_attempt`` marks, for the duration of a task."""
+    token = _current_ledger.set(ledger)
+    try:
+        yield ledger
+    finally:
+        _current_ledger.reset(token)
+
+
+def bind_ledger(ledger: UsageLedger | None) -> None:
+    """Make ``ledger`` the current task's for the rest of this request (each runs in its own
+    thread or event loop, so nothing leaks to the next)."""
+    _current_ledger.set(ledger)
+
+
+def discard_attempt(request_id: str) -> None:
+    """The platform threw this answer away and will retry: the user must not pay for it."""
+    ledger = _current_ledger.get()
+    if ledger is not None:
+        ledger.discard(request_id)

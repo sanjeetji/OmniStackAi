@@ -10,6 +10,8 @@ the one explicit `generate_app_delta_proposal` boundary.
 
 from __future__ import annotations
 
+from ..model_gateway.accounting import discard_attempt
+
 import json
 import re
 import uuid
@@ -657,6 +659,7 @@ async def generate_app_delta_proposal(
             )
         except AppDeltaError as error:
             last_reason = str(error)
+            discard_attempt(request.request_id)  # PC-010: a rejected proposal is never billed
             if attempt >= attempts_allowed:
                 raise
             messages.append(Message(ChatRole.ASSISTANT, _safe_echo(response.text)))

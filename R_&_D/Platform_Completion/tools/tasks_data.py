@@ -152,7 +152,7 @@ QUEUE = [
      "Covers R-100, R-214, R-071, R-175. Done 2026-09-27; left: per-user disk quotas, cloud account."),
     ("PC-010", "Credit fairness: estimate before a build, no charge for internal retries, "
      "per-task budgets, cost guardrails", "1 Vibe Mode live", "Platform", "Not Started", "P0",
-     "", "Covers R-046, R-047, R-025, R-104."),
+     "", "Covers R-046, R-047, R-025, R-104. Done 2026-09-27; model prices beyond Groq are PC-011."),
     ("PC-011", "Plans, entitlements, credit top-up and super_admin console (Phase E)",
      "1 Vibe Mode live", "Platform", "Not Started", "P0", "",
      "Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at "

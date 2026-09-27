@@ -1,9 +1,9 @@
 task_id: PC-010
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: R-046
 started_at: "2026-09-27"
-completed_at: null
+completed_at: "2026-09-27"
 branch: platform-completion
 objective: >-
   Credit fairness. A user sees what a build or edit will cost before starting it; is never charged
@@ -35,5 +35,12 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "Prices for Gemini, NVIDIA and OpenRouter models, and the value of a credit (founder pricing decision, PC-011)"
+found_and_fixed:
+  - "Nothing refused paid work at zero credits: the charge was clamped to the balance, so an empty account built for free."
+  - "The build models (Groq gpt-oss-120b and the fallbacks) had no price, so every build cost 0 credits."
+  - "A caller could have sent its own budget in the request body; the control plane now drops it and sets its own."
+progress:
+  - "Live via console: estimate 5-10 credits shown before a build; build charged 3 (cost $0.0023); with 1 credit left, cost $0.0026 charged exactly 1; at zero, refused (402) and the prompt box said why in advance."
+  - "Next queue task: PC-011 (plans, entitlements, top-up, super-admin)."

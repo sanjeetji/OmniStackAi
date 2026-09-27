@@ -1,5 +1,6 @@
 "use client";
 
+import { CostHint } from "@/components/cost-hint";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -1477,6 +1478,7 @@ export default function StudioChat({
           <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
             Enter to send · Shift+Enter for a new line · Type @ to mention skills
           </p>
+          <CostHint kind={activeProjectId ? "edit" : "build"} projectId={activeProjectId} refreshKey={messages.length} />
         </form>
       </aside>
 

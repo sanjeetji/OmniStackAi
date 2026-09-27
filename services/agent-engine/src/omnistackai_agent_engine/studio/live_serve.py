@@ -51,9 +51,10 @@ from ..intake.app_delta import (
 from ..intake.provider_resolution import resolve_generation_provider_from_env
 from ..model_gateway.overview import platform_overview
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt, build_app_from_prompt_stream
-from ..model_gateway.accounting import UsageLedger
+from ..model_gateway.accounting import bind_ledger, UsageLedger
 from .files import BuildNotFoundError, list_build_files, read_build_file
 from .history import StudioBuildHistory
+from . import estimates
 from .quotas import QuotaExceeded, Quotas, current_user
 from .preview import StudioPreviewManager
 from .problems import ProblemsNotCheckedError, StudioProblemsStore, check_build_problems
@@ -63,6 +64,20 @@ from .templates import TemplateCatalog, is_template_workspace
 from .workspace import StudioWorkspaceStore, WorkspaceLockedError
 
 _MICROS_PER_USD = Decimal(1_000_000)
+
+
+def _task_ledger(budget_micros: object = None) -> UsageLedger:
+    """PC-010: one task's ledger, with the budget the control plane set for it (never more than the
+    user's balance), made current so retry loops can mark answers they throw away."""
+    budget = None
+    try:
+        if budget_micros is not None and int(budget_micros) >= 0:
+            budget = Decimal(int(budget_micros)) / _MICROS_PER_USD
+    except (TypeError, ValueError):
+        budget = None
+    ledger = UsageLedger(budget_usd=budget)
+    bind_ledger(ledger)
+    return ledger
 
 
 def _usage_summary_to_dict(ledger: UsageLedger) -> dict:
@@ -101,6 +116,11 @@ def _usage_summary_to_dict(ledger: UsageLedger) -> dict:
         "output_tokens": summary.output_tokens,
         "unpriced_calls": summary.unpriced_calls,
         "cost_micros_usd": cost_micros,
+        # PC-010: what the user is charged — used answers only, capped at the task's budget.
+        "billable_cost_micros_usd": int((ledger.billable_cost_usd() * _MICROS_PER_USD).to_integral_value(rounding=ROUND_HALF_UP)),
+        "discarded_calls": len(ledger.discarded()),
+        "budget_micros_usd": (int((ledger.budget_usd * _MICROS_PER_USD).to_integral_value(rounding=ROUND_HALF_UP))
+                              if ledger.budget_usd is not None else None),
         "calls": calls_list,
     }
 
@@ -497,7 +517,7 @@ def _build(
             "hybrid_ui_active": False,
         }
     else:
-        usage_ledger = UsageLedger()
+        usage_ledger = _task_ledger(extra_options.pop("budget_micros", None))
         provider, eff_model_id, max_output, request_timeout = resolve_generation_provider_from_env(
             usage_ledger=usage_ledger,
             provider_id=provider_id,
@@ -617,7 +637,7 @@ async def _build_stream(
         )
 
     stream_started = time.perf_counter()
-    usage_ledger = UsageLedger()
+    usage_ledger = _task_ledger(extra_options.pop("budget_micros", None))
     provider, eff_model_id, max_output, request_timeout = resolve_generation_provider_from_env(
         usage_ledger=usage_ledger,
         provider_id=provider_id,
@@ -674,6 +694,7 @@ async def _build_stream(
     assert result is not None  # build_app_from_prompt_stream always yields exactly one result last
 
     payload = app_build_result_to_dict(result, usage=_usage_summary_to_dict(usage_ledger))
+    estimates.record("build", usage_ledger)  # PC-010: grounds the next estimate
     payload["hybrid_ui_requested"] = False
     payload["hybrid_ui_active"] = False
     editable_ir = result.ir
@@ -889,7 +910,7 @@ async def _edit(
     # R-476: without usage_ledger, an edit's real cost was never recorded anywhere - the response
     # had no "usage" key at all, so the control-plane's Job API proxy would debit 0 credits for
     # every edit regardless of what it actually cost. Mirrors _build()'s own exact pattern.
-    usage_ledger = UsageLedger()
+    usage_ledger = _task_ledger(extra_options.pop("budget_micros", None))
     provider, eff_model_id, _max_output, timeout = resolve_generation_provider_from_env(
         usage_ledger=usage_ledger,
         provider_id=provider_id,
@@ -1081,7 +1102,7 @@ async def _workspace_edit(
         if not os.path.isdir(repo_dir):
             raise BuildNotFoundError(f"workspace '{ws_id}' repo directory does not exist")
 
-        usage_ledger = UsageLedger()
+        usage_ledger = _task_ledger(options.pop("budget_micros", None))
         provider, eff_model_id, _max_output, timeout = resolve_generation_provider_from_env(
             usage_ledger=usage_ledger,
             provider_id=provider_id,
@@ -1193,6 +1214,7 @@ async def _workspace_code_edit(
     provider_id: str | None = None,
     model_id: str | None = None,
     api_key: str | None = None,
+    budget_micros: int | None = None,
 ) -> dict:
     """Change a template project's code by chat (R-525). Raises CodeEditError (nothing saved)."""
     from ..intake.context import assemble_context
@@ -1200,7 +1222,7 @@ async def _workspace_code_edit(
 
     with workspace_store.lock(ws_id):
         repo_dir = workspace_store.repo_path(ws_id)
-        usage_ledger = UsageLedger()
+        usage_ledger = _task_ledger(budget_micros)
         provider, eff_model_id, max_output, timeout = resolve_generation_provider_from_env(
             usage_ledger=usage_ledger,
             provider_id=provider_id,
@@ -1313,7 +1335,18 @@ def main() -> None:
         return _workspace_build_stream(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)
 
     def workspace_edit(ws_id: str, prompt: str, **options) -> dict:
-        return asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store, **options))
+        result = asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store, **options))
+        usage = result.get("usage") if isinstance(result, dict) else None
+        if isinstance(usage, dict) and usage.get("total_calls"):
+            estimates.record_counts("edit", usage.get("input_tokens", 0), usage.get("output_tokens", 0))
+        return result
+
+    def estimate(kind: str, provider_id: str | None = None, model_id: str | None = None) -> dict:
+        """PC-010: the likely cost of a build or edit, for the model this project would use now."""
+        if not provider_id:
+            provider, model, _, _ = resolve_generation_provider_from_env(task="plan")
+            provider_id, model_id = provider.provider_id, model
+        return estimates.estimate(kind, provider_id, model_id or "")
 
     def workspace_preview(
         ws_id: str,
@@ -1364,6 +1397,9 @@ def main() -> None:
         if report is None:
             raise ProblemsNotCheckedError(f"workspace '{ws_id}' has not been checked for problems yet")
         return report
+
+    # PC-010: this server keeps the token history estimates are grounded in.
+    os.environ.setdefault(estimates.HISTORY_ENV, str(estimates.default_history_path()))
 
     from ..publish.stack import StackPublisher
 
@@ -1461,6 +1497,7 @@ def main() -> None:
         "workspace_preview_status_fn": workspace_preview_status,
         "workspace_preview_stop_fn": workspace_preview_stop,
         "workspace_live_fn": workspace_live,
+        "estimate_fn": estimate,
         "workspace_problems_check_fn": workspace_problems_check,
         "workspace_problems_get_fn": workspace_problems_get,
         "workspace_cancel_fn": workspace_cancel,

@@ -137,6 +137,7 @@ def _make_handler(
     workspace_preview_status_fn: PreviewBuildFn | None = None,
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_live_fn: Callable[[str, str, dict], dict] | None = None,
+    estimate_fn: Callable[..., dict] | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
     workspace_cancel_fn: Callable[[str], dict] | None = None,
@@ -1160,6 +1161,18 @@ def _make_handler(
                 self._send(200, "text/html; charset=utf-8", STUDIO_HTML.encode("utf-8"))
             elif self.path == "/healthz":
                 self._send_json(200, {"status": "ok"})
+            elif urlparse(self.path).path == "/api/estimate":
+                # PC-010: what a build or edit will likely cost, before it starts.
+                if estimate_fn is None:
+                    self._send_json(404, {"error": "estimates are not enabled"})
+                    return
+                query = parse_qs(urlparse(self.path).query)
+                try:
+                    self._send_json(200, estimate_fn((query.get("kind") or ["build"])[0],
+                                                     (query.get("provider_id") or [None])[0],
+                                                     (query.get("model_id") or [None])[0]))
+                except Exception as error:  # noqa: BLE001
+                    self._send_json(502, {"error": str(error)})
             elif self.path == "/api/preview":
                 if status_fn is None:
                     self._send_json(404, {"error": "preview controls are not enabled"})
@@ -2027,6 +2040,7 @@ def create_studio_server(
     workspace_preview_status_fn: PreviewBuildFn | None = None,
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_live_fn: Callable[[str, str, dict], dict] | None = None,
+    estimate_fn: Callable[..., dict] | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
     workspace_cancel_fn: Callable[[str], dict] | None = None,
@@ -2118,6 +2132,7 @@ def create_studio_server(
             workspace_preview_status_fn=workspace_preview_status_fn,
             workspace_preview_stop_fn=workspace_preview_stop_fn,
             workspace_live_fn=workspace_live_fn,
+            estimate_fn=estimate_fn,
             workspace_problems_check_fn=workspace_problems_check_fn,
             workspace_problems_get_fn=workspace_problems_get_fn,
             workspace_cancel_fn=workspace_cancel_fn,

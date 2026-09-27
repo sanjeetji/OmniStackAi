@@ -82,6 +82,13 @@ class ModelProfileMismatchError(ModelProviderError):
     code = "model_profile_mismatch"
 
 
+class BudgetExceededError(ModelProviderError):
+    """PC-010: this task has spent its budget; no further model call is made for it.
+
+    A model failure like any other to the callers, so they fall back to their deterministic
+    templates rather than stopping the build."""
+
+
 class MissingCredentialError(ModelProviderError):
     code = "missing_credential"
 

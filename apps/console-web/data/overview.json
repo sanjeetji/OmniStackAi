@@ -159,6 +159,12 @@
       "outputPerMTokUsd": "0.79"
     },
     {
+      "providerId": "groq",
+      "modelId": "openai/gpt-oss-120b",
+      "inputPerMTokUsd": "0.15",
+      "outputPerMTokUsd": "0.75"
+    },
+    {
       "providerId": "mistral",
       "modelId": "mistral-large-latest",
       "inputPerMTokUsd": "2",

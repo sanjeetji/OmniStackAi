@@ -17,6 +17,8 @@ Guarantees:
 
 from __future__ import annotations
 
+from ..model_gateway.accounting import discard_attempt
+
 import asyncio
 import logging
 import re
@@ -667,6 +669,7 @@ async def _synthesize_file(
             logger.info("Synthesized bespoke LLM UI for %s on attempt %d", log_label, attempt)
             return _finalize(cleaned, tag)
         last_reason = reason
+        discard_attempt(request.request_id)  # PC-010: a rejected answer is never billed
         logger.warning(
             "Synthesized JSX for %s rejected on attempt %d/%d (%s)", log_label, attempt, attempts_allowed, reason
         )

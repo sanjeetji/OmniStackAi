@@ -412,7 +412,10 @@ for route in 'POST /jobs/build/{id}/edit' 'GET /jobs/build/{id}/turns'; do
   fi
 done
 
-if ! rg -q 'usage_ledger = UsageLedger\(\)' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py"; then
+# PC-010: the ledger is made by _task_ledger (it carries the task's budget), which must build a
+# real UsageLedger; every task still threads one through.
+if ! rg -q 'usage_ledger = _task_ledger\(' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py" \
+  || ! rg -q 'ledger = UsageLedger\(budget_usd=' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py"; then
   printf 'R-476 must thread a real UsageLedger through _edit() (live_serve.py).\n'
   exit 1
 fi

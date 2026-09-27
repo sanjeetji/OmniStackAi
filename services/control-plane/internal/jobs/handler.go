@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
 	"io"
 	"math"
 	"net/http"
@@ -107,6 +108,10 @@ func handleBuildStream(deps Deps) http.HandlerFunc {
 					body = newBody
 				}
 			}
+		}
+		var refused bool
+		if body, refused = applyCreditGuard(w, r, deps, user, resolved.BilledTo == "platform", body); refused {
+			return
 		}
 
 		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, deps.AgentEngineURL+"/api/build/stream", bytes.NewReader(body))
@@ -323,6 +328,10 @@ func proxyAndDebit(w http.ResponseWriter, r *http.Request, deps Deps, user auth.
 				body = newBody
 			}
 		}
+	}
+	var refused bool
+	if body, refused = applyCreditGuard(w, r, deps, user, resolved.BilledTo == "platform", body); refused {
+		return
 	}
 
 	upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, targetURL, bytes.NewReader(body))
@@ -643,7 +652,11 @@ func creditsForUsage(usage any, creditsPerUSD float64) int64 {
 	if !ok {
 		return 0
 	}
-	costMicros, ok := usageObject["cost_micros_usd"].(float64) // encoding/json decodes JSON numbers as float64
+	// PC-010: billable cost first (discarded retries excluded, capped at the budget).
+	costMicros, ok := usageObject["billable_cost_micros_usd"].(float64)
+	if !ok {
+		costMicros, ok = usageObject["cost_micros_usd"].(float64) // encoding/json decodes JSON numbers as float64
+	}
 	if !ok || costMicros <= 0 {
 		return 0
 	}
@@ -663,4 +676,34 @@ type errorResponse struct {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, errorResponse{Error: message})
+}
+
+// applyCreditGuard (PC-010) refuses paid work the caller may not start and sets the task's budget.
+// The budget is the control plane's alone: whatever the caller sent is replaced or removed.
+func applyCreditGuard(w http.ResponseWriter, r *http.Request, deps Deps, user auth.User, billedToPlatform bool, body []byte) ([]byte, bool) {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil || payload == nil {
+		payload = map[string]any{}
+	}
+	_, callerSetBudget := payload["budget_micros"]
+	delete(payload, "budget_micros")
+	changed := callerSetBudget
+	if deps.CreditGuard != nil {
+		decision := deps.CreditGuard.Admit(r.Context(), user.ID, user.CreditBalance, billedToPlatform)
+		if !decision.Allowed {
+			credits.Refuse(w, decision, user.CreditBalance)
+			return body, true
+		}
+		if decision.BudgetMicros >= 0 {
+			payload["budget_micros"] = decision.BudgetMicros
+			changed = true
+		}
+	}
+	if !changed {
+		return body, false // forwarded verbatim when there is nothing to add or remove
+	}
+	if out, err := json.Marshal(payload); err == nil {
+		return out, false
+	}
+	return body, false
 }

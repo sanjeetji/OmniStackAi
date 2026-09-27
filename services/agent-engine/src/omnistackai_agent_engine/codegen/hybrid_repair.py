@@ -14,6 +14,8 @@ stub providers, fake runners and temp dirs only. Outcomes are JSON-safe and secr
 
 from __future__ import annotations
 
+from ..model_gateway.accounting import discard_attempt
+
 import asyncio
 import logging
 import os
@@ -198,6 +200,7 @@ async def _repair_one(
             logger.info("Compile-repaired %s on attempt %d", path, attempt)
             return _finalize(cleaned, tag)
         last_reason = reason
+        discard_attempt(request.request_id)  # PC-010: a rejected repair is never billed
         if attempt < attempts_allowed:
             transcript.reject(_safe_message_text(raw, _MAX_ECHO_CHARS), _repair_message(path, reason))
 

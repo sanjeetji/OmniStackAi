@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-010 (2026-09-27): credit fairness.** Estimate before every build; discarded retries free; per-task budget (never above the balance); 402 at zero credits; per-user and platform caps; kill switch. Found: empty accounts built free and the build model was unpriced. Next: PC-011.
 > **PC-009 (2026-09-27): safe to host for many users.** Per-project database + role, Studio service token, per-workspace previews, per-user quotas + idle stop; multi-tenant mode sandboxes previews (no route out, egress allowlist, limits). All proven live. Next: PC-010.
 > **PC-008 (2026-09-27): one-click publish of the whole app.** Database, API, web and admin at one URL, production build, migrations, real sign-up/sign-in check, rollback, unpublish; local stand-in now, server + domain by config. Live: notes app live 61 s after Publish, data kept across releases. Fixed: published apps accepted admin/changeme. Next: PC-009.
 > **PC-007 (2026-09-27): preview with no local toolchain.** Engine switch (auto/local/container/webcontainer) and an open-source container engine needing only Docker (gVisor where registered). Live with node/pnpm/python removed: API, web, admin all 200; warm 10-14 s; console build 20 s. Fixed a migration that could never apply. WebContainer split to PC-096. Next: PC-008.

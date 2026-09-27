@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/studioauth"
 	"log/slog"
 	"net"
@@ -126,6 +127,8 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		Logger:         logger,
 	})
+	// PC-010: no paid model work at zero credits; per-task budgets; per-user and platform caps.
+	creditGuard := credits.FromEnv(runtimeConfig.CreditsPerUSD, projectStore)
 	jobs.Register(mux, jobs.Deps{
 		AuthStore:      userStore,
 		CreditStore:    userStore,
@@ -133,6 +136,7 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
 		Logger:         logger,
+		CreditGuard:    &creditGuard,
 	})
 	skillsStore := skills.NewPgStore(pool)
 	skills.Register(mux, skills.Deps{
@@ -160,6 +164,7 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 		AIStore:        aiStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
+		CreditGuard:    &creditGuard,
 		Logger:         logger,
 	})
 	// Template marketplace (Phase T, T-1 / R-519)

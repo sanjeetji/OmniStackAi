@@ -7,6 +7,7 @@ package jobs
 
 import (
 	"context"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
 	"log/slog"
 	"net/http"
 	"time"
@@ -38,6 +39,8 @@ type Deps struct {
 	// operation, not a quick API round trip.
 	HTTPClient *http.Client
 	Logger     *slog.Logger
+	// CreditGuard (PC-010): zero-balance refusal, per-task budget, caps. Nil disables it.
+	CreditGuard *credits.Guard
 }
 
 func (d Deps) httpClient() *http.Client {

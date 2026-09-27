@@ -297,7 +297,8 @@ class ARefusedBuildSaysWhy(TestCase):
                 captured.update(kwargs)
                 raise SystemExit
 
-            with mock.patch.object(live_serve, "create_studio_server", side_effect=fake_serve), \
+            with mock.patch.dict(os.environ), \
+                    mock.patch.object(live_serve, "create_studio_server", side_effect=fake_serve), \
                     mock.patch.object(live_serve, "StudioPreviewManager"), self.assertRaises(SystemExit):
                 live_serve.main()
             stream = captured["workspace_build_stream_fn"]("ws1", "a prompt")

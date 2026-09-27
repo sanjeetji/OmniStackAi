@@ -2597,3 +2597,28 @@ export function actOnProjectLive(
     body: JSON.stringify(action === "unpublish" ? { delete_data: Boolean(options.deleteData) } : {}),
   });
 }
+
+// ── PC-010: the cost of a build or edit, before it starts ──────────────────────────────────────
+
+export type CostEstimate = {
+  kind: "build" | "edit";
+  credits_low: number;
+  credits_high: number;
+  credit_balance: number;
+  billed_to: string;
+  can_start: boolean;
+  reason?: string;
+  retry_after?: number;
+  budget_credits?: number;
+  model?: string;
+  basis?: string;
+  priced?: boolean;
+  note?: string;
+};
+
+export function getEstimate(token: string, kind: "build" | "edit", projectId?: string): Promise<CostEstimate> {
+  const path = projectId ? `/projects/${encodeURIComponent(projectId)}/estimate` : "/estimate";
+  return callControlPlane<CostEstimate>(`${path}?kind=${kind}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

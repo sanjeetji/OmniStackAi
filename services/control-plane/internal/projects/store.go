@@ -479,3 +479,15 @@ func (s *PgStore) GetUserProjectRole(ctx context.Context, projectID, userID stri
 	}
 	return role, nil
 }
+
+// SpentSince reports credits debited since a time, by one user or (userID "") by everyone (PC-010).
+func (s *PgStore) SpentSince(ctx context.Context, userID string, since time.Time) (int64, error) {
+	var spent int64
+	var err error
+	if userID == "" {
+		err = s.pool.QueryRow(ctx, `SELECT COALESCE(-SUM(delta), 0) FROM credit_ledger WHERE delta < 0 AND created_at >= $1`, since).Scan(&spent)
+	} else {
+		err = s.pool.QueryRow(ctx, `SELECT COALESCE(-SUM(delta), 0) FROM credit_ledger WHERE user_id = $1 AND delta < 0 AND created_at >= $2`, userID, since).Scan(&spent)
+	}
+	return spent, err
+}
