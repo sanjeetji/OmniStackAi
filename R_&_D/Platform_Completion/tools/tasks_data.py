@@ -165,7 +165,8 @@ QUEUE = [
      "drafts for counsel. Not built: cancelling a paid plan from Settings (deleting the account "
      "cancels it) — with billing go-live at PC-070."),
     ("PC-013", "Verified integrations catalog with health tests", "1 Vibe Mode live", "Vibe",
-     "Pending", "P1", "", "R-511 Connectors v1 exists. Covers R-055, R-056."),
+     "Pending", "P1", "", "R-511 Connectors v1 exists. Covers R-055, R-056. Done 2026-09-27 (also "
+     "proves R-511 live); real-account checks of Resend/Stripe/Razorpay pass at PC-070."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "

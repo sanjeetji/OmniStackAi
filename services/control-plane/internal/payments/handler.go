@@ -190,12 +190,18 @@ func handleSetProjectPayments(deps Deps) http.HandlerFunc {
 			return
 		}
 
+		// PC-013: the console sends payment_gateway (the name this API returns); before, only
+		// gateway was read, so a gateway could never be enabled from the console.
 		var body struct {
-			Gateway string `json:"gateway"`
+			Gateway        string `json:"gateway"`
+			PaymentGateway string `json:"payment_gateway"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
+		}
+		if body.Gateway == "" {
+			body.Gateway = body.PaymentGateway
 		}
 
 		gateway := strings.ToLower(strings.TrimSpace(body.Gateway))

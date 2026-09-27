@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/plans"
@@ -9,8 +10,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/integrations"
 )
 
 // Deps captures the dependencies required by the AI API handlers.
@@ -20,6 +23,11 @@ type Deps struct {
 	AgentEngineURL string
 	HTTPClient     *http.Client
 	Logger         *slog.Logger
+	// KeyCheck asks the provider whether a key works and records the answer (PC-013). Without
+	// it a key whose form is right is reported as not yet confirmed.
+	KeyCheck func(ctx context.Context, userID, providerID, key string) integrations.Result
+	// KeyChanged forgets a recorded answer when the key is replaced or removed.
+	KeyChanged func(ctx context.Context, userID, providerID string)
 }
 
 func (d Deps) logger() *slog.Logger {
@@ -221,6 +229,9 @@ func handleSetUserKey(deps Deps) http.HandlerFunc {
 		}
 
 		err = deps.AIStore.SetUserKey(r.Context(), user.ID, providerID, req.APIKey, req.Label)
+		if err == nil && deps.KeyChanged != nil {
+			deps.KeyChanged(r.Context(), user.ID, providerID)
+		}
 		if err != nil {
 			deps.logger().Error("save user key", "error", err)
 			writeError(w, http.StatusInternalServerError, "failed to save key")
@@ -254,6 +265,9 @@ func handleDeleteUserKey(deps Deps) http.HandlerFunc {
 			return
 		}
 
+		if deps.KeyChanged != nil {
+			deps.KeyChanged(r.Context(), user.ID, providerID)
+		}
 		writeJSON(w, http.StatusOK, map[string]string{
 			"status":      "deleted",
 			"provider_id": providerID,
@@ -287,10 +301,9 @@ func handleTestUserKey(deps Deps) http.HandlerFunc {
 			return
 		}
 
-		// Simple honesty validation based on provider prefix/format
+		// A key of the wrong form for its provider is certainly wrong: no need to ask.
 		validFormat := true
-		providerLower := strings.ToLower(providerID)
-		switch providerLower {
+		switch strings.ToLower(providerID) {
 		case "openai":
 			validFormat = strings.HasPrefix(key, "sk-")
 		case "anthropic":
@@ -300,18 +313,20 @@ func handleTestUserKey(deps Deps) http.HandlerFunc {
 		case "nvidia":
 			validFormat = strings.HasPrefix(key, "nvapi-")
 		}
-
-		if !validFormat {
-			writeJSON(w, http.StatusOK, map[string]any{
-				"valid":   false,
-				"message": "Key does not match expected prefix for " + providerID,
-			})
-			return
+		result := integrations.Result{Integration: "ai:" + strings.ToLower(providerID), Status: integrations.Unchecked,
+			Message: "The key has the right form; the provider has not confirmed it yet.", CheckedAt: time.Now().UTC()}
+		switch {
+		case !validFormat:
+			result.Status, result.Message = integrations.Failed, "Key does not match expected prefix for "+providerID
+		case deps.KeyCheck != nil:
+			result = deps.KeyCheck(r.Context(), user.ID, providerID, key)
 		}
-
 		writeJSON(w, http.StatusOK, map[string]any{
-			"valid":   true,
-			"message": "Key is configured and format is valid",
+			// valid means "not refuted": a key no free check can confirm is not reported as bad.
+			"valid":      result.Status != integrations.Failed,
+			"status":     result.Status,
+			"message":    result.Message,
+			"checked_at": result.CheckedAt,
 		})
 	}
 }

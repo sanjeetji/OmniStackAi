@@ -53,6 +53,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { HealthBadge, HealthResult, type HealthAnswer } from "@/components/health-result";
 
 interface ProjectConnectorsManageProps {
   projectId: string;
@@ -78,7 +79,52 @@ export function ProjectConnectorsManage({
 
   // Testing state
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<ConnectorTestResult | null>(null);
+  const [testResult, setTestResult] = useState<HealthAnswer | null>(null);
+  // PC-013: the last health test of each connected integration, and how each is checked.
+  const [health, setHealth] = useState<Record<string, HealthAnswer>>({});
+  const [howChecked, setHowChecked] = useState<Record<string, string>>({});
+
+  const loadHealth = useCallback(async () => {
+    const [healthRes, catalogRes] = await Promise.all([
+      fetch(`/api/projects/${projectId}/integrations/health`),
+      fetch("/api/integrations"),
+    ]);
+    const healthBody = healthRes.ok
+      ? ((await healthRes.json()) as { project?: (HealthAnswer & { integration: string })[] })
+      : {};
+    const catalogBody = catalogRes.ok
+      ? ((await catalogRes.json()) as { integrations?: { id: string; how_checked: string }[] })
+      : {};
+    return {
+      health: Object.fromEntries((healthBody.project ?? []).map((h) => [h.integration, h])),
+      how: Object.fromEntries((catalogBody.integrations ?? []).map((e) => [e.id, e.how_checked])),
+    };
+  }, [projectId]);
+
+  const refreshHealth = useCallback(() => {
+    loadHealth()
+      .then(({ health: h, how }) => {
+        setHealth(h);
+        setHowChecked(how);
+      })
+      .catch(() => {
+        // Health is extra information; the panel works without it.
+      });
+  }, [loadHealth]);
+
+  useEffect(() => {
+    let active = true;
+    loadHealth()
+      .then(({ health: h, how }) => {
+        if (!active) return;
+        setHealth(h);
+        setHowChecked(how);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [loadHealth]);
 
   // Disconnecting state
   const [disconnecting, setDisconnecting] = useState(false);
@@ -236,17 +282,15 @@ export function ProjectConnectorsManage({
         }
       );
 
-      const data = await res.json();
-      setTestResult({
-        success: data.success ?? res.ok,
-        message: data.message || (res.ok ? "Connection test successful!" : "Test failed"),
-        details: data.details,
-      });
-    } catch (err: any) {
-      setTestResult({
-        success: false,
-        message: err?.message || "Connection test failed",
-      });
+      const data = (await res.json().catch(() => ({}))) as Partial<HealthAnswer> & { error?: string };
+      setTestResult(
+        data.status
+          ? { status: data.status, message: data.message ?? "", checked_at: data.checked_at }
+          : { status: "failed", message: data.error ?? "The test could not run." },
+      );
+      refreshHealth();
+    } catch {
+      setTestResult({ status: "unchecked", message: "Couldn't reach the server; nothing was decided." });
     } finally {
       setTesting(false);
     }
@@ -398,7 +442,7 @@ export function ProjectConnectorsManage({
                 )}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50">
                         {getProviderIcon(def.id)}
@@ -417,7 +461,9 @@ export function ProjectConnectorsManage({
                     </div>
 
                     {/* Status Chip */}
-                    {isConnected ? (
+                    {isConnected && health[def.id] ? (
+                      <HealthBadge answer={health[def.id]} />
+                    ) : isConnected ? (
                       <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-medium text-xs gap-1.5 py-0.5">
                         <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         Connected
@@ -661,36 +707,18 @@ await sendEmail({
               </div>
 
               {/* Test Result Display */}
-              {testResult && (
-                <div
-                  className={cn(
-                    "p-3 rounded-md text-xs border flex items-start gap-2.5",
-                    testResult.success
-                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                      : "bg-destructive/10 border-destructive/20 text-destructive"
-                  )}
-                >
-                  {testResult.success ? (
-                    <CheckCircle2 className="size-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-                  ) : (
-                    <AlertCircle className="size-4 shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-medium">{testResult.message}</p>
-                    {testResult.details && (
-                      <pre className="mt-1.5 p-2 rounded bg-black/10 dark:bg-black/40 font-mono text-[10px] overflow-x-auto">
-                        {JSON.stringify(testResult.details, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                </div>
-              )}
+              {testResult ? <HealthResult answer={testResult} /> : null}
+              {selectedConnector && howChecked[selectedConnector.id] ? (
+                <p className="text-[11px] text-muted-foreground">
+                  How the test works: {howChecked[selectedConnector.id]}
+                </p>
+              ) : null}
 
               {/* Save Success Notice */}
               {saveSuccess && (
                 <div className="p-3 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
                   <Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                  Connector saved and code applied to repository successfully!
+                  Saved. Credentials are kept encrypted as project secrets, and the code was added to the app.
                 </div>
               )}
             </div>

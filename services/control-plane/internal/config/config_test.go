@@ -95,3 +95,20 @@ func clone(source map[string]string) map[string]string {
 	}
 	return result
 }
+
+// PC-013: every form .env.example documents gives the same 32-byte key.
+func TestTheSecretsKeyIsReadInEveryDocumentedForm(t *testing.T) {
+	want := "0123456789abcdef0123456789abcdef"
+	for _, raw := range []string{
+		"3031323334353637383961626364656630313233343536373839616263646566", // hex
+		"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",                     // base64
+		want, // plain
+	} {
+		if got := parseSecretsKey(raw); string(got) != want {
+			t.Errorf("%q gave %q", raw, got)
+		}
+	}
+	if parseSecretsKey("too-short") != nil {
+		t.Error("a short key must not be used")
+	}
+}

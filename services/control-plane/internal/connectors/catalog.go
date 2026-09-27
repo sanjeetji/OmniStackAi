@@ -8,13 +8,17 @@ const (
 	CategoryProductivity  ConnectorCategory = "productivity"
 )
 
+// ConfigField is one setting. The JSON names are the console's (ConnectorConfigField); before
+// PC-013 they differed and the console could not open a connector at all.
 type ConfigField struct {
-	Key         string `json:"key"`
+	Key         string `json:"name"`
 	Label       string `json:"label"`
 	Type        string `json:"type"` // "text", "password", "number"
 	Required    bool   `json:"required"`
+	Secret      bool   `json:"secret"`
 	Placeholder string `json:"placeholder"`
-	HelpText    string `json:"help_text"`
+	Default     string `json:"default,omitempty"`
+	HelpText    string `json:"help"`
 }
 
 type ConnectorDefinition struct {
@@ -25,8 +29,8 @@ type ConnectorDefinition struct {
 	AuthType    string            `json:"auth_type"` // "none", "api_key", "oauth2"
 	Icon        string            `json:"icon"`
 	DocsURL     string            `json:"docs_url"`
-	Fields      []ConfigField     `json:"fields"`
-	Generated   []string          `json:"generated"`
+	Fields      []ConfigField     `json:"config_fields"`
+	Generated   []string          `json:"generated_files"`
 }
 
 var Catalog = []ConnectorDefinition{
@@ -66,6 +70,7 @@ var Catalog = []ConnectorDefinition{
 				Label:       "API Key",
 				Type:        "password",
 				Required:    true,
+				Secret:      true,
 				Placeholder: "re_...",
 				HelpText:    "Your Resend API key starting with re_",
 			},
@@ -108,6 +113,7 @@ var Catalog = []ConnectorDefinition{
 				Type:        "number",
 				Required:    true,
 				Placeholder: "587",
+				Default:     "587",
 				HelpText:    "Usually 587 (TLS/STARTTLS) or 465 (SSL)",
 			},
 			{
@@ -123,6 +129,7 @@ var Catalog = []ConnectorDefinition{
 				Label:       "SMTP Password",
 				Type:        "password",
 				Required:    true,
+				Secret:      true,
 				Placeholder: "••••••••",
 				HelpText:    "Authentication password or app password",
 			},

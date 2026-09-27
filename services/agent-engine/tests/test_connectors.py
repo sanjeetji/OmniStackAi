@@ -112,7 +112,7 @@ class TestConnectorsCodegen(unittest.TestCase):
         self.assertTrue(templates_ts.is_file())
         self.assertTrue(route_ts.is_file())
         self.assertTrue(contact_form_tsx.is_file())
-        self.assertTrue(env_file.is_file())
+        self.assertFalse(env_file.exists(), "PC-013: credentials are project secrets, never repository files")
 
         self.assertIn("https://api.resend.com/emails", email_ts.read_text())
         self.assertIn("welcomeEmailTemplate", templates_ts.read_text())
@@ -120,8 +120,7 @@ class TestConnectorsCodegen(unittest.TestCase):
         self.assertIn("passwordResetTemplate", templates_ts.read_text())
         self.assertIn("notificationTemplate", templates_ts.read_text())
         self.assertIn("ContactForm", contact_form_tsx.read_text())
-        self.assertIn("RESEND_API_KEY=re_123456789", env_file.read_text())
-        self.assertIn("RESEND_FROM_EMAIL=notifications@myapp.com", env_file.read_text())
+        self.assertIn("process.env.RESEND_API_KEY", email_ts.read_text())
 
         # 2. Remove Resend
         remove_res = remove_connector(self.repo_dir, "resend")
@@ -130,7 +129,6 @@ class TestConnectorsCodegen(unittest.TestCase):
         self.assertFalse(templates_ts.is_file())
         self.assertFalse(route_ts.is_file())
         self.assertFalse(contact_form_tsx.is_file())
-        self.assertNotIn("RESEND_", env_file.read_text())
 
     def test_smtp_apply_and_remove(self) -> None:
         # 1. Apply SMTP
@@ -153,9 +151,8 @@ class TestConnectorsCodegen(unittest.TestCase):
         self.assertTrue(templates_ts.is_file())
         self.assertTrue(route_ts.is_file())
         self.assertTrue(contact_form_tsx.is_file())
-        self.assertIn("SMTP_HOST=smtp.mailgun.org", env_file.read_text())
-        self.assertIn("SMTP_USER=postmaster@mail.example.com", env_file.read_text())
-        
+        self.assertFalse(env_file.exists(), "PC-013: credentials are project secrets, never repository files")
+
         # Verify socket client implementation uses node:net and node:tls (zero external npm dependencies)
         smtp_code = email_ts.read_text()
         self.assertIn("import * as net from 'node:net';", smtp_code)
@@ -170,7 +167,32 @@ class TestConnectorsCodegen(unittest.TestCase):
         self.assertFalse(templates_ts.is_file())
         self.assertFalse(route_ts.is_file())
         self.assertFalse(contact_form_tsx.is_file())
-        self.assertNotIn("SMTP_", env_file.read_text())
+
+    def test_code_goes_into_the_web_app_and_old_credentials_leave_git(self) -> None:
+        # PC-013: generated projects keep the web app in apps/web; code at the root was never built.
+        web = self.repo_dir / "apps" / "web"
+        (web / "app").mkdir(parents=True)
+        (web / "package.json").write_text("{}", encoding="utf-8")
+        (web / "app" / "layout.tsx").write_text(
+            "export default function RootLayout({ children }: { children: React.ReactNode }) {\n"
+            "  return (<html><body>{children}</body></html>);\n}\n", encoding="utf-8")
+        # An older connector committed a key to a root .env.local.
+        (self.repo_dir / ".env.local").write_text("RESEND_API_KEY=re_old\nOTHER=1\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=self.repo_dir, check=True)
+        subprocess.run(["git", "commit", "-qm", "old"], cwd=self.repo_dir, check=True)
+
+        apply_connector(self.repo_dir, "resend", {"from_email": "a@b.test"})
+        apply_connector(self.repo_dir, "ga4", {"measurement_id": "G-ABC1234567"})
+        self.assertTrue((web / "lib" / "email.ts").is_file())
+        self.assertTrue((web / "app" / "api" / "send" / "route.ts").is_file())
+        self.assertIn("GoogleAnalytics", (web / "app" / "layout.tsx").read_text())
+        self.assertFalse((self.repo_dir / "lib").exists(), "nothing is written outside the web app")
+        self.assertEqual((self.repo_dir / ".env.local").read_text(), "OTHER=1\n")
+        tracked = subprocess.run(["git", "ls-files"], cwd=self.repo_dir, capture_output=True, text=True).stdout
+        self.assertNotIn(".env.local", tracked.split())
+        self.assertIn(".env*.local", (self.repo_dir / ".gitignore").read_text())
+        clean = subprocess.run(["git", "status", "--porcelain"], cwd=self.repo_dir, capture_output=True, text=True).stdout
+        self.assertEqual(clean.strip(), "", "every change is committed")
 
     def test_email_templates_node_execution(self) -> None:
         apply_connector(self.repo_dir, "smtp", {

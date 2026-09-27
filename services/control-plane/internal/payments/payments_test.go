@@ -166,7 +166,7 @@ func TestPaymentsEndpoints(t *testing.T) {
 	}
 
 	// 2. PUT /projects/proj-1/payments enabling Stripe
-	body := strings.NewReader(`{"gateway":"stripe"}`)
+	body := strings.NewReader(`{"payment_gateway":"stripe"}`) // what the console sends (PC-013)
 	reqPut := httptest.NewRequest(http.MethodPut, "/projects/proj-1/payments", body)
 	reqPut.Header.Set("Authorization", "Bearer valid-token")
 	reqPut.Header.Set("Content-Type", "application/json")

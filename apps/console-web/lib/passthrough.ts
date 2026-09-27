@@ -16,7 +16,7 @@ export async function passThrough(request: NextRequest, prefix: string, segments
   };
   if (request.method !== "GET" && request.method !== "HEAD") init.body = await request.text();
   try {
-    const upstream = await fetch(`${controlPlaneUrl()}/${prefix}/${path}${search}`, init);
+    const upstream = await fetch(`${controlPlaneUrl()}/${prefix}${path ? `/${path}` : ""}${search}`, init);
     const body = await upstream.text();
     return new NextResponse(body, {
       status: upstream.status,

@@ -1,9 +1,9 @@
 task_id: PC-013
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: R-055
 started_at: "2026-09-27"
-completed_at: null
+completed_at: "2026-09-27"
 branch: platform-completion
 objective: >-
   A verified integrations catalog with health tests (R-055, R-056, proves R-511). One catalog of
@@ -39,5 +39,14 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "Real-account passes for Resend, Stripe, Razorpay (keys at PC-070)"
+  - "Disconnecting Resend removes lib/email.ts that an enabled SMTP connector also uses (both at once is unusual; note for PC-078)"
+found_and_fixed:
+  - "Every integration test was format-only and reported success; now the provider is asked"
+  - "Console could not open a connector (field names differed) nor enable payments (payment_gateway vs gateway)"
+  - "BYOK test result read a field the server never sent: every test showed failure"
+  - "Connector and payment code went to the repo root, not apps/web, so it was never built"
+  - "Resend key / SMTP password stored as plain JSON and committed to the project's git via a root .env.local"
+  - "OMNISTACKAI_SECRETS_KEY never passed to the control plane, and a hex key was silently ignored: no secret could be saved locally"
+  - "omnistack.sh: Studio failed without ~/.local/bin on PATH; 'restart console' stopped the stack before rejecting the argument"

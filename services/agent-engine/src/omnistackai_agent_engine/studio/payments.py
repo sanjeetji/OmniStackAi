@@ -16,6 +16,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .connectors import app_root
+
 
 class PaymentsError(Exception):
     """Raised when payment gateway validation or codegen fails."""
@@ -543,6 +545,8 @@ def apply_payments(repo_dir: Path, gateway: str) -> dict[str, Any]:
     """Apply payment gateway codegen to the workspace repository and commit the changes."""
     if not repo_dir.is_dir():
         raise PaymentsError(f"repository directory does not exist: {repo_dir}")
+    # PC-013: the code goes into the project's web app (apps/web), where it is built and served.
+    git_dir, repo_dir = repo_dir, app_root(repo_dir)
 
     gateway = gateway.lower().strip()
     if gateway not in {"stripe", "razorpay"}:
@@ -606,7 +610,7 @@ def apply_payments(repo_dir: Path, gateway: str) -> dict[str, Any]:
         env_ex.write_text("\n".join(lines) + "\n", encoding="utf-8")
         files_modified.append(".env.example")
 
-        _git_commit(repo_dir, "chore(payments): enable Stripe payment gateway")
+        _git_commit(git_dir, "chore(payments): enable Stripe payment gateway")
 
         return {
             "status": "applied",
@@ -637,7 +641,7 @@ def apply_payments(repo_dir: Path, gateway: str) -> dict[str, Any]:
         env_ex.write_text("\n".join(lines) + "\n", encoding="utf-8")
         files_modified.append(".env.example")
 
-        _git_commit(repo_dir, "chore(payments): enable Razorpay payment gateway")
+        _git_commit(git_dir, "chore(payments): enable Razorpay payment gateway")
 
         return {
             "status": "applied",
@@ -652,6 +656,8 @@ def remove_payments(repo_dir: Path, gateway: str) -> dict[str, Any]:
     """Remove payment gateway codegen from workspace repository and commit the deletion."""
     if not repo_dir.is_dir():
         raise PaymentsError(f"repository directory does not exist: {repo_dir}")
+    # PC-013: the code goes into the project's web app (apps/web), where it is built and served.
+    git_dir, repo_dir = repo_dir, app_root(repo_dir)
 
     gateway = gateway.lower().strip()
     if gateway not in ("stripe", "razorpay"):
@@ -736,7 +742,7 @@ def remove_payments(repo_dir: Path, gateway: str) -> dict[str, Any]:
         env_ex.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
         files_modified.append(".env.example")
 
-    _git_commit(repo_dir, f"chore(payments): disable {gateway} payment gateway")
+    _git_commit(git_dir, f"chore(payments): disable {gateway} payment gateway")
 
     return {
         "status": "removed",

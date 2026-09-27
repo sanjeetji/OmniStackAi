@@ -42,6 +42,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { HealthResult, type HealthAnswer } from "@/components/health-result";
 
 interface ProjectPaymentsManageProps {
   projectId: string;
@@ -125,6 +126,26 @@ export function ProjectPaymentsManage({
 
   // Copied webhook indicator
   const [copiedWebhook, setCopiedWebhook] = useState(false);
+
+  // PC-013: ask the gateway whether the saved keys work (nothing is charged).
+  const [keyTest, setKeyTest] = useState<HealthAnswer | null>(null);
+  const [testingKeys, setTestingKeys] = useState(false);
+  const testKeys = async (gateway: string) => {
+    setTestingKeys(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/integrations/${gateway}/check`, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as Partial<HealthAnswer> & { error?: string };
+      setKeyTest(
+        body.status
+          ? { status: body.status, message: body.message ?? "", checked_at: body.checked_at }
+          : { status: "failed", message: body.error ?? "The keys could not be tested." },
+      );
+    } catch {
+      setKeyTest({ status: "unchecked", message: "Couldn't reach the server; nothing was decided." });
+    } finally {
+      setTestingKeys(false);
+    }
+  };
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -428,6 +449,24 @@ export function ProjectPaymentsManage({
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="grid gap-2 pt-2 border-t border-border/60">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={testingKeys || !allKeysConfigured}
+                  onClick={() => void testKeys(activeGateway)}
+                >
+                  {testingKeys ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                  Test the keys
+                </Button>
+                <span className="text-[11px] text-muted-foreground">
+                  Asks {activeGateway === "stripe" ? "Stripe" : "Razorpay"} whether the saved keys work. Nothing is charged.
+                </span>
+              </div>
+              {keyTest ? <HealthResult answer={keyTest} /> : null}
             </div>
           </CardContent>
         </Card>

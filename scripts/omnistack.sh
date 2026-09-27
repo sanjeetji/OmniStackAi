@@ -14,6 +14,11 @@
 set -euo pipefail
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+# The Studio needs Python 3.13; `doctor` recommends linking it into ~/.local/bin. Use that link even
+# when the calling shell has not put ~/.local/bin on PATH (the Studio otherwise fails to start).
+if [[ -x "$HOME/.local/bin/python3" && ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+  export PATH="$HOME/.local/bin:$PATH"
+fi
 run_dir="$repo_root/.run"
 env_file="$repo_root/.env"
 compose_file="$repo_root/infra/environments/local/compose.yaml"
@@ -586,7 +591,18 @@ cmd_down() {
   fi
 }
 
-cmd_restart() { cmd_down --keep-db; cmd_up "$@"; }
+cmd_restart() {
+  # Check the options before stopping anything: a typo must not leave the platform down.
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      --no-preview|--no-console|--dev) ;;
+      *) die "Unknown option for restart: $arg (restart takes the same options as up; it always restarts everything)" ;;
+    esac
+  done
+  cmd_down --keep-db
+  cmd_up "$@"
+}
 
 # Database access for the admin commands. The control-plane owns the schema; these talk to the
 # same PostgreSQL it runs against.

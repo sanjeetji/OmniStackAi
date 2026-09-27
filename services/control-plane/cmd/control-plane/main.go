@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -31,6 +32,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/domains"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/git"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/health"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/integrations"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/jobs"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/payments"
@@ -76,6 +78,15 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	mux := newMux(pool, runtimeConfig, logger)
 	// PC-012: expired sessions and links, and usage records past retention, removed hourly.
 	account.StartSweeper(ctx, pool, logger)
+	// PC-013: credentials older connectors kept in plain settings move to encrypted secrets, and
+	// every connected integration is re-tested daily.
+	if moved, err := connectors.NewPgStore(pool).MoveCredentialsToSecrets(ctx,
+		secrets.NewPgStore(pool, runtimeConfig.SecretsKey, runtimeConfig.SecretsKeyPrevious)); err != nil {
+		logger.Error("move connector credentials to secrets", "error", err)
+	} else if moved > 0 {
+		logger.Info("moved connector credentials to encrypted secrets", "count", moved)
+	}
+	newIntegrationHealth(pool, runtimeConfig, logger).StartSweeper(ctx, 24*time.Hour)
 
 	server := &http.Server{
 		Addr:              runtimeConfig.HTTPAddress,
@@ -118,6 +129,8 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 	userStore := users.New(pool)
 	projectStore := projects.New(pool)
 	aiStore := ai.NewPgStore(pool, runtimeConfig.SecretsKey, runtimeConfig.SecretsKeyPrevious)
+	// PC-013: health tests of every connected integration, with the saved credentials.
+	integrationHealth := newIntegrationHealth(pool, runtimeConfig, logger)
 
 	mux := http.NewServeMux()
 	health.Register(mux, pool, runtimeConfig.DatabasePingTimeout)
@@ -155,6 +168,22 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 		AIStore:        aiStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		Logger:         logger,
+		KeyCheck: func(ctx context.Context, userID, providerID, key string) integrations.Result {
+			result := integrationHealth.Checker.Check(ctx, "ai:"+strings.ToLower(providerID), map[string]string{"api_key": key})
+			integrationHealth.Record(ctx, "user", userID, result)
+			return result
+		},
+		KeyChanged: func(ctx context.Context, userID, providerID string) {
+			integrationHealth.Forget(ctx, "user", userID, "ai:"+strings.ToLower(providerID))
+		},
+	})
+	integrations.Register(mux, integrations.Deps{
+		Service:   integrationHealth,
+		AuthStore: userStore,
+		CanUse: func(ctx context.Context, projectID, userID string) bool {
+			_, err := projectStore.GetProject(ctx, projectID, userID)
+			return err == nil
+		},
 	})
 	// PC-010: no paid model work at zero credits; per-task budgets; per-user and platform caps.
 	creditGuard := credits.FromEnv(runtimeConfig.CreditsPerUSD, projectStore)
@@ -277,6 +306,8 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 		ConnectorStore: connectorStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		Logger:         logger,
+		Secrets:        secretsStore,
+		Health:         integrationHealth,
 	})
 	paymentsStore := payments.NewPgStore(pool)
 	payments.Register(mux, payments.Deps{
@@ -324,4 +355,31 @@ func postgresURL(runtimeConfig config.Config) string {
 	query.Set("sslmode", "disable")
 	databaseURL.RawQuery = query.Encode()
 	return databaseURL.String()
+}
+
+// newIntegrationHealth builds the integration health tests (PC-013) over the stores that hold the
+// credentials. A mail server on a private address may be tested only in local development.
+func newIntegrationHealth(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger) integrations.Service {
+	secretsStore := secrets.NewPgStore(pool, runtimeConfig.SecretsKey, runtimeConfig.SecretsKeyPrevious)
+	aiStore := ai.NewPgStore(pool, runtimeConfig.SecretsKey, runtimeConfig.SecretsKeyPrevious)
+	connectorStore := connectors.NewPgStore(pool)
+	return integrations.Service{
+		Pool:    pool,
+		Checker: integrations.Checker{AllowPrivate: os.Getenv("OMNISTACKAI_DEV_MODE") == "1"},
+		ProjectSecrets: func(ctx context.Context, projectID string) (map[string]string, error) {
+			if !secretsStore.IsAvailable() {
+				return map[string]string{}, nil
+			}
+			return secretsStore.ForProject(ctx, projectID)
+		},
+		ConnectorConfig: func(ctx context.Context, projectID, provider string) (map[string]any, error) {
+			pc, err := connectorStore.GetProjectConnector(ctx, projectID, provider)
+			return pc.Config, err
+		},
+		UserKey: func(ctx context.Context, userID, provider string) (string, error) {
+			key, _, err := aiStore.GetUserKey(ctx, userID, provider)
+			return key, err
+		},
+		Logger: logger,
+	}
 }

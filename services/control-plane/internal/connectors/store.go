@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/integrations"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/secrets"
 )
 
 var (
@@ -144,4 +148,69 @@ func (s *PgStore) DeleteProjectConnector(ctx context.Context, projectID, provide
 		return ErrNotFound
 	}
 	return nil
+}
+
+// SecretSetter is the part of the secrets store MoveCredentialsToSecrets needs.
+type SecretSetter interface {
+	SetSecret(ctx context.Context, projectID, userID, key, value, description string) (*secrets.SecretMetadata, error)
+	IsAvailable() bool
+}
+
+// MoveCredentialsToSecrets moves credentials that connectors saved before PC-013 (in plain JSON
+// settings) into the project's encrypted secrets, and removes them from the settings. It is safe
+// to run on every start: once moved, nothing is left to move. It returns how many were moved.
+func (s *PgStore) MoveCredentialsToSecrets(ctx context.Context, store SecretSetter) (int, error) {
+	if store == nil || !store.IsAvailable() {
+		return 0, nil
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT pc.project_id::text, p.user_id::text, pc.provider, pc.config
+		FROM project_connectors pc JOIN projects p ON p.id = pc.project_id`)
+	if err != nil {
+		return 0, err
+	}
+	type row struct {
+		projectID, userID, provider string
+		config                      map[string]any
+	}
+	var todo []row
+	for rows.Next() {
+		var r row
+		var raw []byte
+		if err := rows.Scan(&r.projectID, &r.userID, &r.provider, &raw); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		_ = json.Unmarshal(raw, &r.config)
+		todo = append(todo, r)
+	}
+	rows.Close()
+	moved := 0
+	for _, r := range todo {
+		env := integrations.EnvFields(r.provider)
+		def, _ := GetDefinition(r.provider)
+		changed := false
+		for field, name := range env {
+			value, ok := r.config[field]
+			if !ok {
+				continue
+			}
+			if v := strings.TrimSpace(fmt.Sprintf("%v", value)); v != "" && value != nil {
+				if _, err := store.SetSecret(ctx, r.projectID, r.userID, name, v, "Set by the "+def.Name+" connector"); err != nil {
+					return moved, err
+				}
+				moved++
+			}
+			delete(r.config, field)
+			changed = true
+		}
+		if changed {
+			raw, _ := json.Marshal(r.config)
+			if _, err := s.pool.Exec(ctx, `UPDATE project_connectors SET config = $3 WHERE project_id = $1 AND provider = $2`,
+				r.projectID, r.provider, raw); err != nil {
+				return moved, err
+			}
+		}
+	}
+	return moved, nil
 }

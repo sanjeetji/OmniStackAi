@@ -739,10 +739,49 @@ def _git_commit(repo_dir: Path, message: str) -> None:
     subprocess.run(["git", "commit", "-m", message], cwd=str(repo_dir), env=env, capture_output=True, text=True, check=False)
 
 
+def app_root(repo_dir: Path) -> Path:
+    """The directory of the project's web app, where connector code must go (PC-013).
+
+    Generated projects keep the Next.js app in apps/web; code written at the repository root was
+    never compiled or served. A project that is itself a Next.js app at the root keeps the root.
+    """
+    web = repo_dir / "apps" / "web"
+    return web if (web / "package.json").is_file() else repo_dir
+
+
+def forget_local_credentials(repo_dir: Path, prefixes: tuple[str, ...]) -> None:
+    """Remove credentials an older connector wrote into the repository (PC-013).
+
+    Credentials now live in the project's encrypted secrets and reach the app as environment
+    variables. Older versions wrote them to a root .env.local that git tracked; drop those lines,
+    stop tracking the file, and ignore it from now on.
+    """
+    env_file = repo_dir / ".env.local"
+    if env_file.is_file():
+        kept = [line for line in env_file.read_text(encoding="utf-8").splitlines() if not line.startswith(prefixes)]
+        if kept:
+            env_file.write_text("\n".join(kept) + "\n", encoding="utf-8")
+        else:
+            env_file.unlink()
+    if (repo_dir / ".git").is_dir():
+        subprocess.run(["git", "rm", "--cached", "--quiet", "--ignore-unmatch", ".env.local"], cwd=str(repo_dir),
+                       capture_output=True, text=True, check=False)
+    gitignore = repo_dir / ".gitignore"
+    current = gitignore.read_text(encoding="utf-8") if gitignore.is_file() else ""
+    if ".env*.local" not in current.split():
+        gitignore.write_text(current + ("" if current.endswith("\n") or not current else "\n") + ".env*.local\n",
+                             encoding="utf-8")
+
+
 def apply_connector(repo_dir: Path, provider: str, config: dict[str, Any]) -> dict[str, Any]:
-    """Apply connector codegen to the workspace repository and commit the changes."""
+    """Apply connector codegen to the workspace repository and commit the changes.
+
+    Credentials are not written anywhere in the repository: they are the project's secrets and
+    reach the app as environment variables (RESEND_*, SMTP_*) when it runs.
+    """
     if not repo_dir.is_dir():
         raise ConnectorError(f"repository directory does not exist: {repo_dir}")
+    git_dir, repo_dir = repo_dir, app_root(repo_dir)
 
     provider = provider.lower().strip()
     files_created: list[str] = []
@@ -768,7 +807,7 @@ def apply_connector(repo_dir: Path, provider: str, config: dict[str, Any]) -> di
             if _inject_ga4_into_layout(layout_path, measurement_id):
                 files_modified.append(str(layout_path.relative_to(repo_dir)))
 
-        _git_commit(repo_dir, f"chore(connector): enable Google Analytics 4 ({measurement_id})")
+        _git_commit(git_dir, f"chore(connector): enable Google Analytics 4 ({measurement_id})")
 
         return {
             "status": "applied",
@@ -779,11 +818,6 @@ def apply_connector(repo_dir: Path, provider: str, config: dict[str, Any]) -> di
         }
 
     elif provider == "resend":
-        api_key = str(config.get("api_key", "")).strip()
-        from_email = str(config.get("from_email", "onboarding@resend.dev")).strip()
-        if not api_key:
-            raise ConnectorError("api_key is required for Resend")
-
         lib_dir = repo_dir / "lib"
         lib_dir.mkdir(parents=True, exist_ok=True)
         email_file = lib_dir / "email.ts"
@@ -806,16 +840,9 @@ def apply_connector(repo_dir: Path, provider: str, config: dict[str, Any]) -> di
         contact_form_file.write_text(CONTACT_FORM_TSX, encoding="utf-8")
         files_created.append("components/contact-form.tsx")
 
-        # Update .env.local
-        env_file = repo_dir / ".env.local"
-        env_content = env_file.read_text(encoding="utf-8") if env_file.is_file() else ""
-        lines = [line for line in env_content.splitlines() if not line.startswith("RESEND_")]
-        lines.append(f"RESEND_API_KEY={api_key}")
-        lines.append(f"RESEND_FROM_EMAIL={from_email}")
-        env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        files_modified.append(".env.local")
+        forget_local_credentials(git_dir, ("RESEND_",))
 
-        _git_commit(repo_dir, "chore(connector): enable Resend transactional email")
+        _git_commit(git_dir, "chore(connector): enable Resend transactional email")
 
         return {
             "status": "applied",
@@ -826,15 +853,6 @@ def apply_connector(repo_dir: Path, provider: str, config: dict[str, Any]) -> di
         }
 
     elif provider == "smtp":
-        host = str(config.get("host", "")).strip()
-        user = str(config.get("username", "")).strip()
-        pass_val = str(config.get("password", "")).strip()
-        port = str(config.get("port", "587")).strip()
-        from_email = str(config.get("from_email", user)).strip()
-
-        if not host or not user or not pass_val:
-            raise ConnectorError("host, username, and password are required for SMTP")
-
         lib_dir = repo_dir / "lib"
         lib_dir.mkdir(parents=True, exist_ok=True)
         email_file = lib_dir / "email.ts"
@@ -857,19 +875,9 @@ def apply_connector(repo_dir: Path, provider: str, config: dict[str, Any]) -> di
         contact_form_file.write_text(CONTACT_FORM_TSX, encoding="utf-8")
         files_created.append("components/contact-form.tsx")
 
-        # Update .env.local
-        env_file = repo_dir / ".env.local"
-        env_content = env_file.read_text(encoding="utf-8") if env_file.is_file() else ""
-        lines = [line for line in env_content.splitlines() if not line.startswith("SMTP_")]
-        lines.append(f"SMTP_HOST={host}")
-        lines.append(f"SMTP_PORT={port}")
-        lines.append(f"SMTP_USER={user}")
-        lines.append(f"SMTP_PASS={pass_val}")
-        lines.append(f"SMTP_FROM={from_email}")
-        env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        files_modified.append(".env.local")
+        forget_local_credentials(git_dir, ("SMTP_",))
 
-        _git_commit(repo_dir, "chore(connector): enable custom SMTP transactional email")
+        _git_commit(git_dir, "chore(connector): enable custom SMTP transactional email")
 
         return {
             "status": "applied",
@@ -887,6 +895,7 @@ def remove_connector(repo_dir: Path, provider: str) -> dict[str, Any]:
     """Remove connector codegen from workspace repository and commit the deletion."""
     if not repo_dir.is_dir():
         raise ConnectorError(f"repository directory does not exist: {repo_dir}")
+    git_dir, repo_dir = repo_dir, app_root(repo_dir)
 
     provider = provider.lower().strip()
     files_removed: list[str] = []
@@ -903,7 +912,7 @@ def remove_connector(repo_dir: Path, provider: str) -> dict[str, Any]:
             if _remove_ga4_from_layout(layout_path):
                 files_modified.append(str(layout_path.relative_to(repo_dir)))
 
-        _git_commit(repo_dir, "chore(connector): disable Google Analytics 4")
+        _git_commit(git_dir, "chore(connector): disable Google Analytics 4")
 
         return {
             "status": "removed",
@@ -939,16 +948,9 @@ def remove_connector(repo_dir: Path, provider: str) -> dict[str, Any]:
             except OSError:
                 pass
 
-        # Clean env vars from .env.local
-        env_file = repo_dir / ".env.local"
-        if env_file.is_file():
-            env_content = env_file.read_text(encoding="utf-8")
-            prefix = "RESEND_" if provider == "resend" else "SMTP_"
-            lines = [line for line in env_content.splitlines() if not line.startswith(prefix)]
-            env_file.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-            files_modified.append(".env.local")
+        forget_local_credentials(git_dir, ("RESEND_" if provider == "resend" else "SMTP_",))
 
-        _git_commit(repo_dir, f"chore(connector): disable {provider} transactional email")
+        _git_commit(git_dir, f"chore(connector): disable {provider} transactional email")
 
         return {
             "status": "removed",

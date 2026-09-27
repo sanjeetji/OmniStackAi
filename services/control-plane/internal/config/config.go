@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -148,21 +149,11 @@ func Load(lookup Lookup) (Config, error) {
 	config.GitHubAppClientSecret = valueOrDefault(lookup, "GITHUB_APP_CLIENT_SECRET", "")
 	config.GitHubAppPrivateKey = valueOrDefault(lookup, "GITHUB_APP_PRIVATE_KEY", "")
 
-	rawSecretsKey := valueOrDefault(lookup, "OMNISTACKAI_SECRETS_KEY", "")
-	if rawSecretsKey != "" {
-		keyBytes, err := base64.StdEncoding.DecodeString(rawSecretsKey)
-		if err == nil && len(keyBytes) == 32 {
-			config.SecretsKey = keyBytes
-		}
-	}
-
-	rawPreviousKey := valueOrDefault(lookup, "OMNISTACKAI_SECRETS_KEY_PREVIOUS", "")
-	if rawPreviousKey != "" {
-		keyBytes, err := base64.StdEncoding.DecodeString(rawPreviousKey)
-		if err == nil && len(keyBytes) == 32 {
-			config.SecretsKeyPrevious = keyBytes
-		}
-	}
+	// PC-013: the forms .env.example documents - 64 hex characters, base64 of 32 bytes, or 32
+	// plain characters. Before, only base64 was read and a hex key was silently ignored, so no
+	// secret could be saved.
+	config.SecretsKey = parseSecretsKey(valueOrDefault(lookup, "OMNISTACKAI_SECRETS_KEY", ""))
+	config.SecretsKeyPrevious = parseSecretsKey(valueOrDefault(lookup, "OMNISTACKAI_SECRETS_KEY_PREVIOUS", ""))
 
 	return config, nil
 }
@@ -244,4 +235,25 @@ func parsePositiveFloat(value string) (float64, error) {
 		return 0, errors.New("must be a positive number")
 	}
 	return parsed, nil
+}
+
+// ParseSecretsKey reads a 32-byte key written as 64 hex characters, base64, or 32 plain
+// characters; anything else gives nil (secrets stay unavailable rather than weakly keyed).
+func parseSecretsKey(raw string) []byte {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	if len(raw) == 64 {
+		if b, err := hex.DecodeString(raw); err == nil {
+			return b
+		}
+	}
+	if b, err := base64.StdEncoding.DecodeString(raw); err == nil && len(b) == 32 {
+		return b
+	}
+	if len(raw) == 32 {
+		return []byte(raw)
+	}
+	return nil
 }

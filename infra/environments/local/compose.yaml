@@ -49,6 +49,10 @@ services:
       OMNISTACKAI_AGENT_ENGINE_URL: ${OMNISTACKAI_AGENT_ENGINE_URL:-http://host.docker.internal:4173}
       # PC-009: sent to the Studio on every call; scripts/omnistack.sh generates it.
       OMNISTACKAI_STUDIO_TOKEN: ${OMNISTACKAI_STUDIO_TOKEN:-}
+      # PC-013: encrypts project secrets, connector credentials and BYOK keys. Without it nothing
+      # secret can be saved (it was never passed through before, so every save failed locally).
+      OMNISTACKAI_SECRETS_KEY: ${OMNISTACKAI_SECRETS_KEY:-}
+      OMNISTACKAI_SECRETS_KEY_PREVIOUS: ${OMNISTACKAI_SECRETS_KEY_PREVIOUS:-}
       # PC-010: spending limits. PC-011: plans, packs and the payment providers (keys last, PC-070).
       OMNISTACKAI_TASK_BUDGET_CREDITS: ${OMNISTACKAI_TASK_BUDGET_CREDITS:-}
       OMNISTACKAI_USER_HOURLY_CREDIT_CAP: ${OMNISTACKAI_USER_HOURLY_CREDIT_CAP:-}

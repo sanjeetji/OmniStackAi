@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/integrations"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/projects"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/secrets"
 )
 
 type fakeAuthStore struct {
@@ -153,129 +155,140 @@ func TestCatalogDefinitions(t *testing.T) {
 	}
 }
 
+type memSecrets struct {
+	values    map[string]string
+	available bool
+}
+
+func (m *memSecrets) ListSecrets(context.Context, string, string) ([]secrets.SecretMetadata, error) {
+	return nil, nil
+}
+func (m *memSecrets) SetSecret(_ context.Context, _, _, key, value, _ string) (*secrets.SecretMetadata, error) {
+	m.values[key] = value
+	return &secrets.SecretMetadata{Key: key}, nil
+}
+func (m *memSecrets) DeleteSecret(_ context.Context, _, _, key string) error {
+	delete(m.values, key)
+	return nil
+}
+func (m *memSecrets) RevealSecret(_ context.Context, _, _, key string) (string, error) {
+	return m.values[key], nil
+}
+func (m *memSecrets) ForProject(context.Context, string) (map[string]string, error) {
+	out := map[string]string{}
+	for k, v := range m.values {
+		out[k] = v
+	}
+	return out, nil
+}
+func (m *memSecrets) IsAvailable() bool { return m.available }
+
+// PC-013: a connector's test asks the provider; its credentials are project secrets.
 func TestProjectConnectorsLifecycle(t *testing.T) {
-	authStore := fakeAuthStore{
-		user: auth.User{ID: "usr-123", Email: "dev@example.com"},
-	}
-	projectStore := fakeProjectStore{
-		project: projects.Project{ID: "proj-123", UserID: "usr-123"},
-	}
-	connectorStore := newMemConnectorStore()
+	resend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/domains" || r.Header.Get("Authorization") != "Bearer re_good_key" {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"name":"validation_error"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"data":[{"name":"example.com","status":"verified"},{"name":"new.example","status":"pending"}]}`))
+	}))
+	defer resend.Close()
 
+	store := newMemConnectorStore()
+	sec := &memSecrets{values: map[string]string{}, available: true}
 	deps := Deps{
-		AuthStore:      authStore,
-		ProjectStore:   projectStore,
-		ConnectorStore: connectorStore,
+		AuthStore:      fakeAuthStore{user: auth.User{ID: "usr-123", Email: "dev@example.com"}},
+		ProjectStore:   fakeProjectStore{project: projects.Project{ID: "proj-123", UserID: "usr-123"}},
+		ConnectorStore: store,
+		Secrets:        sec,
 	}
-
+	deps.Health = integrations.Service{
+		Checker:        integrations.Checker{BaseURL: resend.URL},
+		ProjectSecrets: sec.ForProject,
+		ConnectorConfig: func(ctx context.Context, projectID, provider string) (map[string]any, error) {
+			pc, err := store.GetProjectConnector(ctx, projectID, provider)
+			return pc.Config, err
+		},
+	}
 	mux := http.NewServeMux()
 	Register(mux, deps)
-
-	// 1. Get catalogue
-	req := httptest.NewRequest("GET", "/connectors", nil)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("GET /connectors status = %d", w.Code)
+	do := func(method, path, body string) (int, map[string]any) {
+		t.Helper()
+		req := httptest.NewRequest(method, path, bytes.NewReader([]byte(body)))
+		req.Header.Set("Authorization", "Bearer token")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		var out map[string]any
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		return w.Code, out
 	}
 
-	// 2. Initially empty project connectors
-	req = httptest.NewRequest("GET", "/projects/proj-123/connectors", nil)
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("GET /projects/proj-123/connectors status = %d", w.Code)
+	// The catalog speaks the console's field names.
+	_, cat := do("GET", "/connectors", "")
+	raw, _ := json.Marshal(cat)
+	if !bytes.Contains(raw, []byte(`"config_fields"`)) || !bytes.Contains(raw, []byte(`"name":"api_key"`)) {
+		t.Fatalf("catalog shape: %s", raw)
 	}
 
-	// 3. Test GA4 invalid measurement ID
-	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/ga4/test", bytes.NewReader([]byte(`{"config":{"measurement_id":"bad-id"}}`)))
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("POST /test invalid GA4 status = %d, want 400", w.Code)
+	// GA4 can only be checked for form, and says so rather than claiming it is verified.
+	if _, out := do("POST", "/projects/proj-123/connectors/ga4/test", `{"config":{"measurement_id":"bad-id"}}`); out["status"] != "failed" {
+		t.Fatalf("bad GA4 id: %v", out)
+	}
+	if _, out := do("POST", "/projects/proj-123/connectors/ga4/test", `{"config":{"measurement_id":"G-ABC123XYZ4"}}`); out["status"] != "unchecked" || out["success"] != false {
+		t.Fatalf("GA4 id: %v", out)
+	}
+	if code, _ := do("PUT", "/projects/proj-123/connectors/ga4", `{"config":{"measurement_id":"G-ABC123XYZ4"}}`); code != 200 {
+		t.Fatalf("save ga4: %d", code)
 	}
 
-	// 4. Test GA4 valid measurement ID
-	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/ga4/test", bytes.NewReader([]byte(`{"config":{"measurement_id":"G-ABC123XYZ4"}}`)))
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("POST /test valid GA4 status = %d, want 200", w.Code)
+	// Resend: a made-up key that merely looks right is refused by the provider.
+	if _, out := do("POST", "/projects/proj-123/connectors/resend/test", `{"config":{"api_key":"re_abcdef123456","from_email":"a@example.com"}}`); out["status"] != "failed" {
+		t.Fatalf("a made-up key passed: %v", out)
+	}
+	if _, out := do("POST", "/projects/proj-123/connectors/resend/test", `{"config":{"api_key":"re_good_key","from_email":"a@new.example"}}`); out["status"] != "failed" {
+		t.Fatalf("an unverified sending domain passed: %v", out)
+	}
+	if _, out := do("POST", "/projects/proj-123/connectors/resend/test", `{"config":{"api_key":"re_good_key","from_email":"a@example.com"}}`); out["status"] != "ok" {
+		t.Fatalf("a good key and domain failed: %v", out)
 	}
 
-	// 5. Save GA4 connector
-	saveBody := bytes.NewReader([]byte(`{"config":{"measurement_id":"G-ABC123XYZ4"}}`))
-	req = httptest.NewRequest("PUT", "/projects/proj-123/connectors/ga4", saveBody)
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("PUT /connectors/ga4 status = %d, body = %s", w.Code, w.Body.String())
+	// Saving puts the credentials in the project's secrets, not in the connector's settings.
+	code, saved := do("PUT", "/projects/proj-123/connectors/resend", `{"config":{"api_key":"re_good_key","from_email":"a@example.com"}}`)
+	if code != 200 || sec.values["RESEND_API_KEY"] != "re_good_key" || sec.values["RESEND_FROM_EMAIL"] != "a@example.com" {
+		t.Fatalf("save resend: %d %v %v", code, saved, sec.values)
+	}
+	if pc, _ := store.GetProjectConnector(context.Background(), "proj-123", "resend"); pc.Config["api_key"] != nil {
+		t.Fatalf("the key is in the plain settings: %v", pc.Config)
+	}
+	if cfg := saved["config"].(map[string]any); cfg["api_key"] != masked || cfg["from_email"] != "a@example.com" {
+		t.Fatalf("shown settings: %v", cfg)
+	}
+	_, list := do("GET", "/projects/proj-123/connectors", "")
+	if raw, _ := json.Marshal(list); bytes.Contains(raw, []byte("re_good_key")) {
+		t.Fatalf("the key reached the console: %s", raw)
 	}
 
-	var saved ProjectConnector
-	if err := json.Unmarshal(w.Body.Bytes(), &saved); err != nil {
-		t.Fatalf("unmarshal saved connector: %v", err)
+	// The saved settings test clean; saving the masked value keeps the key.
+	if _, out := do("POST", "/projects/proj-123/connectors/resend/test", `{}`); out["status"] != "ok" {
+		t.Fatalf("saved settings: %v", out)
 	}
-	if saved.Provider != "ga4" || !saved.Enabled {
-		t.Fatalf("unexpected saved connector: %+v", saved)
-	}
-
-	// 6. Delete connector
-	req = httptest.NewRequest("DELETE", "/projects/proj-123/connectors/ga4", nil)
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("DELETE /connectors/ga4 status = %d", w.Code)
+	do("PUT", "/projects/proj-123/connectors/resend", `{"config":{"api_key":"`+masked+`","from_email":"b@example.com"}}`)
+	if sec.values["RESEND_API_KEY"] != "re_good_key" || sec.values["RESEND_FROM_EMAIL"] != "b@example.com" {
+		t.Fatalf("masked resave: %v", sec.values)
 	}
 
-	// 7. Test Resend invalid api_key
-	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/resend/test", bytes.NewReader([]byte(`{"config":{"api_key":"invalid","from_email":"test@example.com"}}`)))
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("POST /test invalid Resend status = %d, want 400", w.Code)
+	// Disconnecting removes the credentials too.
+	if code, _ := do("DELETE", "/projects/proj-123/connectors/resend", ""); code != 200 {
+		t.Fatalf("delete: %d", code)
+	}
+	if len(sec.values) != 0 {
+		t.Fatalf("credentials left behind: %v", sec.values)
 	}
 
-	// 8. Test Resend valid config
-	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/resend/test", bytes.NewReader([]byte(`{"config":{"api_key":"re_abcdef123456","from_email":"onboarding@resend.dev"}}`)))
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("POST /test valid Resend status = %d, want 200", w.Code)
-	}
-
-	// 9. Test SMTP invalid port
-	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/smtp/test", bytes.NewReader([]byte(`{"config":{"host":"smtp.example.com","username":"u","port":"999999"}}`)))
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("POST /test invalid SMTP port status = %d, want 400", w.Code)
-	}
-
-	// 10. Test SMTP valid config
-	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/smtp/test", bytes.NewReader([]byte(`{"config":{"host":"smtp.example.com","username":"user@example.com","password":"pwd","port":"587"}}`)))
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("POST /test valid SMTP status = %d, want 200", w.Code)
-	}
-
-	// 11. Save SMTP connector
-	saveSMTP := bytes.NewReader([]byte(`{"config":{"host":"smtp.example.com","username":"user@example.com","password":"pwd","port":"587","from_email":"noreply@example.com"}}`))
-	req = httptest.NewRequest("PUT", "/projects/proj-123/connectors/smtp", saveSMTP)
-	req.Header.Set("Authorization", "Bearer token")
-	w = httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("PUT /connectors/smtp status = %d", w.Code)
+	// Without encrypted storage, credentials are refused rather than stored in the clear.
+	sec.available = false
+	if code, _ := do("PUT", "/projects/proj-123/connectors/smtp", `{"config":{"host":"smtp.example.com","username":"u","password":"p","from_email":"n@example.com"}}`); code != http.StatusServiceUnavailable {
+		t.Fatalf("save without secret storage: %d", code)
 	}
 }

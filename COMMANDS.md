@@ -4,6 +4,47 @@ This guide details all commands to run, inspect, develop, and verify OmniStackAI
 
 ---
 
+## 0. Try everything built so far (updated 2026-09-27, through PC-013)
+
+**Once per machine:** Docker runs through Colima (no Docker Desktop), and the Studio needs
+Python 3.13 (`./scripts/omnistack.sh doctor` says how to link it into `~/.local/bin`; the script
+now uses that link even if your shell's PATH does not include it).
+
+**`.env` must have** (copy `.env.example` first; values are local-only and never committed):
+`OMNISTACKAI_POSTGRES_PASSWORD`, `OMNISTACKAI_SECRETS_KEY` (64 hex characters, e.g. from
+`openssl rand -hex 32` — without it no secret, connector credential or model key can be saved),
+and at least one model key such as `GROQ_API_KEY` (or a local Ollama model).
+
+```bash
+colima start                          # after every reboot
+./scripts/omnistack.sh doctor         # tools, .env, ports, Python
+./scripts/omnistack.sh build          # needed once after pulling new console pages
+./scripts/omnistack.sh up             # PostgreSQL, control plane, Studio, console
+./scripts/omnistack.sh status         # every address and its health
+./scripts/omnistack.sh fresh          # optional: wipe local data and create the owner (asks first)
+```
+
+Then open http://127.0.0.1:4321 and walk through it:
+
+| Try | Where | What proves it works |
+|---|---|---|
+| Sign up (accept Terms/Privacy) | /register | A banner asks you to confirm your email |
+| Confirm the email | `./scripts/omnistack.sh logs control-plane \| grep verify-email` → open the link | Banner gone; building is allowed (it is refused before) |
+| Forgot password | /login → Forgot password? → link from the same log (`reset-password`) | Every other signed-in device is signed out |
+| Build an app | Home → describe it → Studio | Code streams in, preview runs, estimate shown first |
+| Connect email/analytics | Studio → Manage → Connectors | "Test" asks Resend / your mail server for real; badge shows Working / Not working / Not confirmed |
+| Payments | Manage → Payments → enable → set keys in Secrets → Test the keys | Stripe/Razorpay answer; nothing is charged |
+| Your own model keys | Settings → BYOK keys → Test | The provider confirms the key; no model runs |
+| Publish | Studio → Publish | The whole app goes live at one address |
+| Export / delete account | Settings → Account | JSON download; delete needs your password |
+| Admin console (owner) | /admin | Users, plans, credits, kill switch |
+
+Existing accounts count as confirmed. Locally, emails are written to the control-plane log
+(`OMNISTACKAI_DEV_MODE=1` is the local default); real email needs `RESEND_API_KEY` + `EMAIL_FROM`.
+`restart` always restarts everything (`restart console` is refused rather than stopping the stack).
+
+---
+
 ## 1. Quick Start: Single-Command Platform Runner
 
 The easiest way to run the entire platform is with `scripts/omnistack.sh` or its `task` aliases.

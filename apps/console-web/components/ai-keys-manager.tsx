@@ -38,6 +38,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { HealthResult, type HealthAnswer } from "@/components/health-result";
 
 interface ProviderKeyEntry {
   providerId: string;
@@ -95,7 +96,7 @@ export function AIKeysManager() {
 
   // Testing key state
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<Record<string, { success: boolean; latency_ms?: number; message?: string; error?: string }>>({});
+  const [testResults, setTestResults] = useState<Record<string, HealthAnswer>>({});
 
   // Delete state
   const [deletingProvider, setDeletingProvider] = useState<string | null>(null);
@@ -158,7 +159,8 @@ export function AIKeysManager() {
   };
 
   useEffect(() => {
-    fetchKeysAndProviders();
+    // Loaded after the first paint (the list starts in its loading state).
+    void Promise.resolve().then(fetchKeysAndProviders);
   }, []);
 
   const handleOpenEdit = (entry: ProviderKeyEntry) => {
@@ -230,23 +232,17 @@ export function AIKeysManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(testApiKey ? { api_key: testApiKey } : {}),
       });
-      const data = await res.json();
+      const data = (await res.json().catch(() => ({}))) as Partial<HealthAnswer> & { error?: string };
       setTestResults((prev) => ({
         ...prev,
-        [providerId]: {
-          success: res.ok && data.success,
-          latency_ms: data.latency_ms,
-          message: data.message,
-          error: data.error,
-        },
+        [providerId]: data.status
+          ? { status: data.status, message: data.message ?? "", checked_at: data.checked_at }
+          : { status: "failed", message: data.error ?? "The test could not run." },
       }));
-    } catch (err) {
+    } catch {
       setTestResults((prev) => ({
         ...prev,
-        [providerId]: {
-          success: false,
-          error: err instanceof Error ? err.message : "Test failed",
-        },
+        [providerId]: { status: "unchecked", message: "Couldn't reach the server; nothing was decided." },
       }));
     } finally {
       setTestingProvider(null);
@@ -340,21 +336,7 @@ export function AIKeysManager() {
                   </div>
                 )}
 
-                {testRes ? (
-                  <div
-                    className={cn(
-                      "p-2 rounded text-[11px] flex items-center justify-between gap-1",
-                      testRes.success
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                        : "bg-destructive/10 text-destructive border border-destructive/20",
-                    )}
-                  >
-                    <span>{testRes.success ? "Key valid & connected" : (testRes.error || "Connection failed")}</span>
-                    {testRes.latency_ms ? (
-                      <span className="font-mono tabular-nums">{testRes.latency_ms}ms</span>
-                    ) : null}
-                  </div>
-                ) : null}
+                {testRes ? <HealthResult answer={testRes} /> : null}
 
                 <div className="pt-2 flex flex-wrap items-center gap-2 mt-auto">
                   {isConfigured ? (
