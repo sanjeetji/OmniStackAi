@@ -1,51 +1,42 @@
-task_id: PC-011
-status: complete
+task_id: PC-012
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: R-109
+tracker_row: R-108
 started_at: "2026-09-27"
-completed_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Plans, entitlements, credit top-up and the super_admin console (Phase E). A plan catalogue whose
-  numbers are configuration (D-1: 100 signup credits, 1 credit = $0.001 for the beta; paid prices
-  after beta), enforced where it matters; credit top-ups and plan purchases through Stripe and
-  Razorpay, complete and tested against their APIs' shapes and signatures, switched on by keys at
-  PC-070 and idempotent per payment; a web super_admin console for users, credits, plans, roles,
-  platform spend and a live kill switch, every action audited; and, from R-590, a role manager in
-  every generated admin console so an app's admin can give self-registered users their roles.
+  Legal and account basics for a beta strangers sign up to (D-4). Email verification (building and
+  publishing wait for a verified address; existing accounts are grandfathered), password reset
+  (one-time hashed links, same answer for unknown addresses, every session signed out after a
+  reset), data export and account deletion from Settings, a retention sweeper with the periods the
+  privacy policy states, and Terms of Service and Privacy Policy pages with consent recorded at
+  sign-up. Email is sent through Resend when keyed (PC-070) and logged in dev mode otherwise.
 founder_gate: >-
-  D-1 and D-3 (Stripe global, Razorpay India); keys last (PC-070).
+  D-4 (email verification and password reset required for beta). The legal texts are drafts for
+  counsel to review before launch.
 companions:
-  - "Every refusal names the plan that would allow it"
-  - "Admin actions are audited"
+  - "Settings shows verification status, export and delete"
+  - "Sign-up records which terms version was accepted"
 allowed_paths:
   - services/control-plane/
-  - services/agent-engine/
   - apps/console-web/
-  - scripts/
+  - infra/environments/local/compose.yaml
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - .env.example
 forbidden_changes:
-  - no live payment keys; test mode only, and no secret in code, logs or client payloads
+  - no secret or token in logs outside dev mode, client payloads or the repository
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: a plan limit enforced, a signed test webhook granting credits once, the admin console used end to end
+  - Live: sign-up, verify by link, build allowed only after; reset by link signs out old sessions; export; delete
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Real prices for paid plans and packs, and live payment keys (D-1, D-3; PC-070)"
-found_and_fixed:
-  - "Plans existed since R-469 but nothing depended on them: every account could do everything."
-  - "The control plane's container never received the PC-010 limit settings (task budget, caps, kill switch) from .env: only defaults ever applied. The compose file now passes them, with the plan, pack and payment settings."
-progress:
-  - "Parts 1-3 done: plan catalogue + enforcement (projects, published apps, previews, builds, budgets, caps, own keys, custom domains, team seats); Stripe + Razorpay top-ups and plan purchases with signed, once-only webhooks; super_admin console (overview, accounts, credits, plans, roles, live kill switch, audit)."
-  - "Live: 6th project on Free refused naming Developer; signed Stripe webhook delivered twice granted 5,000 credits once, forged rejected; admin grant/plan/pause/resume through the console with audit entries; build refused while paused."
-  - "Part 4 done: GET /auth/users and PUT /auth/users/{id}/role on Python, Go, Express and Hono, plus a Users and roles page in the generated admin console. Live on all four backends: 403 for a non-admin, role change applied at next sign-in, 422 unknown role, 409 last admin."
-  - "Next queue task: PC-012 (legal and account basics)."
+deferred: []
+found_and_fixed: []
