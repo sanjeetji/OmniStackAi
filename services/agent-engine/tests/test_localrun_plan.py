@@ -65,7 +65,10 @@ class TestBuildRunPlan(unittest.TestCase):
             serve = next(s for s in plan.steps if s.background and "uvicorn" in s.program)
             env = dict(serve.env)
             self.assertIn("DATABASE_URL", env)
-            self.assertIn("secretpw", env["DATABASE_URL"])
+            # PC-009: the app connects as its own role. It used to receive the platform database
+            # owner's password, which could read the control plane's accounts and secrets.
+            self.assertNotIn("secretpw", env["DATABASE_URL"])
+            self.assertTrue(env["DATABASE_URL"].startswith("postgresql://app:"))
             self.assertIn("/app", env["DATABASE_URL"])  # db name == repo slug "app"
             self.assertEqual(env["JWT_SECRET"], "local-dev-secret")
 

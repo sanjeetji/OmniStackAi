@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import hmac
 import json
 import os
 import re
@@ -58,6 +59,10 @@ from .templates import (
 )
 from .tests_runner import get_last_test_report, run_project_tests
 from .workspace import StudioWorkspaceStore, WorkspaceLockedError, WorkspaceNotFoundError
+
+#: PC-009: the control plane's service token (see the control plane's internal/studioauth).
+STUDIO_TOKEN_ENV = "OMNISTACKAI_STUDIO_TOKEN"
+STUDIO_TOKEN_HEADER = "X-OmniStack-Studio-Token"
 
 BuildFn = Callable[..., dict]
 ControlFn = Callable[..., dict]
@@ -141,6 +146,8 @@ def _make_handler(
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
 
+    studio_token = os.environ.get(STUDIO_TOKEN_ENV, "").strip()
+
     class StudioHandler(BaseHTTPRequestHandler):
         server_version = "OmniStackAIStudio/1.0"
 
@@ -213,6 +220,19 @@ def _make_handler(
                 return None
             build_id = unquote(path[len(prefix) : -len(suffix)])
             return build_id if build_id and "/" not in build_id else None
+
+        def _authorized(self) -> bool:
+            """PC-009: only the control plane may call the Studio when a service token is set.
+
+            Ownership is checked in the control plane; the Studio acts on any workspace it is asked
+            about, so on a shared host it must know who is asking. The health check stays open.
+            """
+            if not studio_token or urlparse(self.path).path == "/healthz":
+                return True
+            if hmac.compare_digest(self.headers.get(STUDIO_TOKEN_HEADER, ""), studio_token):
+                return True
+            self._send_json(401, {"error": "unauthorized"})
+            return False
 
         @staticmethod
         def _workspace_id_for_suffix(path: str, suffix: str) -> str | None:
@@ -1129,6 +1149,8 @@ def _make_handler(
                 self._send_json(502, {"error": str(error)})
 
         def do_GET(self) -> None:  # noqa: N802 (http.server API)
+            if not self._authorized():
+                return
             if self.path in ("/", "/index.html"):
                 self._send(200, "text/html; charset=utf-8", STUDIO_HTML.encode("utf-8"))
             elif self.path == "/healthz":
@@ -1451,6 +1473,8 @@ def _make_handler(
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
         def do_POST(self) -> None:  # noqa: N802 (http.server API)
+            if not self._authorized():
+                return
             if self.path == "/api/preview/switch":
                 data = self._read_json_body()
                 if data is None:
@@ -1906,6 +1930,8 @@ def _make_handler(
             self._send_json(200, result)
 
         def do_PUT(self) -> None:  # noqa: N802 (http.server API)
+            if not self._authorized():
+                return
             path_only = urlparse(self.path).path
             ws_seo_page_id = self._workspace_id_for_suffix(path_only, "/seo/page")
             if ws_seo_page_id is not None:
@@ -1914,6 +1940,8 @@ def _make_handler(
             self._send_json(404, {"error": "not found"})
 
         def do_DELETE(self) -> None:  # noqa: N802 (http.server API)
+            if not self._authorized():
+                return
             path_only = urlparse(self.path).path
             ws_logs_id = self._workspace_id_for_suffix(path_only, "/logs")
             if ws_logs_id is not None:

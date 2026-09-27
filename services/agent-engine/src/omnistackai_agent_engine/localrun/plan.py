@@ -9,6 +9,8 @@ offline (it only reads the repo layout and composes commands as data); the opt-i
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import re
 import socket
 import urllib.parse
@@ -16,6 +18,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _database_name(root: Path) -> str:
+    """One database per project: the workspace id when the code lives in the Studio's `repo`."""
+    name = root.parent.name if root.name == "repo" and root.parent.name else root.name
+    cleaned = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")[:40] or "app"
+    return cleaned if cleaned[0].isalpha() else f"app_{cleaned}"[:40]
 
 
 def _slug(text: str) -> str:
@@ -282,7 +291,15 @@ def build_run_plan(
     web_dir = root / "apps" / "web"
     admin_dir = root / "apps" / "admin"
     app_slug = _slug(root.name)
-    database = db_name or app_slug
+    # PC-009, found auditing isolation: every Studio workspace keeps its code in a folder named
+    # `repo`, so every project previewed into one database called "repo" — and starting one
+    # project's preview dropped the other's. The database is named for the project instead.
+    database = db_name or _database_name(root)
+    # Each app connects as its own role, never as the platform's database owner (which could read
+    # the control plane's accounts and secrets). The password is derived, so the plan stays
+    # deterministic; it is unguessable without the platform's password.
+    app_role = database
+    app_password = hmac.new((db_password or "local").encode(), database.encode(), hashlib.sha256).hexdigest()[:32]
     backend_kind = _backend_kind(api_dir)
     # R-553: discovered rather than named. `web` and `admin` keep their meaning; anything else
     # under apps/ is a role-scoped surface (a courier dispatch app, a merchant portal) that an
@@ -346,39 +363,40 @@ def build_run_plan(
     # Relative on purpose: the browser loads the app from the console's origin, so a loopback
     # address here would break every API call from another device on the LAN.
     public_api_url = f"{base}/api" if multi_app else api_url
-    database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{database}"
+    database_url = f"postgresql://{app_role}:{app_password}@{db_host}:{db_port}/{database}"
 
     extra_tuples = tuple((k, str(v)) for k, v in sorted(extra_env.items())) if extra_env else ()
 
     steps: list[RunStep] = []
 
-    # --- database: recreate a clean per-app database, then apply migrations ---
+    # --- database: a clean per-app database owned by the app's own role, then migrations ---
     pg_env = (("PGPASSWORD", db_password),)
-    steps.append(
-        RunStep(
-            label=f"drop database {database} (if it exists)",
+
+    def admin_sql(label: str, sql: str, *, tolerate: bool = False) -> RunStep:
+        return RunStep(
+            label=label,
             program="docker",
-            args=(
-                "exec", "-i", db_container,
-                "psql", "-U", db_user, "-d", maintenance_db,
-                "-c", f'DROP DATABASE IF EXISTS "{database}" WITH (FORCE);',
-            ),
+            args=("exec", "-i", db_container, "psql", "-U", db_user, "-d", maintenance_db, "-c", sql),
             env=pg_env,
-            tolerate_failure=True,
+            tolerate_failure=tolerate,
         )
-    )
-    steps.append(
-        RunStep(
-            label=f"create database {database}",
-            program="docker",
-            args=(
-                "exec", "-i", db_container,
-                "psql", "-U", db_user, "-d", maintenance_db,
-                "-c", f'CREATE DATABASE "{database}";',
-            ),
-            env=pg_env,
-        )
-    )
+
+    quoted_db, quoted_role = f'"{database}"', f'"{app_role}"'
+    steps.append(admin_sql(f"drop database {database} (if it exists)",
+                           f"DROP DATABASE IF EXISTS {quoted_db} WITH (FORCE);", tolerate=True))
+    steps.append(admin_sql(f"drop database role {app_role} (if it exists)",
+                           f"DROP ROLE IF EXISTS {quoted_role};", tolerate=True))
+    steps.append(admin_sql(
+        f"create database role {app_role}",
+        f"CREATE ROLE {quoted_role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION "
+        f"PASSWORD '{app_password}';",
+    ))
+    steps.append(admin_sql(f"create database {database}", f"CREATE DATABASE {quoted_db} OWNER {quoted_role};"))
+    # Nobody else may open this database, and no app may open the platform's.
+    steps.append(admin_sql(f"lock database {database} to its role",
+                           f"REVOKE CONNECT ON DATABASE {quoted_db} FROM PUBLIC;"))
+    steps.append(admin_sql("lock the platform database to its owner",
+                           f'REVOKE CONNECT ON DATABASE "{maintenance_db}" FROM PUBLIC;', tolerate=True))
     migrations_dir = api_dir / "migrations"
     if migrations_dir.is_dir():
         for migration in sorted(migrations_dir.glob("*.sql")):
@@ -386,9 +404,10 @@ def build_run_plan(
                 RunStep(
                     label=f"apply migration {migration.name}",
                     program="docker",
+                    # As the app's role, so it owns its tables and needs no grant from anyone.
                     args=(
                         "exec", "-i", db_container,
-                        "psql", "-U", db_user, "-d", database, "-v", "ON_ERROR_STOP=1",
+                        "psql", "-U", app_role, "-d", database, "-v", "ON_ERROR_STOP=1",
                     ),
                     stdin_file=str(migration),
                     env=pg_env,

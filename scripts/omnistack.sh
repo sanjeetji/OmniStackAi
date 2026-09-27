@@ -71,7 +71,25 @@ port_listener() {
   { lsof -nP -iTCP:"$1" -sTCP:LISTEN 2>/dev/null || true; } | tail -n +2 | awk 'NR==1 {print $1" "$2}'
 }
 
-http_code() { curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$1" 2>/dev/null || printf '000'; }
+http_code() {
+  # The Studio refuses callers without the service token (PC-009); send it when there is one.
+  curl -s -o /dev/null -w '%{http_code}' --max-time 3 \
+    ${OMNISTACKAI_STUDIO_TOKEN:+-H "X-OmniStack-Studio-Token: $OMNISTACKAI_STUDIO_TOKEN"} "$1" 2>/dev/null || printf '000'
+}
+
+ensure_studio_token() {
+  # PC-009: only the control plane may call the Studio. One random token, kept private, handed to
+  # both; set OMNISTACKAI_STUDIO_TOKEN yourself to use your own (a hosted deployment's secret store).
+  if [[ -z "${OMNISTACKAI_STUDIO_TOKEN:-}" ]]; then
+    local file="$HOME/.omnistackai/studio-token"
+    if [[ ! -s "$file" ]]; then
+      mkdir -p "$(dirname "$file")"
+      (umask 077 && head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$file")
+    fi
+    OMNISTACKAI_STUDIO_TOKEN="$(cat "$file")"
+  fi
+  export OMNISTACKAI_STUDIO_TOKEN
+}
 
 wait_http() {
   # wait_http <url> <seconds> [expected-prefix]
@@ -456,6 +474,7 @@ cmd_up() {
   have docker || die "docker is required"
   docker info >/dev/null 2>&1 || die "docker daemon is not running"
   mkdir -p "$run_dir"
+  ensure_studio_token
 
   step "PostgreSQL + control-plane (Docker)"
   # --build: the control-plane runs from an image, so without a rebuild `up` silently serves
@@ -658,6 +677,7 @@ cmd_fresh() {
 }
 
 cmd_status() {
+  ensure_studio_token
   step "OmniStackAI"
   local code who pid
 

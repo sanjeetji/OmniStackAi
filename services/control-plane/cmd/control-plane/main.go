@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/studioauth"
 	"log/slog"
 	"net"
 	"net/http"
@@ -53,6 +54,8 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	// PC-009: every request to the Studio carries the service token.
+	studioauth.Install(runtimeConfig.AgentEngineURL, runtimeConfig.StudioToken)
 
 	pool, err := pgxpool.New(context.Background(), postgresURL(runtimeConfig))
 	if err != nil {

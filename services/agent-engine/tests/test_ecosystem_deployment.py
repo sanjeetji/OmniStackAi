@@ -278,9 +278,18 @@ class TestEcosystemLiveGateway(unittest.TestCase):
             self.assertFalse(gateway.is_running)
 
 
+def _no_real_start(repo_dir, **kwargs):
+    """PC-009: these tests are about deployment bookkeeping. The real start ran the generated app's
+    database steps against this machine's PostgreSQL (drop, create, revoke) inside the offline
+    suite; nothing is started now."""
+    from omnistackai_agent_engine.localrun import LocalAppRunError
+
+    raise LocalAppRunError("not started in tests")
+
+
 class TestStudioPreviewManagerDeployment(unittest.TestCase):
     def test_preview_manager_tracks_deployment(self) -> None:
-        mgr = StudioPreviewManager()
+        mgr = StudioPreviewManager(start_fn=_no_real_start)
         status = mgr.status()
         self.assertFalse(status.get("has_deployment", False))
 
@@ -316,7 +325,7 @@ class TestStudioServerDeploymentEndpoints(unittest.TestCase):
         import urllib.request
         from omnistackai_agent_engine.studio.server import create_studio_server
 
-        mgr = StudioPreviewManager()
+        mgr = StudioPreviewManager(start_fn=_no_real_start)
         eco = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get("minimal-blog-ecosystem")
         self.assertIsNotNone(eco)
         assert eco is not None and eco.package is not None

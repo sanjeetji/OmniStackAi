@@ -35,21 +35,24 @@ const (
 
 // Config contains the complete Stage 0 control-plane runtime configuration.
 type Config struct {
-	HTTPAddress           string
-	PostgresHost          string
-	PostgresPort          uint16
-	PostgresDatabase      string
-	PostgresUser          string
-	PostgresPassword      string
-	ReadHeaderTimeout     time.Duration
-	ReadTimeout           time.Duration
-	WriteTimeout          time.Duration
-	IdleTimeout           time.Duration
-	ShutdownTimeout       time.Duration
-	DatabasePingTimeout   time.Duration
-	SessionTTL            time.Duration
-	SignupCreditGrant     int64
-	AgentEngineURL        string
+	HTTPAddress         string
+	PostgresHost        string
+	PostgresPort        uint16
+	PostgresDatabase    string
+	PostgresUser        string
+	PostgresPassword    string
+	ReadHeaderTimeout   time.Duration
+	ReadTimeout         time.Duration
+	WriteTimeout        time.Duration
+	IdleTimeout         time.Duration
+	ShutdownTimeout     time.Duration
+	DatabasePingTimeout time.Duration
+	SessionTTL          time.Duration
+	SignupCreditGrant   int64
+	AgentEngineURL      string
+	// StudioToken (PC-009) is sent to the Studio on every request; the Studio refuses callers
+	// without it. Empty keeps single-operator mode.
+	StudioToken           string
 	CreditsPerUSD         float64
 	GitHubAppID           string
 	GitHubAppClientID     string
@@ -132,6 +135,7 @@ func Load(lookup Lookup) (Config, error) {
 		return Config{}, fmt.Errorf("OMNISTACKAI_AGENT_ENGINE_URL: %w", err)
 	}
 	config.AgentEngineURL = agentEngineURL
+	config.StudioToken = strings.TrimSpace(valueOrDefault(lookup, "OMNISTACKAI_STUDIO_TOKEN", ""))
 
 	creditsPerUSD, err := parsePositiveFloat(valueOrDefault(lookup, "OMNISTACKAI_CREDITS_PER_USD", defaultCreditsPerUSD))
 	if err != nil {
