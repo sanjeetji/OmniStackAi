@@ -66,6 +66,7 @@ def resolve_generation_provider_from_env(
     provider_id: str | None = None,
     model_id: str | None = None,
     api_key: str | None = None,
+    task: str = "plan",
 ) -> tuple[ModelProvider, str, int, float]:
     """Resolve (provider, model_id, max_output_tokens, request_timeout_seconds).
 
@@ -79,6 +80,9 @@ def resolve_generation_provider_from_env(
     If usage_ledger is given, the resolved provider is wrapped in a RecordingProvider so every
     real generate() call it makes is recorded (tokens, cost, success/failure) into that ledger.
     Default None keeps today's unchanged behavior (a raw, unwrapped provider).
+
+    ``task`` (PC-085) names the job — ``plan`` or ``code`` — so the default chain is ordered by the
+    model scorecard for that job. An explicit ``provider_id`` (a pinned project) is never re-routed.
     """
     if load_dotenv:
         _load_dotenv_if_needed()
@@ -152,7 +156,9 @@ def resolve_generation_provider_from_env(
                     boot.cloud_tier_provider_id,
                     model_id,
                 )
-                provider = _with_fallbacks(provider, model_id, max_output, boot.cloud_tier_provider_id)
+                provider, model_id, max_output = _with_fallbacks(
+                    provider, model_id, max_output, boot.cloud_tier_provider_id, task
+                )
                 return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
         except Exception as err:
             logger.warning(
@@ -165,17 +171,21 @@ def resolve_generation_provider_from_env(
     return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
 
 
-def _with_fallbacks(primary: ModelProvider, model_id: str, max_output: int, primary_id: str | None) -> ModelProvider:
-    """Wrap the build provider in OMNISTACKAI_FALLBACK_PROVIDERS, in order (founder, 2026-09-26).
+def _with_fallbacks(
+    primary: ModelProvider, model_id: str, max_output: int, primary_id: str | None, task: str = "plan"
+) -> tuple[ModelProvider, str, int]:
+    """Wrap the build provider in OMNISTACKAI_FALLBACK_PROVIDERS (founder, 2026-09-26).
 
     Only the tiered router read that setting before, so a rate-limited primary failed the build.
     A named provider without a key is skipped with a log line rather than failing the build.
+    PC-085: the chain is then ordered by the model scorecard for ``task``, best first; with no
+    scorecard it stays in configured order. Returns the provider and the model it tries first.
     """
     from ..model_gateway.fallback import ChainEntry, FallbackChainProvider
 
     names = [n.strip().lower() for n in (os.environ.get("OMNISTACKAI_FALLBACK_PROVIDERS", "") or "").split(",") if n.strip()]
     if not names:
-        return primary
+        return primary, model_id, max_output
     entries = [ChainEntry(primary, model_id, max_output)]
     specs = resolve_provider_specs()
     for name in names:
@@ -201,7 +211,16 @@ def _with_fallbacks(primary: ModelProvider, model_id: str, max_output: int, prim
             ))
         except Exception as error:  # noqa: BLE001 - one bad fallback must not break the build
             logger.warning("fallback provider %r skipped: %s", name, error)
-    return FallbackChainProvider(entries) if len(entries) > 1 else primary
+    if len(entries) == 1:
+        return primary, model_id, max_output
+    from ..model_gateway.evals import rank_chain
+
+    keys = [f"{e.provider.provider_id}:{e.model_id}" for e in entries]
+    order = rank_chain(keys, task)
+    if order != list(range(len(entries))):
+        logger.info("%s jobs routed by model scorecard: %s", task, " -> ".join(keys[i] for i in order))
+    entries = [entries[i] for i in order]
+    return FallbackChainProvider(entries), entries[0].model_id, entries[0].max_output_tokens
 
 
 def _maybe_record(provider: ModelProvider, usage_ledger: UsageLedger | None) -> ModelProvider:

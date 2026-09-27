@@ -1,9 +1,9 @@
 task_id: PC-085
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-27"
-completed_at: null
+completed_at: "2026-09-27"
 branch: platform-completion
 objective: >-
   Model quality evals and best-model routing. Score every configured provider (Groq, Gemini,
@@ -36,4 +36,9 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed: []
+found_and_fixed:
+  - "A free tier's quota (Gemini 429) would have scored as poor quality and routed that provider last for good; unavailable runs are now not scored."
+  - "Back-to-back eval cases measured Groq's rate-limit waits as slowness; cases are now spaced out, untimed."
+progress:
+  - "Live scorecard 2026-09-27: plan Groq 0.99 > NVIDIA 0.66 > OpenRouter free 0.38 > local 7b 0; code OpenRouter free 1.0 = NVIDIA 1.0 > Groq 0.97 > local 7b 0.63; Gemini unscored (quota)."
+  - "Next queue task: PC-094 (intake repairs round 2)."

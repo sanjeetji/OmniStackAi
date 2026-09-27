@@ -785,7 +785,31 @@ def _provider_status() -> dict:
     overview = platform_overview()
     overview["activeNow"] = active_now
     overview["activeNowError"] = active_now_error
+    overview["routing"] = _routing_summary(provider if active_now else None)
     return overview
+
+
+def _routing_summary(provider) -> dict:
+    """PC-085: the order each job tries providers in, and the scores behind it. Metadata only."""
+    from ..model_gateway.evals import configured_candidates, load_scorecard, rank_chain
+
+    card = load_scorecard()
+    # Rank from the configured order, as each job's own resolution does, so ties break the same way.
+    try:
+        keys = [candidate.key for candidate in configured_candidates()] if provider is not None else []
+    except Exception:  # noqa: BLE001 - status must never fail on a routing detail
+        keys = list(getattr(provider, "chain", ()) or ())
+    jobs = {}
+    for task in ("plan", "code"):
+        scores = (card.get("tasks") or {}).get(task) or {}
+        order = [keys[i] for i in rank_chain(keys, task, card)] if keys else []
+        jobs[task] = [
+            {"model": key, "score": (scores.get(key) or {}).get("score"),
+             "valid": (scores.get(key) or {}).get("valid"), "runs": (scores.get(key) or {}).get("runs"),
+             "medianSeconds": (scores.get(key) or {}).get("median_seconds")}
+            for key in order
+        ]
+    return {"scoredAt": card.get("generated_at"), "jobs": jobs}
 
 
 def _check_build_problems(build_id: str, history: StudioBuildHistory, problems_store: StudioProblemsStore) -> dict:
@@ -1155,6 +1179,7 @@ async def _workspace_code_edit(
             provider_id=provider_id,
             model_id=model_id,
             api_key=api_key,
+            task="code",  # PC-085: a code edit goes to the best code model
         )
         context_text = assemble_context(context)[0] if isinstance(context, dict) else ""
         workspace_store.append_turn(ws_id, "user", prompt)

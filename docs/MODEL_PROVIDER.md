@@ -207,6 +207,31 @@ environment, so resilience is enabled without code:
 `GatewayBootstrap` exposes `fallback_provider_ids` and the breaker settings, and the console's overview
 snapshot includes a `resilience` block rendered as a Resilience panel.
 
+## PC-085 Model quality evals and best-model routing
+
+Builds give a model two jobs: **plan** (turn the prompt into the app plan, through the real intake
+parse, repair and validation) and **code** (repair a TypeScript file the compiler rejected, checked
+by the TypeScript compiler against the dependencies generated web apps use).
+
+`scripts/model-eval.sh` scores every configured provider (the build model plus
+`OMNISTACKAI_FALLBACK_PROVIDERS`) on both jobs and writes the scorecard to
+`~/.omnistackai/model-evals/scorecard.json` (override: `OMNISTACKAI_MODEL_SCORECARD`). It calls real
+models, so it is opt-in and never part of `task verify`.
+
+- Score = 0.75 x share of valid runs + 0.15 x richness + 0.10 x speed (1 at 10 s or faster). Quality
+  comes first: a slow valid answer always beats a fast broken one.
+- A run the provider could not take at all (429 quota, missing or rejected key, outage) is not
+  scored. A provider unavailable for every run keeps its previous score.
+- `--only groq` re-scores one provider; the others keep their scores. `--pause` (default 20 s,
+  untimed) spaces cases out so free-tier rate limits are not measured as slowness.
+
+Routing: each job's fallback chain is ordered by its own scores, best first. Providers with no score
+keep their configured place after the scored ones that passed, and a provider that failed every run
+goes last. With no scorecard nothing moves. `OMNISTACKAI_MODEL_ROUTING=fixed` turns ordering off. A
+project that pinned a provider is never re-routed. Scores are keyed by provider and model, so a new
+model starts unscored. The Studio's provider status shows the order and scores per job under
+`routing`.
+
 ## Deferred work
 
 Durable/persistent cost storage, benchmark-backed capability promotion, richer context management,

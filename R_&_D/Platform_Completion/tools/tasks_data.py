@@ -111,7 +111,9 @@ QUEUE = [
      "cloud, local) per task type and route each job to the best one", "1 Vibe Mode live",
      "Both", "Not Started", "P1", "PC-047",
      "NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. "
-     "Founder-approved 2026-09-26."),
+     "Founder-approved 2026-09-26. Done 2026-09-27: plan and code evals, scorecard routing; follow-ups: "
+     "more code cases, score Gemini once its daily quota resets, route the build's repair step as a "
+     "code job."),
     ("PC-095", "Build fallback chain: Groq -> Gemini -> OpenRouter (free) -> NVIDIA -> local Ollama",
      "1 Vibe Mode live", "Platform", "Not Started", "P1", "PC-085",
      "Founder, 2026-09-26. A rate-limited or failing provider hands the build to the next one."),

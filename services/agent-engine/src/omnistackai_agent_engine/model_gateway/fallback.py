@@ -64,6 +64,10 @@ class FallbackChainProvider:
         self.last_provider_id: str | None = None
 
     @property
+    def entries(self) -> tuple[ChainEntry, ...]:
+        return self._entries
+
+    @property
     def chain(self) -> tuple[str, ...]:
         return tuple(f"{e.provider.provider_id}:{e.model_id}" for e in self._entries)
 
