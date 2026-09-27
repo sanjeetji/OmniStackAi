@@ -30,9 +30,9 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 |---|---|
 | Completed | 420 |
 | Completed - needs live proof | 8 |
-| In Progress | 0 |
+| In Progress | 1 |
 | Pending | 97 |
-| Not Started | 515 |
+| Not Started | 514 |
 | Superseded | 12 |
 | Deferred | 57 |
 | Dropped | 9 |
@@ -66,7 +66,7 @@ Open work queue: **102** tasks (P0: 8, P1: 48, P2: 32, P3: 14).
 | 18 | PC-096 | In-browser WebContainer preview engine behind the PC-007 engine switch (Node in the visitor's browser; licence key supplied at PC-070) | Not Started | P2 | Vibe | PC-007 |  | Split out of PC-007 on 2026-09-27: PC-007 delivers the engine switch and the open-source container engine; WebContainer needs StackBlitz's commercial licence (D-6) and runs Node only, so Python/Go APIs still need a server-side engine behind it. |
 | 19 | PC-008 | One-click publish to a live URL: web, admin, API and database together, code complete and proven against local stand-ins | Completed | P0 | Vibe | PC-049 | BP-SHIPCHECK, R-048, R-509, R-510, SPEC-TS-03 | R-509/R-510 publish the web app only and were never run for real. From specs/table-stakes/03. Real accounts are plugged in at PC-070. Done 2026-09-27 against the local stand-in; a real server + domain is proven at PC-071. |
 | 20 | PC-097 | Compile repair covers every Next surface (admin console and ecosystem role surfaces), not only the main web app | Not Started | P1 | Both | PC-008 |  | Found publishing a clinic app on 2026-09-27: the `provider` role surface shipped a model-written page with an invented import and misused components; the build never checked it. PC-008 now type-checks every Next surface and publish refuses a broken app with the compiler's reason; this task makes the repair loop fix or revert those pages as it does for web. |
-| 21 | PC-009 | Hosted multi-tenant service: per-user isolation of builds, sessions and previews; quotas; egress policy | Not Started | P0 | Platform |  | MULTI-TENANT, PG-05, R-071, R-100, R-175, R-214 | Today the Studio is one trusted operator's tool. Built cloud-neutral and proven locally (Colima); the cloud account (D-2) is plugged in at PC-070. |
+| 21 | PC-009 | Hosted multi-tenant service: per-user isolation of builds, sessions and previews; quotas; egress policy | In Progress | P0 | Platform |  | MULTI-TENANT, PG-05, R-071, R-100, R-175, R-214 | Today the Studio is one trusted operator's tool. Built cloud-neutral and proven locally (Colima); the cloud account (D-2) is plugged in at PC-070. |
 | 22 | PC-010 | Credit fairness: estimate before a build, no charge for internal retries, per-task budgets, cost guardrails | Not Started | P0 | Platform |  | PG-13, R-025, R-046, R-047, R-104 |  |
 | 23 | PC-011 | Plans, entitlements, credit top-up and super_admin console (Phase E) | Not Started | P0 | Platform |  | PG-16, PHASE-E, R-109 | Stripe and Razorpay adapters complete and tested in their test modes; live keys (D-3) at PC-070. Found in R-590: self-registered users get role 'user', which is not one of the plan's roles, so role-guarded actions need an admin to assign roles — include a role manager in the generated admin console. |
 | 24 | PC-012 | Legal and account basics: ToS, privacy, retention, deletion/export, email verification | Not Started | P0 | Platform |  | GAP-LEGAL, PG-14, R-108, R-516 |  |

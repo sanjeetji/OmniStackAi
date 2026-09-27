@@ -1,26 +1,26 @@
-task_id: PC-008
-status: complete
+task_id: PC-009
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: R-048
+tracker_row: R-100
 started_at: "2026-09-27"
-completed_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  One-click publish of the whole generated app to a live URL: web app, admin console, API and a
-  dedicated production PostgreSQL together, behind one address (/ web, /admin, /api), built in
-  production mode, migrated, smoke-tested, with rollback. The production bundle (Dockerfiles and a
-  compose file) is generated into the project so the owner can run it anywhere. Proven against a
-  local stand-in (this machine's Docker); the same stack publishes to any server over
-  DOCKER_HOST=ssh://..., with automatic HTTPS for a real domain (Caddy). Only the server and
-  domain are supplied at go-live (PC-070). Managed clouds stay in PC-028; hosted databases in PC-049.
+  Make the platform safe to host for many users. Per-project isolation of builds, sessions and
+  previews: the Studio accepts calls only from the control plane (service token); every preview
+  gets its own database and database role, never the platform's credentials; a multi-tenant mode
+  runs previews in containers (gVisor where registered) with CPU/memory/process limits, no route to
+  platform services, and outbound traffic only through an allowlist proxy; per-user quotas on
+  concurrent previews and builds, with idle previews stopped. A tenant-isolation test suite proves
+  it (R-100, R-214, PG-05). Cloud-neutral, proven locally on Colima; the cloud account is PC-070.
 founder_gate: >-
-  Keys last (founder, 2026-09-26): code and integrations complete, accounts plugged in at PC-070.
+  Queue order (founder: continue one by one). No paid service or new cloud infrastructure.
 companions:
-  - "Rollback to the previous release"
-  - "Unpublish"
-  - "Publish status and log in the Studio"
+  - "Idle previews are stopped and their resources released"
+  - "The Studio reports each quota and why a request was refused"
 allowed_paths:
   - services/agent-engine/
+  - services/control-plane/
   - apps/console-web/
   - scripts/
   - .ai/
@@ -30,29 +30,14 @@ allowed_paths:
   - .env.example
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - no paid service; no secrets in the repo, logs or client payloads
+  - no secret in logs, client payloads or the repository
 required_gates:
-  - A live publish to the local stand-in, with sign-up, sign-in and a record saved through the published URL
+  - Live isolation checks on this machine (token, database roles, container network, egress)
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Follow-on migrations for schema changes after first publish; hosted databases; backups (PC-049)"
-  - "Row ownership: a published notes app saved notes with created_by null (R-570)"
-  - "Repair of model-written pages on role surfaces (PC-097)"
-  - "A real server and domain (PC-070/PC-071)"
-found_and_fixed:
-  - "Every published app accepted admin@example.local / changeme and its sign-in page offered to fill it in; the password is replaced on publish (owner-only) and production builds drop the button."
-  - "Model-declared created_at/updated_at had no DB default, so the first saved record failed (NOT NULL)."
-  - "A plan's POST /login became app/login/route.ts beside the sign-in page; next build refused it. Pages win; intake removes duplicate account endpoints."
-  - "List pages used the delete confirmation without declaring it when only child rows were deletable."
-  - "Role surfaces were never type-checked; now every Next surface is."
-  - "An Expo app with app.config.js was treated as a web app."
-  - "Web apps import brand files from the project root; their images now build from the root."
-  - "Brand-banner description text was grey on blue."
-progress:
-  - "Live via console: notes app built 14 s, live 61 s after Publish; visitor sign-up, note saved, survived a republish; changeme rejected (401), owner password 200; rollback and unpublish on live stacks."
-  - "Next queue task: PC-009 (hosted multi-tenant service)."
+deferred: []
+found_and_fixed: []
