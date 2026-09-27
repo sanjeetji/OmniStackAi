@@ -1,9 +1,9 @@
 task_id: PC-094
-status: in_progress
+status: complete
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: null
 started_at: "2026-09-27"
-completed_at: null
+completed_at: "2026-09-27"
 branch: platform-completion
 objective: >-
   Intake repairs, round 2. Weaker models' plans failed intake in ways PC-093-style repair can fix:
@@ -31,3 +31,6 @@ model_tool_trace:
 blockers: []
 deferred: []
 found_and_fixed: []
+progress:
+  - "Live plan eval after repairs: qwen2.5-coder:7b 0/3 -> 2/3 valid; OpenRouter free nemotron 1/3 -> 2/3 (remaining miss a timeout)."
+  - "Next queue task: PC-007 (instant in-browser preview)."

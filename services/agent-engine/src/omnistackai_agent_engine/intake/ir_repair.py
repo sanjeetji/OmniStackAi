@@ -22,6 +22,17 @@ Two repairs, both deterministic and both reported rather than silent:
    a workflow for the entity already exists, the ad-hoc endpoint is redundant and is removed. If
    the field lists no states, repair 1 alone applies: we do not invent a lifecycle nobody described.
 
+PC-094 adds round two, found testing weaker models on 2026-09-26:
+
+3. **Duplicates collapse to one.** qwen2.5-coder:7b declared the role `user` twice; the validator
+   rejected the whole plan. The first of each role, entity, field, relation, screen, endpoint and
+   capability is kept, and a repeated entity's extra fields are merged into the first.
+
+4. **A lifecycle names a declared entity, or goes.** nemotron wrote a lifecycle for `Orders` when
+   the entity was `Order`; that is resolved the same way schema names are. A lifecycle for an entity
+   the plan never declared, or over a field the entity does not have, is removed rather than
+   failing the build. Transition roles the plan never declared are dropped from the transition.
+
 This runs on the decoded dict, after `_sanitize_ir_dict` and before the IR is constructed, so every
 caller of `parse_ir_response` gets it.
 """
@@ -130,13 +141,92 @@ def _workflow_for(entity: str, field: str, states: tuple[str, ...], roles: list[
     }
 
 
+def _dedupe(items: Any, key, what: str, notes: list[str], merge=None) -> Any:
+    if not isinstance(items, list):
+        return items
+    kept: dict[Any, Any] = {}
+    out: list[Any] = []
+    for item in items:
+        k = key(item) if isinstance(item, dict) else None
+        if k is None:
+            out.append(item)
+            continue
+        if k in kept:
+            if merge is not None:
+                merge(kept[k], item)
+            notes.append(f"{what} {k!r} was declared more than once; kept one")
+            continue
+        kept[k] = item
+        out.append(item)
+    return out
+
+
+def _merge_entity(first: dict[str, Any], again: dict[str, Any]) -> None:
+    fields = first.setdefault("fields", [])
+    if isinstance(fields, list) and isinstance(again.get("fields"), list):
+        names = {f.get("name") for f in fields if isinstance(f, dict)}
+        fields.extend(f for f in again["fields"] if isinstance(f, dict) and f.get("name") not in names)
+
+
+def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
+    """Repairs 3 and 4: duplicates, and lifecycles that point at nothing."""
+    data["roles"] = _dedupe(data.get("roles"), lambda r: r.get("id"), "role", notes)
+    data["entities"] = _dedupe(data.get("entities"), lambda e: e.get("name"), "entity", notes, _merge_entity)
+    for entity in data.get("entities") or ():
+        if isinstance(entity, dict):
+            name = entity.get("name")
+            entity["fields"] = _dedupe(entity.get("fields"), lambda f: f.get("name"), f"{name} field", notes)
+            if "relations" in entity:
+                entity["relations"] = _dedupe(entity.get("relations"), lambda r: r.get("name"),
+                                              f"{name} relation", notes)
+    data["screens"] = _dedupe(data.get("screens"), lambda s: s.get("id"), "screen", notes)
+    data["apis"] = _dedupe(data.get("apis"), lambda a: f"{str(a.get('method', '')).upper()} {a.get('path')}",
+                           "endpoint", notes)
+    data["capabilities"] = _dedupe(data.get("capabilities"), lambda c: c.get("name"), "capability", notes)
+    for key in ("roles", "entities", "screens", "apis", "capabilities"):
+        if data[key] is None:
+            del data[key]
+
+    entities = {str(e.get("name")): e for e in data.get("entities") or () if isinstance(e, dict) and e.get("name")}
+    role_ids = {str(r.get("id")) for r in data.get("roles") or () if isinstance(r, dict)}
+    kept: list[Any] = []
+    for capability in data.get("capabilities") or ():
+        config = capability.get("config") if isinstance(capability, dict) else None
+        if not (isinstance(config, dict) and capability.get("kind") == "workflow"):
+            kept.append(capability)
+            continue
+        label = capability.get("name", "lifecycle")
+        named = str(config.get("entity") or "")
+        entity = resolve_entity_reference(named, list(entities)) if named else None
+        if entity is None:
+            notes.append(f"lifecycle {label!r}: entity {named!r} is not in the plan; removed")
+            continue
+        if entity != named:
+            config["entity"] = entity
+            notes.append(f"lifecycle {label!r}: entity {named!r} resolved to {entity}")
+        fields = {f.get("name") for f in entities[entity].get("fields") or () if isinstance(f, dict)}
+        if config.get("field") not in fields:
+            notes.append(f"lifecycle {label!r}: {entity} has no field {config.get('field')!r}; removed")
+            continue
+        for transition in config.get("transitions") or ():
+            if isinstance(transition, dict) and isinstance(transition.get("roles"), list) and role_ids:
+                unknown = [r for r in transition["roles"] if str(r) not in role_ids]
+                if unknown:
+                    transition["roles"] = [r for r in transition["roles"] if str(r) in role_ids]
+                    notes.append(f"lifecycle {label!r}: undeclared role(s) {', '.join(map(str, unknown))} dropped")
+        kept.append(capability)
+    if "capabilities" in data:
+        data["capabilities"] = kept
+
+
 def repair_ir_dict(data: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...]]:
     """Repair `data` in place where it can; return it and a human-readable note per repair."""
     notes: list[str] = []
+    _repair_structure(data, notes)
     apis = data.get("apis")
     entities = data.get("entities")
     if not isinstance(apis, list) or not isinstance(entities, list):
-        return data, ()
+        return data, tuple(notes)
 
     entity_by_name = {str(e.get("name")): e for e in entities if isinstance(e, dict) and e.get("name")}
     entity_names = list(entity_by_name)

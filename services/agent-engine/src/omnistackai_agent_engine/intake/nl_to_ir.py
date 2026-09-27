@@ -594,13 +594,16 @@ def parse_ir_response_with_repairs(text: str) -> tuple[ApplicationIR, tuple[str,
         raise IntakeResponseError(f"model response was not valid JSON: {error}") from error
     if not isinstance(data, dict):
         raise IntakeResponseError("model response JSON was not an object")
-    data = _sanitize_ir_dict(data)
-    data, repairs = repair_ir_dict(data)
+    # PC-094: a malformed part (a string where an object belongs, a list where a name belongs)
+    # crashed intake with an AttributeError, which no caller expects. It is a bad answer like any
+    # other: a clean IntakeResponseError the fallback chain and the user can act on.
     try:
+        data = _sanitize_ir_dict(data)
+        data, repairs = repair_ir_dict(data)
         ir = ApplicationIR.from_dict(data)
-    except (ApplicationIRError, ValueError, TypeError, KeyError) as error:
+    except (ApplicationIRError, ValueError, TypeError, KeyError, AttributeError, IndexError) as error:
         raise IntakeResponseError(
-            f"model response was not a valid Application IR: {error}"
+            f"model response was not a valid Application IR: {type(error).__name__}: {error}"
         ) from error
     return normalize_ir(ir), repairs
 

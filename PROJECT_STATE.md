@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-094 (2026-09-27): intake repairs round 2.** Duplicates collapse, lifecycles point at declared entities or go, malformed parts are a clean error not a crash. Live: local 7b 0/3 -> 2/3 valid plans. Next: PC-007.
 > **PC-085 (2026-09-27): model evals and best-model routing.** `scripts/model-eval.sh` scores every provider on plan and code jobs; each job's fallback chain is ordered by score. Live: Groq best for plans (3/3, 8 s); NVIDIA/OpenRouter free best for code repair. Next: PC-094.
 > **PC-006 (2026-09-26): wow in 30 seconds.** Live prompt -> running app 12-15 s on Groq (was 18-26 s); preview start 17.7 -> 9.6 s. First screen fixed: tracker home instead of a blog's, readable names, cards that say what you can do, header fits a phone. Next: PC-085.
 > **PC-095 (2026-09-26): build fallback chain.** Groq -> Gemini -> OpenRouter free -> NVIDIA -> local 7b; moves on only for fixable failures, never mid-stream. Fixed: a keyless fallback made builds silently use the local model. Live: wrong Groq key -> Gemini answered in 2.2 s.

@@ -28,9 +28,9 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 417 |
+| Completed | 418 |
 | Completed - needs live proof | 8 |
-| In Progress | 1 |
+| In Progress | 0 |
 | Pending | 98 |
 | Not Started | 514 |
 | Superseded | 12 |
@@ -38,7 +38,7 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 | Dropped | 9 |
 | **Total** | **1116** |
 
-Open work queue: **103** tasks (P0: 10, P1: 48, P2: 31, P3: 14).
+Open work queue: **102** tasks (P0: 10, P1: 47, P2: 31, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -61,7 +61,7 @@ Open work queue: **103** tasks (P0: 10, P1: 48, P2: 31, P3: 14).
 | 13 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | P1 | Vibe | PC-006 |  | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
 | 14 | PC-085 | Model quality evals and best-model routing: score every provider (NVIDIA, cloud, local) per task type and route each job to the best one | Completed | P1 | Both | PC-047 |  | NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. Founder-approved 2026-09-26. Done 2026-09-27: plan and code evals, scorecard routing; follow-ups: more code cases, score Gemini once its daily quota resets, route the build's repair step as a code job. |
 | 15 | PC-095 | Build fallback chain: Groq -> Gemini -> OpenRouter (free) -> NVIDIA -> local Ollama | Completed | P1 | Platform | PC-085 |  | Founder, 2026-09-26. A rate-limited or failing provider hands the build to the next one. |
-| 16 | PC-094 | Intake repairs, round 2: duplicate roles, a lifecycle for a missing entity, and a clean error (not a crash) for malformed plan parts | In Progress | P1 | Both | PC-093 |  | Found testing weaker models on 2026-09-26: qwen3.8-27b crashed intake with an AttributeError; nemotron named a lifecycle for an entity it did not declare; qwen2.5-coder:7b declared the role 'user' twice. Each is repairable the way PC-093 repairs endpoints. |
+| 16 | PC-094 | Intake repairs, round 2: duplicate roles, a lifecycle for a missing entity, and a clean error (not a crash) for malformed plan parts | Completed | P1 | Both | PC-093 |  | Found testing weaker models on 2026-09-26: qwen3.8-27b crashed intake with an AttributeError; nemotron named a lifecycle for an entity it did not declare; qwen2.5-coder:7b declared the role 'user' twice. Each is repairable the way PC-093 repairs endpoints. |
 | 17 | PC-007 | Instant in-browser preview (no local toolchain needed) | Not Started | P0 | Vibe |  | ARCH-WEBCONTAINER, BP-TURBO, R-174, SPEC-TS-02 | From specs/table-stakes/02 and tracker R-174. Built behind a preview-engine interface with an open-source engine first; a paid engine licence (D-6) is only a key at the end. |
 | 18 | PC-008 | One-click publish to a live URL: web, admin, API and database together, code complete and proven against local stand-ins | Pending | P0 | Vibe | PC-049 | BP-SHIPCHECK, R-048, R-509, R-510, SPEC-TS-03 | R-509/R-510 publish the web app only and were never run for real. From specs/table-stakes/03. Real accounts are plugged in at PC-070. |
 | 19 | PC-009 | Hosted multi-tenant service: per-user isolation of builds, sessions and previews; quotas; egress policy | Not Started | P0 | Platform |  | MULTI-TENANT, PG-05, R-071, R-100, R-175, R-214 | Today the Studio is one trusted operator's tool. Built cloud-neutral and proven locally (Colima); the cloud account (D-2) is plugged in at PC-070. |
@@ -875,6 +875,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | 2026-09-26 | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
 | PC-085 | Model quality evals and best-model routing: score every provider (NVIDIA, cloud, local) per task type and route each job to the best one | Completed | 2026-09-27 | NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. Founder-approved 2026-09-26. Done 2026-09-27: plan and code evals, scorecard routing; follow-ups: more code cases, score Gemini once its daily quota resets, route the build's repair step as a code job. |
 | PC-093 | Intake repairs instead of rejecting: a model's status-change endpoint becomes a workflow transition, and an undeclared request-schema reference is fixed, not fatal | Completed | 2026-09-26 | Found by PC-047's comparison (2026-09-26): 3 of 6 real intake runs, on both NVIDIA and Gemini, were rejected for the same reason. Roughly half of real prompts fail at the first step whichever model runs, so this comes before everything else. |
+| PC-094 | Intake repairs, round 2: duplicate roles, a lifecycle for a missing entity, and a clean error (not a crash) for malformed plan parts | Completed | 2026-09-27 | Found testing weaker models on 2026-09-26: qwen3.8-27b crashed intake with an AttributeError; nemotron named a lifecycle for an entity it did not declare; qwen2.5-coder:7b declared the role 'user' twice. Each is repairable the way PC-093 repairs endpoints. |
 | PC-095 | Build fallback chain: Groq -> Gemini -> OpenRouter (free) -> NVIDIA -> local Ollama | Completed | 2026-09-26 | Founder, 2026-09-26. A rate-limited or failing provider hands the build to the next one. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
