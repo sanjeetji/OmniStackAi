@@ -1,46 +1,43 @@
-task_id: PC-010
-status: complete
+task_id: PC-011
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: R-046
+tracker_row: R-109
 started_at: "2026-09-27"
-completed_at: "2026-09-27"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Credit fairness. A user sees what a build or edit will cost before starting it; is never charged
-  for model answers the platform threw away and retried; each task has a budget it cannot exceed,
-  and never more than the user's balance; and the platform has guardrails: no work at zero
-  credits, per-user hourly and daily caps, a platform daily cap, and a kill switch that pauses all
-  paid model work (R-046, R-047, R-025, R-104, PG-13).
+  Plans, entitlements, credit top-up and the super_admin console (Phase E). A plan catalogue whose
+  numbers are configuration (D-1: 100 signup credits, 1 credit = $0.001 for the beta; paid prices
+  after beta), enforced where it matters; credit top-ups and plan purchases through Stripe and
+  Razorpay, complete and tested against their APIs' shapes and signatures, switched on by keys at
+  PC-070 and idempotent per payment; a web super_admin console for users, credits, plans, roles,
+  platform spend and a live kill switch, every action audited; and, from R-590, a role manager in
+  every generated admin console so an app's admin can give self-registered users their roles.
 founder_gate: >-
-  Queue order (founder: continue one by one).
+  D-1 and D-3 (Stripe global, Razorpay India); keys last (PC-070).
 companions:
-  - "The console shows the estimate and the balance before a build"
-  - "Every refusal says why and when it can be tried again"
+  - "Every refusal names the plan that would allow it"
+  - "Admin actions are audited"
 allowed_paths:
-  - services/agent-engine/
   - services/control-plane/
+  - services/agent-engine/
   - apps/console-web/
+  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - .env.example
 forbidden_changes:
+  - no live payment keys; test mode only, and no secret in code, logs or client payloads
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: estimate shown, a zero-balance build refused, a budget respected, a discarded retry not charged
+  - Live: a plan limit enforced, a signed test webhook granting credits once, the admin console used end to end
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Prices for Gemini, NVIDIA and OpenRouter models, and the value of a credit (founder pricing decision, PC-011)"
-found_and_fixed:
-  - "Nothing refused paid work at zero credits: the charge was clamped to the balance, so an empty account built for free."
-  - "The build models (Groq gpt-oss-120b and the fallbacks) had no price, so every build cost 0 credits."
-  - "A caller could have sent its own budget in the request body; the control plane now drops it and sets its own."
-progress:
-  - "Live via console: estimate 5-10 credits shown before a build; build charged 3 (cost $0.0023); with 1 credit left, cost $0.0026 charged exactly 1; at zero, refused (402) and the prompt box said why in advance."
-  - "Next queue task: PC-011 (plans, entitlements, top-up, super-admin)."
+deferred: []
+found_and_fixed: []
