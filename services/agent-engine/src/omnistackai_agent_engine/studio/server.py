@@ -132,6 +132,7 @@ def _make_handler(
     workspace_store: StudioWorkspaceStore | None = None,
     workspace_build_fn: WorkspaceBuildFn | None = None,
     workspace_build_stream_fn: WorkspaceBuildStreamFn | None = None,
+    workspace_design_stream_fn: Callable[..., Any] | None = None,
     workspace_edit_fn: EditFn | None = None,
     workspace_preview_fn: PreviewBuildFn | None = None,
     workspace_preview_status_fn: PreviewBuildFn | None = None,
@@ -627,6 +628,71 @@ def _make_handler(
                 asyncio.run(_drain())
             except Exception as error:
                 self._write_sse_event({"phase": "error", "error": str(error)})
+
+        def _handle_workspace_design_stream(self, ws_id: str) -> None:
+            """PC-098: design the workspace's pages with the model, one event per page (SSE)."""
+            data = self._read_json_body()
+            if data is None:
+                return
+            if workspace_design_stream_fn is None:
+                self._send_json(404, {"error": "page design is not enabled"})
+                return
+            pages = data.get("pages")
+            if pages is not None and not (isinstance(pages, list) and all(isinstance(p, str) for p in pages)):
+                self._send_json(400, {"error": "pages must be a list of page paths"})
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+            options = {k: v for k, v in data.items() if k in {"pages", "provider_id", "model_id", "api_key", "budget_micros"}}
+
+            # Found live: page design blocks its own thread for minutes (model calls, compiles), so
+            # a heartbeat on the same event loop never fired, and hops that drop a silent response
+            # (the console's HTTP client after 300 s) cut the stream. The design runs on its own
+            # thread; this one sends what it produces, and a heartbeat every 15 s when it has none.
+            import queue as _queue
+            import threading as _threading
+
+            events: _queue.Queue = _queue.Queue()
+            finished = object()
+
+            def produce() -> None:
+                async def run() -> None:
+                    async for event in workspace_design_stream_fn(ws_id, **options):
+                        events.put(event)
+
+                try:
+                    asyncio.run(run())
+                except Exception as error:  # noqa: BLE001 - reported to the client below
+                    events.put({"phase": "error", "error": str(error)})
+                finally:
+                    events.put(finished)
+
+            producer = _threading.Thread(target=produce, name=f"design-{ws_id}", daemon=True)
+            producer.start()
+            interval = float(os.environ.get("OMNISTACKAI_SSE_HEARTBEAT_SECONDS", "15"))
+            client_gone = False
+            while True:
+                try:
+                    event = events.get(timeout=interval)
+                except _queue.Empty:
+                    event = {"phase": "heartbeat"}
+                if event is finished:
+                    break
+                if client_gone:
+                    continue
+                try:
+                    self.wfile.write(f"data: {json.dumps(event)}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                except OSError:
+                    # The caller left: the run stops after the page it is writing.
+                    client_gone = True
+                    if workspace_store is not None:
+                        workspace_store.set_cancelled(ws_id)
+            producer.join()
 
         def _handle_workspace_edit(self, ws_id: str) -> None:
             data = self._read_json_body()
@@ -1843,6 +1909,10 @@ def _make_handler(
             if ws_cancel_id is not None:
                 self._handle_workspace_cancel(ws_cancel_id)
                 return
+            ws_design_id = self._workspace_id_for_suffix(path_only, "/design/stream")
+            if ws_design_id is not None:
+                self._handle_workspace_design_stream(ws_design_id)
+                return
             ws_stream_id = self._workspace_id_for_suffix(path_only, "/build/stream")
             if ws_stream_id is not None:
                 self._handle_workspace_build_stream(ws_stream_id)
@@ -2040,6 +2110,7 @@ def create_studio_server(
     workspace_store: StudioWorkspaceStore | None = None,
     workspace_build_fn: WorkspaceBuildFn | None = None,
     workspace_build_stream_fn: WorkspaceBuildStreamFn | None = None,
+    workspace_design_stream_fn: Callable[..., Any] | None = None,
     workspace_edit_fn: EditFn | None = None,
     workspace_preview_fn: PreviewBuildFn | None = None,
     workspace_preview_status_fn: PreviewBuildFn | None = None,
@@ -2132,6 +2203,7 @@ def create_studio_server(
             workspace_store=workspace_store,
             workspace_build_fn=workspace_build_fn,
             workspace_build_stream_fn=workspace_build_stream_fn,
+            workspace_design_stream_fn=workspace_design_stream_fn,
             workspace_edit_fn=workspace_edit_fn,
             workspace_preview_fn=workspace_preview_fn,
             workspace_preview_status_fn=workspace_preview_status_fn,

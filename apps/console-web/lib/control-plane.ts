@@ -578,6 +578,17 @@ export function streamProjectBuild(
   });
 }
 
+/** PC-098: the model designs the project's pages after the build; `pages` names specific ones
+ * (an edit asks for the designed pages it left in place). Server-sent events. */
+export function streamProjectDesign(token: string, projectId: string, pages?: string[]): Promise<Response> {
+  return fetch(`${controlPlaneUrl()}/projects/${encodeURIComponent(projectId)}/design/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(pages && pages.length > 0 ? { pages } : {}),
+    cache: "no-store",
+  });
+}
+
 export function getProjectTurns(
   token: string,
   projectId: string
@@ -2617,6 +2628,8 @@ export type CostEstimate = {
   basis?: string;
   priced?: boolean;
   note?: string;
+  /** PC-098: a build's estimate includes the page design that follows it. */
+  includes_page_design?: boolean;
 };
 
 export function getEstimate(token: string, kind: "build" | "edit", projectId?: string): Promise<CostEstimate> {

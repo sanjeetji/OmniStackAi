@@ -133,8 +133,9 @@ class ShrinkOnTooLargeTests(unittest.TestCase):
         self.assertEqual(_roles(provider.requests[1]), [ChatRole.SYSTEM, ChatRole.USER])
         self.assertEqual(provider.requests[1].messages[1].content, compact_prompt)
         self.assertTrue(result.startswith('"use client";\n' + MARKER_PREFIX))
-        self.assertIn("attempt 2/3", result)
-        self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("llm", 2))
+        # PC-098: a size refusal is not an answer and uses no attempt; the answer is attempt 1.
+        self.assertIn("attempt 1/3", result)
+        self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("llm", 1))
 
     def test_413_on_a_repair_turn_drops_the_echo_then_compacts(self) -> None:
         provider = ScriptedProvider([_INVALID_PAGE, _too_large(), _too_large(), _VALID_PAGE])
@@ -152,8 +153,9 @@ class ShrinkOnTooLargeTests(unittest.TestCase):
         self.assertEqual(_roles(fourth), [ChatRole.SYSTEM, ChatRole.USER])
         self.assertTrue(fourth.messages[1].content.startswith(compact_prompt))
         self.assertIn("REJECTED", fourth.messages[1].content)
-        self.assertIn("attempt 4/4", result)
-        self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("llm", 4))
+        # PC-098: the two size refusals use no attempt - the rejected page was attempt 1.
+        self.assertIn("attempt 2/4", result)
+        self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("llm", 2))
 
     def test_413_without_compact_grounding_falls_back_at_once(self) -> None:
         provider = ScriptedProvider([_too_large(), _VALID_PAGE])
@@ -169,7 +171,7 @@ class ShrinkOnTooLargeTests(unittest.TestCase):
         provider = ScriptedProvider([error, _VALID_PAGE])
         _, result, _ = self._run(provider)
         self.assertEqual(len(provider.requests), 2)
-        self.assertIn("attempt 2/3", result)
+        self.assertIn("attempt 1/3", result)  # PC-098: the size refusal used no attempt
 
     def test_other_errors_never_retry(self) -> None:
         for error, reason in (
@@ -189,7 +191,8 @@ class ShrinkOnTooLargeTests(unittest.TestCase):
         ir, result, outcomes = self._run(provider)
         self.assertEqual(len(provider.requests), 2)
         self.assertEqual(result, _overview_page(ir))
-        self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("deterministic", 2))
+        # PC-098: still two requests and a template; only the refusal that could not shrink counts.
+        self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("deterministic", 1))
         self.assertEqual(outcomes[0].last_reason, "ProviderHTTPError(413)")
 
 

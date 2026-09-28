@@ -107,6 +107,8 @@ DEFAULT_PRICE_BOOK = PriceBook(
         ("anthropic", "claude-sonnet-5"): ModelPrice("3", "15"),
         ("openai", "gpt-4o"): ModelPrice("2.5", "10"),
         ("google-gemini", "gemini-1.5-pro"): ModelPrice("1.25", "5"),
+        # PC-098: the page-writing model. Google's published preview price; verify before launch.
+        ("google-gemini", "gemini-3-flash-preview"): ModelPrice("0.5", "3"),
         ("groq", "llama-3.3-70b-versatile"): ModelPrice("0.59", "0.79"),
         # PC-010: the build model since 2026-09-26. Groq's published price; verify before launch.
         ("groq", "openai/gpt-oss-120b"): ModelPrice("0.15", "0.75"),

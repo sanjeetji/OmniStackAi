@@ -113,6 +113,7 @@ def commit_all(
 
     identity = (author_name, author_email)
     _git(target, ["add", "-A"])
+    untrack_node_modules_links(target)
     _git(target, ["commit", "-q", "-m", message], identity=identity)
     commit_sha = _git(target, ["rev-parse", "HEAD"], identity=identity).strip()
     tracked = _git(target, ["ls-files"]).splitlines()
@@ -140,3 +141,25 @@ def _git(cwd: Path, args: list[str], *, identity: tuple[str, str] | None = None)
     if process.returncode != 0:
         raise RepositoryError(f"git {args[0]} failed with exit code {process.returncode}")
     return process.stdout
+
+
+def untrack_node_modules_links(target_dir: str | os.PathLike[str]) -> list[str]:
+    """Unstage any `node_modules` symlink (PC-098). Returns the paths it removed from the index.
+
+    Found live: type-checking links a shared node_modules into each app, and the generated
+    `.gitignore` said `node_modules/`, which matches directories only - so the link (an absolute
+    path on the platform's machine) was committed into users' projects. It is never recorded, even
+    in a project generated before the ignore pattern was fixed.
+    """
+    target = Path(target_dir)
+    links = [
+        line.split("\t", 1)[1]
+        for line in _git(target, ["ls-files", "-s"]).splitlines()
+        if line.startswith("120000 ") and "\t" in line and line.split("\t", 1)[1].split("/")[-1] == "node_modules"
+    ]
+    # Type-checking also leaves `tsconfig.tsbuildinfo` behind (incremental compile state, found
+    # committed in PC-098). Never recorded either.
+    links += [path for path in _git(target, ["ls-files"]).splitlines() if path.endswith(".tsbuildinfo")]
+    if links:
+        _git(target, ["rm", "-q", "--cached", "--", *links])
+    return links

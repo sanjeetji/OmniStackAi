@@ -67,8 +67,12 @@ def resolve_generation_provider_from_env(
     model_id: str | None = None,
     api_key: str | None = None,
     task: str = "plan",
+    max_output_tokens: int | None = None,
 ) -> tuple[ModelProvider, str, int, float]:
     """Resolve (provider, model_id, max_output_tokens, request_timeout_seconds).
+
+    ``max_output_tokens`` (PC-098) replaces the output budget of an explicitly named cloud provider,
+    for a job whose answers are longer than a plan's (a whole page).
 
     Smart dual-engine routing:
     - If explicit provider_id is passed, uses that provider with optional model_id and api_key.
@@ -100,6 +104,14 @@ def resolve_generation_provider_from_env(
             if eff_key:
                 eff_model = (model_id or os.environ.get(spec.model_env, "") or spec.default_model).strip()
                 desc = _cloud_descriptor(spec.provider_id, eff_model)
+                if max_output_tokens:
+                    from dataclasses import replace as _replace
+
+                    desc = _replace(
+                        desc,
+                        max_output_tokens=int(max_output_tokens),
+                        safe_input_tokens=max(1, min(desc.safe_input_tokens, desc.context_window_tokens - int(max_output_tokens))),
+                    )
                 rate_limit_retries = int(os.environ.get("OMNISTACKAI_RATE_LIMIT_RETRIES", "2"))
                 max_retry_after = float(os.environ.get("OMNISTACKAI_MAX_RETRY_AFTER_SECONDS", "60.0"))
                 provider = create_cloud_provider(
@@ -225,3 +237,155 @@ def _with_fallbacks(
 
 def _maybe_record(provider: ModelProvider, usage_ledger: UsageLedger | None) -> ModelProvider:
     return provider if usage_ledger is None else RecordingProvider(provider, usage_ledger)
+
+
+#: PC-098: the models that can write a whole page, most capable first. Groq is last: its free tier
+#: refuses any request over ~8,000 tokens (prompt plus answer), and a grounded page needs more.
+PAGE_PROVIDER_ORDER = ("google", "anthropic", "openai", "deepseek", "mistral", "nvidia", "groq")
+PAGE_PROVIDER_ENV = "OMNISTACKAI_PAGE_PROVIDER"
+PAGE_MODEL_ENV = "OMNISTACKAI_PAGE_MODEL"
+PAGE_MAX_OUTPUT_ENV = "OMNISTACKAI_PAGE_MAX_OUTPUT_TOKENS"
+
+
+def page_output_budget() -> int:
+    """The answer budget for one page: room for a full page plus a model's own reasoning.
+
+    Measured in PC-097: at the platform-wide 4,096 every provider's answers arrived truncated.
+    """
+    try:
+        return max(1024, int(os.environ.get(PAGE_MAX_OUTPUT_ENV, "16384")))
+    except ValueError:
+        return 16384
+
+
+def page_provider_choice(provider_id: str | None = None) -> str | None:
+    """Which provider writes pages: the project's own (pinned or the user's key), else the
+    operator's choice, else the first configured one in PAGE_PROVIDER_ORDER; None means the
+    build's own default resolution (for example a local model)."""
+    if provider_id:
+        return provider_id.strip().lower()
+    chosen = (os.environ.get(PAGE_PROVIDER_ENV) or "").strip().lower()
+    if chosen:
+        return "google" if chosen == "gemini" else chosen
+    specs = resolve_provider_specs()
+    for candidate in PAGE_PROVIDER_ORDER:
+        spec = specs.get(candidate)
+        if spec is not None and os.environ.get(spec.key_env, "").strip():
+            return candidate
+    return None
+
+
+def resolve_page_provider_from_env(
+    *,
+    usage_ledger: UsageLedger | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
+) -> tuple[ModelProvider, str, int, float]:
+    """The provider that writes pages (PC-098), with a page-sized answer budget.
+
+    A project that names its own provider (pinned, or the user's own key) keeps it and its billing.
+    """
+    _load_dotenv_if_needed()
+    chosen = page_provider_choice(provider_id)
+    if chosen is None:
+        return resolve_generation_provider_from_env(usage_ledger=usage_ledger, load_dotenv=False)
+    eff_model = model_id if provider_id else (os.environ.get(PAGE_MODEL_ENV) or "").strip() or None
+    return resolve_generation_provider_from_env(
+        usage_ledger=usage_ledger,
+        load_dotenv=False,
+        provider_id=chosen,
+        model_id=eff_model,
+        api_key=api_key if provider_id else None,
+        max_output_tokens=page_output_budget(),
+    )
+
+
+#: PC-098: the free page-writing chain, best first. Measured on this machine (2026-09-28): Gemini's
+#: free tier gives each model its own daily quota (gemini-3-flash-preview: 20 requests), so two
+#: Gemini models come first; OpenRouter only with a ":free" model (founder rule); NVIDIA is slow but
+#: capable; the local model is unlimited and last. Groq's free tier cannot take a page request.
+DEFAULT_PAGE_CHAIN = (
+    "google:gemini-3.8-flash",
+    "google:gemini-3.5-flash-lite",
+    "openrouter:qwen/qwen3.8-27b:free",
+    "nvidia",
+    "ollama",
+)
+PAGE_CHAIN_ENV = "OMNISTACKAI_PAGE_CHAIN"
+PAGE_CLOUD_TIMEOUT_ENV = "OMNISTACKAI_PAGE_CLOUD_TIMEOUT_SECONDS"
+PAGE_LOCAL_TIMEOUT_ENV = "OMNISTACKAI_PAGE_LOCAL_TIMEOUT_SECONDS"
+PAGE_LOCAL_CONTEXT_ENV = "OMNISTACKAI_PAGE_LOCAL_CONTEXT_TOKENS"
+PAGE_LOCAL_OUTPUT_ENV = "OMNISTACKAI_PAGE_LOCAL_OUTPUT_TOKENS"
+
+
+def _env_number(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, "") or default)
+    except ValueError:
+        return default
+
+
+def page_chain_spec() -> list[tuple[str, str | None]]:
+    """(provider, model) pairs in the order to try them; ``provider[:model]`` entries."""
+    raw = (os.environ.get(PAGE_CHAIN_ENV) or "").strip()
+    entries = [e.strip() for e in raw.split(",") if e.strip()] if raw else list(DEFAULT_PAGE_CHAIN)
+    chosen = (os.environ.get(PAGE_PROVIDER_ENV) or "").strip().lower()
+    if chosen and not raw:
+        model = (os.environ.get(PAGE_MODEL_ENV) or "").strip()
+        entries.insert(0, f"{chosen}:{model}" if model else chosen)
+    spec: list[tuple[str, str | None]] = []
+    for entry in entries:
+        provider, _, model = entry.partition(":")
+        provider = "google" if provider.lower() == "gemini" else provider.lower()
+        if (provider, model or None) not in spec:
+            spec.append((provider, model or None))
+    return spec
+
+
+def resolve_page_providers_from_env(
+    *,
+    usage_ledger: UsageLedger | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
+) -> list[tuple[ModelProvider, str, int, float]]:
+    """Every provider that may write pages, in the order to try them (PC-098).
+
+    When one provider's limit is spent the next takes over, so free keys and a local model can
+    design pages without a bill. A project's own provider (pinned, or the user's key) is the only
+    one used - its billing is the user's.
+    """
+    _load_dotenv_if_needed()
+    if provider_id:
+        return [resolve_page_provider_from_env(usage_ledger=usage_ledger, provider_id=provider_id,
+                                               model_id=model_id, api_key=api_key)]
+    specs = resolve_provider_specs()
+    cloud_timeout = _env_number(PAGE_CLOUD_TIMEOUT_ENV, 240.0)
+    chain: list[tuple[ModelProvider, str, int, float]] = []
+    for provider, model in page_chain_spec():
+        try:
+            if provider in ("ollama", "local"):
+                if not is_ollama_ready():
+                    continue
+                local, default_model, max_out, _t = build_ollama_provider_from_env(
+                    context_window=int(_env_number(PAGE_LOCAL_CONTEXT_ENV, 16_384)),
+                    max_output=int(_env_number(PAGE_LOCAL_OUTPUT_ENV, 6_144)),
+                )
+                chain.append((_maybe_record(local, usage_ledger), model or default_model, max_out,
+                              _env_number(PAGE_LOCAL_TIMEOUT_ENV, 900.0)))
+                continue
+            spec = specs.get(provider)
+            if spec is None or not os.environ.get(spec.key_env, "").strip():
+                continue
+            if provider == "openrouter" and not (model or "").endswith(":free"):
+                logger.warning("page chain: OpenRouter is used with free models only; skipping %s", model)
+                continue
+            resolved = resolve_generation_provider_from_env(
+                usage_ledger=usage_ledger, load_dotenv=False, provider_id=provider, model_id=model,
+                max_output_tokens=page_output_budget(),
+            )
+            chain.append((resolved[0], resolved[1], resolved[2], cloud_timeout))
+        except Exception as err:  # noqa: BLE001 - one unusable provider must not stop the others
+            logger.warning("page provider %s unavailable: %s", provider, err)
+    return chain or [resolve_generation_provider_from_env(usage_ledger=usage_ledger, load_dotenv=False)]

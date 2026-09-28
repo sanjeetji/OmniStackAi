@@ -3739,15 +3739,18 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     success_actions_jsx: list[str] = []
     if detail_screen:
         id_expr = "lastSavedId || (isEdit ? editId : null)" if can_update else "lastSavedId"
+        # PC-098, found compiling a real project: this closed with a literal `)}}` (a plain string,
+        # not an f-string), so every editor screen with a detail screen failed `tsc` and `next
+        # build`; and without the parentheses `a || b && <Link/>` rendered the raw id, not the link.
         success_actions_jsx.append(
-            f'          {{{id_expr} && (\n'
+            f'          {{({id_expr}) && (\n'
             f'            <Link\n'
             f'              href={{`/{detail_screen.id}?id=${{{id_expr}}}`}}\n'
             '              style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 12px", background: "#166534", color: "#ffffff", borderRadius: 6, fontSize: 13, fontWeight: 500, textDecoration: "none" }}\n'
             '            >\n'
             f'              View {name} &rarr;\n'
             '            </Link>\n'
-            '          )}}'
+            '          )}'
         )
     if list_screen:
         success_actions_jsx.append(
@@ -73787,7 +73790,9 @@ def _component_export_names(source: str) -> list[str]:
     return list(dict.fromkeys(names))
 
 
-def summarize_components(ir: ApplicationIR, *, max_chars: int = 16_000, max_names_per_file: int = 12) -> str:
+def summarize_components(
+    ir: ApplicationIR, *, max_chars: int = 24_000, max_names_per_file: int = 12, with_props: bool = True
+) -> str:
     """The REAL pre-built components an LLM may import, with their real export names (R-465).
 
     The auth-provider entry appears only when ``needs_auth(ir)`` — it is only generated then — and is listed
@@ -73804,7 +73809,46 @@ def summarize_components(ir: ApplicationIR, *, max_chars: int = 16_000, max_name
         names = _component_export_names(generated.content)
         if names:
             lines.append(f"- @/components/{stem}: {', '.join(names[:max_names_per_file])}")
+            if with_props and stem in _CORE_COMPONENTS:
+                for props in _component_props(generated.content):
+                    lines.append(f"    {props}")
     return _truncate("\n".join(lines), max_chars)
+
+
+#: The components pages reach for most; their props are spelled out in the prompt (the rest are
+#: listed by name). All 110 with props would add ~13k tokens to every page request.
+_CORE_COMPONENTS = frozenset({
+    "empty-state", "card", "badge", "alert", "skeleton", "tabs", "pagination", "breadcrumbs",
+    "stat-card", "avatar", "dialog", "drawer", "form-controls", "data-grid", "chart", "progress",
+    "rating", "timeline", "tooltip", "dropdown-menu", "banner", "toast", "confirm-dialog", "separator",
+})
+
+_PROPS_INTERFACE = re.compile(r"export\s+interface\s+(\w+)Props\s*\{([^{}]*)\}", re.S)
+_PROP_LINE = re.compile(r"^\s*(?:readonly\s+)?(\w+)(\??):\s*([^;]+);?\s*$")
+
+
+def _component_props(source: str, *, max_type_chars: int = 28) -> list[str]:
+    """Each exported component's props, one compact line (PC-098).
+
+    Found live: the prompt listed component names only, so the model guessed their props - an
+    `EmptyState` given `actionLabel`/`onAction` it does not take - and most first drafts failed to
+    compile on exactly that. Names with `?` are optional.
+    """
+    out = []
+    for name, body in _PROPS_INTERFACE.findall(source):
+        props = []
+        for line in body.splitlines():
+            match = _PROP_LINE.match(line)
+            if match:
+                prop, optional, kind = match.groups()
+                if prop in {"style", "className"}:
+                    continue  # every component takes them; listing them only costs room
+                kind = " ".join(kind.split())
+                kind = kind if len(kind) <= max_type_chars else kind[: max_type_chars - 1] + "…"
+                props.append(f"{prop}{optional}: {kind}")
+        if props:
+            out.append(f"{name}({', '.join(props)})")
+    return out
 
 
 # R-466: the compact grounding the engine switches to when a provider rejects the full request as too large
@@ -73820,7 +73864,7 @@ def compact_grounding(ir: ApplicationIR) -> dict[str, str]:
     """The smaller data-layer/components/tokens blocks for size-limited providers (R-466)."""
     return {
         "data_layer": summarize_data_layer(ir, max_chars=_COMPACT_DATA_LAYER_CHARS),
-        "components": summarize_components(ir, max_chars=_COMPACT_COMPONENTS_CHARS, max_names_per_file=1),
+        "components": summarize_components(ir, max_chars=_COMPACT_COMPONENTS_CHARS, max_names_per_file=1, with_props=False),
         "design_tokens": summarize_design_tokens(max_chars=_COMPACT_DESIGN_TOKENS_CHARS),
     }
 
@@ -73960,7 +74004,7 @@ class NextjsWebAdapter:
             GeneratedFile("next.config.mjs", _NEXT_CONFIG),
             GeneratedFile("tailwind.config.ts", _TAILWIND_CONFIG),
             GeneratedFile("postcss.config.mjs", _POSTCSS_CONFIG),
-            GeneratedFile(".gitignore", "node_modules/\n.next/\nout/\nnext-env.d.ts\n.env*.local\n"),
+            GeneratedFile(".gitignore", "node_modules\n.next/\nout/\nnext-env.d.ts\n.env*.local\n*.tsbuildinfo\n"),
             GeneratedFile(".env.example", "# Public env vars only. Never commit secrets.\nNEXT_PUBLIC_APP_NAME=" + app_title + "\nNEXT_PUBLIC_API_URL=http://localhost:8080\nSTORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\n"),
             GeneratedFile("README.md", f"# {app_title}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
             GeneratedFile("app/layout.tsx", _layout_file(ir)),

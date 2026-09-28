@@ -316,8 +316,14 @@ class OllamaProvider:
                 "tool messages require a separately evaluated tool-calling contract"
             )
 
-    @staticmethod
-    def _chat_payload(request: GenerateRequest, *, stream: bool) -> dict[str, Any]:
+    def _chat_payload(self, request: GenerateRequest, *, stream: bool) -> dict[str, Any]:
+        options: dict[str, Any] = {"num_predict": request.max_output_tokens}
+        # PC-098, found reading the adapter: the context window was declared but never sent, so
+        # Ollama used its own small default and silently cut long prompts (a grounded page is ~9k
+        # tokens). The profile's window is what the request is sized against, so it is sent.
+        profile = self._profiles.get(request.model.model_id)
+        if profile is not None:
+            options["num_ctx"] = profile.descriptor.context_window_tokens
         return {
             "model": request.model.model_id,
             "messages": [
@@ -326,7 +332,7 @@ class OllamaProvider:
             ],
             "stream": stream,
             "think": False,
-            "options": {"num_predict": request.max_output_tokens},
+            "options": options,
         }
 
     def _parse_final_chat(

@@ -48,7 +48,7 @@ export function CostHint({ kind, projectId, refreshKey }: { kind: "build" | "edi
     <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground" title={estimate.basis ? `Based on ${estimate.basis}` : undefined}>
       <Coins className="mt-px size-3.5 shrink-0" aria-hidden="true" />
       <span className="text-pretty">
-        This {kind} will use {range} · {estimate.credit_balance} left
+        This {kind}{estimate.includes_page_design ? " (with its pages designed by the model)" : ""} will use {range} · {estimate.credit_balance} left
         {estimate.budget_credits !== undefined && estimate.billed_to === "platform" && (
           <> · never more than {estimate.budget_credits}</>
         )}

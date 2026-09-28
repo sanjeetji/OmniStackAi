@@ -19,11 +19,16 @@ from pathlib import Path
 from ..model_gateway.accounting import UsageLedger, price_book_from_env
 from ..model_gateway.contracts import TokenUsage
 
-KINDS = ("build", "edit")
+KINDS = ("build", "edit", "design")
 _WINDOW = 30
 _KEEP = 500
 #: Conservative starting points: (median input, median output, high input, high output) tokens.
-_DEFAULTS = {"build": (9000, 4000, 20000, 9000), "edit": (6000, 2500, 12000, 6000)}
+_DEFAULTS = {
+    "build": (9000, 4000, 20000, 9000),
+    "edit": (6000, 2500, 12000, 6000),
+    # PC-098: one page-design run - up to 8 pages of ~7k input and ~4.5k output, plus repairs.
+    "design": (56000, 36000, 140000, 90000),
+}
 _MICROS = Decimal(1_000_000)
 _lock = threading.Lock()
 

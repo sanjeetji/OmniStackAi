@@ -39,6 +39,12 @@ const (
 // platform runs on Ollama.
 var defaultBuildTimeout = durationFromEnv("OMNISTACKAI_AGENT_CALL_TIMEOUT", 5*time.Minute)
 
+// designTimeout bounds one page-design run (PC-098). It runs after the build, page by page, and
+// waits out a model's per-minute limits, so it legitimately takes longer than a build: found live,
+// the build's 5 minutes cut every run off part-way, and then 30 minutes cut a slow model's run. The
+// Studio stops starting pages after 40 minutes, so its end (and its bill) arrives inside this.
+var designTimeout = durationFromEnv("OMNISTACKAI_PAGE_DESIGN_TIMEOUT", 60*time.Minute)
+
 func durationFromEnv(name string, fallback time.Duration) time.Duration {
 	if raw := strings.TrimSpace(os.Getenv(name)); raw != "" {
 		if parsed, err := time.ParseDuration(raw); err == nil && parsed > 0 {
@@ -114,6 +120,8 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("DELETE /projects/{id}", handleDeleteProject(deps))
 
 	mux.HandleFunc("POST /projects/{id}/build/stream", handleProjectBuildStream(deps))
+	// PC-098: the model designs the pages after the build, as its own billed step.
+	mux.HandleFunc("POST /projects/{id}/design/stream", handleProjectDesignStream(deps))
 	mux.HandleFunc("POST /projects/{id}/edit", handleProjectEdit(deps))
 	mux.HandleFunc("GET /projects/{id}/turns", handleProjectTurns(deps))
 	mux.HandleFunc("GET /projects/{id}/files", handleProjectFiles(deps))
@@ -352,6 +360,146 @@ func handleDeleteProject(deps Deps) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// handleProjectDesignStream (PC-098) streams the model designing a project's pages, after the
+// build, while the template preview is already running. Same guards as a build (verified email,
+// credits, the task budget), billed from the Studio's usage when it finishes.
+func handleProjectDesignStream(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if controller := http.NewResponseController(w); controller != nil {
+			_ = controller.SetWriteDeadline(time.Now().Add(designTimeout))
+		}
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		var body struct {
+			Pages []string `json:"pages"`
+		}
+		_ = json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&body)
+		if !account.RequireVerified(w, user) {
+			return
+		}
+		upstreamPayload := map[string]any{}
+		if len(body.Pages) > 0 {
+			upstreamPayload["pages"] = body.Pages
+		}
+		resolved := ai.ResolveModel(r.Context(), deps.AIStore, user.ID, id)
+		if resolved.ProviderID != "" {
+			upstreamPayload["provider_id"] = resolved.ProviderID
+		}
+		if resolved.ModelID != "" {
+			upstreamPayload["model_id"] = resolved.ModelID
+		}
+		if resolved.APIKey != "" {
+			upstreamPayload["api_key"] = resolved.APIKey
+		}
+		if deps.CreditGuard != nil {
+			plan := plans.For(user.Plan)
+			decision := deps.CreditGuard.ForPlan(plan.TaskBudgetCredits, plan.DailyCreditCap).Admit(r.Context(), user.ID, user.CreditBalance, resolved.BilledTo == "platform")
+			if !decision.Allowed {
+				credits.Refuse(w, decision, user.CreditBalance)
+				return
+			}
+			if decision.BudgetMicros >= 0 {
+				upstreamPayload["budget_micros"] = decision.BudgetMicros
+			}
+		}
+		reqBody, _ := json.Marshal(upstreamPayload)
+		upstreamURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/design/stream"
+		// Detached from the client: if they leave, the Studio is told to stop and what it already
+		// designed is still read back and billed. Still bounded, by the design timeout.
+		designCtx, designCancel := upstreamContext(context.WithoutCancel(r.Context()), designTimeout)
+		defer designCancel()
+		upstreamRequest, err := http.NewRequestWithContext(designCtx, http.MethodPost, upstreamURL, bytes.NewReader(reqBody))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "could not build upstream request")
+			return
+		}
+		upstreamRequest.Header.Set("Content-Type", "application/json")
+		upstreamRequest.Header.Set(studioauth.UserHeader, user.ID)
+		upstreamRequest.Header.Set(plans.LimitsHeader, plans.StudioLimits(plans.For(user.Plan)))
+		upstreamResponse, err := deps.httpClient().Do(upstreamRequest)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "could not reach the build service")
+			return
+		}
+		defer func() { _ = upstreamResponse.Body.Close() }()
+		if upstreamResponse.StatusCode != http.StatusOK {
+			upstreamBody, _ := io.ReadAll(io.LimitReader(upstreamResponse.Body, 1<<20))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(upstreamResponse.StatusCode)
+			_, _ = w.Write(upstreamBody)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("X-Accel-Buffering", "no")
+		w.WriteHeader(http.StatusOK)
+		flusher, _ := w.(http.Flusher)
+
+		var doneUsage any
+		sawDone, clientGone := false, false
+		reader := bufio.NewReader(upstreamResponse.Body)
+		for {
+			frame, readErr := readSSEFrame(reader)
+			if len(frame) > 0 && !clientGone {
+				if _, writeErr := w.Write(frame); writeErr != nil {
+					// The person left: the Studio stops after the page it is writing, and this keeps
+					// reading so what was already designed (and kept) is still billed.
+					clientGone = true
+					go func() {
+						cancelURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/cancel"
+						cancelCtx, cancelDone := context.WithTimeout(context.Background(), defaultProxyTimeout)
+						defer cancelDone()
+						req, _ := http.NewRequestWithContext(cancelCtx, http.MethodPost, cancelURL, nil)
+						if resp, doErr := deps.httpClient().Do(req); doErr == nil {
+							_ = resp.Body.Close()
+						}
+					}()
+				} else if flusher != nil {
+					flusher.Flush()
+				}
+			}
+			if len(frame) > 0 {
+				if payload := parseSSEDataPayload(frame); payload != nil {
+					if phase, _ := payload["phase"].(string); phase == "done" {
+						sawDone = true
+						doneUsage = payload["usage"]
+					}
+				}
+			}
+			if readErr != nil {
+				break
+			}
+		}
+		if !sawDone {
+			return
+		}
+		requestedCredits := int64(0)
+		if resolved.BilledTo == "platform" {
+			requestedCredits = creditsForUsage(doneUsage, deps.CreditsPerUSD)
+		}
+		charged := int64(0)
+		if requestedCredits > 0 {
+			// Detached from the request: a person who closed the tab still used what was designed.
+			charged, _, err = deps.ProjectStore.DebitProjectCredits(context.WithoutCancel(r.Context()), user.ID, id, requestedCredits, "project:design")
+			if err != nil {
+				deps.logger().Error("debit credits for page design", "error", err, "user_id", user.ID, "project_id", id)
+			}
+		}
+		_ = ai.RecordUsageCalls(context.WithoutCancel(r.Context()), deps.AIStore, user.ID, &id, "design", resolved.BilledTo, doneUsage, charged, deps.CreditsPerUSD)
+		if !clientGone {
+			writeSSEEvent(w, flusher, "credits", map[string]any{"credits_spent": charged})
+		}
 	}
 }
 
@@ -920,6 +1068,10 @@ func handleProjectEstimate(deps Deps) http.HandlerFunc {
 			Basis    string `json:"basis"`
 			Provider string `json:"provider_id"`
 			Model    string `json:"model_id"`
+			// PC-098: a build's estimate includes the page design that follows it.
+			Design *struct {
+				Model string `json:"model_id"`
+			} `json:"design"`
 		}
 		if resp.StatusCode != http.StatusOK || json.NewDecoder(resp.Body).Decode(&est) != nil {
 			writeError(w, http.StatusBadGateway, "the build service could not estimate")
@@ -930,6 +1082,7 @@ func handleProjectEstimate(deps Deps) http.HandlerFunc {
 		out["model"] = est.Provider + ":" + est.Model
 		out["basis"] = est.Basis
 		out["priced"] = est.Priced
+		out["includes_page_design"] = est.Design != nil
 		if !est.Priced {
 			out["note"] = "This model has no configured price, so it uses no credits."
 		}

@@ -181,7 +181,10 @@ QUEUE = [
      "Measured in PC-097 (2026-09-28): on Groq's free tier the page-writing request is too large (413) "
      "for a real project even with compact grounding, and answers arrive truncated, so pages must be "
      "written from a much smaller prompt or on a larger-context model (Gemini wrote and repaired an "
-     "admin page); most first drafts had 1-4 type errors, so the page prompt must shrink them."),
+     "admin page); most first drafts had 1-4 type errors, so the page prompt must shrink them. Done "
+     "2026-09-28 on free keys: a chain (Gemini 3.8 Flash, Gemini 3.5 Flash-Lite, OpenRouter free, "
+     "NVIDIA, local Qwen2.5-Coder 14B) designed 8 of 8 pages of a food-delivery app in 7.5 min. A "
+     "billed key later only goes first in the chain (PC-070)."),
     ("PC-099", "A design direction per project: colours, type, radius, density and layout style "
      "chosen from the prompt and the product's archetype", "1 Vibe Mode live", "Both", "Not Started",
      "P0", "PC-098", "Every project on 2026-09-27 shared one byte-identical tokens.css, so all apps look "
@@ -189,7 +192,9 @@ QUEUE = [
      "light/dark) from the prompt ('modern', 'playful', 'luxury', named brand colours) and the "
      "archetype; write it to brand.json and the tokens, and give it to the page writer. A "
      "deterministic default without a model; the same prompt gives the same direction. Shown and "
-     "editable in the Plan view (PC-022) and later the brand kit (PC-020)."),
+     "editable in the Plan view (PC-022) and later the brand kit (PC-020). Found in PC-098: a designed "
+     "home page brings its own header and the app shell's navbar still renders above it - the "
+     "direction covers the layout (one header), not only the page."),
     ("PC-050", "Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, "
      "command menu, drawer, toasts, tables, forms, maps, uploads)", "1 Vibe Mode live", "Vibe",
      "Not Started", "P0", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
@@ -201,7 +206,8 @@ QUEUE = [
      "The admin console is one template for every project (21 of 27 admin layouts byte-identical on "
      "2026-09-27). Keep every existing admin capability (roles manager, CRUD on every entity, auth) "
      "and its API wiring; model-written admin pages go through the same repair and fallback as the "
-     "web app (PC-097, PC-098)."),
+     "web app (PC-097, PC-098). Found in PC-098: the admin template shows invented figures "
+     "('99.98% system health', '< 24ms latency') - every number must come from the API or not be shown."),
     ("PC-101", "UI quality gate for ordinary prompts: every Vibe build is screenshotted and checked "
      "(layout, contrast, spacing, phone width, empty/loading/error states) before it is called done",
      "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-098, PC-099, PC-100",
@@ -214,7 +220,9 @@ QUEUE = [
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "
      "qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not "
-     "configured with — detect installed models instead of trusting the setting."),
+     "configured with — detect installed models instead of trusting the setting. PC-098 "
+     "(2026-09-28): the founder replaced 7b with qwen2.5-coder:14b; the Ollama adapter now sends "
+     "num_ctx (long prompts were cut silently) and page design sizes it to 16k context / 6k answer."),
     ("R-574", "Store publishing for React Native apps: EAS build and submit to Play Store and "
      "App Store, proven with real accounts", "1 Vibe Mode live", "Both", "Pending", "P1",
      "PC-003", "R-546/R-547 generate the EAS config. Everything up to the upload is built and "

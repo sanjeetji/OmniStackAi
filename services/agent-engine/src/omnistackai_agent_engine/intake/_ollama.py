@@ -41,13 +41,25 @@ def _positive_float(name: str, default: float) -> float:
     return value
 
 
-def build_ollama_provider_from_env() -> tuple[OllamaProvider, str, int, float]:
-    """Return (provider, model_id, max_output_tokens, request_timeout_seconds) from env."""
+def build_ollama_provider_from_env(
+    *, context_window: int | None = None, max_output: int | None = None
+) -> tuple[OllamaProvider, str, int, float]:
+    """Return (provider, model_id, max_output_tokens, request_timeout_seconds) from env.
+
+    ``context_window`` / ``max_output`` (PC-098) size the local model for one job - a whole page
+    needs far more room than a plan - within what the machine's memory allows.
+    """
     base_url = os.environ.get("OMNISTACKAI_OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     model_id = os.environ.get("OMNISTACKAI_OLLAMA_MODEL", "qwen2.5-coder:14b")
-    context_window = _positive_int("OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS", 8_192)
-    safe_input = _positive_int("OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS", 6_144)
-    max_output = _positive_int("OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS", 2_048)
+    if context_window is None and max_output is None:
+        context_window = _positive_int("OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS", 8_192)
+        safe_input = _positive_int("OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS", 6_144)
+        max_output = _positive_int("OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS", 2_048)
+    else:
+        # Sized for a job: whatever the answer does not use is room for the prompt.
+        context_window = context_window or _positive_int("OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS", 8_192)
+        max_output = max_output or _positive_int("OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS", 2_048)
+        safe_input = context_window - max_output
     request_timeout = _positive_float("OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS", 300.0)
     health_timeout = _positive_float("OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS", 5.0)
     max_concurrency = _positive_int("OMNISTACKAI_OLLAMA_MAX_CONCURRENCY", 1)

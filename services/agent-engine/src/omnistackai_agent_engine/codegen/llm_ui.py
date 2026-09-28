@@ -354,9 +354,10 @@ def _core_rules(ir: ApplicationIR) -> str:
     return f"""CORE IMPLEMENTATION RULES:
 1. Start with `"use client";`
 2. IMPORTS: ONLY `react`, `react-dom`, `next/*` (e.g. next/link, next/navigation), `@/lib/hooks`, `@/lib/types`,
-   `@/lib/api`, and the `@/components/<file>` modules listed above. No other package exists (no Tailwind, no icon
-   libraries, no axios). Never use require() or dynamic import().
-3. DATA ACCESS: use ONLY the hooks in the TYPED DATA LAYER with EXACTLY those signatures. List hooks expose
+   `@/lib/api`, `lucide-react` icons, and the `@/components/<file>` modules above; nothing else, no require().
+   Import every icon and component you use.
+3. DATA ACCESS: use ONLY the hooks in the TYPED DATA LAYER with EXACTLY those signatures, only fields its types
+   declare, and only the props listed for a component. List hooks expose
    `refetch()`, `setPage()`, `setPageSize()`, `setSearch()`, `setSort()` (and `setFilter()`/`clearFilters()` on
    collection lists); there is NO `refresh()`. List params are `{{ limit, offset, sort, order, q }}` — never
    page/pageSize as params. If the data layer says NO hooks exist, do not import '@/lib/hooks'.
@@ -503,12 +504,29 @@ def _resolve_target(provider: ModelProvider, model_id: str | None) -> tuple[Mode
     target = ModelRef(provider_id=provider_id, model_id=resolved_model_id)
 
     max_output = 4096
-    profiles_dict = getattr(provider, "_profiles", None)
-    if isinstance(profiles_dict, dict) and resolved_model_id in profiles_dict:
+    # PC-098, found live: the billing wrapper (RecordingProvider) has no profile of its own, so every
+    # billed page request fell back to 4,096 output tokens whatever the model allowed - too few for a
+    # page, which is why answers arrived truncated. The limits are read from the wrapped provider.
+    inner = provider
+    for _ in range(4):
+        if (hasattr(inner, "profile") or isinstance(getattr(inner, "_profiles", None), dict)
+                or getattr(inner, "_descriptor", None) is not None):
+            break
+        nxt = getattr(inner, "_inner", None)
+        if nxt is None:
+            break
+        inner = nxt
+    profiles_dict = getattr(inner, "_profiles", None)
+    # A cloud provider carries one descriptor for the model it was built for; it was never read
+    # here, so cloud pages were capped at 4,096 whatever the descriptor allowed.
+    single = getattr(inner, "_descriptor", None)
+    if single is not None and getattr(getattr(single, "model", None), "model_id", None) == resolved_model_id:
+        max_output = single.max_output_tokens
+    elif isinstance(profiles_dict, dict) and resolved_model_id in profiles_dict:
         max_output = profiles_dict[resolved_model_id].descriptor.max_output_tokens
-    elif hasattr(provider, "profile"):
+    elif hasattr(inner, "profile"):
         try:
-            max_output = provider.profile(target).descriptor.max_output_tokens
+            max_output = inner.profile(target).descriptor.max_output_tokens
         except Exception:  # noqa: BLE001 - profile lookup is best-effort
             pass
     return target, max_output
@@ -637,8 +655,11 @@ async def _synthesize_file(
     transcript = _Transcript(prompt, compact_prompt)
     attempts = 0
     last_reason = ""
-    for attempt in range(1, attempts_allowed + 1):
-        attempts = attempt
+    # PC-098: a size refusal is not an answer and costs no attempt (bounded: the transcript can
+    # only shrink twice). Counting it made a two-step shrink eat the whole budget.
+    while attempts < attempts_allowed:
+        attempts += 1
+        attempt = attempts
         try:
             request = GenerateRequest(
                 request_id=f"ui-synth-{uuid.uuid4().hex[:12]}",
@@ -650,9 +671,10 @@ async def _synthesize_file(
             response = await asyncio.wait_for(provider.generate(request), timeout=timeout_seconds)
         except Exception as err:  # noqa: BLE001 - transport/provider errors never retry; fall back
             last_reason = _reason_for(err)
-            shrunk = transcript.shrink() if _is_request_too_large(err) and attempt < attempts_allowed else None
+            shrunk = transcript.shrink() if _is_request_too_large(err) else None
             if shrunk is not None:
                 logger.warning("LLM UI synthesis for %s: request too large (%s); %s and retrying", log_label, last_reason, shrunk)
+                attempts -= 1
                 continue
             logger.warning(
                 "LLM UI synthesis for %s failed (%s); falling back to the deterministic template", log_label, last_reason

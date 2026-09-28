@@ -138,6 +138,8 @@ export default function StudioChat({
   const [streamChars, setStreamChars] = useState(0);
   const [hydrating, setHydrating] = useState(Boolean(initialProjectId || urlBuildId));
   const [creditBalance, setCreditBalance] = useState(initialCreditBalance);
+  // PC-098: the model designing pages after a build, page by page, while the preview runs.
+  const [designing, setDesigning] = useState<{ done: number; total: number } | null>(null);
 
   // Skills & Knowledge state
   const [projectKnowledge, setProjectKnowledge] = useState<ProjectKnowledge | null>(null);
@@ -858,6 +860,8 @@ export default function StudioChat({
         timings: finalResult.timings,
       });
       setPreviewVersion((v) => v + 1);
+      // PC-098: the preview is up with template pages; now the model designs them.
+      void designPages(newProject.id);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         return;
@@ -867,6 +871,93 @@ export default function StudioChat({
       abortControllerRef.current = null;
       activeBuildingProjectId.current = null;
       setStreamChars(0);
+    }
+  }
+
+  /** PC-098: the model designs the pages after the build (or redesigns the ones an edit kept).
+   * The template preview is already running; each page swaps in once it has compiled. */
+  async function designPages(id: string, pages?: string[]) {
+    setDesigning({ done: 0, total: pages?.length ?? 0 });
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(id)}/design/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pages && pages.length > 0 ? { pages } : {}),
+      });
+      if (!response.ok || !response.body) {
+        const body = (await response.json().catch(() => ({}))) as ErrorBody;
+        appendMessage(
+          "assistant",
+          `The pages keep their built-in design: ${formatServerError(body.error, "page design could not start.")}`,
+          "error",
+        );
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let summary: Record<string, unknown> | null = null;
+      let failure: string | null = null;
+      const settled = new Set<string>();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary !== -1) {
+          const rawFrame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          for (const line of rawFrame.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            let payload: Record<string, unknown>;
+            try {
+              payload = JSON.parse(line.slice("data: ".length)) as Record<string, unknown>;
+            } catch {
+              continue;
+            }
+            if (payload.phase === "planned" && Array.isArray(payload.pages)) {
+              setDesigning({ done: 0, total: payload.pages.length });
+            } else if (payload.phase === "page" && typeof payload.path === "string") {
+              const status = payload.status;
+              if (status === "designed" || status === "kept_template") settled.add(payload.path);
+              else if (status === "written") settled.delete(payload.path);
+              setDesigning((prev) => (prev ? { ...prev, done: settled.size } : prev));
+            } else if (payload.phase === "done") {
+              summary = payload;
+            } else if (payload.phase === "error") {
+              failure = typeof payload.error === "string" ? payload.error : "page design failed";
+            } else if (typeof payload.credits_spent === "number" && payload.credits_spent > 0) {
+              const spent = payload.credits_spent;
+              setCreditBalance((balance) => Math.max(0, balance - spent));
+            }
+          }
+          boundary = buffer.indexOf("\n\n");
+        }
+      }
+      if (failure) {
+        appendMessage("assistant", `The pages keep their built-in design: ${failure}`, "error");
+        return;
+      }
+      if (!summary) return;
+      const designed = typeof summary.designed === "number" ? summary.designed : 0;
+      const kept = typeof summary.kept_template === "number" ? summary.kept_template : 0;
+      if (designed === 0 && kept === 0) return;
+      const reasons = new Set<string>();
+      const detail = (summary.pages ?? {}) as Record<string, { status?: string; reason?: string }>;
+      for (const page of Object.values(detail)) {
+        if (page.status === "kept_template" && page.reason) reasons.add(page.reason);
+      }
+      let note = `Designed ${designed} page${designed === 1 ? "" : "s"} with the model.`;
+      if (kept > 0) {
+        note += ` ${kept} kept ${kept === 1 ? "its" : "their"} built-in design (${Array.from(reasons).slice(0, 2).join("; ")}).`;
+      }
+      appendMessage("assistant", note);
+      const files = await fetchProjectFiles(id);
+      if (files.length > 0) setWorkspace((prev) => (prev ? { ...prev, files } : prev));
+    } catch {
+      appendMessage("assistant", "Page design stopped: couldn't reach the server. The pages keep their built-in design.", "error");
+    } finally {
+      setDesigning(null);
     }
   }
 
@@ -945,6 +1036,11 @@ export default function StudioChat({
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);
+      // PC-098: designed pages the edit kept are redesigned against the new plan.
+      const redesign = Array.isArray(result.redesign_pages)
+        ? result.redesign_pages.filter((p): p is string => typeof p === "string")
+        : [];
+      if (redesign.length > 0) void designPages(id, redesign);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         return;
@@ -1124,6 +1220,15 @@ export default function StudioChat({
           ) : null}
 
           {submitting ? <WorkingBubble label={workingLabel} /> : null}
+          {!submitting && designing ? (
+            <WorkingBubble
+              label={
+                designing.total > 0
+                  ? `Designing pages with the model: ${designing.done} of ${designing.total}. The preview updates as each one is ready.`
+                  : "Designing pages with the model…"
+              }
+            />
+          ) : null}
         </div>
 
         {truncationWarning?.truncated && (

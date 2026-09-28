@@ -736,6 +736,12 @@ def _git_commit(repo_dir: Path, message: str) -> None:
         "GIT_COMMITTER_EMAIL": "agent@omnistack.ai",
     }
     subprocess.run(["git", "add", "-A"], cwd=str(repo_dir), env=env, capture_output=True, text=True, check=False)
+    from ..git_service import untrack_node_modules_links
+
+    try:
+        untrack_node_modules_links(repo_dir)  # PC-098: never commit the type-check's node_modules link
+    except Exception:  # noqa: BLE001 - best effort; the commit below still happens
+        pass
     subprocess.run(["git", "commit", "-m", message], cwd=str(repo_dir), env=env, capture_output=True, text=True, check=False)
 
 

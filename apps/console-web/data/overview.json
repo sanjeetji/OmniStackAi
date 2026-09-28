@@ -153,6 +153,12 @@
       "outputPerMTokUsd": "5"
     },
     {
+      "providerId": "google-gemini",
+      "modelId": "gemini-3-flash-preview",
+      "inputPerMTokUsd": "0.5",
+      "outputPerMTokUsd": "3"
+    },
+    {
       "providerId": "groq",
       "modelId": "llama-3.3-70b-versatile",
       "inputPerMTokUsd": "0.59",

@@ -78,6 +78,8 @@ services:
       OMNISTACKAI_MODEL_CALL_RETENTION_DAYS: ${OMNISTACKAI_MODEL_CALL_RETENTION_DAYS:-}
       # A local model needs far longer than a cloud one for a build or a chat edit (R-530).
       OMNISTACKAI_AGENT_CALL_TIMEOUT: ${OMNISTACKAI_AGENT_CALL_TIMEOUT:-5m}
+      # PC-098: a page-design run waits out model rate limits page by page, so it has its own bound.
+      OMNISTACKAI_PAGE_DESIGN_TIMEOUT: ${OMNISTACKAI_PAGE_DESIGN_TIMEOUT:-60m}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

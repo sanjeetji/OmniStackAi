@@ -1,9 +1,9 @@
 task_id: PC-098
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 2 of 6)
 tracker_row: PC-098
 started_at: "2026-09-28"
-completed_at: null
+completed_at: "2026-09-28"
 branch: platform-completion
 objective: >-
   Model-written pages back on for every Vibe build. The build and its template preview stay as fast
@@ -39,5 +39,15 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "Designed page header under the app shell navbar (PC-099)"
+  - "Admin template shows invented figures (PC-100)"
+  - "Free-chain models unpriced: page design costs users 0 credits until PC-070"
+found_and_fixed:
+  - "Page answers capped at 4,096 tokens: billing wrapper hid limits, cloud descriptors never read"
+  - "Size refusals used up page-writing attempts"
+  - "Prompt forbade the allowed icon library and listed no component props"
+  - "Editor screens with a View link emitted `)}}`: tsc and next build failed"
+  - "node_modules symlink and tsbuildinfo committed into user projects"
+  - "Ollama adapter never sent num_ctx; long prompts cut silently"
+  - "Design stream cut by silent hops and short bounds: heartbeats, own thread, 40/60-minute bounds"

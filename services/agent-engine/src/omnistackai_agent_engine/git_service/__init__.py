@@ -5,6 +5,7 @@ from .materialize import (
     MaterializeResult,
     RepositoryResult,
     commit_all,
+    untrack_node_modules_links,
     create_repository,
     materialize_project,
 )
@@ -17,6 +18,7 @@ __all__ = [
     "RepositoryResult",
     "TargetNotEmptyError",
     "commit_all",
+    "untrack_node_modules_links",
     "create_repository",
     "materialize_project",
 ]

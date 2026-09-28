@@ -31,6 +31,7 @@ import time
 import re
 import signal
 import subprocess
+from contextlib import contextmanager
 import sys
 import tempfile
 from collections.abc import AsyncIterator
@@ -1076,6 +1077,141 @@ def _apps_touched(diff) -> list[str]:
     return sorted(touched)
 
 
+#: PC-098: workspaces whose pages are being designed right now.
+_DESIGNING: set[str] = set()
+
+
+@contextmanager
+def _lock_stopping_design(workspace_store: StudioWorkspaceStore, ws_id: str, wait_seconds: float = 180.0):
+    """The workspace lock for an edit. A page design run holding it is asked to stop after its
+    current page, and the edit waits for it rather than failing with "busy"."""
+    deadline = time.monotonic() + wait_seconds
+    stopped_design = False
+    while True:
+        try:
+            lock = workspace_store.lock(ws_id)
+            lock.__enter__()
+        except WorkspaceLockedError:
+            if ws_id not in _DESIGNING or time.monotonic() > deadline:
+                raise
+            workspace_store.set_cancelled(ws_id)
+            stopped_design = True
+            time.sleep(1.0)
+            continue
+        break
+    if stopped_design:
+        workspace_store.clear_cancelled(ws_id)  # the stop was for the design run, not for this edit
+    try:
+        yield
+    finally:
+        lock.__exit__(None, None, None)
+
+
+def _keep_designed_pages(diff, repo_dir: str):
+    """Drop an edit's template rewrite of any page the model designed (PC-098).
+
+    Returns the filtered diff and the pages kept, which the console then redesigns against the new
+    plan - so an edit never throws a designed page away, and the page still learns the change.
+    """
+    from pathlib import Path
+
+    from ..codegen.hybrid_repair import is_model_written
+    from ..edit.diff import ChangeKind, ProjectDiff
+
+    kept = [
+        change.path for change in diff.changes
+        if change.kind is ChangeKind.MODIFIED and change.path.endswith("page.tsx")
+        and is_model_written(Path(repo_dir) / change.path)
+    ]
+    if not kept:
+        return diff, []
+    return ProjectDiff(tuple(c for c in diff.changes if c.path not in kept), diff.unchanged + tuple(kept)), kept
+
+
+async def _workspace_design_stream(
+    ws_id: str,
+    *,
+    workspace_store: StudioWorkspaceStore,
+    pages: list[str] | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
+    budget_micros: int | None = None,
+    **_ignored,
+) -> AsyncIterator[dict]:
+    """Design a workspace's pages with the model (PC-098), streaming each page's outcome.
+
+    Runs after the build, while the template preview is already up. A final ``done`` event carries
+    the usage the control plane bills, exactly like a build's.
+    """
+    from ..intake.provider_resolution import resolve_page_providers_from_env
+    from .page_design import ChainProvider, design_enabled, design_pages
+
+    if not design_enabled():
+        yield {"phase": "done", "designed": 0, "kept_template": 0, "pages": {}, "disabled": True,
+               "usage": _usage_summary_to_dict(_task_ledger(None))}
+        return
+    if is_template_workspace(workspace_store, ws_id) is not None:
+        yield {"phase": "error", "error": "Template projects keep their own hand-built pages."}
+        return
+    workspace_store.clear_cancelled(ws_id)
+    try:
+        lock = workspace_store.lock(ws_id)
+        lock.__enter__()
+    except WorkspaceLockedError:
+        yield {"phase": "error", "error": "This project is busy with another change; pages will be designed when it finishes."}
+        return
+    _DESIGNING.add(ws_id)
+    usage_ledger = _task_ledger(budget_micros)
+    try:
+        ir = workspace_store.load_ir(ws_id)
+        repo_dir = workspace_store.repo_path(ws_id)
+        if ir is None or not repo_dir.is_dir():
+            yield {"phase": "error", "error": "Build the project first."}
+            return
+        chain = resolve_page_providers_from_env(
+            usage_ledger=usage_ledger, provider_id=provider_id, model_id=model_id, api_key=api_key,
+        )
+        provider = ChainProvider([(entry[0], entry[1], entry[3], entry[2]) for entry in chain])
+        # Each call is bounded by the slowest entry's own timeout (a local model's page can take
+        # many minutes); the chain adds its waits on top.
+        eff_model, timeout = chain[0][1], max(entry[3] for entry in chain)
+        prompt = str((workspace_store.get_state(ws_id) or {}).get("prompt") or ir.description or ir.name)
+        summary: dict = {}
+        async for event in design_pages(
+            repo_dir, ir, prompt, provider, model_id=eff_model, only=pages, timeout_seconds=timeout,
+            cancelled=lambda: workspace_store.is_cancelled(ws_id),
+            author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
+        ):
+            if event.get("phase") == "summary":
+                summary = event
+                continue
+            yield event
+        usage = _usage_summary_to_dict(usage_ledger)
+        estimates.record("design", usage_ledger)
+        state = workspace_store.get_state(ws_id) or {}
+        designed_pages = dict(state.get("designed_pages") or {})
+        designed_pages.update(summary.get("pages") or {})
+        state["designed_pages"] = designed_pages
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(repo_dir), capture_output=True, text=True, check=False)
+        if head.returncode == 0:
+            state["commit_sha"] = head.stdout.strip()
+        workspace_store.save_state(ws_id, state)
+        designed, kept = summary.get("designed", 0), summary.get("kept_template", 0)
+        if designed or kept:
+            note = f"Designed {designed} page{'s' if designed != 1 else ''} with the model."
+            if kept:
+                note += f" {kept} kept {'their' if kept != 1 else 'its'} built-in template."
+            workspace_store.append_turn(ws_id, "assistant", note)
+        yield {"phase": "done", **{k: v for k, v in summary.items() if k != "phase"},
+               "model": {"provider_id": provider.provider_id, "model_id": eff_model,
+                         "served_by": list(provider.served_by)},
+               "commit_sha": state.get("commit_sha", ""), "usage": usage}
+    finally:
+        _DESIGNING.discard(ws_id)
+        lock.__exit__(None, None, None)
+
+
 async def _workspace_edit(
     ws_id: str,
     prompt: str,
@@ -1094,7 +1230,7 @@ async def _workspace_edit(
             ws_id, prompt, workspace_store=workspace_store, context=context,
             provider_id=provider_id, model_id=model_id, api_key=api_key,
         )
-    with workspace_store.lock(ws_id):
+    with _lock_stopping_design(workspace_store, ws_id):
         ir = workspace_store.load_ir(ws_id)
         if ir is None:
             raise BuildNotFoundError(f"workspace '{ws_id}' not found or has no IR; build first")
@@ -1147,6 +1283,9 @@ async def _workspace_edit(
                 "usage": _usage_summary_to_dict(usage_ledger),
             }
 
+        # PC-098: an edit never replaces a page the model designed with a template. The page is
+        # kept, and named so the console redesigns it against the new plan.
+        diff, redesign = _keep_designed_pages(diff, repo_dir)
         result = commit_edit(
             diff, repo_dir, author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
             message=f"edit: {prompt.strip()[:72]}",
@@ -1190,6 +1329,8 @@ async def _workspace_edit(
             # R-584: present only when the edit destroyed something, so an ordinary edit renders
             # nothing extra and a destructive one cannot be mistaken for it.
             **({"data_loss": loss} if loss else {}),
+            # PC-098: designed pages the edit left in place; the console redesigns these.
+            **({"redesign_pages": redesign} if redesign else {}),
             "diff": {
                 "added": list(diff.added()),
                 "modified": list(diff.modified()),
@@ -1334,6 +1475,9 @@ def main() -> None:
             return refused()
         return _workspace_build_stream(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)
 
+    def workspace_design_stream(ws_id: str, **options) -> AsyncIterator[dict]:
+        return _workspace_design_stream(ws_id, workspace_store=workspace_store, **options)
+
     def workspace_edit(ws_id: str, prompt: str, **options) -> dict:
         result = asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store, **options))
         usage = result.get("usage") if isinstance(result, dict) else None
@@ -1342,11 +1486,32 @@ def main() -> None:
         return result
 
     def estimate(kind: str, provider_id: str | None = None, model_id: str | None = None) -> dict:
-        """PC-010: the likely cost of a build or edit, for the model this project would use now."""
+        """PC-010: the likely cost of a build or edit, for the model this project would use now.
+
+        PC-098: a build is followed by page design, so its estimate includes that too - priced for
+        the model that writes pages - and says so.
+        """
+        pinned = provider_id
         if not provider_id:
             provider, model, _, _ = resolve_generation_provider_from_env(task="plan")
             provider_id, model_id = provider.provider_id, model
-        return estimates.estimate(kind, provider_id, model_id or "")
+        result = estimates.estimate(kind, provider_id, model_id or "")
+        from .page_design import design_enabled
+
+        if kind == "build" and design_enabled():
+            from ..intake.provider_resolution import resolve_page_provider_from_env
+
+            try:
+                page_provider, page_model, _, _ = resolve_page_provider_from_env(provider_id=pinned, model_id=model_id if pinned else None)
+                design = estimates.estimate("design", page_provider.provider_id, page_model)
+            except Exception:  # noqa: BLE001 - an estimate never fails a request
+                design = None
+            if design is not None:
+                result["design"] = design
+                result["priced"] = bool(result.get("priced")) and bool(design.get("priced"))
+                result["cost_micros_low"] = result.get("cost_micros_low", 0) + design["cost_micros_low"]
+                result["cost_micros_high"] = result.get("cost_micros_high", 0) + design["cost_micros_high"]
+        return result
 
     def workspace_preview(
         ws_id: str,
@@ -1506,6 +1671,7 @@ def main() -> None:
         "workspace_preview_fn": workspace_preview,
         "workspace_preview_status_fn": workspace_preview_status,
         "workspace_preview_stop_fn": workspace_preview_stop,
+        "workspace_design_stream_fn": workspace_design_stream,
         "workspace_live_fn": workspace_live,
         "estimate_fn": estimate,
         "workspace_problems_check_fn": workspace_problems_check,
