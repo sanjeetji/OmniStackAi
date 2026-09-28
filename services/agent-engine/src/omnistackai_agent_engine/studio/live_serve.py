@@ -1176,10 +1176,18 @@ async def _workspace_design_stream(
         # Each call is bounded by the slowest entry's own timeout (a local model's page can take
         # many minutes); the chain adds its waits on top.
         eff_model, timeout = chain[0][1], max(entry[3] for entry in chain)
-        prompt = str((workspace_store.get_state(ws_id) or {}).get("prompt") or ir.description or ir.name)
+        state_now = workspace_store.get_state(ws_id) or {}
+        prompt = str(state_now.get("prompt") or ir.description or ir.name)
+        apps = None
+        if state_now.get("ecosystem_apps"):
+            # PC-099: an ecosystem's apps, each with its own plan - re-planned from the saved prompt
+            # exactly as an edit does, with the ecosystem's design direction.
+            from ..intake.build_app import ecosystem_next_apps
+
+            apps = ecosystem_next_apps(plan_ecosystem_from_prompt(prompt, entities=ir.entities), brand=ir.brand)
         summary: dict = {}
         async for event in design_pages(
-            repo_dir, ir, prompt, provider, model_id=eff_model, only=pages, timeout_seconds=timeout,
+            repo_dir, ir, prompt, provider, model_id=eff_model, only=pages, timeout_seconds=timeout, apps=apps,
             cancelled=lambda: workspace_store.is_cancelled(ws_id),
             author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
         ):

@@ -433,3 +433,58 @@ class EachProviderOnItsOwnTerms(TestCase):
         with mock.patch.dict(os.environ, env), mock.patch.object(pr, "is_ollama_ready", return_value=False):
             chain = pr.resolve_page_providers_from_env()
         self.assertEqual([m for _p, m, _o, _t in chain], ["qwen/qwen3.8-27b:free"])
+
+    def test_a_rate_limited_build_also_keeps_its_stream_open(self) -> None:
+        """Found live in PC-099: a build waiting out Groq's limit went silent past 300 s."""
+        import threading
+        import urllib.request
+
+        from omnistackai_agent_engine.studio.server import create_studio_server
+
+        async def slow_build(ws_id, prompt, **options):  # noqa: ANN001
+            import time
+
+            time.sleep(0.5)  # blocks, as a provider's own rate-limit wait does
+            yield {"phase": "done", "name": "x"}
+
+        with mock.patch.dict(os.environ, {"OMNISTACKAI_SSE_HEARTBEAT_SECONDS": "0.1"}):
+            server = create_studio_server(lambda _p: {}, host="127.0.0.1", port=0, workspace_build_stream_fn=slow_build)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                request = urllib.request.Request(f"http://127.0.0.1:{server.server_port}/api/workspaces/w1/build/stream",
+                                                 data=b'{"prompt": "a blog"}', method="POST",
+                                                 headers={"Content-Type": "application/json"})
+                body = urllib.request.urlopen(request, timeout=10).read().decode()
+            finally:
+                server.shutdown()
+        self.assertIn('"heartbeat"', body)
+        self.assertIn('"done"', body)
+
+
+class AnEcosystemsAppsAreDesignedToo(TestCase):
+    """Found live in PC-099: a salon built as web, provider and admin apps had no page designed -
+    only the single-project layout was known to page design."""
+
+    def test_every_app_of_an_ecosystem_gets_its_pages_with_the_shared_direction(self) -> None:
+        from omnistackai_agent_engine.intake.build_app import build_ecosystem_from_plan, ecosystem_next_apps
+        from omnistackai_agent_engine.intake.ecosystem import plan_ecosystem_from_prompt
+
+        prompt = "A luxury beauty salon where clients book appointments with stylists"
+        plan = plan_ecosystem_from_prompt(prompt)
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_ecosystem_from_plan(plan, tmp, author_name="t", author_email="t@t.t", prompt=prompt, overwrite=True)
+            self.assertEqual(result.ir.brand.style, "elegant", "the kept plan carries the direction")
+            apps = ecosystem_next_apps(plan_ecosystem_from_prompt(prompt, entities=result.ir.entities), brand=result.ir.brand)
+            self.assertGreater(len(apps), 1)
+            self.assertTrue(all(app_ir.brand.style == "elegant" for _d, app_ir, _f in apps))
+            for rel, _i, _f in apps:
+                tsc = Path(tmp, rel, "node_modules", ".bin", "tsc")
+                tsc.parent.mkdir(parents=True, exist_ok=True)
+                tsc.write_text("")
+
+            async def go():
+                return [e async for e in page_design.design_pages(tmp, result.ir, prompt, _Model(), limit=len(apps),
+                                                                  runner=_Tsc(), apps=apps)]
+            events = asyncio.run(go())
+        designed = {p for p, r in events[-1]["pages"].items() if r["status"] == "designed"}
+        self.assertEqual(designed, {f"{rel}/app/page.tsx" for rel, _i, _f in apps})

@@ -580,6 +580,9 @@ _DEFAULT_BRAND_PRIMARY = "#2563eb"
 _DEFAULT_BRAND_DARK_PRIMARY = "#3b82f6"
 _DEFAULT_BRAND_FONT = "Inter"
 _DEFAULT_BRAND_RADIUS = "md"
+#: PC-099: the design styles a direction can take ("" = none chosen).
+_ALLOWED_STYLES = frozenset({"", "professional", "bold", "playful", "elegant", "minimal", "editorial", "friendly", "calm", "vibrant"})
+_ALLOWED_DENSITIES = frozenset({"", "compact", "comfortable", "spacious"})
 
 
 def _validate_hex_color(value: str, name: str) -> str:
@@ -607,6 +610,12 @@ class BrandTokens:
     dark_primary_color: str = _DEFAULT_BRAND_DARK_PRIMARY
     font_family: str = _DEFAULT_BRAND_FONT
     border_radius: str = _DEFAULT_BRAND_RADIUS
+    # PC-099: the rest of a design direction. Empty means "not chosen", so a brand from before
+    # PC-099 is unchanged and renders exactly as it did.
+    accent_color: str = ""
+    heading_font: str = ""
+    style: str = ""
+    density: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "primary_color", _validate_hex_color(self.primary_color, "primary_color"))
@@ -619,14 +628,26 @@ class BrandTokens:
             raise InvalidIRError(
                 f"border_radius must be one of: {', '.join(sorted(_ALLOWED_RADII))}; got {self.border_radius!r}"
             )
+        if self.accent_color:
+            object.__setattr__(self, "accent_color", _validate_hex_color(self.accent_color, "accent_color"))
+        if self.heading_font and not _SAFE_FONT_RE.match(self.heading_font):
+            raise InvalidIRError(f"heading_font must be a safe CSS font-family string: {self.heading_font!r}")
+        if self.style not in _ALLOWED_STYLES:
+            raise InvalidIRError(f"style must be one of: {', '.join(sorted(_ALLOWED_STYLES - {''}))}; got {self.style!r}")
+        if self.density not in _ALLOWED_DENSITIES:
+            raise InvalidIRError(f"density must be compact, comfortable or spacious; got {self.density!r}")
 
     def to_dict(self) -> dict[str, str]:
-        return {
+        out = {
             "primary_color": self.primary_color,
             "dark_primary_color": self.dark_primary_color,
             "font_family": self.font_family,
             "border_radius": self.border_radius,
         }
+        for key in ("accent_color", "heading_font", "style", "density"):
+            if getattr(self, key):
+                out[key] = getattr(self, key)
+        return out
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BrandTokens":
@@ -635,6 +656,10 @@ class BrandTokens:
             dark_primary_color=data.get("dark_primary_color", _DEFAULT_BRAND_DARK_PRIMARY),
             font_family=data.get("font_family", _DEFAULT_BRAND_FONT),
             border_radius=data.get("border_radius", _DEFAULT_BRAND_RADIUS),
+            accent_color=data.get("accent_color", ""),
+            heading_font=data.get("heading_font", ""),
+            style=data.get("style", ""),
+            density=data.get("density", ""),
         )
 
 

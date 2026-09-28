@@ -619,15 +619,9 @@ def _make_handler(
             self.end_headers()
 
             options = {k: v for k, v in data.items() if k != "prompt"}
-
-            async def _drain() -> None:
-                async for event in workspace_build_stream_fn(ws_id, prompt, **options):
-                    self._write_sse_event(event)
-
-            try:
-                asyncio.run(_drain())
-            except Exception as error:
-                self._write_sse_event({"phase": "error", "error": str(error)})
+            # PC-099, found live: a build waiting out the model's rate limit sent nothing for over
+            # 300 s and the console dropped it. Same heartbeat as page design.
+            self._stream_events(lambda: workspace_build_stream_fn(ws_id, prompt, **options), ws_id)
 
         def _handle_workspace_design_stream(self, ws_id: str) -> None:
             """PC-098: design the workspace's pages with the model, one event per page (SSE)."""
@@ -649,10 +643,17 @@ def _make_handler(
             self.end_headers()
             options = {k: v for k, v in data.items() if k in {"pages", "provider_id", "model_id", "api_key", "budget_micros"}}
 
-            # Found live: page design blocks its own thread for minutes (model calls, compiles), so
-            # a heartbeat on the same event loop never fired, and hops that drop a silent response
-            # (the console's HTTP client after 300 s) cut the stream. The design runs on its own
-            # thread; this one sends what it produces, and a heartbeat every 15 s when it has none.
+            self._stream_events(lambda: workspace_design_stream_fn(ws_id, **options), ws_id)
+
+        def _stream_events(self, make_events, ws_id: str | None = None) -> None:
+            """Send an async event stream as SSE, with a heartbeat while it is quiet.
+
+            Found live (PC-098, PC-099): page design and a rate-limited build block their thread
+            for minutes, so a heartbeat on the same event loop never fired, and the console's HTTP
+            client drops a response silent for 300 s. The events are produced on their own thread;
+            this one sends them, and a heartbeat every 15 s when there are none. A caller who has
+            left stops the run after its current step.
+            """
             import queue as _queue
             import threading as _threading
 
@@ -661,7 +662,7 @@ def _make_handler(
 
             def produce() -> None:
                 async def run() -> None:
-                    async for event in workspace_design_stream_fn(ws_id, **options):
+                    async for event in make_events():
                         events.put(event)
 
                 try:
@@ -671,7 +672,7 @@ def _make_handler(
                 finally:
                     events.put(finished)
 
-            producer = _threading.Thread(target=produce, name=f"design-{ws_id}", daemon=True)
+            producer = _threading.Thread(target=produce, name=f"stream-{ws_id or 'build'}", daemon=True)
             producer.start()
             interval = float(os.environ.get("OMNISTACKAI_SSE_HEARTBEAT_SECONDS", "15"))
             client_gone = False
@@ -688,9 +689,8 @@ def _make_handler(
                     self.wfile.write(f"data: {json.dumps(event)}\n\n".encode("utf-8"))
                     self.wfile.flush()
                 except OSError:
-                    # The caller left: the run stops after the page it is writing.
                     client_gone = True
-                    if workspace_store is not None:
+                    if workspace_store is not None and ws_id:
                         workspace_store.set_cancelled(ws_id)
             producer.join()
 

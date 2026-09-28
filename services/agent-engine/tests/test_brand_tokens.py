@@ -119,8 +119,12 @@ class TheWholePipelineIsConnected(TestCase):
         self.assertEqual(_var(css, "color-primary"), "#16a34a")
         self.assertEqual(_var(css, "radius-md"), "0.5rem")
 
-    def test_a_prompt_with_no_cue_keeps_the_default_palette(self) -> None:
-        self.assertEqual(_var(self._tokens_for("a plain internal tool"), "color-primary"), "#2563eb")
+    def test_a_prompt_with_no_cue_gets_a_design_direction_not_the_shared_default(self) -> None:
+        # PC-099: "no cue keeps the default palette" is exactly why every app looked alike. A
+        # prompt without cues now gets a direction of its own; only no prompt keeps the default.
+        self.assertNotEqual(_var(self._tokens_for("a plain internal tool"), "color-primary"), "#2563eb")
+        plain = assemble_project(example_ir("minimal-blog")).get("apps/web/styles/tokens.css").content
+        self.assertEqual(_var(plain, "color-primary"), "#2563eb")
 
     def test_the_admin_console_follows_the_same_brand(self) -> None:
         """Both apps are one product; a red shop with a blue back office would be a bug."""

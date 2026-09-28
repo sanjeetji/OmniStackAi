@@ -95,6 +95,12 @@ def build_app_from_ir(
     collect the per-file outcome records; both are no-ops without a ``provider``.
     """
     timings: dict[str, float] = {}
+    # PC-099: the design direction is chosen once and saved in the plan the workspace keeps, so a
+    # chat edit (which assembles from the plan alone) keeps the project's look.
+    if prompt:
+        from ..codegen.design_direction import with_design_direction
+
+        ir = with_design_direction(ir, prompt)
     started = time.perf_counter()
     project = assemble_project(
         ir,
@@ -181,6 +187,8 @@ def app_build_result_to_dict(
     usage: dict | None = None,
 ) -> dict:
     """A JSON-safe view of an AppBuildResult for the studio/API (no secrets)."""
+    from ..codegen.design_direction import describe as describe_direction
+
     root = Path(result.target_dir)
     files: list[str] = []
     if root.is_dir():
@@ -198,6 +206,8 @@ def app_build_result_to_dict(
         "name": result.ir.name,
         "description": result.ir.description,
         "entities": [entity.name for entity in result.ir.entities],
+        # PC-099: what the app will look like, in one line (empty for a plan with no direction).
+        "design_direction": describe_direction(result.ir.brand),
         "file_count": result.file_count,
         "target_dir": result.target_dir,
         "commit_sha": result.commit_sha,
@@ -255,7 +265,11 @@ def build_ecosystem_from_plan(
     from ..codegen.ecosystem_assembler import assemble_ecosystem, surface_directory, union_ir
 
     project = assemble_ecosystem(plan, provider=provider, prompt=prompt)
-    shared = union_ir(plan)
+    # PC-099: the plan the workspace keeps carries the ecosystem's design direction (the same one
+    # the assembler applied), so the console can say what it looks like.
+    from ..codegen.design_direction import with_design_direction
+
+    shared = with_design_direction(union_ir(plan), prompt) if prompt else union_ir(plan)
     repo = create_repository(
         project,
         target_dir,
@@ -276,13 +290,7 @@ def build_ecosystem_from_plan(
     # test_build_verification.py found this within a minute of being written.
     # PC-097: each role app is repaired with its own IR - the union has no screens and would
     # revert a surface's page to a template for a different app.
-    from ..application_ir import MobileProfile
-
-    next_apps = [
-        (f"apps/{directory}", app.ir, "admin" if directory == "admin" else "web")
-        for directory, app in zip(directories, plan.apps)
-        if app.ir.project_strategy.mobile_profile is not MobileProfile.REACT_NATIVE
-    ]
+    next_apps = ecosystem_next_apps(plan, brand=shared.brand)
     verification = verify_and_repair_build(
         target_dir=repo.target_dir,
         ir=shared,
@@ -307,6 +315,29 @@ def build_ecosystem_from_plan(
         substitutions=_substitutions_for(shared, prompt),
         not_connected=_not_connected(shared),
     )
+
+
+def ecosystem_next_apps(plan, *, brand=None) -> list[tuple[str, ApplicationIR, str]]:
+    """Every Next.js app of an ecosystem: (directory, its own IR, "web" | "admin").
+
+    Laid out exactly as the ecosystem assembler lays it out, so a check or a page design reaches
+    the app that was generated. ``brand`` (PC-099) gives each app the ecosystem's direction.
+    """
+    from dataclasses import replace as _replace
+
+    from ..application_ir import MobileProfile
+    from ..codegen.ecosystem_assembler import surface_directory
+
+    taken: set[str] = set()
+    apps: list[tuple[str, ApplicationIR, str]] = []
+    for app in plan.apps:
+        directory = surface_directory(app.surface.kind, taken)
+        taken.add(directory)
+        if app.ir.project_strategy.mobile_profile is MobileProfile.REACT_NATIVE:
+            continue
+        app_ir = _replace(app.ir, brand=brand) if brand is not None else app.ir
+        apps.append((f"apps/{directory}", app_ir, "admin" if directory == "admin" else "web"))
+    return apps
 
 
 async def build_app_from_prompt(

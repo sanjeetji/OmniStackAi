@@ -110,6 +110,27 @@ def dark_palette(primary: str) -> dict[str, str]:
     }
 
 
+def accent_light(accent: str) -> dict[str, str]:
+    """PC-099: the light-theme accent values of a design direction."""
+    return {
+        "--color-accent": accent,
+        "--color-accent-hover": mix(accent, _BLACK, 0.14),
+        "--color-accent-subtle": mix(accent, _WHITE, 0.86),
+        "--color-accent-foreground": readable_foreground(accent),
+    }
+
+
+def accent_dark(accent: str) -> dict[str, str]:
+    """PC-099: the dark-theme accent values (lifted toward white, as the primary is)."""
+    lifted = mix(accent, _WHITE, 0.18)
+    return {
+        "--color-accent": lifted,
+        "--color-accent-hover": mix(accent, _WHITE, 0.34),
+        "--color-accent-subtle": "rgba({}, {}, {}, 0.15)".format(*_rgb(accent)),
+        "--color-accent-foreground": readable_foreground(lifted),
+    }
+
+
 # --- applying it to the stylesheet ----------------------------------------------------------------
 
 #: Radius alias -> the value `--radius-md` takes, since that is what components use by default.
@@ -149,7 +170,12 @@ def apply_brand(css: str, brand: BrandTokens) -> str:
     if root_start == -1 or root_end == -1:
         return css
 
-    for name, value in light_palette(brand.primary_color).items():
+    light = dict(light_palette(brand.primary_color))
+    dark_values = dict(dark_palette(brand.primary_color))
+    if brand.accent_color:
+        light.update(accent_light(brand.accent_color))
+        dark_values.update(accent_dark(brand.accent_color))
+    for name, value in light.items():
         css = _replace_var(css, name, value, start=root_start, end=root_end)
         # The block can grow or shrink as values change length; re-find its end each time.
         root_end = css.find("\n}", root_start)
@@ -162,7 +188,7 @@ def apply_brand(css: str, brand: BrandTokens) -> str:
 
     # Everything after the light block is dark-theme territory.
     after = css.find("\n}", root_start) + 2
-    for name, value in dark_palette(brand.primary_color).items():
+    for name, value in dark_values.items():
         # Dark blocks may repeat (media query and an explicit class); update each occurrence.
         cursor = after
         while True:

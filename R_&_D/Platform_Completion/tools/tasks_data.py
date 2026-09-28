@@ -194,7 +194,9 @@ QUEUE = [
      "deterministic default without a model; the same prompt gives the same direction. Shown and "
      "editable in the Plan view (PC-022) and later the brand kit (PC-020). Found in PC-098: a designed "
      "home page brings its own header and the app shell's navbar still renders above it - the "
-     "direction covers the layout (one header), not only the page."),
+     "direction covers the layout (one header), not only the page. Done 2026-09-29: ten styles, "
+     "domain palettes, font pairs loaded from Google Fonts, saved in the plan; components and pages "
+     "themed; ecosystems designed too. Not built: the Plan view and brand kit that edit it."),
     ("PC-050", "Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, "
      "command menu, drawer, toasts, tables, forms, maps, uploads)", "1 Vibe Mode live", "Vibe",
      "Not Started", "P0", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
@@ -215,7 +217,10 @@ QUEUE = [
      "surface; deterministic checks (contrast, overflow, broken images, console errors) always, a "
      "model review when a provider is set; a failing page is repaired or reported, never hidden. A "
      "fixed set of benchmark prompts (food delivery, clinic, store, SaaS, blog) is re-run so the UI "
-     "is shown to improve and never regress."),
+     "is shown to improve and never regress. Seen in PC-099 for this gate to catch: in a preview "
+     "served under a base path, a page's server-side API proxy route (/products) answered 503 "
+     "'backend_unavailable' while the API itself answered 200; and the generated Expo app fails tsc "
+     "on `process` (no Node types) in src/shared/api/client.ts."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "

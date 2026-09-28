@@ -339,6 +339,14 @@ def _grounding_blocks(
     )
 
 
+def _direction_block(ir: ApplicationIR) -> str:
+    """PC-099: this product's design direction, for every page the model writes (empty if none)."""
+    from .design_direction import page_brief
+
+    brief = page_brief(ir.brand)
+    return f"\n{brief}\n" if brief else ""
+
+
 def _core_rules(ir: ApplicationIR) -> str:
     from .auth_guard import needs_auth
 
@@ -376,7 +384,7 @@ def _core_rules(ir: ApplicationIR) -> str:
 9. CONCISE: keep the file under 300 lines so it is never truncated; it MUST end with the closing `}}` of the
    default export.
 10. Output ONLY the raw TypeScript/React file content — no markdown fences, no commentary.
-"""
+{_direction_block(ir)}"""
 
 
 def build_ui_synthesis_prompt(

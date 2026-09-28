@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from ..application_ir.ir import BrandTokens
 from ..application_ir import (
     AdminStrategy,
     ApiEndpoint,
@@ -154,6 +155,19 @@ def assemble_ecosystem(plan, *, provider=None, prompt: str = "") -> GeneratedPro
         raise ValueError("an ecosystem plan must contain at least one surface")
 
     shared = union_ir(plan)
+    # PC-099: one design direction for the whole ecosystem - every app of one product looks like
+    # one product. Derived from the plan's own prompt, so re-planning for an edit gives the same.
+    if shared.brand == BrandTokens():
+        from dataclasses import replace as _replace
+
+        from .design_direction import with_design_direction
+
+        brand = with_design_direction(shared, prompt or getattr(plan, "prompt", "")).brand
+        shared = _replace(shared, brand=brand)
+        plan = _replace(plan, apps=tuple(
+            _replace(app, ir=_replace(app.ir, brand=brand)) if app.ir.brand == BrandTokens() else app
+            for app in plan.apps
+        ))
     files: list[GeneratedFile] = []
 
     # The backend, generated from the union so every surface's calls resolve against it.

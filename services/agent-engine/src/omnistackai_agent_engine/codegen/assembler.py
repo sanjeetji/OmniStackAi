@@ -309,10 +309,12 @@ def assemble_project(
     # the defaults and the user's "red shop" was lost before codegen ever saw it. Read the cues
     # from the prompt here — deterministically, no model call — and only when the IR has not set a
     # brand of its own, so an explicit brand always wins.
+    # PC-099: a whole design direction, not only the cues the prompt spelled out - with no cue at
+    # all every project used to get the same default look. Explicit cues still win inside it.
     if prompt and ir.brand == BrandTokens():
-        derived = extract_brand_tokens(prompt, ir_name=ir.name)
-        if derived != BrandTokens():
-            ir = replace(ir, brand=derived)
+        from .design_direction import with_design_direction
+
+        ir = with_design_direction(ir, prompt)
 
     apps, skipped, substitutions = _plan_assembly(ir, registry)
     files: list[GeneratedFile] = []

@@ -74045,7 +74045,13 @@ class NextjsWebAdapter:
             GeneratedFile("app/opengraph-image.tsx", _opengraph_image_file(ir)),
         ]
 
+        # PC-099, found live: a plan with a screen called "login" collided with the built-in sign-in
+        # page at app/login/page.tsx, and the whole build failed ("duplicate generated path"). When
+        # the app has accounts, its own auth pages win; the planned screen is not generated twice.
+        auth_routes = {"login", "register", "forgot-password", "reset-password"} if needs_auth(ir) else set()
         for screen in ir.screens:
+            if screen.id in auth_routes:
+                continue
             files.append(GeneratedFile(f"app/{screen.id}/layout.tsx", _screen_layout_file(screen, ir)))
             files.append(
                 GeneratedFile(
@@ -74104,6 +74110,16 @@ class NextjsWebAdapter:
                 continue
             files.append(GeneratedFile(f"app/{route_dir}/route.ts", _route_file(apis)))
 
+        if ir.brand.style:
+            # PC-099: a project with a design direction gets its components in its own colours.
+            from .design_direction import theme_component
+
+            # Found live: template pages (the admin dashboard, the 404 page) hard-code the same
+            # blues as the components, so every generated .tsx is themed, not only components/.
+            files = [
+                GeneratedFile(f.path, theme_component(f.content)) if f.path.endswith(".tsx") else f
+                for f in files
+            ]
         return GeneratedProject(self.target.value, tuple(files))
 
 

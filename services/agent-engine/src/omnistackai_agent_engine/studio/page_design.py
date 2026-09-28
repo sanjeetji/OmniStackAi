@@ -195,6 +195,7 @@ class PageTarget:
     flavour: str  # "web" | "admin"
     page: str  # app-relative, e.g. "app/page.tsx"
     screen_id: str | None  # None for the home page
+    ir: Any = None  # the app's own plan (an ecosystem's apps each have one)
 
     @property
     def path(self) -> str:
@@ -207,21 +208,28 @@ def plan_pages(
     *,
     only: list[str] | None = None,
     limit: int | None = None,
+    apps: list[tuple[str, Any, str]] | None = None,
 ) -> list[PageTarget]:
     """The pages to design, most visible first: every app's home page, then the screens.
 
     ``only`` restricts to those monorepo paths (and designs them even if already designed).
+    ``apps`` (directory, its IR, flavour) names the apps; by default the single-project layout.
+    Found live (PC-099): an ecosystem (web, provider and admin apps) had no page designed at all,
+    because only the single-project layout was known here.
     """
     from ..codegen.hybrid_repair import is_model_written
     from ..intake.build_verify import next_apps_for
 
     root = Path(repo_dir)
-    apps = [(rel, flavour) for rel, _ir, flavour in next_apps_for(ir) if (root / rel).is_dir()]
-    homes = [PageTarget(rel, flavour, "app/page.tsx", None) for rel, flavour in apps]
+    layout = apps if apps is not None else next_apps_for(ir)
+    present = [(rel, app_ir, flavour) for rel, app_ir, flavour in layout if (root / rel).is_dir()]
+    homes = [PageTarget(rel, flavour, "app/page.tsx", None, app_ir) for rel, app_ir, flavour in present]
+    auth_routes = {"login", "register", "forgot-password", "reset-password"}  # the app's own sign-in pages
     screens = [
-        PageTarget(rel, flavour, f"app/{screen.id}/page.tsx", screen.id)
-        for rel, flavour in apps
-        for screen in getattr(ir, "screens", ())
+        PageTarget(rel, flavour, f"app/{screen.id}/page.tsx", screen.id, app_ir)
+        for rel, app_ir, flavour in present
+        for screen in getattr(app_ir, "screens", ())
+        if screen.id not in auth_routes
     ]
     wanted = set(only or ())
     ordered: list[PageTarget] = []
@@ -294,6 +302,7 @@ async def design_pages(
     author_name: str = "OmniStackAI",
     author_email: str = "agent@omnistack.ai",
     runner: Any = None,
+    apps: list[tuple[str, Any, str]] | None = None,
 ) -> AsyncIterator[dict]:
     """Design pages one app at a time, streaming what happens to each.
 
@@ -307,20 +316,27 @@ async def design_pages(
     from ..verify import VerifyError, ensure_web_dependencies
 
     root = Path(repo_dir)
-    targets = plan_pages(root, ir, only=only, limit=limit)
+    targets = plan_pages(root, ir, only=only, limit=limit, apps=apps)
     yield {"phase": "planned", "pages": [t.path for t in targets]}
     results: dict[str, dict] = {}
     if not targets:
         yield {"phase": "summary", "designed": 0, "kept_template": 0, "pages": results}
         return
 
-    grounding = {
-        "data_layer": summarize_data_layer(ir),
-        "components": summarize_components(ir),
-        "design_tokens": summarize_design_tokens(),
-    }
-    compact = compact_grounding(ir)
-    flavours = {rel: flavour for rel, _i, flavour in next_apps_for(ir)}
+    layout = apps if apps is not None else next_apps_for(ir)
+    flavours = {rel: flavour for rel, _i, flavour in layout}
+    app_irs = {rel: app_ir for rel, app_ir, _f in layout}
+    groundings: dict[str, tuple[dict, dict]] = {}
+
+    def grounding_for(app: str) -> tuple[dict, dict]:
+        if app not in groundings:
+            app_ir = app_irs[app]
+            groundings[app] = ({
+                "data_layer": summarize_data_layer(app_ir),
+                "components": summarize_components(app_ir),
+                "design_tokens": summarize_design_tokens(),
+            }, compact_grounding(app_ir))
+        return groundings[app]
     source = os.environ.get(NODE_MODULES_ENV) or None
     changed = False
     limit_reached = ""
@@ -345,7 +361,9 @@ async def design_pages(
                 results[target.path] = {"status": "kept_template", "reason": limit_reached}
                 yield {"phase": "page", "path": target.path, **results[target.path]}
                 continue
-            content, reason = await _write_page(target, ir, prompt, provider, model_id, timeout_seconds, grounding, compact)
+            grounding, compact = grounding_for(app)
+            content, reason = await _write_page(target, app_irs[app], prompt, provider, model_id, timeout_seconds,
+                                                grounding, compact)
             if content is None and "rate-limiting" in reason:
                 limit_reached = "the model's request limit is used up for now; try designing again later"
                 reason = limit_reached
@@ -361,7 +379,7 @@ async def design_pages(
             continue
 
         app_dir = root / app
-        specs = llm_file_specs(ir, prompt, synthesize_screens=True, flavour=flavours[app])
+        specs = llm_file_specs(app_irs[app], prompt, synthesize_screens=True, flavour=flavours[app])
         repair_outcomes: list = []
         try:
             if runner is None:
@@ -369,7 +387,7 @@ async def design_pages(
                     raise VerifyError("dependencies are not installed")
                 ensure_web_dependencies(app_dir, node_modules_source=source)
             report = await compile_and_repair(
-                repo_dir=str(root), ir=ir, user_prompt=prompt, provider=provider, model_id=model_id,
+                repo_dir=str(root), ir=app_irs[app], user_prompt=prompt, provider=provider, model_id=model_id,
                 synthesize_screens=True, web_prefix=f"{app}/", flavour=flavours[app], runner=runner,
                 timeout_seconds=timeout_seconds, outcomes=repair_outcomes,
                 # Measured live: one repair round took a page from 6 errors to 1; the default gave

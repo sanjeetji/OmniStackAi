@@ -295,4 +295,6 @@ class EveryNextAppIsRepairedNotOnlyTheWebApp(TestCase):
 
         source = inspect.getsource(build_app.build_ecosystem_from_plan)
         self.assertIn("next_apps=next_apps", source)
-        self.assertIn("app.ir", source)
+        self.assertIn("ecosystem_next_apps(plan", source)
+        # PC-099 moved the layout into one helper shared with page design; it uses each app's IR.
+        self.assertIn("app.ir", inspect.getsource(build_app.ecosystem_next_apps))

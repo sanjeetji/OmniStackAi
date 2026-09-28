@@ -839,6 +839,9 @@ export default function StudioChat({
       setMentionSkills(new Set());
 
       appendMessage("assistant", `Built ${finalResult.name ?? newProject.name ?? "the app"}.`);
+      // PC-099: say what the app will look like.
+      const direction = (finalResult as { design_direction?: unknown }).design_direction;
+      if (typeof direction === "string" && direction.length > 0) appendMessage("assistant", direction);
       setProject((prev) =>
         prev ? { ...prev, name: finalResult?.name ?? prev.name, status: "active" } : null,
       );

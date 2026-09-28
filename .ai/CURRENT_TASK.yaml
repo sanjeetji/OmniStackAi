@@ -1,9 +1,9 @@
 task_id: PC-099
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 3 of 6)
 tracker_row: PC-099
 started_at: "2026-09-28"
-completed_at: null
+completed_at: "2026-09-29"
 branch: platform-completion
 objective: >-
   A design direction per project. Every project used to share one byte-identical tokens.css, so
@@ -36,5 +36,15 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "Plan view and brand kit to edit the direction (PC-022, PC-020)"
+  - "Admin template invented figures (PC-100)"
+  - "Preview proxy route 503 and Expo tsc on process (PC-101)"
+found_and_fixed:
+  - "No-cue prompts got the shared default look; a test pinned it"
+  - "Named fonts were never loaded"
+  - "Derived brand not saved in the plan: edits would revert the look"
+  - "76 components and template pages hard-coded default blues"
+  - "Page design ignored ecosystem projects"
+  - "A planned login screen collided with the auth page and failed the build"
+  - "Build stream dropped after 300 silent seconds during a rate-limit wait"

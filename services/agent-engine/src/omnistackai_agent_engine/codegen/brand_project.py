@@ -40,6 +40,11 @@ def brand_json(ir: ApplicationIR, slug: str) -> GeneratedFile:
         "primaryColor": ir.brand.primary_color,
         "fontFamily": ir.brand.font_family,
         "borderRadius": ir.brand.border_radius,
+        # PC-099: the rest of the design direction (present only once one was chosen).
+        **({"accentColor": ir.brand.accent_color} if ir.brand.accent_color else {}),
+        **({"headingFont": ir.brand.heading_font} if ir.brand.heading_font else {}),
+        **({"style": ir.brand.style} if ir.brand.style else {}),
+        **({"density": ir.brand.density} if ir.brand.density else {}),
         "identity": {
             "$comment": [
                 "bundleId is PERMANENT once the app has been submitted to either store.",
@@ -290,12 +295,25 @@ def web_brand_ts() -> GeneratedFile:
 // derive.mjs, which is plain ESM so that apps/mobile/app.config.js can load the same file.
 // They need no compiler suppression, and adding one here is a build error rather than a nicety.
 import brand from "../../../brand.json";
-import { lightPalette, darkPalette, RADIUS_VALUES } from "../../../brand/derive.mjs";
+import { lightPalette, darkPalette, RADIUS_VALUES, mix, readableOn } from "../../../brand/derive.mjs";
 
 const block = (selector: string, values: Record<string, string>, extra: string[] = []) =>
   `${selector}{${Object.entries(values)
     .map(([name, value]) => `${name}:${value};`)
     .join("")}${extra.join("")}}`;
+
+/** PC-099: load the brand's fonts. Before, a named font was only ever a wish: nothing loaded it,
+ * so every app fell back to the system font whatever brand.json said. Google Fonts serves every
+ * font a design direction picks; a name it does not know is ignored by the browser. */
+function fontImport(...names: (string | undefined)[]): string {
+  const system = /^(system-ui|-apple-system|sans-serif|serif|monospace)$/i;
+  const families = [...new Set(names.filter((n): n is string => Boolean(n) && !system.test(n as string)))];
+  if (families.length === 0) return "";
+  const query = families
+    .map((name) => `family=${encodeURIComponent(name).replace(/%20/g, "+")}:wght@400;500;600;700`)
+    .join("&");
+  return `@import url("https://fonts.googleapis.com/css2?${query}&display=swap");`;
+}
 
 /** Every CSS variable this product's branding sets, light and dark. */
 export function brandCss(): string {
@@ -305,6 +323,19 @@ export function brandCss(): string {
 
   const extras: string[] = [];
   if (font) extras.push(`--font-sans:${font},system-ui,-apple-system,sans-serif;`);
+  // PC-099: the design direction's accent and heading font.
+  const direction = brand as { accentColor?: string; headingFont?: string };
+  const accent = direction.accentColor;
+  const heading = direction.headingFont;
+  if (accent) {
+    extras.push(
+      `--color-accent:${accent};`,
+      `--color-accent-hover:${mix(accent, "#000000", 0.14)};`,
+      `--color-accent-subtle:${mix(accent, "#ffffff", 0.86)};`,
+      `--color-accent-foreground:${readableOn(accent)};`,
+    );
+  }
+  extras.push(`--font-heading:${heading || font || "inherit"},system-ui,-apple-system,sans-serif;`);
   // RADIUS_VALUES comes from a .js module, so TypeScript infers its exact keys and refuses a
   // plain string index under `strict`. Widened once here rather than cast at the use site.
   const radiusScale = (RADIUS_VALUES as Record<string, string | undefined>)[radius ?? ""];
@@ -312,7 +343,10 @@ export function brandCss(): string {
 
   const dark = block(":root", darkPalette(primary));
   return [
+    fontImport(font, heading),
     block(":root", lightPalette(primary), extras),
+    // PC-099: headings take the direction's heading font.
+    heading ? "h1,h2,h3,h4{font-family:var(--font-heading)}" : "",
     // Matches the structure styles/tokens.css already uses, so a user reading either file sees
     // the same shape: a media query for the system preference, and an explicit override.
     `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${dark.slice(":root{".length, -1)}}}`,
