@@ -1,45 +1,43 @@
-task_id: PC-097
-status: completed
-phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 1 of 6)
-tracker_row: PC-097
+task_id: PC-098
+status: in_progress
+phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 2 of 6)
+tracker_row: PC-098
 started_at: "2026-09-28"
-completed_at: "2026-09-28"
+completed_at: null
 branch: platform-completion
 objective: >-
-  The compile-verify-repair loop covers every Next.js surface a build produces — the web app, the
-  admin console and every ecosystem role app — not only apps/web. A model-written page anywhere is
-  type-checked, repaired by the model with the compiler's own errors, or reverted to that app's own
-  deterministic template (the admin dashboard for an admin app, the public landing page for its
-  archetype otherwise). A file without the model marker is ours and is reported, never rewritten.
-  This is the precondition for PC-098 turning model-written pages back on.
+  Model-written pages back on for every Vibe build. The build and its template preview stay as fast
+  as today; then a separate, billed "design pages" step has the model write each app's home page and
+  its main screens one by one, each type-checked and repaired (PC-097) or kept as the template, so a
+  broken page never ships. Page writing uses a model that can take the request (a larger context and
+  output budget than the build model), is priced and included in the estimate shown before the
+  build, respects the task budget, and reports per page which were designed and which kept the
+  template and why. Chat edits never overwrite a designed page with a template: the page is kept and
+  redesigned against the new plan. task verify stays offline; a weak or local model falls back cleanly.
 founder_gate: none
 companions:
-  - "Fallback for a web home page is the public landing page for its archetype, not the admin dashboard"
-  - "Ecosystem builds repair each surface with that surface's own IR"
+  - "Size refusals no longer use up a page-writing attempt (as PC-097 fixed for repair)"
+  - "Gemini 3 Flash priced so platform-billed page design is not free by accident"
 allowed_paths:
   - services/agent-engine/
+  - services/control-plane/
+  - apps/console-web/
+  - .env.example
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - a deterministic (unmarked) file is never rewritten by the model
-  - a build is never failed by verification; skipping is never silent
+  - a page that does not compile is never left in place
+  - the build itself does not get slower
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: a build with model-written pages on web and admin — a deliberately broken admin page is repaired or reverted, and every Next surface compiles
+  - Live: console build of a real prompt; pages designed after the preview is up, every Next app compiles, cost charged and shown; an edit keeps and redesigns a designed page
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Live multi-app (ecosystem) build: same code path, tested offline only"
-  - "Groq free tier cannot take the page request; first drafts carry 1-4 type errors (PC-098)"
-found_and_fixed:
-  - "Admin and role-app model pages were never repaired or reverted"
-  - "Ecosystem verification used the union plan (no screens) instead of each app's own"
-  - "Web home page repair prompt and fallback were the admin dashboard's"
-  - "Any page at a model path was treated as model-written; now only files with the marker"
-  - "A size refusal used up an attempt, so repair never reached the compact grounding"
+deferred: []
+found_and_fixed: []
