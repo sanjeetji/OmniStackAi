@@ -1,53 +1,40 @@
-task_id: PC-098
-status: completed
-phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 2 of 6)
-tracker_row: PC-098
+task_id: PC-099
+status: in_progress
+phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 3 of 6)
+tracker_row: PC-099
 started_at: "2026-09-28"
-completed_at: "2026-09-28"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Model-written pages back on for every Vibe build. The build and its template preview stay as fast
-  as today; then a separate, billed "design pages" step has the model write each app's home page and
-  its main screens one by one, each type-checked and repaired (PC-097) or kept as the template, so a
-  broken page never ships. Page writing uses a model that can take the request (a larger context and
-  output budget than the build model), is priced and included in the estimate shown before the
-  build, respects the task budget, and reports per page which were designed and which kept the
-  template and why. Chat edits never overwrite a designed page with a template: the page is kept and
-  redesigned against the new plan. task verify stays offline; a weak or local model falls back cleanly.
+  A design direction per project. Every project used to share one byte-identical tokens.css, so
+  all apps looked alike. Each build now gets a coherent direction - style, primary and accent
+  colours with checked contrast, a body and heading font pairing (loaded as web fonts), corner
+  radius and density - chosen deterministically from the prompt's cues and the product's domain
+  and archetype, varied between projects, and the same for the same prompt. It is saved in the
+  project's plan (so edits keep it), written to brand.json and the tokens, and handed to the page
+  writer. Also: a designed page no longer adds a second header under the app's navigation bar.
 founder_gate: none
 companions:
-  - "Size refusals no longer use up a page-writing attempt (as PC-097 fixed for repair)"
-  - "Gemini 3 Flash priced so platform-billed page design is not free by accident"
+  - "Explicit cues in the prompt (a colour, a font, 'rounded') always win over the chosen direction"
+  - "The direction survives chat edits (it lives in the plan, not only in the first build)"
+  - "The chosen direction is shown to the person after the build"
 allowed_paths:
   - services/agent-engine/
-  - services/control-plane/
   - apps/console-web/
-  - .env.example
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - a page that does not compile is never left in place
-  - the build itself does not get slower
+  - existing projects keep their look (a default brand renders byte-identical tokens)
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: console build of a real prompt; pages designed after the preview is up, every Next app compiles, cost charged and shown; an edit keeps and redesigns a designed page
+  - Live: three different prompts get three different directions, visible in the preview; an edit keeps the direction; no double header on a designed page
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Designed page header under the app shell navbar (PC-099)"
-  - "Admin template shows invented figures (PC-100)"
-  - "Free-chain models unpriced: page design costs users 0 credits until PC-070"
-found_and_fixed:
-  - "Page answers capped at 4,096 tokens: billing wrapper hid limits, cloud descriptors never read"
-  - "Size refusals used up page-writing attempts"
-  - "Prompt forbade the allowed icon library and listed no component props"
-  - "Editor screens with a View link emitted `)}}`: tsc and next build failed"
-  - "node_modules symlink and tsbuildinfo committed into user projects"
-  - "Ollama adapter never sent num_ctx; long prompts cut silently"
-  - "Design stream cut by silent hops and short bounds: heartbeats, own thread, 40/60-minute bounds"
+deferred: []
+found_and_fixed: []
