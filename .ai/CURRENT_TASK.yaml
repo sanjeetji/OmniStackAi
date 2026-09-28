@@ -1,50 +1,37 @@
-task_id: PC-099
-status: completed
-phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 3 of 6)
-tracker_row: PC-099
-started_at: "2026-09-28"
-completed_at: "2026-09-29"
+task_id: PC-050
+status: in_progress
+phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 4 of 6)
+tracker_row: PC-050
+started_at: "2026-09-29"
+completed_at: null
 branch: platform-completion
 objective: >-
-  A design direction per project. Every project used to share one byte-identical tokens.css, so
-  all apps looked alike. Each build now gets a coherent direction - style, primary and accent
-  colours with checked contrast, a body and heading font pairing (loaded as web fonts), corner
-  radius and density - chosen deterministically from the prompt's cues and the product's domain
-  and archetype, varied between projects, and the same for the same prompt. It is saved in the
-  project's plan (so edits keep it), written to brand.json and the tokens, and handed to the page
-  writer. Also: a designed page no longer adds a second header under the app's navigation bar.
+  Design System Pro: model-written pages may use modern libraries - motion (framer-motion), charts
+  (recharts), rich tables (@tanstack/react-table), forms (react-hook-form + zod), dates (date-fns),
+  toasts (sonner), a command menu (cmdk) and drawers (vaul) - pinned to React-18-compatible
+  versions in every generated web app, allowed by the import validator, explained to the page
+  writer, type-checked and repaired like today's allowlist. The shared type-check cache is rebuilt
+  when the generated dependencies change, so a page using them is checked, not reverted.
 founder_gate: none
 companions:
-  - "Explicit cues in the prompt (a colour, a font, 'rounded') always win over the chosen direction"
-  - "The direction survives chat edits (it lives in the plan, not only in the first build)"
-  - "The chosen direction is shown to the person after the build"
+  - "The web type-check cache rebuilds when the generated package.json changes (as the mobile one does)"
 allowed_paths:
   - services/agent-engine/
-  - apps/console-web/
+  - scripts/omnistack.sh
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - existing projects keep their look (a default brand renders byte-identical tokens)
+  - no library that does not support React 18
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: three different prompts get three different directions, visible in the preview; an edit keeps the direction; no double header on a designed page
+  - Live: a model-written page using a chart and motion compiles, renders in the preview and is kept
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Plan view and brand kit to edit the direction (PC-022, PC-020)"
-  - "Admin template invented figures (PC-100)"
-  - "Preview proxy route 503 and Expo tsc on process (PC-101)"
-found_and_fixed:
-  - "No-cue prompts got the shared default look; a test pinned it"
-  - "Named fonts were never loaded"
-  - "Derived brand not saved in the plan: edits would revert the look"
-  - "76 components and template pages hard-coded default blues"
-  - "Page design ignored ecosystem projects"
-  - "A planned login screen collided with the auth page and failed the build"
-  - "Build stream dropped after 300 silent seconds during a rate-limit wait"
+deferred: []
+found_and_fixed: []
