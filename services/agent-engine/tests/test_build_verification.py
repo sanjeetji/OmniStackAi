@@ -239,7 +239,7 @@ class EverySurfaceIsCheckedNotJustTheWebApp(TestCase):
 
         source = inspect.getsource(build_verify.verify_and_repair_build)
         provider_check = source.index("if provider is None")
-        surfaces_call = source.index("verify_other_surfaces(target_dir)")
+        surfaces_call = source.index("verify_other_surfaces(target_dir")  # PC-097 adds skip=
         self.assertLess(surfaces_call, provider_check, "the other surfaces need no model provider")
 
     def test_a_cache_is_only_shared_where_dependencies_match(self) -> None:
@@ -247,3 +247,52 @@ class EverySurfaceIsCheckedNotJustTheWebApp(TestCase):
         reported as broken — the defect R-560 shipped and caught in review."""
         source = __import__("inspect").getsource(build_verify.verify_other_surfaces)
         self.assertIn("_dependency_set(app_dir", source)
+
+
+class EveryNextAppIsRepairedNotOnlyTheWebApp(TestCase):
+    """PC-097: a model-written page in the admin console or a role app used to be type-checked at
+    most, never repaired or reverted - so it could ship broken. Every Next.js app now goes through
+    the repair loop with its own IR and its own template fallbacks."""
+
+    def test_the_default_apps_are_the_assemblers_own_layout(self) -> None:
+        apps = build_verify.next_apps_for(example_ir("minimal-blog"))
+        self.assertIn(("apps/web", "web"), [(d, f) for d, _ir, f in apps])
+        self.assertTrue(all(ir is not None for _d, ir, _f in apps))
+
+    def test_web_and_admin_are_each_repaired_and_reported_separately(self) -> None:
+        from types import SimpleNamespace
+
+        ir = example_ir("minimal-blog")
+        calls = []
+
+        def fake_repair(**kwargs):
+            calls.append((kwargs["web_prefix"], kwargs["flavour"]))
+            reverted = ("app/page.tsx",) if kwargs["web_prefix"] == "apps/admin/" else ()
+            return SimpleNamespace(final_ok=True, repaired=(), reverted=reverted, untouched_failures=())
+
+        commits = []
+        with tempfile.TemporaryDirectory() as tmp:
+            for app in ("web", "admin"):
+                os.makedirs(os.path.join(tmp, "apps", app, "node_modules"))
+            with mock.patch("omnistackai_agent_engine.codegen.compile_and_repair_sync", fake_repair), \
+                    mock.patch("omnistackai_agent_engine.git_service.commit_all",
+                               lambda *a, **k: commits.append(k) or SimpleNamespace(commit_sha="abc")), \
+                    mock.patch.object(build_verify, "_typecheck", side_effect=AssertionError("compiled twice")):
+                record = build_verify.verify_and_repair_build(
+                    target_dir=tmp, ir=ir, prompt="a blog", provider=object(), author_name="t", author_email="t@t.t",
+                    next_apps=[("apps/web", ir, "web"), ("apps/admin", ir, "admin")],
+                )
+        self.assertEqual(calls, [("apps/web/", "web"), ("apps/admin/", "admin")])
+        self.assertEqual(record["status"], "clean")
+        admin = record["surfaces"]["apps/admin"]
+        self.assertEqual((admin["status"], admin["reverted"], admin["repair_commit"]), ("repaired", ["app/page.tsx"], "abc"))
+        self.assertEqual(len(commits), 1, "one commit for every repair in the build")
+
+    def test_an_ecosystem_repairs_each_role_app_with_its_own_ir(self) -> None:
+        import inspect
+
+        from omnistackai_agent_engine.intake import build_app
+
+        source = inspect.getsource(build_app.build_ecosystem_from_plan)
+        self.assertIn("next_apps=next_apps", source)
+        self.assertIn("app.ir", source)

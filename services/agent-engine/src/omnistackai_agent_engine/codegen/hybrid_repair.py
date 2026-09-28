@@ -74,9 +74,20 @@ class LlmFileSpec:
     compact_prompt: str | None = None
 
 
-def llm_file_specs(ir: ApplicationIR, user_prompt: str, *, synthesize_screens: bool = True) -> dict[str, LlmFileSpec]:
-    """The files the hybrid engine lets the model write, with the same prompts and fallbacks R-465 used."""
+def llm_file_specs(
+    ir: ApplicationIR, user_prompt: str, *, synthesize_screens: bool = True, flavour: str = "web"
+) -> dict[str, LlmFileSpec]:
+    """The files the hybrid engine lets the model write, with the same prompts and fallbacks R-465 used.
 
+    PC-097: ``flavour`` is the app the files belong to ("web" or "admin"). The home page's prompt and
+    its fallback follow the app's archetype exactly as the generator decides it without a model
+    (R-543), so a public site whose page cannot be repaired reverts to its own landing page - not to
+    the staff dashboard, which is what every web app used to fall back to here.
+    """
+    from .archetype import Archetype, detect_archetype
+    from .llm_ui import _deterministic_page_for
+
+    archetype = (Archetype.ADMIN_PANEL if flavour == "admin" else detect_archetype(ir, user_prompt)).value
     grounding = {
         "data_layer": summarize_data_layer(ir),
         "components": summarize_components(ir),
@@ -86,9 +97,9 @@ def llm_file_specs(ir: ApplicationIR, user_prompt: str, *, synthesize_screens: b
     specs = {
         "app/page.tsx": LlmFileSpec(
             "app/page.tsx",
-            build_ui_synthesis_prompt(ir, user_prompt, **grounding),
-            _overview_page(ir),
-            build_ui_synthesis_prompt(ir, user_prompt, **compact),
+            build_ui_synthesis_prompt(ir, user_prompt, archetype=archetype, **grounding),
+            _deterministic_page_for(ir, archetype)(),
+            build_ui_synthesis_prompt(ir, user_prompt, archetype=archetype, **compact),
         )
     }
     if synthesize_screens:
@@ -101,6 +112,19 @@ def llm_file_specs(ir: ApplicationIR, user_prompt: str, *, synthesize_screens: b
                 build_screen_synthesis_prompt(screen, ir, user_prompt, **compact),
             )
     return specs
+
+
+def is_model_written(path: Path) -> bool:
+    """Whether a file on disk was written by the model (it carries the synthesis marker).
+
+    PC-097: only these are ever rewritten. A page the generator wrote itself - a template, or a
+    model page already reverted - is our code, and an error in it is reported, never "repaired".
+    """
+    try:
+        head = path.read_text(encoding="utf-8")[:400]
+    except OSError:
+        return False
+    return MARKER_PREFIX in head
 
 
 def compile_errors_message(errors: tuple[CompileError, ...], *, max_errors: int = _MAX_ERRORS_IN_MESSAGE) -> str:
@@ -170,8 +194,14 @@ async def _repair_one(
 
     attempts = 0
     last_reason = ""
-    for attempt in range(1, attempts_allowed + 1):
-        attempts = attempt
+    # PC-097, found live: a request the provider refused for its size is not an answer, so shrinking
+    # it must not use up an attempt. Counting it did: with the default two attempts the repair gave
+    # up after dropping the echo and never reached the compact grounding, so on Groq every repair of
+    # a real project reverted to the template without the model ever seeing a request it could take.
+    # The loop stays bounded: the transcript can only shrink twice.
+    while attempts < attempts_allowed:
+        attempts += 1
+        attempt = attempts
         try:
             request = GenerateRequest(
                 request_id=f"ui-repair-{uuid.uuid4().hex[:12]}",
@@ -183,9 +213,10 @@ async def _repair_one(
             response = await asyncio.wait_for(provider.generate(request), timeout=timeout_seconds)
         except Exception as err:  # noqa: BLE001 - transport/provider errors never retry; fall back
             last_reason = _reason_for(err)
-            shrunk = transcript.shrink() if _is_request_too_large(err) and attempt < attempts_allowed else None
+            shrunk = transcript.shrink() if _is_request_too_large(err) else None
             if shrunk is not None:
                 logger.warning("Compile repair for %s: request too large (%s); %s and retrying", path, last_reason, shrunk)
+                attempts -= 1
                 continue
             logger.warning("Compile repair for %s failed (%s); reverting to the template", path, last_reason)
             break
@@ -283,8 +314,12 @@ async def compile_and_repair(
     timeout_seconds: float = 120.0,
     compile_timeout_seconds: float = 600.0,
     web_prefix: str = WEB_PREFIX,
+    flavour: str = "web",
 ) -> CompileRepairReport:
     """Compile the web app; repair LLM-written files with the model; recompile; revert what still fails.
+
+    PC-097: ``web_prefix`` and ``flavour`` point this at any Next.js app in the repository (the admin
+    console, an ecosystem role app), each with its own template fallbacks.
 
     ``max_rounds`` repair rounds follow the first compile: every round but the last asks the model, the
     last reverts still-failing LLM files to their templates; each applied round is followed by a compile,
@@ -295,7 +330,7 @@ async def compile_and_repair(
     from ..verify.compile import compile_web_project
 
     web_dir = Path(repo_dir) / web_prefix.rstrip("/")
-    specs = llm_file_specs(ir, user_prompt, synthesize_screens=synthesize_screens)
+    specs = llm_file_specs(ir, user_prompt, synthesize_screens=synthesize_screens, flavour=flavour)
     rounds_allowed = max(1, int(max_rounds))
     repaired: set[str] = set()
     reverted: set[str] = set()
@@ -307,8 +342,9 @@ async def compile_and_repair(
         if report.ok:
             break
         by_file = report.errors_by_file()
-        untouched.update(path for path in by_file if path not in specs)
-        failing = {path: errors for path, errors in by_file.items() if path in specs}
+        model_written = {path for path in by_file if path in specs and is_model_written(web_dir / path)}
+        untouched.update(path for path in by_file if path not in model_written)
+        failing = {path: errors for path, errors in by_file.items() if path in model_written}
         if not failing:
             break
         if round_index < rounds_allowed:

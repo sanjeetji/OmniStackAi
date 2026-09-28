@@ -58,6 +58,23 @@ def skipped(reason: str) -> dict[str, Any]:
     return {"status": "skipped", "reason": reason[:_MAX_REASON_CHARS]}
 
 
+def next_apps_for(ir: Any) -> list[tuple[str, Any, str]]:
+    """Every Next.js app a single-project build lays out: (directory, its IR, "web" | "admin").
+
+    PC-097: taken from the assembler's own layout decision, so the apps repaired are exactly the
+    apps generated - including an admin-only project whose console lives in apps/web.
+    """
+    from ..codegen.assembler import assembled_targets
+    from ..codegen.adapter import GenerationTarget
+
+    flavours = {GenerationTarget.NEXTJS_WEB.value: "web", GenerationTarget.NEXTJS_ADMIN.value: "admin"}
+    try:
+        apps = assembled_targets(ir)
+    except (TypeError, ValueError):
+        return []
+    return [(app.directory, ir, flavours[app.target]) for app in apps if app.target in flavours]
+
+
 def verify_and_repair_build(
     *,
     target_dir: str | os.PathLike[str],
@@ -70,8 +87,16 @@ def verify_and_repair_build(
     author_email: str,
     outcomes: list | None = None,
     timeout_seconds: float = 120.0,
+    next_apps: list[tuple[str, Any, str]] | None = None,
 ) -> dict[str, Any]:
-    """Type-check the generated web app, repair what the model wrote, and report what happened.
+    """Type-check every generated Next.js app, repair what the model wrote, and report what happened.
+
+    PC-097: the repair loop used to cover apps/web only; a model-written page in the admin console
+    or an ecosystem role app was type-checked at most, never repaired or reverted, so it could ship
+    broken. Now every Next.js app goes through the same loop with its own IR and its own template
+    fallbacks. ``next_apps`` lists them (directory, IR, "web" | "admin"); by default they are the
+    apps the assembler lays out for ``ir``. The main app's result is the top-level record, the
+    others are reported per surface, as before.
 
     Returns a JSON-safe record; never raises for an ordinary failure to verify, because a build that
     produced a repository is a successful build whether or not we could compile it.
@@ -80,18 +105,21 @@ def verify_and_repair_build(
     if mode == "off":
         return skipped(f"type-checking is turned off ({MODE_ENV}=off)")
 
-    # R-561: the other surfaces are checked whatever happens to the web app. They contain no
-    # model-written file, so they need no provider — and a build with no model still deserves to
-    # know its backend does not compile.
-    surfaces = verify_other_surfaces(target_dir)
+    root = Path(target_dir)
+    apps = next_apps if next_apps is not None else next_apps_for(ir)
+    apps = [app for app in apps if (root / app[0]).is_dir()]
+    repairable = {relative for relative, _ir, _flavour in apps} if provider is not None else set()
+
+    # R-561: the other surfaces are checked whatever happens to the web app. The Next.js apps the
+    # repair loop takes are left to it, so nothing is compiled twice.
+    surfaces = verify_other_surfaces(target_dir, skip=repairable)
 
     if provider is None:
         # Without a model there is nobody to repair a broken file, and compiling only to report
         # errors the user cannot act on inside the product is not worth a minute of their build.
         return _with_surfaces(skipped("this build ran without a model provider, so the web app was not type-checked"), surfaces)
 
-    web_dir = Path(target_dir) / WEB_PREFIX
-    if not web_dir.is_dir():
+    if not apps:
         return _with_surfaces(skipped("this project has no web app to type-check"), surfaces)
 
     from ..verify import VerifyError, ensure_web_dependencies
@@ -106,55 +134,80 @@ def verify_and_repair_build(
             f"{NODE_MODULES_ENV} must point at a directory named 'node_modules' (got "
             f"'{Path(source).name}'); type resolution silently breaks otherwise, so nothing was checked"
         ), surfaces)
-    if mode == "auto" and source is None and not (web_dir / "node_modules").exists():
-        return _with_surfaces(skipped(
-            "dependencies are not installed, so the web app was not type-checked. Set "
-            f"{NODE_MODULES_ENV} to a warm node_modules, or {MODE_ENV}=install to install them"
-        ), surfaces)
-    try:
-        how = ensure_web_dependencies(web_dir, node_modules_source=source)
-    except VerifyError as error:
-        return _with_surfaces(skipped(f"dependencies could not be prepared: {error}"), surfaces)
 
     from ..codegen import compile_and_repair_sync
 
-    try:
-        report = compile_and_repair_sync(
-            repo_dir=str(target_dir),
-            ir=ir,
-            user_prompt=prompt,
-            provider=provider,
-            model_id=model_id,
-            synthesize_screens=synthesize_screens,
-            outcomes=outcomes,
-            timeout_seconds=timeout_seconds,
-        )
-    except VerifyError as error:
-        return _with_surfaces(skipped(f"the type-checker could not run: {error}"), surfaces)
+    primary = "apps/web" if any(relative == "apps/web" for relative, _i, _f in apps) else apps[0][0]
+    web_deps = _dependency_set(root / primary / "package.json")
+    records: dict[str, dict[str, Any]] = {}
+    for relative, app_ir, flavour in apps:
+        app_dir = root / relative
+        if mode == "auto" and source is None and not (app_dir / "node_modules").exists():
+            records[relative] = skipped(
+                "dependencies are not installed, so the web app was not type-checked. Set "
+                f"{NODE_MODULES_ENV} to a warm node_modules, or {MODE_ENV}=install to install them"
+            )
+            continue
+        if (source is not None and relative != primary and not (app_dir / "node_modules").exists()
+                and _dependency_set(app_dir / "package.json") != web_deps):
+            # The one warm cache is only correct for an app with exactly the same dependencies;
+            # linking it anyway is how correct code gets reported as broken.
+            records[relative] = skipped("this app's dependencies differ from the shared cache, so it was not type-checked")
+            continue
+        try:
+            how = ensure_web_dependencies(app_dir, node_modules_source=source)
+            report = compile_and_repair_sync(
+                repo_dir=str(target_dir),
+                ir=app_ir,
+                user_prompt=prompt,
+                provider=provider,
+                model_id=model_id,
+                # Every page the model wrote is repairable, whichever flags produced it: a page is
+                # taken as model-written by its marker, never by a flag.
+                synthesize_screens=True,
+                outcomes=outcomes,
+                timeout_seconds=timeout_seconds,
+                web_prefix=f"{relative}/",
+                flavour=flavour,
+            )
+        except VerifyError as error:
+            records[relative] = skipped(f"the type-checker could not run: {error}")
+            continue
+        records[relative] = {
+            "status": "clean" if report.final_ok else "failing",
+            "dependencies": how,
+            "repaired": list(report.repaired),
+            "reverted": list(report.reverted),
+            # Deterministic files the repair loop reports but will never rewrite — it only touches
+            # what a model wrote. This is precisely where R-549's defect lived, so it is carried out
+            # to the user rather than left in a report nobody reads: a template bug affects every
+            # project generated until someone fixes the generator.
+            "generator_failures": list(report.untouched_failures),
+        }
 
-    record: dict[str, Any] = {
-        "status": "clean" if report.final_ok else "failing",
-        "dependencies": how,
-        "repaired": list(report.repaired),
-        "reverted": list(report.reverted),
-        # Deterministic files the repair loop reports but will never rewrite — it only touches what
-        # a model wrote. This is precisely where R-549's defect lived, so it is carried out to the
-        # user rather than left in a report nobody reads: a template bug affects every project
-        # generated until someone fixes the generator.
-        "generator_failures": list(report.untouched_failures),
-    }
-    if report.repaired or report.reverted:
+    changed = [rec for rec in records.values() if rec.get("repaired") or rec.get("reverted")]
+    commit_sha = None
+    if changed:
         from ..git_service import commit_all
 
-        commit = commit_all(
+        commit_sha = commit_all(
             str(target_dir),
             author_name=author_name,
             author_email=author_email,
             message="fix(ui): compile-level repair of model-written pages",
-        )
-        record["repair_commit"] = commit.commit_sha
-        record["status"] = "repaired" if report.final_ok else "failing"
-    record["summary"] = _summary(record)
+        ).commit_sha
+    for rec in records.values():
+        if rec.get("status") == "skipped":
+            continue
+        if rec.get("repaired") or rec.get("reverted"):
+            rec["repair_commit"] = commit_sha
+            if rec["status"] == "clean":
+                rec["status"] = "repaired"
+        rec["summary"] = _summary(rec)
+
+    record = records.pop(primary)
+    for relative, rec in records.items():
+        surfaces[relative] = rec
     return _with_surfaces(record, surfaces)
 
 
@@ -265,7 +318,9 @@ def _typecheck(app_dir: Path) -> dict[str, Any]:
     return {"status": "failing", "errors": lines}
 
 
-def verify_other_surfaces(target_dir: str | os.PathLike[str]) -> dict[str, dict[str, Any]]:
+def verify_other_surfaces(
+    target_dir: str | os.PathLike[str], *, skip: set[str] | frozenset[str] = frozenset()
+) -> dict[str, dict[str, Any]]:
     """Compile the admin console, the mobile app and the backend, each reporting for itself.
 
     One combined verdict would hide which surface is broken, and "your project does not compile" is
@@ -282,7 +337,7 @@ def verify_other_surfaces(target_dir: str | os.PathLike[str]) -> dict[str, dict[
     # the first anyone heard of it was a failed production build. Every Next app is checked now.
     for relative in _next_surfaces(root):
         app_dir = root / relative
-        if not app_dir.is_dir():
+        if not app_dir.is_dir() or relative in skip:
             continue
         if shared_ok and not (app_dir / "node_modules").exists():
             # Only when the dependency sets match exactly. They are generated from one template

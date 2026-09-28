@@ -25,7 +25,9 @@ from omnistackai_agent_engine.codegen import (
     llm_file_specs,
     repair_compiled_files,
 )
-from omnistackai_agent_engine.codegen.nextjs import _overview_page, _screen_page
+from omnistackai_agent_engine.codegen.archetype import detect_archetype
+from omnistackai_agent_engine.codegen.archetype import detect_archetype
+from omnistackai_agent_engine.codegen.nextjs import _overview_page, _public_home_page, _screen_page
 from omnistackai_agent_engine.edit.apply import apply_diff
 from omnistackai_agent_engine.edit.diff import ChangeKind
 from omnistackai_agent_engine.model_gateway.contracts import ChatRole
@@ -84,8 +86,9 @@ def _errors(text: str = _PAGE_ERRORS) -> dict[str, tuple[CompileError, ...]]:
     return {path: tuple(errors) for path, errors in grouped.items()}
 
 
-def _fake_repo(root: str, page: str = "bad content") -> Path:
-    web = Path(root) / "apps" / "web"
+def _fake_repo(root: str, page: str = MARKER_PREFIX + " (m)\nbad content", app: str = "web") -> Path:
+    # PC-097: a page is repaired only when it carries the model's marker; this one does.
+    web = Path(root) / "apps" / app
     (web / "app").mkdir(parents=True)
     (web / "app" / "page.tsx").write_text(page, encoding="utf-8")
     (web / "node_modules" / ".bin").mkdir(parents=True)
@@ -103,7 +106,10 @@ class SpecTests(unittest.TestCase):
         self.assertIsInstance(overview, LlmFileSpec)
         self.assertIn("AVAILABLE PRE-BUILT UI COMPONENTS", overview.prompt)
         self.assertIn("useListPosts", overview.prompt)
-        self.assertEqual(overview.fallback, _overview_page(ir))
+        # PC-097: a public app falls back to its own landing page, as the generator builds it without
+        # a model (R-543) - this used to be the staff dashboard for every web app.
+        self.assertEqual(overview.fallback, _public_home_page(ir, detect_archetype(ir, "a blog")))
+        self.assertEqual(llm_file_specs(ir, "a blog", flavour="admin")["app/page.tsx"].fallback, _overview_page(ir))
         screen = ir.screens[0]
         self.assertEqual(specs[f"app/{screen.id}/page.tsx"].fallback, _screen_page(screen, ir))
 
@@ -167,7 +173,7 @@ class RepairFilesTests(unittest.TestCase):
         changes = asyncio.run(repair_compiled_files(
             current={"app/page.tsx": "x"}, errors_by_file=_errors(), specs=specs, provider=exhausted, outcomes=outcomes,
         ))
-        self.assertEqual(changes["app/page.tsx"], _overview_page(ir))
+        self.assertEqual(changes["app/page.tsx"], specs["app/page.tsx"].fallback)
         self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("deterministic", 2))
         self.assertIn("axios", outcomes[0].last_reason)
 
@@ -176,7 +182,7 @@ class RepairFilesTests(unittest.TestCase):
         changes = asyncio.run(repair_compiled_files(
             current={"app/page.tsx": "x"}, errors_by_file=_errors(), specs=specs, provider=failing, outcomes=outcomes,
         ))
-        self.assertEqual(changes["app/page.tsx"], _overview_page(ir))
+        self.assertEqual(changes["app/page.tsx"], specs["app/page.tsx"].fallback)
         self.assertEqual(len(failing.requests), 1)
         self.assertEqual(outcomes[0].last_reason, "RuntimeError")
 
@@ -250,7 +256,8 @@ class CompileAndRepairTests(unittest.TestCase):
             self.assertEqual(len(report.rounds), 3)
             self.assertEqual(report.repaired, ())
             self.assertEqual(report.reverted, ("app/page.tsx",))
-            self.assertEqual((web / "app" / "page.tsx").read_text(encoding="utf-8"), _overview_page(ir))
+            self.assertEqual((web / "app" / "page.tsx").read_text(encoding="utf-8"),
+                             _public_home_page(ir, detect_archetype(ir, "a blog")))
             self.assertEqual([o.mode for o in outcomes], ["llm", "deterministic"])
             self.assertEqual(outcomes[1].last_reason, "tsc: 1 error(s)")
 
@@ -266,7 +273,7 @@ class CompileAndRepairTests(unittest.TestCase):
             self.assertEqual(len(report.rounds), 1)
             self.assertEqual(report.untouched_failures, ("lib/hooks.ts",))
             self.assertEqual(provider.requests, [])
-            self.assertEqual((web / "app" / "page.tsx").read_text(encoding="utf-8"), "bad content")
+            self.assertIn("bad content", (web / "app" / "page.tsx").read_text(encoding="utf-8"))
 
     def test_clean_first_compile_does_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -279,6 +286,35 @@ class CompileAndRepairTests(unittest.TestCase):
             self.assertTrue(report.final_ok)
             self.assertEqual(len(report.rounds), 1)
             self.assertEqual(provider.requests, [])
+
+
+class EveryNextAppTests(unittest.TestCase):
+    """PC-097: the admin console and role apps are repaired like the web app, never beyond it."""
+
+    def test_an_admin_page_is_repaired_under_apps_admin_and_reverts_to_the_dashboard(self) -> None:
+        ir = _ir()
+        with tempfile.TemporaryDirectory() as tmp:
+            admin = _fake_repo(tmp, app="admin")
+            runner = _FakeRunner([(2, _PAGE_ERRORS), (2, _PAGE_ERRORS), (0, "")])
+            report = asyncio.run(compile_and_repair(
+                repo_dir=tmp, ir=ir, user_prompt="a blog", provider=SequenceStubProvider([_VALID_PAGE]),
+                synthesize_screens=False, runner=runner, web_prefix="apps/admin/", flavour="admin",
+            ))
+            self.assertEqual(report.reverted, ("app/page.tsx",))
+            self.assertEqual((admin / "app" / "page.tsx").read_text(encoding="utf-8"), _overview_page(ir))
+            self.assertGreater(runner.calls, 0)
+
+    def test_a_template_page_with_an_error_is_reported_not_rewritten(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            web = _fake_repo(tmp, page="template page, no marker")
+            provider = SequenceStubProvider([_VALID_PAGE])
+            report = asyncio.run(compile_and_repair(
+                repo_dir=tmp, ir=_ir(), user_prompt="a blog", provider=provider, synthesize_screens=False,
+                runner=_FakeRunner([(2, _PAGE_ERRORS)]),
+            ))
+            self.assertEqual(report.untouched_failures, ("app/page.tsx",))
+            self.assertEqual(provider.requests, [])
+            self.assertEqual((web / "app" / "page.tsx").read_text(encoding="utf-8"), "template page, no marker")
 
 
 if __name__ == "__main__":

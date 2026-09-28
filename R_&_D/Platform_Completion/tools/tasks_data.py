@@ -166,7 +166,7 @@ QUEUE = [
      "PC-008", "Found publishing a clinic app on 2026-09-27: the `provider` role surface shipped a "
      "model-written page with an invented import and misused components; the build never checked it. "
      "PC-008 now type-checks every Next surface and publish refuses a broken app with the "
-     "compiler's reason; this task makes the repair loop fix or revert those pages as it does for web. First of the modern-UI block (added 2026-09-27, founder-approved): PC-098 turns model-written pages back on only once this holds, so no surface can ship a page that does not compile."),
+     "compiler's reason; this task makes the repair loop fix or revert those pages as it does for web. First of the modern-UI block (added 2026-09-27, founder-approved): PC-098 turns model-written pages back on only once this holds, so no surface can ship a page that does not compile. Done 2026-09-28."),
     ("PC-098", "Model-written pages back on for every Vibe build: fast template first, modern pages "
      "upgraded in the background, safe under chat edits", "1 Vibe Mode live", "Both", "Not Started",
      "P0", "PC-097", "PC-084 switched them off (80 s per build; its admin page did not compile), so every "
@@ -177,7 +177,11 @@ QUEUE = [
      "update a model-written page instead of regenerating it from the template, so an edit never "
      "throws the modern page away; (4) pages still use only the app's real data hooks (PC-004); "
      "(5) say plainly which pages were upgraded and which kept the template; (6) task verify stays "
-     "offline (templates only, 0 model calls); (7) a weak local model (PC-014) falls back cleanly."),
+     "offline (templates only, 0 model calls); (7) a weak local model (PC-014) falls back cleanly. "
+     "Measured in PC-097 (2026-09-28): on Groq's free tier the page-writing request is too large (413) "
+     "for a real project even with compact grounding, and answers arrive truncated, so pages must be "
+     "written from a much smaller prompt or on a larger-context model (Gemini wrote and repaired an "
+     "admin page); most first drafts had 1-4 type errors, so the page prompt must shrink them."),
     ("PC-099", "A design direction per project: colours, type, radius, density and layout style "
      "chosen from the prompt and the product's archetype", "1 Vibe Mode live", "Both", "Not Started",
      "P0", "PC-098", "Every project on 2026-09-27 shared one byte-identical tokens.css, so all apps look "

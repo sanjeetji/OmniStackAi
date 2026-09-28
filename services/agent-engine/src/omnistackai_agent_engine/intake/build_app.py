@@ -274,6 +274,15 @@ def build_ecosystem_from_plan(
     # only there would have left every multi-app project unchecked — the same shape as R-555, where
     # the branch was wired into the twin the console does not call. The gate in
     # test_build_verification.py found this within a minute of being written.
+    # PC-097: each role app is repaired with its own IR - the union has no screens and would
+    # revert a surface's page to a template for a different app.
+    from ..application_ir import MobileProfile
+
+    next_apps = [
+        (f"apps/{directory}", app.ir, "admin" if directory == "admin" else "web")
+        for directory, app in zip(directories, plan.apps)
+        if app.ir.project_strategy.mobile_profile is not MobileProfile.REACT_NATIVE
+    ]
     verification = verify_and_repair_build(
         target_dir=repo.target_dir,
         ir=shared,
@@ -281,6 +290,7 @@ def build_ecosystem_from_plan(
         provider=provider,
         author_name=author_name,
         author_email=author_email,
+        next_apps=next_apps,
     )
     return AppBuildResult(
         prompt=prompt,

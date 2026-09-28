@@ -1,9 +1,9 @@
 task_id: PC-097
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 1 of 6)
 tracker_row: PC-097
 started_at: "2026-09-28"
-completed_at: null
+completed_at: "2026-09-28"
 branch: platform-completion
 objective: >-
   The compile-verify-repair loop covers every Next.js surface a build produces — the web app, the
@@ -34,5 +34,12 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "Live multi-app (ecosystem) build: same code path, tested offline only"
+  - "Groq free tier cannot take the page request; first drafts carry 1-4 type errors (PC-098)"
+found_and_fixed:
+  - "Admin and role-app model pages were never repaired or reverted"
+  - "Ecosystem verification used the union plan (no screens) instead of each app's own"
+  - "Web home page repair prompt and fallback were the admin dashboard's"
+  - "Any page at a model path was treated as model-written; now only files with the marker"
+  - "A size refusal used up an attempt, so repair never reached the compact grounding"

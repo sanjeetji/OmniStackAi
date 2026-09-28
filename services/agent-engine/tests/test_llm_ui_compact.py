@@ -219,7 +219,13 @@ class RepairShrinkTests(unittest.TestCase):
         ir = _ir()
         specs = llm_file_specs(ir, "a blog", synthesize_screens=False)
         spec = specs["app/page.tsx"]
-        self.assertEqual(spec.compact_prompt, build_ui_synthesis_prompt(ir, "a blog", **compact_grounding(ir)))
+        # PC-097: the repair prompt names the page's own archetype (a blog's public page), where it
+        # used to tell the model to design an admin panel for every web app.
+        from omnistackai_agent_engine.codegen.archetype import detect_archetype
+
+        archetype = detect_archetype(ir, "a blog").value
+        self.assertEqual(spec.compact_prompt,
+                         build_ui_synthesis_prompt(ir, "a blog", archetype=archetype, **compact_grounding(ir)))
         errors = {"app/page.tsx": parse_tsc_output(
             "app/page.tsx(5,11): error TS2339: Property 'refresh' does not exist on type 'UseListPosts'.\n"
         )}
@@ -238,8 +244,23 @@ class RepairShrinkTests(unittest.TestCase):
         third = provider.requests[2]
         self.assertTrue(third.messages[1].content.startswith(spec.compact_prompt.strip()))
         self.assertIn("TS2339", third.messages[1].content)
-        self.assertIn("compile-repair 3/3", changes["app/page.tsx"])
-        self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("llm", 3))
+        # PC-097: the two size refusals were not answers and use no attempt; the first real answer
+        # is attempt 1 - which is what lets a two-attempt repair reach the compact grounding at all.
+        self.assertIn("compile-repair 1/3", changes["app/page.tsx"])
+        self.assertEqual((outcomes[0].mode, outcomes[0].attempts), ("llm", 1))
+
+    def test_a_two_attempt_repair_still_reaches_the_compact_grounding(self) -> None:
+        ir = _ir()
+        specs = llm_file_specs(ir, "a blog", synthesize_screens=False)
+        errors = {"app/page.tsx": parse_tsc_output("app/page.tsx(5,11): error TS2339: Property 'x' does not exist.\n")}
+        provider = ScriptedProvider([_too_large(), _too_large(), _VALID_PAGE])
+        changes = asyncio.run(repair_compiled_files(
+            current={"app/page.tsx": "old content"}, errors_by_file=errors, specs=specs, provider=provider,
+            model_id="m", max_attempts=2,
+        ))
+        self.assertEqual(len(provider.requests), 3)
+        self.assertTrue(provider.requests[2].messages[1].content.startswith(specs["app/page.tsx"].compact_prompt.strip()))
+        self.assertIn("compile-repair", changes["app/page.tsx"])
 
 
 if __name__ == "__main__":
