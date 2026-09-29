@@ -248,6 +248,16 @@ QUEUE = [
      "founder decision on storage (local disk on the API vs S3-compatible - MinIO locally, R2/S3 in "
      "production), then an upload endpoint with size/type limits in each backend and uppy in the "
      "console."),
+    ("PC-104", "Rich text in generated apps: a rich_text field type the planner can choose, "
+     "edited with tiptap and rendered safely", "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-102",
+     "Split from PC-102. A field type the planner picks for long formatted content (descriptions, "
+     "articles, notes); stored as HTML sanitized on the server (Python, Go and Node), edited with "
+     "tiptap in the admin console and web forms, rendered with a second sanitizing pass in the web "
+     "app and as plain text on mobile."),
+    ("PC-105", "File uploads in the Go and Node backends", "1 Vibe Mode live", "Both", "Not Started",
+     "P1", "PC-102", "Split from PC-102, which builds uploads for the default Python backend: the "
+     "same /uploads and /files endpoints, the same per-field rules and content checks, and the same "
+     "storage drivers (R2/S3/local) in Go and in Node (Express and Hono)."),
     ("PC-103", "Go and Node backends: relations writable and audit timestamps optional, as the "
      "Python backend now is", "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-100",
      "Found in PC-100 for the Python API (the default backend): no foreign key could be written "

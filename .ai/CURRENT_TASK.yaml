@@ -1,38 +1,49 @@
-task_id: PC-103
-status: completed
+task_id: PC-102
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
-tracker_row: PC-103
+tracker_row: PC-102
 started_at: "2026-09-29"
-completed_at: "2026-09-29"
+completed_at: null
 branch: platform-completion
 objective: >-
-  The Go and Node backends accept what the Python backend now does: a foreign key (a product's
-  category_id) is written on create and update, and a created_at/updated_at the plan declares is
-  set by the database rather than required from the client. Proven by running each generated
-  backend against Postgres and creating, reading and updating a record with a relation.
+  File uploads in generated apps. An attachment field opens an upload window (Uppy): the device,
+  the camera, a web link, and Google Drive / Dropbox / OneDrive / Box when their keys are set
+  (a self-hosted Uppy Companion). What a field accepts follows the requirement - the planner sets
+  the types, size and count per field ("resume" -> PDF/DOC/DOCX; "product photos" -> images),
+  with a deterministic default from the field's name and executables always refused. The app's
+  API receives the file, checks its real content (magic bytes, not the name) and size against the
+  field's rules, and stores it in Cloudflare R2 (dev or prod bucket), AWS S3, or the local disk
+  when no keys are set; files are private and served through short-lived signed links. The
+  platform picks the store from its .env (OMNISTACKAI_STORAGE_TARGET; R2 dev -> local, or R2 prod
+  -> S3 -> local), so production needs only keys. This task covers the default Python backend and
+  the web and admin apps; rich text is PC-104 and Go/Node uploads PC-105.
 founder_gate: none
-companions: []
+decisions:
+  - "Founder, 2026-09-29: Cloudflare R2 for development (free) and production, AWS S3 as the production alternative, local disk as the fallback; no MinIO"
+  - "Uploads pass through the app's API (streamed, size-capped), not straight to the bucket: the server sees the bytes and checks the real type, and cloud-drive files arrive the same way via Companion. Direct-to-bucket multipart for very large media can be added later"
+companions:
+  - "docs/runbooks/uploads-and-cloud-sources.md: account and key steps (R2 dev/prod, S3, Google Drive, Dropbox, OneDrive, Box)"
+  - ".env / .env.example: the storage and cloud-source keys, empty"
 allowed_paths:
   - services/agent-engine/
   - .ai/
   - R_&_D/Platform_Completion/
+  - docs/
+  - .env.example
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - scripts/omnistack.sh
 forbidden_changes:
-  - no change to what the Python backend generates
+  - never print, log or commit a storage or OAuth key
+  - executables and scripts are never accepted, whatever a field says
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: a generated Go API and a generated Node API each create and update a record with a relation against Postgres
+  - Live: in a built project's preview, a file picked from the device is uploaded through the admin console, stored, listed and opened; a file of the wrong type or size is refused by the server even when the browser check is bypassed
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "Go create answers only the new id (unchanged by design); a client re-reads the record for the rest"
-found_and_fixed:
-  - "Go: the model had no foreign-key field and the store neither wrote nor selected the column"
-  - "Go: a declared created_at was a required, validated field on create"
-  - "Node: z.object dropped the foreign key before the insert, and the repository neither wrote nor selected it"
-  - "Node: the role manager's `'status' in claims` does not narrow (AuthClaims takes any key), so `tsc` (npm run build) failed in every Node API with accounts"
+deferred: []
+found_and_fixed: []
