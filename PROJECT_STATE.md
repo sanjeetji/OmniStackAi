@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-050 (2026-09-29): Design System Pro.** Charts, motion, rich tables, forms + zod, dates, toasts, command menu and drawers pinned for React 18 in every web/admin app and allowed for model pages; type-check cache rebuilds on dependency change; a revert that surfaces another page's errors now reverts it too. Live: 7/8 pages designed, 3 with recharts, both apps compile.
 > **PC-099 (2026-09-29): a design direction per project.** Style, palette, fonts (loaded), radius and density chosen from the prompt and domain, saved in the plan; every component and page themed; page writer follows it (one header, no invented figures); ecosystems designed too. Live: salon, kids' app and clinic look clearly different. Next: PC-050.
 > **PC-098 (2026-09-28): model-designed pages.** Build stays fast with template pages; then the model designs up to 8 pages (home pages first), each compiled and repaired or kept as template; free provider chain (Gemini 3.8 Flash, Flash-Lite, OpenRouter free, NVIDIA, local Qwen2.5-Coder 14B); edits keep designed pages. Live: 8/8 pages designed in 7.5 min. Next: PC-099.
 > **PC-097 (2026-09-28): repair on every Next app.** Web, admin and role apps each repaired or reverted to their own template; only marked model files rewritten; size refusals no longer waste attempts. Found: web pages fell back to the admin dashboard; Groq's free tier cannot take the page request (PC-098 must shrink it). Next: PC-098.

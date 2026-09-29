@@ -42,6 +42,18 @@ ALLOWED_EXACT_IMPORTS: frozenset[str] = frozenset({
     "clsx",
     "class-variance-authority",
     "tailwind-merge",
+    # PC-050 (Design System Pro): installed in every generated web app, pinned for React 18
+    # (codegen.nextjs.DESIGN_SYSTEM_PRO is the version list; a test keeps the two in step).
+    "framer-motion",
+    "recharts",
+    "@tanstack/react-table",
+    "react-hook-form",
+    "zod",
+    "@hookform/resolvers/zod",
+    "date-fns",
+    "sonner",
+    "cmdk",
+    "vaul",
 })
 # Allowed import prefixes: platform modules, relative paths, and Radix UI primitives used by shadcn.
 ALLOWED_IMPORT_PREFIXES: tuple[str, ...] = (
@@ -69,13 +81,17 @@ SHADCN UI PRIMITIVES (from '@/components/ui/<file>' — prefer these for common 
 - Button: import { Button } from '@/components/ui/button';  { variant?: 'default'|'destructive'|'outline'|'secondary'|'ghost'|'link', size?: 'default'|'sm'|'lg'|'icon', asChild?: boolean }
 - Card/CardHeader/CardTitle/CardDescription/CardContent/CardFooter: import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 - Input: import { Input } from '@/components/ui/input';  standard <input> with Tailwind ring/border styling
-- Badge: import { Badge } from '@/components/ui/badge';  { variant?: 'default'|'secondary'|'destructive'|'outline'|'success'|'warning' }
+- Badge: import { Badge } from '@/components/ui/badge';  { variant?: 'default'|'secondary'|'destructive'|'outline'|'success'|'warning' }  (NOT '@/components/badge': a different Badge, variant 'success'|'warning'|'error'|'info'|'neutral')
 - Label: import { Label } from '@/components/ui/label'
 - Separator: import { Separator } from '@/components/ui/separator';  { orientation?: 'horizontal'|'vertical' }
 - Skeleton: import { Skeleton } from '@/components/ui/skeleton';  pass className for sizing e.g. className="h-4 w-32"
 - Alert/AlertTitle/AlertDescription: import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';  { variant?: 'default'|'destructive' }
 - cn() helper: import { cn } from '@/lib/utils';  merges Tailwind classes conditionally
 - Icons: import { LayoutDashboard, Users, Settings, Bell, Search, ChevronDown, Loader2, Plus, Pencil, Trash2, Eye, EyeOff, X, Check, AlertCircle, Info, TrendingUp, TrendingDown } from 'lucide-react';
+INSTALLED LIBRARIES (optional; chart ONLY real data from the hooks):
+- 'recharts' (ResponsiveContainer width="100%" height={260} + AreaChart/BarChart/LineChart/PieChart, XAxis, YAxis, Tooltip)
+- 'framer-motion' { motion, AnimatePresence }; 'date-fns' { format, formatDistanceToNow }; 'sonner' { toast } (Toaster is mounted)
+- '@tanstack/react-table'; 'react-hook-form' { useForm } + 'zod' { z } + '@hookform/resolvers/zod' { zodResolver }; 'cmdk'; 'vaul'
 RICH CUSTOM COMPONENTS (from '@/components/<file>' — for advanced/data-heavy UI):
 - StatCard compound: <StatCard><StatCardHeader title="Label" icon="📊" /><StatCardValue value="123" subtext="info" /></StatCard>
 - DataGrid: { columns: Array<{ key: string, header: string }>, data: any[], sortable?: boolean }  (columns use `header`, never `label`)
@@ -362,7 +378,8 @@ def _core_rules(ir: ApplicationIR) -> str:
     return f"""CORE IMPLEMENTATION RULES:
 1. Start with `"use client";`
 2. IMPORTS: ONLY `react`, `react-dom`, `next/*` (e.g. next/link, next/navigation), `@/lib/hooks`, `@/lib/types`,
-   `@/lib/api`, `lucide-react` icons, and the `@/components/<file>` modules above; nothing else, no require().
+   `@/lib/api`, `lucide-react` icons, the `@/components/<file>` modules and INSTALLED LIBRARIES above;
+   nothing else, no require().
    Import every icon and component you use.
 3. DATA ACCESS: use ONLY the hooks in the TYPED DATA LAYER with EXACTLY those signatures, only fields its types
    declare, and only the props listed for a component. List hooks expose

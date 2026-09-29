@@ -18,6 +18,23 @@ if TYPE_CHECKING:  # annotation-only; keeps the generator free of a runtime mode
     from ..model_gateway.contracts import ModelProvider
 from .adapter import GenerationTarget
 from .auth_guard import needs_auth
+
+
+#: PC-050 (Design System Pro): the libraries a model-written page may import, pinned to versions
+#: that support the generated apps' React 18. Every generated web app installs them, and the page
+#: writer's import validator allows exactly these (see llm_ui.ALLOWED_EXACT_IMPORTS).
+DESIGN_SYSTEM_PRO: dict[str, str] = {
+    "framer-motion": "11.18.2",
+    "recharts": "2.15.4",
+    "@tanstack/react-table": "8.21.3",
+    "react-hook-form": "7.89.0",
+    "zod": "3.25.76",
+    "@hookform/resolvers": "3.10.0",
+    "date-fns": "4.4.0",
+    "sonner": "1.7.4",
+    "cmdk": "1.1.1",
+    "vaul": "1.1.2",
+}
 from .auth_pages import forgot_password_page, reset_password_page
 from .brand import apply_brand
 from .brand_project import web_brand_ts
@@ -73357,6 +73374,7 @@ def _layout_file(ir: ApplicationIR) -> str:
             "            {children}\n"
             "          </ToastProvider>\n"
             "        </AuthProvider>\n"
+            '        <Toaster richColors position="top-right" />\n'
         )
     else:
         body_content = (
@@ -73364,6 +73382,7 @@ def _layout_file(ir: ApplicationIR) -> str:
             "          <Navbar />\n"
             "          {children}\n"
             "        </ToastProvider>\n"
+            '        <Toaster richColors position="top-right" />\n'
         )
     escaped_name = _escape_ts(ir.name)
     escaped_desc = _escape_ts(ir.description)
@@ -73396,6 +73415,8 @@ def _layout_file(ir: ApplicationIR) -> str:
         'import { Navbar } from "@/components/navbar";\n'
         'import { ToastProvider } from "@/components/toast";\n'
         'import { PwaSupport } from "@/components/pwa-support";\n'
+        '// PC-050: sonner toasts, for pages that call toast() from "sonner".\n'
+        'import { Toaster } from "sonner";\n'
         f"{auth_import}\n"
         "// R-573: the browser chrome and the installed app take the brand colour.\n"
         f'export const viewport = {{ themeColor: "{ir.brand.primary_color}" }};\n\n'
@@ -73856,7 +73877,9 @@ def _component_props(source: str, *, max_type_chars: int = 28) -> list[str]:
 # (the data layer of a typical app is well under the cap); each component keeps its primary export; the
 # overview/screen prompts stay ≈12k chars (≈3k tokens), leaving room for a 4k-token page under 8k.
 _COMPACT_DATA_LAYER_CHARS = 5_000
-_COMPACT_COMPONENTS_CHARS = 4_000
+# PC-050: 400 chars went to the INSTALLED LIBRARIES block (charts, motion, forms), which is worth more
+# to a page than the tail of the component list.
+_COMPACT_COMPONENTS_CHARS = 3_600
 _COMPACT_DESIGN_TOKENS_CHARS = 1_000
 
 
@@ -73987,6 +74010,8 @@ class NextjsWebAdapter:
                 "tailwind-merge": "3.3.0",
                 "@radix-ui/react-slot": "1.2.3",
                 "styled-jsx": "5.1.6",
+                # PC-050: what a model-written page may use (one list, shared with the validator).
+                **DESIGN_SYSTEM_PRO,
             },
             "devDependencies": {
                 "@types/node": "22.10.2", "@types/react": "18.3.12",

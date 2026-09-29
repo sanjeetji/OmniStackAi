@@ -181,27 +181,36 @@ warm_web_modules() {
   # path, and nested lookups only recognise a directory by that name -- so a cache called anything
   # else makes `next`'s own types unresolvable and reports invented errors in correct code. That is
   # worse than not checking at all, and it took an A/B of two identical caches to see it.
+  # PC-050: its package.json is kept beside it, and a change in the generated dependencies (a new
+  # library the page writer may use) rebuilds it - a stale cache would fail every page that uses one.
   local cache="${OMNISTACKAI_WEB_NODE_MODULES:-$HOME/.omnistackai/web-typecheck/node_modules}"
-  if [[ -x "$cache/.bin/tsc" ]]; then
+  local work
+  work="$(mktemp -d)"
+  if ! bash "$repo_root/scripts/agent-engine.sh" emit-web-package "$work" >/dev/null 2>&1; then
+    rm -rf "$work"
+    if [[ -x "$cache/.bin/tsc" ]]; then
+      export OMNISTACKAI_WEB_NODE_MODULES="$cache"
+      return 0
+    fi
+    warn "could not prepare the type-check cache - builds will report as not type-checked"
+    return 0
+  fi
+  if [[ -x "$cache/.bin/tsc" ]] && cmp -s "$work/package.json" "$(dirname "$cache")/package.json"; then
     export OMNISTACKAI_WEB_NODE_MODULES="$cache"
+    rm -rf "$work"
     return 0
   fi
   if ! command -v pnpm >/dev/null 2>&1; then
     warn "pnpm not found - generated code will not be type-checked at build time"
-    return 0
-  fi
-  step "Warming the type-checker (one install, shared by every generated project)"
-  local work
-  work="$(mktemp -d)"
-  if ! bash "$repo_root/scripts/agent-engine.sh" emit-web-package "$work" >/dev/null 2>&1; then
-    warn "could not prepare the type-check cache - builds will report as not type-checked"
     rm -rf "$work"
     return 0
   fi
+  step "Warming the type-checker (one install, shared by every generated project)"
   if (cd "$work" && pnpm install --ignore-scripts --ignore-workspace >/dev/null 2>&1); then
     mkdir -p "$(dirname "$cache")"
     rm -rf "$cache"
     mv "$work/node_modules" "$cache"
+    cp "$work/package.json" "$(dirname "$cache")/package.json"
     export OMNISTACKAI_WEB_NODE_MODULES="$cache"
     ok "type-checker ready ($cache)"
   else

@@ -261,6 +261,34 @@ class CompileAndRepairTests(unittest.TestCase):
             self.assertEqual([o.mode for o in outcomes], ["llm", "deterministic"])
             self.assertEqual(outcomes[1].last_reason, "tsc: 1 error(s)")
 
+    def test_errors_a_revert_brings_out_are_put_back_too(self) -> None:
+        """Found live in PC-050: while one page has a syntax error, tsc reports only that, so the last
+        round reverted it and a second page's type errors surfaced with no round left - the page was
+        reported designed in an app that did not compile."""
+        ir = _ir()
+        screen = f"app/{ir.screens[0].id}/page.tsx"
+        with tempfile.TemporaryDirectory() as tmp:
+            web = _fake_repo(tmp)
+            (web / screen).parent.mkdir(parents=True)
+            (web / screen).write_text(MARKER_PREFIX + " (m)\n<div>{</div>", encoding="utf-8")
+            runner = _FakeRunner([
+                (2, f"{screen}(2,8): error TS1109: Expression expected.\n"),
+                (2, _PAGE_ERRORS),  # the home page's type error, hidden until now
+                (0, ""),
+            ])
+            provider = SequenceStubProvider([])
+            outcomes: list[UiSynthesisOutcome] = []
+            report = asyncio.run(compile_and_repair(
+                repo_dir=tmp, ir=ir, user_prompt="a blog", provider=provider, model_id="m",
+                synthesize_screens=True, outcomes=outcomes, runner=runner, max_rounds=1,
+            ))
+            self.assertTrue(report.final_ok)
+            self.assertEqual(set(report.reverted), {screen, "app/page.tsx"})
+            self.assertEqual(len(report.rounds), 3)
+            self.assertEqual(provider.requests, [], "putting back needs no model call")
+            self.assertEqual((web / "app" / "page.tsx").read_text(encoding="utf-8"),
+                             _public_home_page(ir, detect_archetype(ir, "a blog")))
+
     def test_errors_in_deterministic_files_stop_without_model_calls(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             web = _fake_repo(tmp)

@@ -338,6 +338,7 @@ async def compile_and_repair(
 
     report = compile_web_project(web_dir, runner=runner, timeout_seconds=compile_timeout_seconds)
     rounds = [report]
+    final_round_ran = False
     for round_index in range(1, rounds_allowed + 1):
         if report.ok:
             break
@@ -371,6 +372,30 @@ async def compile_and_repair(
                 reverted.add(path)
             else:
                 repaired.add(path)
+        apply_diff(build_repair_diff(changes, web_prefix=web_prefix), repo_dir)
+        report = compile_web_project(web_dir, runner=runner, timeout_seconds=compile_timeout_seconds)
+        rounds.append(report)
+        final_round_ran = round_index == rounds_allowed
+
+    # Found live (PC-050): while any file has a syntax error, tsc reports only syntax errors, so the
+    # last round's revert can bring out type errors in model pages that looked clean - and a page
+    # was reported "designed" in an app that no longer compiled. Put those back too, until the app
+    # compiles or only files the model did not write fail. Each pass reverts at least one file.
+    while not report.ok and final_round_ran:
+        by_file = report.errors_by_file()
+        untouched.update(path for path in by_file if path not in specs)
+        surfaced = {path: errors for path, errors in by_file.items()
+                    if path in specs and path not in reverted and is_model_written(web_dir / path)}
+        if not surfaced:
+            break
+        for path, errors in surfaced.items():
+            repaired.discard(path)
+            reverted.add(path)
+            if outcomes is not None:
+                outcomes.append(
+                    UiSynthesisOutcome(path, "deterministic", 0, model_id or "default", f"tsc: {len(errors)} error(s)")
+                )
+        changes = {path: specs[path].fallback for path in surfaced}
         apply_diff(build_repair_diff(changes, web_prefix=web_prefix), repo_dir)
         report = compile_web_project(web_dir, runner=runner, timeout_seconds=compile_timeout_seconds)
         rounds.append(report)

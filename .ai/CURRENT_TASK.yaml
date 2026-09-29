@@ -1,9 +1,9 @@
 task_id: PC-050
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 4 of 6)
 tracker_row: PC-050
 started_at: "2026-09-29"
-completed_at: null
+completed_at: "2026-09-29"
 branch: platform-completion
 objective: >-
   Design System Pro: model-written pages may use modern libraries - motion (framer-motion), charts
@@ -29,9 +29,14 @@ required_gates:
   - Live: a model-written page using a chart and motion compiles, renders in the preview and is kept
   - scripts/verify.sh passes
 model_tool_trace:
-  routing: deterministic_only
+  routing: deterministic_only  # task verify; the live proof used the free page chain (Gemini)
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "tiptap (rich text), maplibre (maps), uppy (uploads): heavy, each needs a backend or tiles; add with the feature that uses them"
+  - "PC-101: a designed home page still showed invented trend figures (+12.5% from last month); a few static 404s in the preview console"
+found_and_fixed:
+  - "tsc reports only syntax errors while any file has one, so the last repair round's revert could surface type errors in another model page, which was then reported designed in an app that did not compile; such pages are now put back too"
+  - "two Badge components with different variants confused the page writer (destructive/outline on @/components/badge); the prompt now tells them apart"
+  - "the compact (small-tier) prompt would have gone over its 14,000-character budget; the component list gave up 400 characters instead"

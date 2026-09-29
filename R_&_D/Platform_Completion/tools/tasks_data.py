@@ -201,7 +201,11 @@ QUEUE = [
      "command menu, drawer, toasts, tables, forms, maps, uploads)", "1 Vibe Mode live", "Vibe",
      "Not Started", "P0", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
      "tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, "
-     "repaired like today's allowlist. From the architecture plan."),
+     "repaired like today's allowlist. From the architecture plan. Done 2026-09-29: framer-motion, "
+     "recharts, @tanstack/react-table, react-hook-form + zod, date-fns, sonner, cmdk, vaul pinned for "
+     "React 18 in every generated web and admin app, allowed and explained to the page writer; the "
+     "type-check cache rebuilds when they change. Deferred: tiptap (rich text), maplibre (maps) and "
+     "uppy (uploads) - heavy, and each needs a backend or tiles; add with the feature that uses them."),
     ("PC-100", "A modern admin panel: redesign the generated admin console (dashboard with real "
      "metrics and charts, rich data tables, forms, filters, bulk actions, command menu) in the "
      "project's design direction", "1 Vibe Mode live", "Both", "Not Started", "P0", "PC-099, PC-050",
@@ -220,7 +224,9 @@ QUEUE = [
      "is shown to improve and never regress. Seen in PC-099 for this gate to catch: in a preview "
      "served under a base path, a page's server-side API proxy route (/products) answered 503 "
      "'backend_unavailable' while the API itself answered 200; and the generated Expo app fails tsc "
-     "on `process` (no Node types) in src/shared/api/client.ts."),
+     "on `process` (no Node types) in src/shared/api/client.ts. Seen in PC-050: a designed home page "
+     "still showed invented trend figures ('+12.5% from last month') despite the rule against them, "
+     "and the preview console had a few static-resource 404s."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "
