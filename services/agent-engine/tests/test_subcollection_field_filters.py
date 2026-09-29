@@ -87,9 +87,9 @@ class PythonSubcollectionFilterTests(TestCase):
             'async def get_parents_parentid_children(parentId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, active: bool | None = None, status: str | None = None) -> list[dict]:',
             self.router,
         )
-        self.assertIn("child.count_child_by_parent(parentId, q=q, active=active, status=status)", self.router)
+        self.assertIn("child_repo.count_child_by_parent(parentId, q=q, active=active, status=status)", self.router)
         self.assertIn(
-            "child.list_child_by_parent(parentId, limit=limit, offset=offset, sort=sort, order=order, q=q, active=active, status=status)",
+            "child_repo.list_child_by_parent(parentId, limit=limit, offset=offset, sort=sort, order=order, q=q, active=active, status=status)",
             self.router,
         )
 
@@ -160,7 +160,7 @@ class CompatibilityTests(TestCase):
         py_repo = py.get("app/repositories/comment.py").content
         py_router = py.get("app/routers/posts.py").content
         self.assertIn("q: str | None = None) -> list[dict[str, Any]]:", py_repo)
-        self.assertIn("comment.count_comment_by_post(postId, q=q)", py_router)
+        self.assertIn("comment_repo.count_comment_by_post(postId, q=q)", py_router)
         self.assertNotIn("active=None", py_repo)
 
         go = GoBackendAdapter().generate(example_ir("minimal-blog"))

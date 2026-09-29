@@ -49,15 +49,15 @@ class PythonWiringTests(TestCase):
     def test_router_calls_repository_and_parses(self) -> None:
         posts = self.project.get("app/routers/posts.py").content
         ast.parse(posts)  # valid Python
-        self.assertIn("from app.repositories import post", posts)
-        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", posts)
+        self.assertIn("from app.repositories import post as post_repo", posts)
+        self.assertIn("return await post_repo.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", posts)
         self.assertIn("from app.models import Post", posts)
-        self.assertIn("await post.create_post(payload.model_dump())", posts)
+        self.assertIn("await post_repo.create_post(payload.model_dump())", posts)
 
     def test_subcollection_wired_to_filtered_list(self) -> None:
         # R-244: GET /posts/{postId}/comments -> parent-scoped list via the FK relation
         posts = self.project.get("app/routers/posts.py").content
-        self.assertIn("await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", posts)
+        self.assertIn("await comment_repo.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", posts)
 
     def test_ambiguous_endpoint_stays_501(self) -> None:
         # POST /favourites/drivers/{driverId} has no request_schema -> genuinely ambiguous -> 501

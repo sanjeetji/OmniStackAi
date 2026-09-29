@@ -29,11 +29,11 @@ class PythonTotalCountRouterTests(TestCase):
 
     def test_router_imports_response_and_sets_total_count_header(self) -> None:
         self.assertIn("from fastapi import APIRouter, Depends, HTTPException, Response", self.posts_router)
-        self.assertIn("total = await post.count_post(q=q, published=published)", self.posts_router)
+        self.assertIn("total = await post_repo.count_post(q=q, published=published)", self.posts_router)
         self.assertIn('response.headers["X-Total-Count"] = str(total)', self.posts_router)
 
     def test_router_sets_total_count_header_on_subcollection_list(self) -> None:
-        self.assertIn("total = await comment.count_comment_by_post(postId, q=q)", self.posts_router)
+        self.assertIn("total = await comment_repo.count_comment_by_post(postId, q=q)", self.posts_router)
         self.assertIn('response.headers["X-Total-Count"] = str(total)', self.posts_router)
 
     def test_python_cors_exposes_x_total_count_header(self) -> None:

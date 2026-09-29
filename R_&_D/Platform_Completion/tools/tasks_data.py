@@ -213,7 +213,13 @@ QUEUE = [
      "2026-09-27). Keep every existing admin capability (roles manager, CRUD on every entity, auth) "
      "and its API wiring; model-written admin pages go through the same repair and fallback as the "
      "web app (PC-097, PC-098). Found in PC-098: the admin template shows invented figures "
-     "('99.98% system health', '< 24ms latency') - every number must come from the API or not be shown."),
+     "('99.98% system health', '< 24ms latency') - every number must come from the API or not be shown. "
+     "Done 2026-09-29: an app shell (sidebar, top bar, Ctrl/Cmd+K command menu, phone drawer), a "
+     "dashboard read only from the API, and a page per listable entity (server-sorted, searched and "
+     "paginated table, bulk delete, CSV, create/edit drawer validated from the plan, related records "
+     "picked by name, a map for coordinates); model pages with invented figures are refused. Found "
+     "and fixed in the generated Python API: GET /orders answered 500 in every app with an Order "
+     "entity, no foreign key could be written, and a declared created_at was required on create."),
     ("PC-101", "UI quality gate for ordinary prompts: every Vibe build is screenshotted and checked "
      "(layout, contrast, spacing, phone width, empty/loading/error states) before it is called done",
      "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-098, PC-099, PC-100",
@@ -225,8 +231,29 @@ QUEUE = [
      "served under a base path, a page's server-side API proxy route (/products) answered 503 "
      "'backend_unavailable' while the API itself answered 200; and the generated Expo app fails tsc "
      "on `process` (no Node types) in src/shared/api/client.ts. Seen in PC-050: a designed home page "
-     "still showed invented trend figures ('+12.5% from last month') despite the rule against them, "
-     "and the preview console had a few static-resource 404s."),
+     "still showed invented trend figures ('+12.5% from last month') despite the rule against them "
+     "(PC-100 now refuses those), and the preview console had a few static-resource 404s - PC-100 "
+     "traced the ones it saw to screenshots taken on an app's raw port (a relative API path only "
+     "resolves through the console) and one transient dev-server 404; check against a production "
+     "build. Seen in PC-100: the proxy route reads BACKEND_INTERNAL_URL or NEXT_PUBLIC_API_URL, not "
+     "the API_URL the preview sets, which is the 503 above; dev-mode HMR websockets fail through the "
+     "console proxy; an app whose API has no sign-in routes still shows 'Sign in'."),
+    ("PC-102", "Rich text and file uploads in generated apps: a rich-text field type edited with "
+     "tiptap and rendered safely, and attachment fields uploaded to storage (uppy)",
+     "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-100",
+     "Deferred from PC-050 and PC-100 because each needs more than a library. Rich text: a field "
+     "type the planner can choose, stored as sanitized HTML (or Markdown), edited with tiptap in the "
+     "admin console and rendered safely in the web and mobile apps. Uploads: attachment fields are "
+     "a URL today and no backend (Python, Go, Node) has an upload endpoint or storage; needs a "
+     "founder decision on storage (local disk on the API vs S3-compatible - MinIO locally, R2/S3 in "
+     "production), then an upload endpoint with size/type limits in each backend and uppy in the "
+     "console."),
+    ("PC-103", "Go and Node backends: relations writable and audit timestamps optional, as the "
+     "Python backend now is", "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-100",
+     "Found in PC-100 for the Python API (the default backend): no foreign key could be written "
+     "(the model lacked it and inserts skipped it) and a declared created_at was required on create. "
+     "The Go models have the same gap (type Order has no CustomerId); check the Node backend too, "
+     "and run the admin console's create/edit against each."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "

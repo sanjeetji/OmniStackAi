@@ -44,6 +44,16 @@ def _fk_relation_names(entity: Entity) -> list[str]:
     return [relation.name for relation in entity.relations if relation.kind in _FK_KINDS]
 
 
+def _python_writable_columns(entity: Entity, workflow=None) -> list[str]:
+    """PC-100, found live: the Python API never wrote a foreign key - a product created with a
+    category_id came back with none, so no relation could be set through the API. Its foreign-key
+    columns are writable too (the Pydantic model declares them, see backend_python)."""
+    declared = {field.name for field in entity.fields}
+    return _insert_columns(entity, workflow) + [
+        f"{name}_id" for name in _fk_relation_names(entity) if f"{name}_id" not in declared
+    ]
+
+
 def _searchable_fields(entity: Entity) -> list[str]:
     return [field.name for field in entity.fields if field.type in (FieldType.STRING, FieldType.TEXT, FieldType.ATTACHMENT)]
 
@@ -85,7 +95,7 @@ def _python_db(slug: str) -> str:
 def _python_repository(entity: Entity, workflow=None) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
-    insert_cols = _insert_columns(entity, workflow)
+    insert_cols = _python_writable_columns(entity, workflow)
     if insert_cols:
         create_body = (
             f"    columns = [c for c in {insert_cols!r} if c in data]\n"
@@ -245,7 +255,7 @@ def _python_state_setter(table: str, workflow) -> str:
 
 def _python_update(entity: Entity, table: str, workflow=None) -> str:
     """Emit update_<table>(id, data) — parameterized UPDATE RETURNING *."""
-    update_cols = _insert_columns(entity, workflow)  # every writable column
+    update_cols = _python_writable_columns(entity, workflow)  # every writable column
     if update_cols:
         set_clause = ", ".join(f"{sql_identifier(c)} = %s" for c in update_cols)
         values_expr = ", ".join(f"data['{c}']" for c in update_cols)

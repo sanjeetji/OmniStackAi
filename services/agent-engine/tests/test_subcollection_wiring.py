@@ -59,7 +59,7 @@ class FilteredRepositoryEmissionTests(TestCase):
 class SubcollectionWiringTests(TestCase):
     def test_python_router_calls_filtered_list(self) -> None:
         posts = PythonBackendAdapter().generate(example_ir("minimal-blog")).get("app/routers/posts.py").content
-        self.assertIn("await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", posts)
+        self.assertIn("await comment_repo.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", posts)
 
     def test_go_handler_calls_filtered_store(self) -> None:
         handlers = GoBackendAdapter().generate(example_ir("minimal-blog")).get("internal/handlers/posts.go").content

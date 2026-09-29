@@ -109,7 +109,9 @@ class SpecTests(unittest.TestCase):
         # PC-097: a public app falls back to its own landing page, as the generator builds it without
         # a model (R-543) - this used to be the staff dashboard for every web app.
         self.assertEqual(overview.fallback, _public_home_page(ir, detect_archetype(ir, "a blog")))
-        self.assertEqual(llm_file_specs(ir, "a blog", flavour="admin")["app/page.tsx"].fallback, _overview_page(ir))
+        from omnistackai_agent_engine.codegen.admin_console import dashboard_page
+
+        self.assertEqual(llm_file_specs(ir, "a blog", flavour="admin")["app/page.tsx"].fallback, dashboard_page(ir))
         screen = ir.screens[0]
         self.assertEqual(specs[f"app/{screen.id}/page.tsx"].fallback, _screen_page(screen, ir))
 
@@ -329,7 +331,10 @@ class EveryNextAppTests(unittest.TestCase):
                 synthesize_screens=False, runner=runner, web_prefix="apps/admin/", flavour="admin",
             ))
             self.assertEqual(report.reverted, ("app/page.tsx",))
-            self.assertEqual((admin / "app" / "page.tsx").read_text(encoding="utf-8"), _overview_page(ir))
+            # PC-100: the admin console reverts to its own real-data dashboard.
+            from omnistackai_agent_engine.codegen.admin_console import dashboard_page
+
+            self.assertEqual((admin / "app" / "page.tsx").read_text(encoding="utf-8"), dashboard_page(ir))
             self.assertGreater(runner.calls, 0)
 
     def test_a_template_page_with_an_error_is_reported_not_rewritten(self) -> None:

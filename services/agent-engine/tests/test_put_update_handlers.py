@@ -161,7 +161,7 @@ class PythonPutRouterTests(TestCase):
         project = PythonBackendAdapter().generate(_ir_py(_VALIDATED_LISTING))
         router = project.get("app/routers/listings.py").content
         self.assertIn("async def put_listings_listingid(listingId: str, payload: Listing) -> dict:", router)
-        self.assertIn("await listing.update_listing(listingId, payload.model_dump())", router)
+        self.assertIn("await listing_repo.update_listing(listingId, payload.model_dump())", router)
 
     def test_put_router_raises_404_on_none(self) -> None:
         project = PythonBackendAdapter().generate(_ir_py(_VALIDATED_LISTING))

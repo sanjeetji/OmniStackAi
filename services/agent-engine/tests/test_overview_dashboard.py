@@ -116,15 +116,16 @@ def _dashboard_ir(description: str = "A test platform.") -> ApplicationIR:
 
 
 def _get_overview_page(ir: ApplicationIR) -> str:
-    """Generate the admin console and return the content of app/page.tsx.
+    """The entity dashboard template (app/page.tsx of a web app whose home is a dashboard).
 
-    R-541: the entity dashboard these tests describe is the *admin* home. The public web app now
-    renders a landing page instead, so the assertions below follow the dashboard to the console
-    that owns it rather than being relaxed.
+    R-541 followed this dashboard to the admin console. PC-100 gave the console its own real-data
+    dashboard (tests/test_admin_console.py), so these assertions follow the template to the web
+    apps that still use it, rather than being relaxed.
     """
-    adapter = NextjsAdminAdapter()
-    project = adapter.generate(ir)
-    return project.get("app/page.tsx").content
+    return _overview_page(ir)
+
+
+from omnistackai_agent_engine.codegen.nextjs import _overview_page  # noqa: E402
 
 
 class OverviewDashboardTests(TestCase):

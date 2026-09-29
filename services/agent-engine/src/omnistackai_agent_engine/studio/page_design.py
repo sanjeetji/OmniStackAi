@@ -257,7 +257,8 @@ async def _write_page(target: PageTarget, ir: Any, prompt: str, provider: Any, m
         archetype = (Archetype.ADMIN_PANEL if target.flavour == "admin" else detect_archetype(ir, prompt)).value
         content = await synthesize_overview_page(
             ir, prompt, provider=provider, model_id=model_id, timeout_seconds=timeout_seconds,
-            outcomes=outcomes, compact_grounding=compact, archetype=archetype, **grounding,
+            outcomes=outcomes, compact_grounding=compact, archetype=archetype, flavour=target.flavour,
+            **grounding,
         )
     else:
         screen = next((s for s in ir.screens if s.id == target.screen_id), None)

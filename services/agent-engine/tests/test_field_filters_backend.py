@@ -94,8 +94,8 @@ class PythonFilterRepositoryTests(TestCase):
     def test_router_declares_and_forwards_filter_params(self) -> None:
         router = PythonBackendAdapter().generate(_ir()).get("app/routers/items.py").content
         self.assertIn('async def get_items(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, active: bool | None = None, status: str | None = None) -> list[dict]:', router)
-        self.assertIn("total = await item.count_item(q=q, active=active, status=status)", router)
-        self.assertIn("return await item.list_item(limit=limit, offset=offset, sort=sort, order=order, q=q, active=active, status=status)", router)
+        self.assertIn("total = await item_repo.count_item(q=q, active=active, status=status)", router)
+        self.assertIn("return await item_repo.list_item(limit=limit, offset=offset, sort=sort, order=order, q=q, active=active, status=status)", router)
 
 
 class GoFilterStoreTests(TestCase):

@@ -90,11 +90,11 @@ class PythonSortingRouterTests(TestCase):
 
     def test_router_declares_sort_and_order_query_parameters(self) -> None:
         self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, published: bool | None = None) -> list[dict]:', self.posts_router)
-        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", self.posts_router)
+        self.assertIn("return await post_repo.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", self.posts_router)
 
     def test_subcollection_router_passes_sort_and_order(self) -> None:
         self.assertIn('async def get_posts_postid_comments(postId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', self.posts_router)
-        self.assertIn("return await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", self.posts_router)
+        self.assertIn("return await comment_repo.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", self.posts_router)
 
 
 class NextJsSortingClientTests(TestCase):

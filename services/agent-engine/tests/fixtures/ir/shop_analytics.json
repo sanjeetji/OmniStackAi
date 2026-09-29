@@ -1,0 +1,541 @@
+{
+ "acceptance_criteria": [
+  {
+   "expected_result": "admin can view orders, customers, products and revenue analytics",
+   "requirement_id": "dashboard_view"
+  }
+ ],
+ "apis": [
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "GET",
+   "path": "/analytics/revenue_by_product",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": null
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "GET",
+   "path": "/customers",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": "Customer"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "POST",
+   "path": "/customers",
+   "request_schema": "Customer",
+   "required_roles": [],
+   "response_schema": "Customer"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "DELETE",
+   "path": "/customers/{customerId}",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": null
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "GET",
+   "path": "/customers/{customerId}",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": "Customer"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "PUT",
+   "path": "/customers/{customerId}",
+   "request_schema": "Customer",
+   "required_roles": [],
+   "response_schema": "Customer"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "GET",
+   "path": "/orders",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": "Order"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "POST",
+   "path": "/orders",
+   "request_schema": "Order",
+   "required_roles": [],
+   "response_schema": "Order"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "DELETE",
+   "path": "/orders/{orderId}",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": null
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "GET",
+   "path": "/orders/{orderId}",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": "Order"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "PUT",
+   "path": "/orders/{orderId}",
+   "request_schema": "Order",
+   "required_roles": [],
+   "response_schema": "Order"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "GET",
+   "path": "/orders/{orderId}/items",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": "OrderItem"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "POST",
+   "path": "/orders/{orderId}/items",
+   "request_schema": "OrderItem",
+   "required_roles": [],
+   "response_schema": "OrderItem"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "DELETE",
+   "path": "/orders/{orderId}/items/{orderItemId}",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": null
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "PUT",
+   "path": "/orders/{orderId}/items/{orderItemId}",
+   "request_schema": "OrderItem",
+   "required_roles": [],
+   "response_schema": "OrderItem"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "GET",
+   "path": "/products",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": "Product"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "POST",
+   "path": "/products",
+   "request_schema": "Product",
+   "required_roles": [],
+   "response_schema": "Product"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "DELETE",
+   "path": "/products/{productId}",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": null
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "GET",
+   "path": "/products/{productId}",
+   "request_schema": null,
+   "required_roles": [],
+   "response_schema": "Product"
+  },
+  {
+   "auth": true,
+   "error_schema": null,
+   "method": "PUT",
+   "path": "/products/{productId}",
+   "request_schema": "Product",
+   "required_roles": [],
+   "response_schema": "Product"
+  }
+ ],
+ "brand": {
+  "accent_color": "#6366f1",
+  "border_radius": "xl",
+  "dark_primary_color": "#3a8f88",
+  "density": "comfortable",
+  "font_family": "Poppins",
+  "heading_font": "Poppins",
+  "primary_color": "#0f766e",
+  "style": "vibrant"
+ },
+ "capabilities": [],
+ "description": "Sales analytics dashboard for a small online shop showing orders, customers and revenue by product.",
+ "entities": [
+  {
+   "fields": [
+    {
+     "name": "id",
+     "required": true,
+     "type": "uuid",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "first_name",
+     "required": true,
+     "type": "string",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "last_name",
+     "required": true,
+     "type": "string",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "email",
+     "required": true,
+     "type": "string",
+     "unique": true,
+     "validation": []
+    },
+    {
+     "name": "phone",
+     "required": false,
+     "type": "string",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "created_at",
+     "required": true,
+     "type": "datetime",
+     "unique": false,
+     "validation": []
+    }
+   ],
+   "indexes": [],
+   "name": "Customer",
+   "relations": []
+  },
+  {
+   "fields": [
+    {
+     "name": "id",
+     "required": true,
+     "type": "uuid",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "order_date",
+     "required": true,
+     "type": "datetime",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "status",
+     "required": true,
+     "type": "string",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "total_amount",
+     "required": true,
+     "type": "float",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "created_at",
+     "required": true,
+     "type": "datetime",
+     "unique": false,
+     "validation": []
+    }
+   ],
+   "indexes": [],
+   "name": "Order",
+   "relations": [
+    {
+     "kind": "many_to_one",
+     "name": "customer",
+     "target_entity": "Customer"
+    }
+   ]
+  },
+  {
+   "fields": [
+    {
+     "name": "id",
+     "required": true,
+     "type": "uuid",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "quantity",
+     "required": true,
+     "type": "int",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "unit_price",
+     "required": true,
+     "type": "float",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "line_total",
+     "required": true,
+     "type": "float",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "created_at",
+     "required": true,
+     "type": "datetime",
+     "unique": false,
+     "validation": []
+    }
+   ],
+   "indexes": [],
+   "name": "OrderItem",
+   "relations": [
+    {
+     "kind": "many_to_one",
+     "name": "order",
+     "target_entity": "Order"
+    },
+    {
+     "kind": "many_to_one",
+     "name": "product",
+     "target_entity": "Product"
+    }
+   ]
+  },
+  {
+   "fields": [
+    {
+     "name": "id",
+     "required": true,
+     "type": "uuid",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "name",
+     "required": true,
+     "type": "string",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "description",
+     "required": false,
+     "type": "text",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "sku",
+     "required": false,
+     "type": "string",
+     "unique": true,
+     "validation": []
+    },
+    {
+     "name": "price",
+     "required": true,
+     "type": "float",
+     "unique": false,
+     "validation": []
+    },
+    {
+     "name": "created_at",
+     "required": true,
+     "type": "datetime",
+     "unique": false,
+     "validation": []
+    }
+   ],
+   "indexes": [],
+   "name": "Product",
+   "relations": []
+  }
+ ],
+ "fixtures": [],
+ "name": "Shop Sales Analytics",
+ "platforms": [
+  "web",
+  "admin",
+  "backend"
+ ],
+ "project_strategy": {
+  "admin_strategy": "nextjs",
+  "backend_strategy": "python",
+  "database_strategy": "postgres",
+  "mobile_profile": "none",
+  "repo_strategy": "customer_project_monorepo",
+  "web_strategy": "nextjs"
+ },
+ "roles": [
+  {
+   "id": "admin",
+   "permissions": [
+    "read",
+    "write"
+   ]
+  },
+  {
+   "id": "analyst",
+   "permissions": [
+    "read"
+   ]
+  }
+ ],
+ "schema_version": 2,
+ "screens": [
+  {
+   "actions": [
+    "save",
+    "delete"
+   ],
+   "components": [
+    "form"
+   ],
+   "id": "customer_detail",
+   "navigation": [
+    "customer_list"
+   ],
+   "role": "admin"
+  },
+  {
+   "actions": [
+    "view",
+    "create",
+    "edit",
+    "delete"
+   ],
+   "components": [
+    "list"
+   ],
+   "id": "customer_list",
+   "navigation": [
+    "customer_detail"
+   ],
+   "role": "analyst"
+  },
+  {
+   "actions": [
+    "save",
+    "delete",
+    "add_item",
+    "remove_item"
+   ],
+   "components": [
+    "form",
+    "list"
+   ],
+   "id": "order_detail",
+   "navigation": [
+    "order_list"
+   ],
+   "role": "admin"
+  },
+  {
+   "actions": [
+    "view",
+    "create",
+    "edit",
+    "delete"
+   ],
+   "components": [
+    "list"
+   ],
+   "id": "order_list",
+   "navigation": [
+    "order_detail"
+   ],
+   "role": "analyst"
+  },
+  {
+   "actions": [
+    "save",
+    "delete"
+   ],
+   "components": [
+    "form"
+   ],
+   "id": "product_detail",
+   "navigation": [
+    "product_list"
+   ],
+   "role": "admin"
+  },
+  {
+   "actions": [
+    "view",
+    "create",
+    "edit",
+    "delete"
+   ],
+   "components": [
+    "list"
+   ],
+   "id": "product_list",
+   "navigation": [
+    "product_detail"
+   ],
+   "role": "analyst"
+  },
+  {
+   "actions": [
+    "filter"
+   ],
+   "components": [
+    "chart",
+    "list"
+   ],
+   "id": "revenue_dashboard",
+   "navigation": [],
+   "role": "analyst"
+  }
+ ]
+}

@@ -234,7 +234,7 @@ class TestOverviewPageSynthesis(unittest.TestCase):
             '  return (\n'
             '    <main style={{ padding: 32 }}>\n'
             '      <h1>FleetTrack Command Center</h1>\n'
-            '      <StatCard title="Active Vehicles" value="48" change="+3%" />\n'
+            '      <StatCard title="Active Vehicles" value={String(vehicles.total)} />\n'
             '    </main>\n'
             '  );\n'
             '}\n'
@@ -277,7 +277,10 @@ class TestNextjsAdapterIntegration(unittest.TestCase):
         self.assertEqual(page_default, page_none)
         # R-541: the public app renders the landing page; the dashboard moved to the admin console.
         self.assertEqual(page_default, _public_home_page(ir))
-        self.assertEqual(NextjsAdminAdapter().generate(ir).get("app/page.tsx").content, _overview_page(ir))
+        # PC-100: the admin console's home is its real-data dashboard.
+        from omnistackai_agent_engine.codegen.admin_console import dashboard_page
+
+        self.assertEqual(NextjsAdminAdapter().generate(ir).get("app/page.tsx").content, dashboard_page(ir))
 
     def test_assemble_project_with_provider(self) -> None:
         ir = _make_test_ir()

@@ -1,9 +1,9 @@
 task_id: PC-100
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 5 of 6)
 tracker_row: PC-100
 started_at: "2026-09-29"
-completed_at: null
+completed_at: "2026-09-29"
 branch: platform-completion
 objective: >-
   A modern admin panel. The generated admin console gets an app shell (collapsible sidebar with
@@ -34,9 +34,17 @@ required_gates:
   - Live: a built project's admin console - dashboard, a management page with create, edit, bulk delete and CSV - works in the preview against the real API
   - scripts/verify.sh passes
 model_tool_trace:
-  routing: deterministic_only
+  routing: deterministic_only  # task verify; the live proof used the free page chain (Gemini)
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "PC-102: rich text (tiptap, with a rich-text field type and safe rendering) and uploads (uppy) - uploads need a founder decision on storage"
+  - "PC-103: the Go and Node backends have the same foreign-key gap the Python one had"
+  - "PC-101: the proxy route ignores the API_URL the preview sets (the 503); dev-mode HMR websockets fail through the console proxy; 'Sign in' shows in apps whose API has no sign-in routes"
+found_and_fixed:
+  - "generated Python API: GET /orders answered 500 in every app with an Order entity (the handler's `order` sort parameter shadowed the imported `order` repository); repositories are imported as <table>_repo"
+  - "generated Python API: no foreign key could be written (the Pydantic model lacked it and inserts skipped it); a product's category came back empty"
+  - "generated Python API: a plan that declares created_at made it required on every create, though the database sets it"
+  - "the admin table's screen-reader-only 'Actions' label escaped its scroll box and widened the page by 146 px at phone width"
+  - "PC-050's 'static 404s' came from screenshots taken on an app's raw port, where a relative API path cannot resolve; through the console the pages are clean"

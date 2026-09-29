@@ -34,6 +34,8 @@ DESIGN_SYSTEM_PRO: dict[str, str] = {
     "sonner": "1.7.4",
     "cmdk": "1.1.1",
     "vaul": "1.1.2",
+    # PC-100: maps (the admin console shows records with coordinates on one).
+    "maplibre-gl": "6.11.2",
 }
 from .auth_pages import forgot_password_page, reset_password_page
 from .brand import apply_brand
@@ -41,7 +43,7 @@ from .brand_project import web_brand_ts
 from .errors import GenerationError
 from .field_validation import parse_field_rules
 from .files import GeneratedFile, GeneratedProject
-from .route_wiring import Op, fk_relations, wire_endpoint
+from .route_wiring import Op, Wiring, fk_relations, wire_endpoint
 
 _FIELD_TS: dict[FieldType, str] = {
     FieldType.STRING: "string",
@@ -606,58 +608,11 @@ def _api_client_file(ir: ApplicationIR) -> str:
     ])
 
     repo_entities = frozenset(e.name for e in ir.entities)
-    fk_by_entity = fk_relations(ir)
     fn_names: list[str] = []
-    seen_names: set[str] = set()
 
-    for api in ir.apis:
-        wiring = wire_endpoint(api, repo_entities, fk_by_entity)
+    for api, wiring, fn_name in _api_function_plan(ir):
         path_params = re.findall(r"\{(\w+)\}", api.path)
         method = api.method.value
-
-        fn_name: str
-        if wiring is not None:
-            plural = wiring.entity if wiring.entity.endswith("s") else f"{wiring.entity}s"
-            if wiring.op is Op.LIST:
-                fn_name = f"list{plural}"
-            elif wiring.op is Op.GET:
-                fn_name = f"get{wiring.entity}"
-            elif wiring.op is Op.CREATE:
-                fn_name = f"create{wiring.entity}"
-            elif wiring.op is Op.UPDATE:
-                fn_name = f"update{wiring.entity}"
-            elif wiring.op is Op.DELETE:
-                fn_name = f"delete{wiring.entity}"
-            elif wiring.op is Op.LIST_BY:
-                rel = _pascal(wiring.relation or "parent")
-                fn_name = f"list{plural}By{rel}"
-            else:
-                fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
-        else:
-            # Fallback: if DELETE /<entity_plural>/{id} or /<entity>/{id} without response_schema
-            matched_del_ent: Entity | None = None
-            if api.method == HttpMethod.DELETE and len(path_params) == 1:
-                segments = [seg for seg in api.path.strip("/").split("/") if seg]
-                if len(segments) == 2 and segments[1].startswith("{") and segments[1].endswith("}"):
-                    entity_seg = segments[0].lower()
-                    matched_del_ent = next(
-                        (e for e in ir.entities if e.name.lower() == entity_seg or f"{e.name.lower()}s" == entity_seg),
-                        None,
-                    )
-            if matched_del_ent is not None:
-                fn_name = f"delete{matched_del_ent.name}"
-            else:
-                fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
-
-        if fn_name in seen_names:
-            fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
-            counter = 2
-            orig = fn_name
-            while fn_name in seen_names:
-                fn_name = f"{orig}_{counter}"
-                counter += 1
-
-        seen_names.add(fn_name)
         fn_names.append(fn_name)
 
         if path_params:
@@ -1651,6 +1606,79 @@ def _title_case(value: str) -> str:
     spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", value)
     parts = [p for p in re.split(r"[_\s-]+", spaced) if p]
     return " ".join(p if p.isupper() and len(p) > 1 else p[:1].upper() + p[1:].lower() for p in parts) or "Page"
+
+
+
+def _api_function_plan(ir: ApplicationIR) -> list[tuple[ApiEndpoint, "Wiring | None", str]]:
+    """Every endpoint with its wiring and the name lib/api.ts exports it under (PC-100: shared, so
+    the admin console calls exactly the functions the client has - collisions included)."""
+    repo_entities = frozenset(e.name for e in ir.entities)
+    fk_by_entity = fk_relations(ir)
+    seen_names: set[str] = set()
+    plan: list[tuple[ApiEndpoint, Wiring | None, str]] = []
+    for api in ir.apis:
+        wiring = wire_endpoint(api, repo_entities, fk_by_entity)
+        path_params = re.findall(r"\{(\w+)\}", api.path)
+        method = api.method.value
+
+        fn_name: str
+        if wiring is not None:
+            plural = wiring.entity if wiring.entity.endswith("s") else f"{wiring.entity}s"
+            if wiring.op is Op.LIST:
+                fn_name = f"list{plural}"
+            elif wiring.op is Op.GET:
+                fn_name = f"get{wiring.entity}"
+            elif wiring.op is Op.CREATE:
+                fn_name = f"create{wiring.entity}"
+            elif wiring.op is Op.UPDATE:
+                fn_name = f"update{wiring.entity}"
+            elif wiring.op is Op.DELETE:
+                fn_name = f"delete{wiring.entity}"
+            elif wiring.op is Op.LIST_BY:
+                rel = _pascal(wiring.relation or "parent")
+                fn_name = f"list{plural}By{rel}"
+            else:
+                fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
+        else:
+            # Fallback: if DELETE /<entity_plural>/{id} or /<entity>/{id} without response_schema
+            matched_del_ent: Entity | None = None
+            if api.method == HttpMethod.DELETE and len(path_params) == 1:
+                segments = [seg for seg in api.path.strip("/").split("/") if seg]
+                if len(segments) == 2 and segments[1].startswith("{") and segments[1].endswith("}"):
+                    entity_seg = segments[0].lower()
+                    matched_del_ent = next(
+                        (e for e in ir.entities if e.name.lower() == entity_seg or f"{e.name.lower()}s" == entity_seg),
+                        None,
+                    )
+            if matched_del_ent is not None:
+                fn_name = f"delete{matched_del_ent.name}"
+            else:
+                fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
+
+        if fn_name in seen_names:
+            fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
+            counter = 2
+            orig = fn_name
+            while fn_name in seen_names:
+                fn_name = f"{orig}_{counter}"
+                counter += 1
+
+        seen_names.add(fn_name)
+        plan.append((api, wiring, fn_name))
+    return plan
+
+
+def entity_api_functions(ir: ApplicationIR) -> dict[str, dict[Op, str]]:
+    """PC-100: per entity, the lib/api.ts function for each CRUD operation it really has."""
+    found: dict[str, dict[Op, str]] = {}
+    for api, wiring, fn_name in _api_function_plan(ir):
+        if wiring is not None and wiring.op in (Op.LIST, Op.GET, Op.CREATE, Op.UPDATE, Op.DELETE):
+            found.setdefault(wiring.entity, {}).setdefault(wiring.op, fn_name)
+        elif wiring is None and fn_name.startswith("delete") and api.method == HttpMethod.DELETE:
+            entity = fn_name[len("delete"):]
+            if any(e.name == entity for e in ir.entities):
+                found.setdefault(entity, {}).setdefault(Op.DELETE, fn_name)
+    return found
 
 
 def _plural(word: str) -> str:
@@ -5052,13 +5080,9 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
         '        <section style={{ marginBottom: 40, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20 }}>',
         "          <div>",
         f'            <h1 style={{{{ fontSize: 32, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.03em", margin: "0 0 6px" }}}}>{escaped_name}</h1>',
-        '            <p style={{ color: "#64748b", margin: 0, fontSize: 15 }}>Production workspace & dashboard overview</p>',
+        '            <p style={{ color: "#64748b", margin: 0, fontSize: 15 }}>Everything in the app, read live from its API</p>',
         "          </div>",
         '          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>',
-        '            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 9999, fontSize: 13, fontWeight: 600, color: "#166534" }}>',
-        '              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", display: "inline-block", boxShadow: "0 0 8px #22c55e" }} />',
-        "              System Operational",
-        "            </div>",
         f'            <span style={{{{ fontSize: 12, padding: "7px 14px", background: "rgba(255, 255, 255, 0.9)", border: "1px solid #e2e8f0", color: "#475569", borderRadius: 9999, fontWeight: 600, backdropFilter: "blur(8px)", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}}}>{entity_label}</span>',
         f'            <span style={{{{ fontSize: 12, padding: "7px 14px", background: "rgba(255, 255, 255, 0.9)", border: "1px solid #e2e8f0", color: "#475569", borderRadius: 9999, fontWeight: 600, backdropFilter: "blur(8px)", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}}}>{screen_label}</span>',
         "          </div>",
@@ -5076,86 +5100,8 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
             "        </section>",
             "",
         ])
-    else:
-        lines.extend([
-            "        {/* ── Executive Cockpit & Live Operations ──────────── */}",
-            '        <section style={{ marginBottom: 36 }}>',
-            '          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 20 }}>',
-            '            <div style={{ background: "#ffffff", borderRadius: 14, padding: "18px 20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)" }}>',
-            '              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>',
-            '                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>System Health</span>',
-            '                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: "#16a34a", background: "#f0fdf4", padding: "2px 8px", borderRadius: 9999 }}>● Live</span>',
-            '              </div>',
-            '              <p style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" }}>99.98%</p>',
-            '              <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>All services & endpoints healthy</p>',
-            '            </div>',
-            '            <div style={{ background: "#ffffff", borderRadius: 14, padding: "18px 20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)" }}>',
-            '              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>',
-            '                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>Telemetry Sync</span>',
-            '                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: "#2563eb", background: "#eff6ff", padding: "2px 8px", borderRadius: 9999 }}>● Active</span>',
-            '              </div>',
-            '              <p style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" }}>Continuous</p>',
-            '              <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>Event-driven architecture streaming</p>',
-            '            </div>',
-            '            <div style={{ background: "#ffffff", borderRadius: 14, padding: "18px 20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)" }}>',
-            '              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>',
-            '                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>Database Engine</span>',
-            '                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: "#0d9488", background: "#f0fdfa", padding: "2px 8px", borderRadius: 9999 }}>● ACID</span>',
-            '              </div>',
-            '              <p style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" }}>PostgreSQL</p>',
-            '              <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>Automated migrations & relations</p>',
-            '            </div>',
-            '            <div style={{ background: "#ffffff", borderRadius: 14, padding: "18px 20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)" }}>',
-            '              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>',
-            '                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>Security & Access</span>',
-            '                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", padding: "2px 8px", borderRadius: 9999 }}>● Protected</span>',
-            '              </div>',
-            '              <p style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" }}>RBAC Guard</p>',
-            '              <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>Role authorization enforced</p>',
-            '            </div>',
-            '          </div>',
-            "",
-            '          {/* ── Live Operational Status Board ── */}',
-            '          <div style={{ background: "#ffffff", borderRadius: 16, border: "1px solid #e2e8f0", padding: "24px", boxShadow: "0 4px 20px -2px rgba(15, 23, 42, 0.04)" }}>',
-            '            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>',
-            '              <div>',
-            '                <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" }}>Live Operations Command Center</h3>',
-            '                <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>Real-time telemetry status, active workflows, and system event stream</p>',
-            '              </div>',
-            '              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
-            '                <span style={{ fontSize: 12, padding: "5px 12px", background: "#f1f5f9", borderRadius: 8, color: "#475569", fontWeight: 600 }}>All Systems Normal</span>',
-            '                <span style={{ fontSize: 12, padding: "5px 12px", background: "#eff6ff", borderRadius: 8, color: "#2563eb", fontWeight: 600 }}>Auto-Dispatch Ready</span>',
-            '              </div>',
-            '            </div>',
-            '            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>',
-            '              <div style={{ padding: "18px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>',
-            '                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>',
-            '                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />',
-            '                  <span style={{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}>Operational Units Active</span>',
-            '                </div>',
-            '                <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 14px", lineHeight: 1.5 }}>Automated background sync monitors live transactions and unit dispatch states in real time.</p>',
-            '                <div style={{ display: "flex", gap: 18, fontSize: 12 }}>',
-            '                  <div><span style={{ color: "#94a3b8" }}>Throughput:</span> <strong style={{ color: "#0f172a" }}>Optimal</strong></div>',
-            '                  <div><span style={{ color: "#94a3b8" }}>Latency:</span> <strong style={{ color: "#0f172a" }}>&lt; 24ms</strong></div>',
-            '                  <div><span style={{ color: "#94a3b8" }}>State:</span> <strong style={{ color: "#16a34a" }}>Synchronized</strong></div>',
-            '                </div>',
-            '              </div>',
-            '              <div style={{ padding: "18px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>',
-            '                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>',
-            '                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", boxShadow: "0 0 8px #3b82f6" }} />',
-            '                  <span style={{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}>Event Stream & Audit Log</span>',
-            '                </div>',
-            '                <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12 }}>',
-            '                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}><span>✓ Database migrations verified</span><span style={{ color: "#94a3b8" }}>Just now</span></div>',
-            '                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}><span>✓ REST API router endpoints wired</span><span style={{ color: "#94a3b8" }}>1m ago</span></div>',
-            '                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}><span>✓ Security tokens & RBAC active</span><span style={{ color: "#94a3b8" }}>3m ago</span></div>',
-            '                </div>',
-            '              </div>',
-            '            </div>',
-            '          </div>',
-            '        </section>',
-            "",
-        ])
+    # PC-100: the "executive cockpit" that stood here showed invented figures ("99.98%" health,
+    # "< 24ms" latency, events "1m ago"); every figure on this page now comes from the API.
 
     # ── Entity count cards ────────────────────────────────────────────────────
     if listable:
@@ -5189,9 +5135,6 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
                     '              <p style={{ fontSize: 36, fontWeight: 800, letterSpacing: "-0.03em", color: "#0f172a", margin: "0 0 6px" }}>',
                     f"                {{{var}.loading ? \"…\" : {var}.error ? \"—\" : {var}.total}}",
                     "              </p>",
-                    '              <div style={{ height: 4, background: "#f1f5f9", borderRadius: 9999, overflow: "hidden", margin: "8px 0 10px" }}>',
-                    '                <div style={{ width: "72%", height: "100%", background: "linear-gradient(90deg, #2563eb, #38bdf8)", borderRadius: 9999 }} />',
-                    '              </div>',
                     '              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>',
                     f'                <p style={{{{ fontSize: 13, color: "#64748b", margin: 0 }}}}>Total {escaped_plural}</p>',
                     '                <span style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>View all &rarr;</span>',
@@ -5212,9 +5155,6 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
                     '              <p style={{ fontSize: 36, fontWeight: 800, letterSpacing: "-0.03em", color: "#0f172a", margin: "0 0 6px" }}>',
                     f'                {{{var}.loading ? "…" : {var}.error ? "—" : {var}.total}}',
                     "              </p>",
-                    '              <div style={{ height: 4, background: "#f1f5f9", borderRadius: 9999, overflow: "hidden", margin: "8px 0 10px" }}>',
-                    '                <div style={{ width: "72%", height: "100%", background: "linear-gradient(90deg, #2563eb, #38bdf8)", borderRadius: 9999 }} />',
-                    '              </div>',
                     f'              <p style={{{{ fontSize: 13, color: "#64748b", margin: 0 }}}}>Total {escaped_plural}</p>',
                     "            </div>",
                 ])
@@ -73361,17 +73301,19 @@ def _ui_component_files() -> list[GeneratedFile]:
     ]
 
 
-def _layout_file(ir: ApplicationIR) -> str:
+def _layout_file(ir: ApplicationIR, admin_shell: bool = False) -> str:
     auth = needs_auth(ir)
     auth_import = 'import { AuthProvider } from "@/components/auth-provider";\n' if auth else ""
     # R-549: one import, so a rebrand reaches this app without regenerating it.
     auth_import = 'import { brandCss } from "@/lib/brand";\n' + auth_import
+    # PC-100: the admin console frames every page in its own shell (sidebar, top bar, command menu).
+    frame = ("<AdminShell>{children}</AdminShell>", "") if admin_shell else ("{children}", "<Navbar />")
     if auth:
         body_content = (
             "        <AuthProvider>\n"
             "          <ToastProvider>\n"
-            "            <Navbar />\n"
-            "            {children}\n"
+            + (f"            {frame[1]}\n" if frame[1] else "")
+            + f"            {frame[0]}\n"
             "          </ToastProvider>\n"
             "        </AuthProvider>\n"
             '        <Toaster richColors position="top-right" />\n'
@@ -73379,8 +73321,8 @@ def _layout_file(ir: ApplicationIR) -> str:
     else:
         body_content = (
             "        <ToastProvider>\n"
-            "          <Navbar />\n"
-            "          {children}\n"
+            + (f"          {frame[1]}\n" if frame[1] else "")
+            + f"          {frame[0]}\n"
             "        </ToastProvider>\n"
             '        <Toaster richColors position="top-right" />\n'
         )
@@ -73412,8 +73354,9 @@ def _layout_file(ir: ApplicationIR) -> str:
     return (
         'import type { Metadata } from "next";\n'
         'import "./globals.css";\n'
-        'import { Navbar } from "@/components/navbar";\n'
-        'import { ToastProvider } from "@/components/toast";\n'
+        + ('import { AdminShell } from "@/components/admin/admin-shell";\n' if admin_shell
+           else 'import { Navbar } from "@/components/navbar";\n')
+        + 'import { ToastProvider } from "@/components/toast";\n'
         'import { PwaSupport } from "@/components/pwa-support";\n'
         '// PC-050: sonner toasts, for pages that call toast() from "sonner".\n'
         'import { Toaster } from "sonner";\n'
@@ -73914,7 +73857,9 @@ def _synthesize_page_content(
 
     resolved = Archetype.ADMIN_PANEL if flavour != "web" else detect_archetype(ir, prompt)
     if provider is None:
-        return _overview_page(ir) if resolved is Archetype.ADMIN_PANEL else _public_home_page(ir, resolved)
+        from .llm_ui import _deterministic_page_for
+
+        return _deterministic_page_for(ir, resolved.value, flavour)()
     from .llm_ui import synthesize_overview_page_sync
     return synthesize_overview_page_sync(
         ir,
@@ -73923,6 +73868,7 @@ def _synthesize_page_content(
         model_id=model_id,
         outcomes=outcomes,
         archetype=resolved.value,
+        flavour=flavour,
         **(grounding or {}),
     )
 
@@ -74032,7 +73978,7 @@ class NextjsWebAdapter:
             GeneratedFile(".gitignore", "node_modules\n.next/\nout/\nnext-env.d.ts\n.env*.local\n*.tsbuildinfo\n"),
             GeneratedFile(".env.example", "# Public env vars only. Never commit secrets.\nNEXT_PUBLIC_APP_NAME=" + app_title + "\nNEXT_PUBLIC_API_URL=http://localhost:8080\nSTORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\n"),
             GeneratedFile("README.md", f"# {app_title}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
-            GeneratedFile("app/layout.tsx", _layout_file(ir)),
+            GeneratedFile("app/layout.tsx", _layout_file(ir, admin_shell=self._flavour == "admin")),
             *_component_files(ir),
             *_ui_component_files(),
             GeneratedFile("lib/utils.ts", _LIB_UTILS),
@@ -74128,6 +74074,13 @@ class NextjsWebAdapter:
             files = [GeneratedFile(f.path, _navbar_component(ir, (("/users", "Users and roles"),)))
                      if f.path == "components/navbar.tsx" else f for f in files]
             files.append(GeneratedFile("app/users/page.tsx", ADMIN_USERS_PAGE))
+        if self._flavour == "admin":
+            # PC-100: the console's shell, its navigation and a management page per entity.
+            from .admin_console import admin_console_files
+
+            taken = {f.path for f in files}
+            files.extend(GeneratedFile(path, content) for path, content in admin_console_files(ir, needs_auth(ir))
+                         if path not in taken)
         page_dirs = {f.path[len("app/"):-len("/page.tsx")] for f in files
                      if f.path.startswith("app/") and f.path.endswith("/page.tsx")}
         for route_dir, apis in by_dir.items():

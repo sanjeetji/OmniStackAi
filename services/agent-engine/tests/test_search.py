@@ -120,13 +120,13 @@ class PythonSearchRouterTests(TestCase):
 
     def test_router_accepts_q_and_forwards_to_repo(self) -> None:
         self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, published: bool | None = None) -> list[dict]:', self.posts_router)
-        self.assertIn("total = await post.count_post(q=q, published=published)", self.posts_router)
-        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", self.posts_router)
+        self.assertIn("total = await post_repo.count_post(q=q, published=published)", self.posts_router)
+        self.assertIn("return await post_repo.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", self.posts_router)
 
     def test_subcollection_router_forwards_q(self) -> None:
         self.assertIn('async def get_posts_postid_comments(postId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', self.posts_router)
-        self.assertIn("total = await comment.count_comment_by_post(postId, q=q)", self.posts_router)
-        self.assertIn("return await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", self.posts_router)
+        self.assertIn("total = await comment_repo.count_comment_by_post(postId, q=q)", self.posts_router)
+        self.assertIn("return await comment_repo.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", self.posts_router)
 
 
 class NextJsSearchClientTests(TestCase):

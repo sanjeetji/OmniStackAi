@@ -79,7 +79,9 @@ class EachAppLooksLikeItself(TestCase):
             with self.subTest(slug=slug):
                 page = NextjsAdminAdapter().generate(example_ir(slug)).get("app/page.tsx").content
                 self.assertTrue(page.startswith('"use client";'))
-                self.assertIn("useList", page)
+                # PC-100: the dashboard reads counts and latest records straight from the API client.
+                self.assertIn("WithCount", page)
+                self.assertIn("/manage/", page)
 
     def test_the_two_homes_are_not_the_same_page(self) -> None:
         ir = example_ir("minimal-blog")

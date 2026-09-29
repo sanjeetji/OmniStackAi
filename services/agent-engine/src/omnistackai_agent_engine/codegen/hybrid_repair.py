@@ -98,7 +98,7 @@ def llm_file_specs(
         "app/page.tsx": LlmFileSpec(
             "app/page.tsx",
             build_ui_synthesis_prompt(ir, user_prompt, archetype=archetype, **grounding),
-            _deterministic_page_for(ir, archetype)(),
+            _deterministic_page_for(ir, archetype, flavour)(),
             build_ui_synthesis_prompt(ir, user_prompt, archetype=archetype, **compact),
         )
     }

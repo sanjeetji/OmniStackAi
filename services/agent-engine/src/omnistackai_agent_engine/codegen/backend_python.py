@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType
+from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType, RelationKind
 from .adapter import GenerationTarget
 from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file, python_auth_router_file
 from .auth_templates import EMAIL_ENV_EXAMPLE, is_account_route
@@ -111,6 +111,11 @@ def _models_file(ir: ApplicationIR) -> str:
                 # to every client that did not invent its own id — the web and mobile apps included.
                 lines.append("    id: Optional[str] = None  # assigned by the database")
                 continue
+            if field.name in ("created_at", "updated_at"):
+                # PC-100, found live: a plan that declares its own created_at made every create
+                # body require one, although the database fills it in and inserts never write it.
+                lines.append(f"    {field.name}: Optional[datetime] = None  # set by the database")
+                continue
             if (entity.name, field.name) in lifecycle_fields:
                 # R-590: returned, never required or written from a request — only a transition
                 # moves it, so a create/update body without it is valid and one with it changes nothing.
@@ -122,6 +127,10 @@ def _models_file(ir: ApplicationIR) -> str:
             lines.append("    created_at: Optional[datetime] = None")
         if "updated_at" not in declared_names:
             lines.append("    updated_at: Optional[datetime] = None")
+        # PC-100: a foreign key the request may set (Pydantic drops a field the model lacks).
+        for relation in entity.relations:
+            if relation.kind in (RelationKind.MANY_TO_ONE, RelationKind.ONE_TO_ONE) and f"{relation.name}_id" not in declared_names:
+                lines.append(f"    {relation.name}_id: Optional[str] = None")
         if entity.relations:
             rels = ", ".join(f"{r.name}->{r.target_entity}" for r in entity.relations)
             lines.append(f"    # relations: {rels}")
@@ -137,7 +146,7 @@ def _router_file(
     transitions: tuple = (),
 ) -> str:
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
-    tables = sorted({w.table for _, w in wirings if w is not None})
+    tables = sorted({w.table for _, w in wirings if w is not None} | {r.table for r in transitions})
     models_used = sorted({w.entity for _, w in wirings if w is not None and w.op in (Op.CREATE, Op.UPDATE)})
 
     seg_needs_auth = any(api.auth for api in apis)
@@ -162,7 +171,10 @@ def _router_file(
         header += [f"from app.models import {name}" for name in models_used]
     if tables:
         header.append("")
-        header += [f"from app.repositories import {table}" for table in tables]
+        # PC-100, found live: `from app.repositories import order` was shadowed by the list
+        # handler's own `order` (sort direction) parameter, so GET /orders answered 500 for every
+        # app with an Order entity. Each repository is imported under a name no parameter can take.
+        header += [f"from app.repositories import {table} as {table}_repo" for table in tables]
     lines = [*header, "", f'router = APIRouter(tags=["{segment}"])', ""]
 
     for api, wiring in wirings:
@@ -189,36 +201,36 @@ def _router_file(
             fsig = "".join(f", {f.name}: {'bool' if kind == 'bool' else 'str'} | None = None" for f, kind in ffields)
             fcall = "".join(f", {f.name}={f.name}" for f, _ in ffields)
             lines.append(f'async def {fn}(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{fsig}) -> list[dict]:')
-            lines.append(f"    total = await {wiring.table}.count_{wiring.table}(q=q{fcall})")
+            lines.append(f"    total = await {wiring.table}_repo.count_{wiring.table}(q=q{fcall})")
             lines.append('    response.headers["X-Total-Count"] = str(total)')
-            lines.append(f"    return await {wiring.table}.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
+            lines.append(f"    return await {wiring.table}_repo.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
         elif wiring.op is Op.LIST_BY:
             entity_obj = entities_by_name.get(wiring.entity) if entities_by_name else None
             ffields = filter_fields(entity_obj) if entity_obj else []
             fsig = "".join(f", {f.name}: {'bool' if kind == 'bool' else 'str'} | None = None" for f, kind in ffields)
             fcall = "".join(f", {f.name}={f.name}" for f, _ in ffields)
             lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{fsig}) -> list[dict]:')
-            lines.append(f"    total = await {wiring.table}.count_{wiring.table}_by_{wiring.relation}({wiring.id_param}, q=q{fcall})")
+            lines.append(f"    total = await {wiring.table}_repo.count_{wiring.table}_by_{wiring.relation}({wiring.id_param}, q=q{fcall})")
             lines.append('    response.headers["X-Total-Count"] = str(total)')
-            lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
+            lines.append(f"    return await {wiring.table}_repo.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
         elif wiring.op is Op.GET:
             lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
-            lines.append(f"    row = await {wiring.table}.get_{wiring.table}({wiring.id_param})")
+            lines.append(f"    row = await {wiring.table}_repo.get_{wiring.table}({wiring.id_param})")
             lines.append("    if row is None:")
             lines.append('        raise HTTPException(status_code=404, detail="not_found")')
             lines.append("    return row")
         elif wiring.op is Op.CREATE:
             lines.append(f"async def {fn}(payload: {wiring.entity}) -> dict:")
-            lines.append(f"    return await {wiring.table}.create_{wiring.table}(payload.model_dump())")
+            lines.append(f"    return await {wiring.table}_repo.create_{wiring.table}(payload.model_dump())")
         elif wiring.op is Op.UPDATE:
             lines.append(f"async def {fn}({wiring.id_param}: str, payload: {wiring.entity}) -> dict:")
-            lines.append(f"    row = await {wiring.table}.update_{wiring.table}({wiring.id_param}, payload.model_dump())")
+            lines.append(f"    row = await {wiring.table}_repo.update_{wiring.table}({wiring.id_param}, payload.model_dump())")
             lines.append("    if row is None:")
             lines.append('        raise HTTPException(status_code=404, detail="not_found")')
             lines.append("    return row")
         else:  # Op.DELETE
             lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
-            lines.append(f"    deleted = await {wiring.table}.delete_{wiring.table}({wiring.id_param})")
+            lines.append(f"    deleted = await {wiring.table}_repo.delete_{wiring.table}({wiring.id_param})")
             lines.append("    if not deleted:")
             lines.append('        raise HTTPException(status_code=404, detail="not_found")')
             lines.append('    return {"deleted": True}')
@@ -232,7 +244,7 @@ def _router_file(
         lines.append("")
         lines.append(f'@router.post("{route.path}"{guard})')
         lines.append(f"async def {route.function}({route.id_param}: str) -> dict:")
-        lines.append(f"    row = await {route.table}.get_{route.table}({route.id_param})")
+        lines.append(f"    row = await {route.table}_repo.get_{route.table}({route.id_param})")
         lines.append("    if row is None:")
         lines.append('        raise HTTPException(status_code=404, detail="not_found")')
         lines.append(f"    allowed = {tuple(allowed)!r}")
@@ -245,7 +257,7 @@ def _router_file(
         )
         lines.append("        )")
         lines.append(
-            f'    return await {route.table}.set_{route.table}_{route.workflow.field}'
+            f'    return await {route.table}_repo.set_{route.table}_{route.workflow.field}'
             f'({route.id_param}, "{route.transition.to}")'
         )
     return "\n".join(lines) + "\n"

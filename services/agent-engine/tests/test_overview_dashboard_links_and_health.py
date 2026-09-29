@@ -139,14 +139,15 @@ class OverviewDashboardLinksAndHealthTests(unittest.TestCase):
         self.assertIn("logEntryList.total", page)
         self.assertNotIn('aria-label="View LogEntrys collection"', page)
 
-    def test_overview_page_header_operational_badge(self) -> None:
-        """Dashboard header renders 'System Operational' badge with green dot indicator."""
+    def test_overview_page_header_claims_nothing_it_cannot_know(self) -> None:
+        """PC-100: the "System Operational" badge (and the cockpit's 99.98% health and < 24ms
+        latency) was a claim no page could check; the header now states only what it reads."""
         ir = _make_ir()
         page = _overview_page(ir)
 
-        self.assertIn("System Operational", page)
-        self.assertIn("#22c55e", page)  # Green indicator dot
-        self.assertIn("#f0fdf4", page)  # Pill background
+        for invented in ("System Operational", "99.98%", "24ms", "72%", "1m ago"):
+            self.assertNotIn(invented, page)
+        self.assertIn("read live from its API", page)
 
     def test_overview_page_header_metric_chips(self) -> None:
         """Dashboard header renders entity count and screen count chips."""
@@ -202,9 +203,10 @@ class OverviewDashboardLinksAndHealthTests(unittest.TestCase):
             self.assertIsNotNone(f, f"app/page.tsx missing for {slug}")
             assert f is not None
             content = f.content
-            self.assertIn("System Operational", content)
-            self.assertIn("Entities", content)
-            self.assertIn("Screens", content)
+            # PC-100: the console's home is its real-data dashboard; no invented status.
+            self.assertNotIn("System Operational", content)
+            self.assertIn("WithCount", content)
+            self.assertIn("/manage/", content)
 
 
 if __name__ == "__main__":

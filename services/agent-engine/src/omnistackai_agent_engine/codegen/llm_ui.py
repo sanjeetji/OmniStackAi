@@ -54,6 +54,7 @@ ALLOWED_EXACT_IMPORTS: frozenset[str] = frozenset({
     "sonner",
     "cmdk",
     "vaul",
+    "maplibre-gl",
 })
 # Allowed import prefixes: platform modules, relative paths, and Radix UI primitives used by shadcn.
 ALLOWED_IMPORT_PREFIXES: tuple[str, ...] = (
@@ -105,10 +106,11 @@ RICH CUSTOM COMPONENTS (from '@/components/<file>' — for advanced/data-heavy U
 """
 
 _ADMIN_ARCHETYPE = """ARCHETYPE: MODERN SAAS ADMIN PANEL
-Design a complete SaaS Admin Panel using shadcn ui/ components and Tailwind classes:
-1. Left Collapsible Sidebar: Logo badge, title, collapse toggle, links with Lucide icons (Dashboard, Users, Settings), active pills.
-2. Top Bar (sticky, border-b): Global search <Input>, Bell icon, User Avatar with dropdown (profile, settings, sign out).
-3. Main Grid: Metric cards with shadcn <Card>, <DataGrid> table, filter bar with '+ Add [Entity]' <Button>, loading skeletons."""
+Design the dashboard CONTENT with shadcn ui/ components and Tailwind. The app already renders its navigation
+(sidebar or navbar, search, account menu): do NOT draw another sidebar, top bar or header.
+1. Metric cards (shadcn <Card>) with counts from the list hooks' `total`; loading skeletons.
+2. A chart (recharts) of real data from the hooks, and a table of the latest records.
+3. Quick actions ('+ Add [Entity]' <Button>) linking to the existing screens."""
 
 _WEBSITE_ARCHETYPE = """ARCHETYPE: MODERN PUBLIC WEBSITE / E-COMMERCE
 Design a consumer web experience using shadcn ui/ components and Tailwind:
@@ -238,6 +240,31 @@ def _import_allowed(module_name: str) -> bool:
     return any(module_name.startswith(prefix) for prefix in ALLOWED_IMPORT_PREFIXES)
 
 
+# PC-100: figures a page may not make up. Found live: model pages showed "+12.5% from last month"
+# on an empty shop and templates showed "99.98%" health and "< 24ms" latency. A number computed from
+# the hooks' data is never a literal, so these only match figures typed into the page.
+_INVENTED_FIGURES = (
+    re.compile(r"\+\s?\d+(?:\.\d+)?\s?%"),
+    re.compile(r"\d(?:[\d.,]*)\s?%?\s*(?:from|vs\.?|versus|since|over)\s+(?:the\s+)?(?:last|previous|prior)\s+"
+               r"(?:day|week|month|quarter|year)", re.IGNORECASE),
+    # A literal percentage or duration next to an uptime/latency word, tags and entities between;
+    # "{" stops the match, so a computed value ({uptime}%) passes.
+    re.compile(r"\d{2}(?:\.\d+)?\s?%[^\n{}]{0,32}?\b(?:uptime|availability|system health|sla)\b", re.IGNORECASE),
+    re.compile(r"\b(?:uptime|latency|response time|system health)\b[^\n{}]{0,40}?\d+(?:\.\d+)?\s?(?:%|ms\b)",
+               re.IGNORECASE),
+    re.compile(r"\b(?:const|let|var)\s+(?:mock|dummy|fake|sample|placeholder)[A-Z_]\w*\s*[:=]"),
+)
+
+
+def invented_figure(content: str) -> str:
+    """The first made-up figure in a page, or "" when it has none (PC-100)."""
+    for pattern in _INVENTED_FIGURES:
+        match = pattern.search(content)
+        if match:
+            return match.group(0).strip()
+    return ""
+
+
 def clean_and_validate_jsx(raw: str) -> tuple[bool, str, str]:
     """Strip markdown code blocks and validate import safety and basic syntax.
 
@@ -295,6 +322,16 @@ def clean_and_validate_jsx(raw: str) -> tuple[bool, str, str]:
     # 5. Must export default component
     if "export default function" not in content and "export default" not in content:
         return False, "", "Missing default export for page"
+
+    # 6. PC-100: no invented figures - every number on the page comes from the API.
+    invented = invented_figure(content)
+    if invented:
+        return (
+            False,
+            "",
+            f"Invented figure '{invented}'. Show only numbers computed from the hooks' data; leave out "
+            "trends, comparisons, uptime and latency the API does not provide, and never hard-code sample data.",
+        )
 
     return True, content, ""
 
@@ -733,15 +770,21 @@ async def _synthesize_file(
 # ---------------------------------------------------------------------------
 
 
-def _deterministic_page_for(ir: ApplicationIR, archetype: str):
+def _deterministic_page_for(ir: ApplicationIR, archetype: str, flavour: str = "web"):
     """The deterministic page this archetype falls back to, as a zero-argument callable.
 
     R-543: one place decides, so the `provider is None` path, the repair-loop fallback and the
     failover pass can never disagree about what a storefront looks like without a model.
+    PC-100: the admin console's home is its real-data dashboard, which links to the console's
+    own management pages; a web app whose home is a dashboard has none, so it keeps its own.
     """
     from .archetype import Archetype
     from .nextjs import _overview_page, _public_home_page
 
+    if flavour == "admin":
+        from .admin_console import dashboard_page
+
+        return lambda: dashboard_page(ir)
     if archetype == Archetype.ADMIN_PANEL.value:
         return lambda: _overview_page(ir)
     try:
@@ -767,6 +810,7 @@ async def synthesize_overview_page(
     design_tokens: str | None = None,
     compact_grounding: dict | None = None,
     archetype: str | None = None,
+    flavour: str = "web",
 ) -> str:
     """Synthesize the bespoke overview page (``app/page.tsx``) or fall back to the deterministic template.
 
@@ -781,7 +825,7 @@ async def synthesize_overview_page(
     # R-543: every archetype except the staff console falls back to the public landing page, shaped
     # for that archetype. Testing for one magic string here is what made a storefront fall back to
     # a dashboard the moment the model failed validation.
-    deterministic = _deterministic_page_for(ir, resolved)
+    deterministic = _deterministic_page_for(ir, resolved, flavour)
 
     if provider is None:
         return deterministic()
@@ -849,11 +893,12 @@ def synthesize_overview_page_sync(
     design_tokens: str | None = None,
     compact_grounding: dict | None = None,
     archetype: str | None = None,
+    flavour: str = "web",
 ) -> str:
     """Synchronous bridge for synthesize_overview_page (the repair loop lives inside the coroutine)."""
     if provider is None:
         resolved = archetype or _detect_ui_archetype(ir, user_prompt)
-        return _deterministic_page_for(ir, resolved)()
+        return _deterministic_page_for(ir, resolved, flavour)()
 
     coro_factory = lambda: synthesize_overview_page(  # noqa: E731 - a fresh coroutine per run
         ir,
@@ -868,6 +913,7 @@ def synthesize_overview_page_sync(
         design_tokens=design_tokens,
         compact_grounding=compact_grounding,
         archetype=archetype,
+        flavour=flavour,
     )
     return _run_sync(coro_factory)
 
