@@ -232,9 +232,15 @@ function adminClaims(authorization: string | undefined): AuthClaims | Result {{
   return claims;
 }}
 
+// PC-103, found live: `'status' in claims` does not narrow - AuthClaims takes any key - so the
+// Node API failed `tsc` (npm run build) wherever it had accounts. An explicit guard does.
+function isFailure(value: AuthClaims | Result): value is Result {{
+  return typeof (value as Result).status === 'number';
+}}
+
 export async function listUsers(authorization: string | undefined): Promise<Result> {{
   const claims = adminClaims(authorization);
-  if ('status' in claims) return claims;
+  if (isFailure(claims)) return claims;
   const result = await pool.query(
     'SELECT id::text AS id, email, full_name, role, created_at FROM "users" ORDER BY created_at DESC LIMIT 500',
   );
@@ -243,7 +249,7 @@ export async function listUsers(authorization: string | undefined): Promise<Resu
 
 export async function setUserRole(authorization: string | undefined, id: string, body: any): Promise<Result> {{
   const claims = adminClaims(authorization);
-  if ('status' in claims) return claims;
+  if (isFailure(claims)) return claims;
   const role = String(body?.role ?? '');
   if (!ASSIGNABLE_ROLES.includes(role)) return fail(422, 'unknown_role');
   const current = await pool.query('SELECT role FROM "users" WHERE id::text = $1', [id]);

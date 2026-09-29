@@ -253,7 +253,10 @@ QUEUE = [
      "Found in PC-100 for the Python API (the default backend): no foreign key could be written "
      "(the model lacked it and inserts skipped it) and a declared created_at was required on create. "
      "The Go models have the same gap (type Order has no CustomerId); check the Node backend too, "
-     "and run the admin console's create/edit against each."),
+     "and run the admin console's create/edit against each. Done 2026-09-29: Go and Node read and "
+     "write foreign keys and leave declared timestamps to the database; both generated servers "
+     "created, read, updated and listed an order with its customer against Postgres. Found: the "
+     "Node API failed tsc wherever it had accounts (fixed)."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "

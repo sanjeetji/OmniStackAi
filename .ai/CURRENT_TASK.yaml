@@ -1,9 +1,9 @@
 task_id: PC-103
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
 tracker_row: PC-103
 started_at: "2026-09-29"
-completed_at: null
+completed_at: "2026-09-29"
 branch: platform-completion
 objective: >-
   The Go and Node backends accept what the Python backend now does: a foreign key (a product's
@@ -29,5 +29,10 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "Go create answers only the new id (unchanged by design); a client re-reads the record for the rest"
+found_and_fixed:
+  - "Go: the model had no foreign-key field and the store neither wrote nor selected the column"
+  - "Go: a declared created_at was a required, validated field on create"
+  - "Node: z.object dropped the foreign key before the insert, and the repository neither wrote nor selected it"
+  - "Node: the role manager's `'status' in claims` does not narrow (AuthClaims takes any key), so `tsc` (npm run build) failed in every Node API with accounts"

@@ -44,14 +44,17 @@ def _fk_relation_names(entity: Entity) -> list[str]:
     return [relation.name for relation in entity.relations if relation.kind in _FK_KINDS]
 
 
+def fk_columns(entity: Entity) -> list[str]:
+    """The foreign-key columns a relation adds that the plan does not declare as fields."""
+    declared = {field.name for field in entity.fields}
+    return [f"{name}_id" for name in _fk_relation_names(entity) if f"{name}_id" not in declared]
+
+
 def _python_writable_columns(entity: Entity, workflow=None) -> list[str]:
     """PC-100, found live: the Python API never wrote a foreign key - a product created with a
     category_id came back with none, so no relation could be set through the API. Its foreign-key
     columns are writable too (the Pydantic model declares them, see backend_python)."""
-    declared = {field.name for field in entity.fields}
-    return _insert_columns(entity, workflow) + [
-        f"{name}_id" for name in _fk_relation_names(entity) if f"{name}_id" not in declared
-    ]
+    return _insert_columns(entity, workflow) + fk_columns(entity)
 
 
 def _searchable_fields(entity: Entity) -> list[str]:
@@ -422,12 +425,13 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
     pascal = entity.name
-    cols = [field.name for field in entity.fields]
+    # PC-103: the foreign keys are read and written too (the model declares them), as in Python.
+    cols = [field.name for field in entity.fields] + fk_columns(entity)
     col_list = _sql_columns(cols)
     go_col_list = _go_string_fragment(col_list)
     go_sql_table = _go_string_fragment(sql_table)
     scan_targets = ", ".join(f"&m.{_pascal(c)}" for c in cols)
-    insert_cols = _insert_columns(entity, workflow)
+    insert_cols = _python_writable_columns(entity, workflow)
 
     if insert_cols:
         insert_col_list = _sql_columns(insert_cols)
@@ -603,7 +607,7 @@ def _go_set_field(table: str, pascal: str, col_list: str, scan_targets: str, wor
 def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targets: str, workflow=None) -> str:
     """Emit Update<Entity>(ctx, db, id, m) — parameterized UPDATE RETURNING full row."""
     sql_table = sql_identifier(table)
-    update_cols = _insert_columns(entity, workflow)  # every writable column
+    update_cols = _python_writable_columns(entity, workflow)  # every writable column, foreign keys included
     if update_cols:
         set_clause = ", ".join(f"{sql_identifier(c)} = ${i + 1}" for i, c in enumerate(update_cols))
         set_args = ", ".join(f"m.{_pascal(c)}" for c in update_cols)

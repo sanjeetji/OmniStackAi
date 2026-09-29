@@ -132,10 +132,18 @@ def _models_file(ir: ApplicationIR) -> str:
             # request (only transitions move it), so a create that omits it must not be rejected.
             tag = "" if (entity.name, field.name) in lifecycle_fields else go_validate_tag(field, parse_field_rules(field))
             validate = f' validate:"{tag}"' if tag else ""
-            if field.required:
+            if field.name in ("created_at", "updated_at"):
+                # PC-103: set by the database; a request need not (and cannot usefully) send it.
+                rows.append((go_name, f"*{go}", f'`json:"{field.name},omitempty"`'))
+            elif field.required:
                 rows.append((go_name, go, f'`json:"{field.name}"{validate}`'))
             else:
                 rows.append((go_name, f"*{go}", f'`json:"{field.name},omitempty"{validate}`'))
+        # PC-103: a foreign key the request may set (the store reads and writes it).
+        from .data_access import fk_columns
+
+        for column in fk_columns(entity):
+            rows.append((_pascal(column), "*string", f'`json:"{column},omitempty"`'))
         # R-502: audit timestamp fields — omitted if the IR already declares them.
         if "created_at" not in declared_names:
             rows.append(("CreatedAt", "time.Time", '`json:"created_at"`'))

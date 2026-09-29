@@ -109,6 +109,11 @@ def _models_file(ir: ApplicationIR) -> str:
         if "updated_at" not in declared_names:
             lines.append("  updated_at?: Date | string;")
 
+        # PC-103: a foreign key the request may set.
+        from .data_access import fk_columns
+
+        for column in fk_columns(entity):
+            lines.append(f"  {column}?: string | null;")
         if entity.relations:
             lines.append("  // Relations")
             for rel in entity.relations:
@@ -194,6 +199,11 @@ def _validation_file(ir: ApplicationIR) -> str:
             rules = parse_field_rules(field)
             zod_expr = _zod_field_schema(field, rules)
             lines.append(f"  {field.name}: {zod_expr},")
+        # PC-103: z.object drops unknown keys, so a foreign key must be declared to be written.
+        from .data_access import fk_columns
+
+        for column in fk_columns(entity):
+            lines.append(f"  {column}: z.string().uuid().nullable().optional(),")
         lines.append("});")
         lines.append("")
         lines.append(f"export const update{entity.name}Schema = create{entity.name}Schema.partial();")
@@ -325,8 +335,11 @@ def _db_repository_file(entity: Entity, workflow=None) -> str:
     # R-590: the lifecycle field is never written here; a new row takes the initial state from the
     # column DEFAULT and only a transition moves it after that.
     skip = {"id", "created_at", "updated_at"} | ({workflow.field} if workflow is not None else set())
-    ins_cols = [f.name for f in entity.fields if f.name not in skip]
-    col_list = ", ".join(sql_identifier(f.name) for f in entity.fields)
+    # PC-103: foreign keys are read and written too.
+    from .data_access import fk_columns
+
+    ins_cols = [f.name for f in entity.fields if f.name not in skip] + fk_columns(entity)
+    col_list = ", ".join(sql_identifier(name) for name in [f.name for f in entity.fields] + fk_columns(entity))
     ins_col_list = ", ".join(sql_identifier(c) for c in ins_cols)
     placeholders = ", ".join(f"${i+1}" for i in range(len(ins_cols)))
     insert_sql = (

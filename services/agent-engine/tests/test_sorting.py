@@ -39,7 +39,8 @@ class GoSortingStoreTests(TestCase):
         self.assertIn('col := "\\\"id\\\""', self.comment_store)
         self.assertIn('case "id":', self.comment_store)
         self.assertIn('case "body":', self.comment_store)
-        self.assertIn('fmt.Sprintf("SELECT \\"id\\", \\"body\\" FROM \\"comment\\" WHERE \\"post_id\\" = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)', self.comment_store)
+        # PC-103: the store also reads the foreign key, so a comment carries its post_id.
+        self.assertIn('fmt.Sprintf("SELECT \\"id\\", \\"body\\", \\"post_id\\" FROM \\"comment\\" WHERE \\"post_id\\" = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)', self.comment_store)
 
 
 class GoSortingHandlerTests(TestCase):
