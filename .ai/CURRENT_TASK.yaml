@@ -1,17 +1,17 @@
-task_id: PC-104
-status: completed
+task_id: PC-105
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
-tracker_row: PC-104
+tracker_row: PC-105
 started_at: "2026-09-29"
-completed_at: "2026-09-29"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Rich text in generated apps. A rich_text field type the planner chooses for long formatted
-  content (an article's body, a product or job description, notes). It is edited with tiptap
-  (headings, bold, italic, lists, quotes, links, undo) in the admin console and the web app's forms,
-  stored as HTML sanitized on the server by an allowlist (Python nh3, Go bluemonday, Node
-  sanitize-html) so a script or event handler can never be stored, rendered in the web and admin
-  apps with a second sanitizing pass (DOMPurify), and shown as plain text on mobile and in tables.
+  File uploads in the Go and Node (Express and Hono) backends, the same as the Python backend
+  (PC-102): POST /uploads takes one file for one field, enforces that field's extensions, size and
+  real content (magic bytes, Office/OpenDocument parts, no macros), stores it under the project's
+  prefix in S3-compatible storage (Cloudflare R2 / AWS S3) or the local disk, and GET /files/<key>
+  answers with a short-lived signed link or the file. Uploads need a signed-in user where the app
+  has accounts. The platform's storage settings, Companion and publishing work unchanged.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -21,20 +21,15 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - no stored or rendered HTML without an allowlist sanitizer
+  - the same refusals as Python; nothing weaker
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: a built project's admin console edits a rich-text field with formatting; a script and an event handler sent straight to the API are stripped; the formatted text renders in the web app
+  - Live: the generated Go API and Node API (Express and Hono) each pass the same 19 upload checks as Python, on the local disk and on S3-compatible storage
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "A plan with no detail screen has no page that shows a whole article (lists show a plain excerpt); page design can add one - PC-101 checks what readers can reach"
-found_and_fixed:
-  - "the built-in publication template planned an article's body as plain text although the prompt asked for headings and lists: the template writes rich text, and a prompt's formatting cues upgrade content fields deterministically"
-  - "the editor lost text typed after a toolbar click: a new StarterKit on every render rebuilt it, a form a keystroke behind reset it, and toolbar buttons took its focus - extensions are created once, only values the editor never produced are loaded, and buttons keep focus"
-  - "the Node sanitizer dropped the safe rel it had just added (rel was not in its allowlist)"
-  - "Go imports were emitted unsorted in one block (gofmt reorders them)"
+deferred: []
+found_and_fixed: []
