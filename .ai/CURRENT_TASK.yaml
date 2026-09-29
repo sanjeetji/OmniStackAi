@@ -1,42 +1,42 @@
-task_id: PC-050
-status: completed
-phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 4 of 6)
-tracker_row: PC-050
+task_id: PC-100
+status: in_progress
+phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 5 of 6)
+tracker_row: PC-100
 started_at: "2026-09-29"
-completed_at: "2026-09-29"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Design System Pro: model-written pages may use modern libraries - motion (framer-motion), charts
-  (recharts), rich tables (@tanstack/react-table), forms (react-hook-form + zod), dates (date-fns),
-  toasts (sonner), a command menu (cmdk) and drawers (vaul) - pinned to React-18-compatible
-  versions in every generated web app, allowed by the import validator, explained to the page
-  writer, type-checked and repaired like today's allowlist. The shared type-check cache is rebuilt
-  when the generated dependencies change, so a page using them is checked, not reverted.
+  A modern admin panel. The generated admin console gets an app shell (collapsible sidebar with
+  every entity and page, a top bar, a command menu on Ctrl/Cmd+K, a phone-width drawer), a dashboard
+  built only from real data (record counts, a chart of them, the latest records per entity - no
+  invented figures), and a management page per entity: a sortable, searchable, paginated table with
+  row selection, bulk delete, CSV export, and create/edit in a drawer whose form is validated from
+  the plan's field rules, with related records picked from a list. It uses only the operations the
+  plan's API really has, in the project's design direction, and entities with coordinates get a
+  map. Model-written pages anywhere are refused when they show invented figures.
 founder_gate: none
 companions:
-  - "The web type-check cache rebuilds when the generated package.json changes (as the mobile one does)"
+  - "Invented-figure check for every model-written page (web and admin): '+12.5%', 'from last month', uptime/latency claims"
+  - "The web dashboard template (admin-panel archetype) loses its invented cockpit and fake progress bars"
+  - "maplibre-gl pinned and allowed; free OpenFreeMap tiles, overridable with NEXT_PUBLIC_MAP_STYLE_URL"
 allowed_paths:
   - services/agent-engine/
-  - scripts/omnistack.sh
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - apps/console-web/data/
 forbidden_changes:
-  - no library that does not support React 18
+  - no admin capability removed (users and roles, every planned screen, auth)
+  - no number shown that does not come from the API
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: a model-written page using a chart and motion compiles, renders in the preview and is kept
+  - Live: a built project's admin console - dashboard, a management page with create, edit, bulk delete and CSV - works in the preview against the real API
   - scripts/verify.sh passes
 model_tool_trace:
-  routing: deterministic_only  # task verify; the live proof used the free page chain (Gemini)
+  routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "tiptap (rich text), maplibre (maps), uppy (uploads): heavy, each needs a backend or tiles; add with the feature that uses them"
-  - "PC-101: a designed home page still showed invented trend figures (+12.5% from last month); a few static 404s in the preview console"
-found_and_fixed:
-  - "tsc reports only syntax errors while any file has one, so the last repair round's revert could surface type errors in another model page, which was then reported designed in an app that did not compile; such pages are now put back too"
-  - "two Badge components with different variants confused the page writer (destructive/outline on @/components/badge); the prompt now tells them apart"
-  - "the compact (small-tier) prompt would have gone over its 14,000-character budget; the component list gave up 400 characters instead"
+deferred: []
+found_and_fixed: []
