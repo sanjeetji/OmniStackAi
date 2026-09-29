@@ -1,44 +1,42 @@
-task_id: PC-105
-status: completed
+task_id: PC-101
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
-tracker_row: PC-105
+tracker_row: PC-101
 started_at: "2026-09-29"
-completed_at: "2026-09-29"
+completed_at: null
 branch: platform-completion
 objective: >-
-  File uploads in the Go and Node (Express and Hono) backends, the same as the Python backend
-  (PC-102): POST /uploads takes one file for one field, enforces that field's extensions, size and
-  real content (magic bytes, Office/OpenDocument parts, no macros), stores it under the project's
-  prefix in S3-compatible storage (Cloudflare R2 / AWS S3) or the local disk, and GET /files/<key>
-  answers with a short-lived signed link or the file. Uploads need a signed-in user where the app
-  has accounts. The platform's storage settings, Companion and publishing work unchanged.
+  A UI quality check for ordinary Vibe builds, and the defects seen while building PC-050 to PC-102:
+  the preview's API proxy route answering 503 (it reads BACKEND_INTERNAL_URL/NEXT_PUBLIC_API_URL,
+  not the API_URL the preview sets); dev-server HMR websockets and static-resource 404s through the
+  console proxy; "Sign in" shown in apps with no sign-in routes; a required <entity>_id for an
+  entity with no API that no form can fill; entities whose only create is nested getting no "New"
+  in the admin console; the Expo app failing tsc on `process`; a plan with no detail screen having
+  no page to read a full record. Every build's pages are screenshotted at phone and desktop width
+  and checked deterministically (overflow, console errors, failed requests, broken images,
+  contrast); a failing page is reported, never hidden.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
+  - services/control-plane/
+  - apps/
+  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
-  - docs/runbooks/uploads-and-cloud-sources.md
+  - docs/
 forbidden_changes:
-  - the same refusals as Python; nothing weaker
   - task verify stays offline with 0 model calls
+  - no new paid service or infrastructure
 required_gates:
-  - Live: the generated Go API and Node API (Express and Hono) each pass the same 19 upload checks as Python, on the local disk and on S3-compatible storage
+  - Live: benchmark prompts built through the console; every page of each checked at phone and desktop width with no overflow, console error, failed request or broken image
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-live_proof:
-  - Go, Express and Hono APIs against Postgres - 19/19 upload checks on the local disk and on S3 (moto), objects under projects/<project>/
-  - real XLSX and ODS accepted, an ODT renamed .ods refused; anonymous upload 401 with dev mode off
-  - a web link imported through Companion into each API; a destination not on the list refused (400)
-  - Dropbox reaches its real sign-in page with the founder's redirect address
 blockers: []
 deferred: []
-found_and_fixed:
-  - Go and Node apps had upload fields in their forms but no /uploads or /files route behind them
-  - the Node key pattern needed its slashes escaped in a regex literal (tsc caught it)
-  - Go map literals are now emitted aligned, as gofmt writes them
+found_and_fixed: []
