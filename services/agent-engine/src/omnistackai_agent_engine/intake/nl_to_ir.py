@@ -133,6 +133,12 @@ def _system_instruction(example_name: str) -> str:
         "- Use lower_snake_case identifiers for field names, roles, and screen ids.\n"
         f"- Every field 'type' MUST be EXACTLY one of: {field_types}. Do NOT invent other types.\n"
         "  For a status/category/enum-like field use \"string\". For money use \"float\". For an id use \"uuid\".\n"
+        # PC-102: what a file field accepts follows the requirement, not one fixed type.
+        "  For a file people upload (a resume, photos, an invoice, a report, a contract) use \"attachment\" and say\n"
+        "  what it accepts in the field's 'validation' - the types the requirement needs, never one fixed type:\n"
+        "  e.g. resume [\"accept:pdf|word\", \"max_size_mb:10\"], product photos [\"accept:images\", \"max_files:8\"],\n"
+        "  invoice [\"accept:pdf|images|spreadsheets\"]. Groups: images, documents, pdf, word, spreadsheets,\n"
+        "  presentations, audio, video, archives, medical; or extensions such as pdf|docx|xlsx|csv.\n"
         "- In an api 'path', use lower_snake_case for literal segments and camelCase for any {param} "
         "placeholder (e.g. {productId}, not {product_id}), matching the template below.\n"
         "\n"

@@ -113,6 +113,24 @@ def _field_specs(entity: Entity, ir: ApplicationIR, listable: dict[str, dict[Op,
             parts.append(f"min: {rules.minimum}")
         if rules.maximum is not None:
             parts.append(f"max: {rules.maximum}")
+        # Found live: a plan may declare "candidate_id" as a plain uuid field instead of a relation;
+        # nobody can type a uuid, so an id field that names an entity is picked from that entity's list.
+        target_name = _entity_for_id_field(field.name, ir) if field.type is FieldType.UUID and editable else None
+        if target_name:
+            relation_parts = _relation_parts(target_name, ir, listable, imports)
+            if relation_parts:
+                parts[1] = f"label: {_ts(_title(field.name[:-3]))}"
+                parts.append(relation_parts)
+        if field.type is FieldType.ATTACHMENT:
+            # PC-102: the field's own upload rules (types, size, count), as the API enforces them.
+            from .upload_policy import policy_for
+            from .uploads import field_key
+
+            policy = policy_for(field)
+            parts.append(
+                f"upload: {{ field: {_ts(field_key(entity.name, field.name))}, accept: {json.dumps(list(policy.extensions))}, "
+                f"maxSizeMb: {policy.max_size_mb}, maxFiles: {policy.max_files}, hint: {_ts(policy.describe())} }}"
+            )
         specs.append("{ " + ", ".join(parts) + " }")
     for relation in entity.relations:
         if relation.kind not in _FK_KINDS:
@@ -124,17 +142,30 @@ def _field_specs(entity: Entity, ir: ApplicationIR, listable: dict[str, dict[Op,
             f"name: {_ts(name)}", f"label: {_ts(_title(relation.name))}", 'kind: "uuid"',
             "required: false", "editable: true", "inTable: true",
         ]
-        target = next((e for e in ir.entities if e.name == relation.target_entity), None)
-        target_list = listable.get(relation.target_entity, {}).get(Op.LIST)
-        if target is not None and target_list:
-            fn = f"{target_list}WithCount"
-            imports.append(fn)
-            parts.append(
-                f"relation: {{ labelKey: {_ts(_label_key(target))}, "
-                f"load: async () => (await {fn}({{ params: {{ limit: 100 }} }})).data as unknown as Row[] }}"
-            )
+        relation_parts = _relation_parts(relation.target_entity, ir, listable, imports)
+        if relation_parts:
+            parts.append(relation_parts)
         specs.append("{ " + ", ".join(parts) + " }")
     return specs, imports
+
+
+def _entity_for_id_field(name: str, ir: ApplicationIR) -> str | None:
+    """"job_posting_id" -> "JobPosting" when the plan has that entity."""
+    if not name.endswith("_id"):
+        return None
+    wanted = name[:-3]
+    return next((e.name for e in ir.entities if table_name(e.name) == wanted), None)
+
+
+def _relation_parts(target_name: str, ir: ApplicationIR, listable: dict[str, dict[Op, str]], imports: list[str]) -> str:
+    target = next((e for e in ir.entities if e.name == target_name), None)
+    target_list = listable.get(target_name, {}).get(Op.LIST)
+    if target is None or not target_list:
+        return ""
+    fn = f"{target_list}WithCount"
+    imports.append(fn)
+    return (f"relation: {{ labelKey: {_ts(_label_key(target))}, "
+            f"load: async () => (await {fn}({{ params: {{ limit: 100 }} }})).data as unknown as Row[] }}")
 
 
 def entity_page(entity: Entity, functions: dict[Op, str], ir: ApplicationIR) -> str:
@@ -783,6 +814,7 @@ import {
 } from "lucide-react";
 import { ApiError, extractFieldErrors } from "@/lib/api";
 import { RecordMap, type MapPoint } from "./record-map";
+import { FileList, FileUploader } from "@/components/file-uploader";
 
 export type FieldKind = "string" | "text" | "int" | "float" | "bool" | "datetime" | "uuid" | "json" | "attachment";
 export type Row = { id: string } & Record<string, unknown>;
@@ -799,6 +831,7 @@ export interface FieldSpec {
   min?: number;
   max?: number;
   relation?: { load: () => Promise<Row[]>; labelKey: string };
+  upload?: { field: string; accept: string[]; maxSizeMb: number; maxFiles: number; hint: string };
 }
 
 // A type alias (not an interface), so it passes where the API client takes a params record.
@@ -820,7 +853,6 @@ type FormValues = Record<string, any>; // eslint-disable-line @typescript-eslint
 type Options = Record<string, Record<string, string>>;
 
 const PAGE_SIZE = 20;
-const IMAGE = /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i;
 const blank = (value: unknown) => (value === "" || value === null ? undefined : value);
 
 function fieldSchema(field: FieldSpec): z.ZodTypeAny {
@@ -839,8 +871,9 @@ function fieldSchema(field: FieldSpec): z.ZodTypeAny {
     }, "Enter valid JSON");
   }
   if (field.kind === "attachment") {
-    const url = z.string().url("Enter a full link (https://...)");
-    return z.preprocess(blank, field.required ? url : url.optional());
+    // PC-102: a stored file's key (or a list of keys), set by the upload window.
+    const stored = z.string();
+    return field.required ? stored.min(1, `Add a file for ${field.label}`) : z.preprocess(blank, stored.optional());
   }
   if (field.enumValues && field.enumValues.length > 0) {
     const choice = z.enum(field.enumValues as [string, ...string[]], { errorMap: () => ({ message: "Choose one" }) });
@@ -908,12 +941,7 @@ function Cell({ field, value, options }: { field: FieldSpec; value: unknown; opt
     case "float":
       return <span className="tabular-nums">{Number(value).toLocaleString()}</span>;
     case "attachment":
-      return IMAGE.test(String(value)) ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={String(value)} alt="" className="h-9 w-9 rounded-md border object-cover" />
-      ) : (
-        <a href={String(value)} target="_blank" rel="noreferrer" className="text-primary underline">Open</a>
-      );
+      return <FileList value={value} compact />;
     case "json":
       return <code className="text-xs">{JSON.stringify(value).slice(0, 60)}</code>;
     default: {
@@ -959,7 +987,12 @@ function FieldInput({ field, form, options }: { field: FieldSpec; form: ReturnTy
     case "datetime":
       return <input type="datetime-local" {...register} className={base} />;
     case "attachment":
-      return <input type="url" placeholder="https://..." {...register} className={base} />;
+      return field.upload ? (
+        <FileUploader {...field.upload} value={form.watch(field.name)}
+          onChange={(value) => form.setValue(field.name, value, { shouldDirty: true, shouldValidate: true })} />
+      ) : (
+        <input type="text" {...register} className={base} />
+      );
     default:
       return <input type="text" maxLength={field.maxLength} {...register} className={base} />;
   }

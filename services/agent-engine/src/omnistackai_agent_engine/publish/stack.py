@@ -257,12 +257,19 @@ class StackPublisher:
                 url = f"http://127.0.0.1:{port}"
                 routing = {"SITE_ADDRESS": ":80", "PUBLISH_BIND": "127.0.0.1", "HTTP_PORT": str(port),
                            "HTTPS_PORT": str(_free_port()), "PUBLIC_URL": url}
+            # PC-102: production storage (R2 prod, else AWS S3, else the uploads volume) and the
+            # cloud-drive keys, from the platform's .env; the project's own keys win. Private file.
+            from ..localrun.upload_env import production_settings
+
+            storage_env, upload_compose = production_settings()
+            app_env = {**storage_env, **app_env}
             app_env_file = self._dir(app_id) / "app.env"
             _write_private(app_env_file, _env_lines(app_env))
             compose_env = self._dir(app_id) / "compose.env"
             _write_private(secrets_file, _env_lines(stored))
             _write_private(compose_env, _env_lines(stored | routing | {
-                "RELEASE": str(release), "APP_ENV_FILE": str(app_env_file)}))
+                "RELEASE": str(release), "APP_ENV_FILE": str(app_env_file),
+                "UPLOAD_SOURCES": upload_compose["UPLOAD_SOURCES"]}))
             compose = self._compose(repo, project, compose_env)
 
             step("build", f"Building release {release} in production mode")

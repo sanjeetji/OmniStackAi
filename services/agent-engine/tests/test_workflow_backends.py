@@ -111,7 +111,8 @@ class NodeRunsTheLifecycle(TestCase):
         for framework in ("express", "hono"):
             with self.subTest(framework=framework):
                 router = self._router(framework)
-                self.assertIn("['author'].some((r) => held.includes(r))", router)
+                # PC-102: the app's admin passes every role check, as in the Python and Go backends.
+                self.assertIn("['author', 'admin'].some((r) => held.includes(r))", router)
                 self.assertIn("403", router)
 
     def test_the_from_state_is_enforced(self) -> None:

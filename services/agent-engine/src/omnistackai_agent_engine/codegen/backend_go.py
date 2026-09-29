@@ -533,7 +533,9 @@ class GoBackendAdapter:
             env_example += "JWT_SECRET=\n"
             if has_db:
                 env_example += EMAIL_ENV_EXAMPLE
-        env_example += "STORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\nSTORAGE_ACCESS_KEY=minioadmin\nSTORAGE_SECRET_KEY=minioadmin\n"
+        # PC-102: the same storage settings as the Python backend (uploads in Go: PC-105).
+        env_example += ("# File storage: leave empty for the local disk.\nSTORAGE_DRIVER=auto\nS3_ENDPOINT=\n"
+                        "S3_REGION=\nS3_BUCKET=\nS3_ACCESS_KEY_ID=\nS3_SECRET_ACCESS_KEY=\nLOCAL_STORAGE_DIR=./uploads\n")
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
             GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth)),

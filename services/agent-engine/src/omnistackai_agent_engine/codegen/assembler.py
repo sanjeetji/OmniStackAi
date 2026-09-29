@@ -336,6 +336,14 @@ def assemble_project(
     if ir.apis:
         files.append(GeneratedFile("contracts/openapi.json", render_openapi_json(ir)))
 
+    # PC-102: an app that takes files can offer cloud drives and web links through Uppy Companion
+    # (started only when its keys are set). Python backends accept the uploads today (PC-105: Go, Node).
+    from .upload_policy import has_uploads
+    from .uploads import companion_files
+
+    if has_uploads(ir) and any(app.directory == "services/api" for app in apps):
+        files.extend(GeneratedFile(path, content) for path, content in companion_files())
+
     # R-548: one brand.json every surface derives from, at the monorepo root because it serves
     # the web app, the admin console and the mobile app alike.
     if any(app.target.startswith("nextjs") or app.target == "react-native" for app in apps):

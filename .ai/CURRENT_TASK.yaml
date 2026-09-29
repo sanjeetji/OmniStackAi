@@ -1,9 +1,9 @@
 task_id: PC-102
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
 tracker_row: PC-102
 started_at: "2026-09-29"
-completed_at: null
+completed_at: "2026-09-29"
 branch: platform-completion
 objective: >-
   File uploads in generated apps. An attachment field opens an upload window (Uppy): the device,
@@ -45,5 +45,15 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "PC-104: rich text; PC-105: uploads in the Go and Node backends"
+  - "Cloud drives are wired and tested through the same path as web links; Google Drive/Dropbox/OneDrive/Box themselves are exercised once their sign-in keys are in .env (runbook)"
+  - "PC-101: a required <entity>_id for an entity with no API cannot be filled; a nested-only create gets no 'New' in the admin console"
+found_and_fixed:
+  - "the generated backends' .env.example carried MinIO placeholders (minioadmin) that nothing read; replaced by the settings the code uses"
+  - "React's development double-mount destroyed the Uppy instance before it drew (an empty panel)"
+  - "an upload modal cannot work inside the admin form's drawer (a modal dialog blocks everything outside it); the upload panel is inline"
+  - "a refused upload was retried four times and shown as 'Upload failed'; refusals are not retried and the API's reason is shown"
+  - "a plan that declares candidate_id / job_posting_id as plain uuid fields gave the admin console text boxes nobody could fill; they are picked from the entity's list"
+  - "the app's own admin was refused by role-scoped endpoints (a recruiters list needing 'recruiter'), so the admin console could not manage them; admin now passes every role check, as it already did require_owner (Python, Go, Node)"
+  - "Uppy Companion 7: named exports, socket options and its working folder differ from older versions; the generated service follows 7"

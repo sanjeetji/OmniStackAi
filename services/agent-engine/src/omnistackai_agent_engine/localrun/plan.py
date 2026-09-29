@@ -99,9 +99,11 @@ class RunPlan:
     #: plan built before this existed, so `preview_apps()` falls back to web/admin.
     web_surfaces: tuple[tuple[str, str], ...] = ()
     steps: tuple[RunStep, ...] = field(default_factory=tuple)
+    #: PC-102: storage and cloud-source keys the steps carry; masked like the database password.
+    secrets: tuple[str, ...] = field(default=(), repr=False)
 
     def to_dict(self) -> dict:
-        mask = (self.db_password,) if self.db_password else ()
+        mask = tuple(s for s in (self.db_password, *self.secrets) if s)
         return {
             "repo_dir": self.repo_dir,
             "app_slug": self.app_slug,
@@ -368,6 +370,12 @@ def build_run_plan(
     database_url = f"postgresql://{app_role}:{app_password}@{db_host}:{db_port}/{database}"
 
     extra_tuples = tuple((k, str(v)) for k, v in sorted(extra_env.items())) if extra_env else ()
+    # PC-102: where uploads are stored (R2 / S3 / the local disk, from the platform's .env) and
+    # which file sources the upload window offers. Every secret is masked in the plan's output.
+    from .upload_env import upload_environment
+
+    uploads = upload_environment(project_key=database, api_url=api_url,
+                                 has_companion=(root / "services" / "companion" / "package.json").is_file())
 
     steps: list[RunStep] = []
 
@@ -440,7 +448,7 @@ def build_run_plan(
                 program=".venv/bin/uvicorn",
                 args=("app.main:app", "--host", "127.0.0.1", "--port", str(api_port)),
                 cwd=str(api_dir),
-                env=(("DATABASE_URL", database_url), ("JWT_SECRET", jwt_secret)) + extra_tuples,
+                env=(("DATABASE_URL", database_url), ("JWT_SECRET", jwt_secret)) + uploads.api + extra_tuples,
                 background=True,
             )
         )
@@ -471,7 +479,7 @@ def build_run_plan(
                     ("JWT_SECRET", jwt_secret),
                     ("PORT", str(api_port)),
                     ("ADDR", f":{api_port}"),
-                ) + extra_tuples,
+                ) + uploads.api + extra_tuples,
                 background=True,
             )
         )
@@ -508,7 +516,7 @@ def build_run_plan(
                     ("NEXT_PUBLIC_BASE_PATH", base_path),
                     # R-573: the in-app QR swaps localhost for this, so a phone can open the page.
                     ("NEXT_PUBLIC_LAN_HOST", web_lan),
-                ) + extra_tuples,
+                ) + uploads.web + extra_tuples,
                 background=True,
             )
         )
@@ -542,6 +550,15 @@ def build_run_plan(
             )
         )
 
+    if uploads.companion_enabled:
+        # PC-102: cloud drives and web links (Uppy Companion), on the port its redirect URIs name.
+        companion_dir = root / "services" / "companion"
+        steps.append(RunStep(label="install companion dependencies (npm)", program="npm",
+                             args=("install", "--no-audit", "--no-fund", "--omit=dev"), cwd=str(companion_dir)))
+        steps.append(RunStep(label=f"start companion (cloud file sources) on :{uploads.companion_port}",
+                             program="node", args=("index.js",), cwd=str(companion_dir),
+                             env=uploads.companion, background=True))
+
     return RunPlan(
         repo_dir=str(root),
         app_slug=app_slug,
@@ -563,4 +580,5 @@ def build_run_plan(
         web_health_url=f"{web_url}{web_base_path}",
         admin_health_url=f"{admin_url}{admin_base_path}" if has_admin else "",
         steps=tuple(steps),
+        secrets=uploads.secrets,
     )

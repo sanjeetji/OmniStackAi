@@ -518,7 +518,8 @@ def _express_router_file(
         param = _to_express_path(f"/{{{route.id_param}}}/{route.transition.name}")
         lines.append(f"router.post('{param}', requireAuth, async (req: Request, res: Response) => {{")
         if route.roles:
-            roles_js = ", ".join(f"'{r}'" for r in route.roles)
+            # The app's admin passes every role check, as in the Python and Go backends.
+            roles_js = ", ".join(f"'{r}'" for r in dict.fromkeys((*route.roles, "admin")))
             lines.append(f"  const held: string[] = ((req as any).user?.roles as string[] | undefined) ?? [];")
             lines.append(f"  if (![{roles_js}].some((r) => held.includes(r))) return res.status(403).json({{ error: 'forbidden' }});")
         lines.append(f"  const item = await {route.workflow.entity}Repository.getById(String(req.params.{route.id_param}));")
@@ -640,7 +641,8 @@ def _hono_router_file(
         param = _to_express_path(f"/{{{route.id_param}}}/{route.transition.name}")
         lines.append(f"router.post('{param}', requireAuth, async (c) => {{")
         if route.roles:
-            roles_js = ", ".join(f"'{r}'" for r in route.roles)
+            # The app's admin passes every role check, as in the Python and Go backends.
+            roles_js = ", ".join(f"'{r}'" for r in dict.fromkeys((*route.roles, "admin")))
             lines.append("  const held: string[] = (((c as any).get('user') as any)?.roles as string[] | undefined) ?? [];")
             lines.append(f"  if (![{roles_js}].some((r) => held.includes(r))) return c.json({{ error: 'forbidden' }}, 403);")
         lines.append(f"  const item = await {route.workflow.entity}Repository.getById(c.req.param('{route.id_param}') ?? '');")

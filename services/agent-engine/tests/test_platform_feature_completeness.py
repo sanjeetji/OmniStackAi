@@ -225,25 +225,13 @@ class TestPlatformFeatureCompletenessPhase4(TestCase):
         self.assertIn("Document *string `json:\"document,omitempty\"`", re.sub(r" +", " ", models_go))
 
     def test_storage_env_vars_in_all_templates(self) -> None:
+        # PC-102: the settings the generated code really reads. The STORAGE_ENDPOINT/minioadmin
+        # placeholders this used to pin were never read by anything (and named a default password).
         ir = _make_ir()
-        # Next.js web .env.example
-        web_proj = NextjsWebAdapter().generate(ir)
-        web_env = web_proj.get(".env.example").content
-        self.assertIn("STORAGE_ENDPOINT", web_env)
-        self.assertIn("STORAGE_BUCKET", web_env)
-
-        # Python backend .env.example
-        py_proj = PythonBackendAdapter().generate(ir)
-        py_env = py_proj.get(".env.example").content
-        self.assertIn("STORAGE_ENDPOINT", py_env)
-        self.assertIn("STORAGE_BUCKET", py_env)
-        self.assertIn("STORAGE_ACCESS_KEY", py_env)
-        self.assertIn("STORAGE_SECRET_KEY", py_env)
-
-        # Go backend .env.example
-        go_proj = GoBackendAdapter().generate(ir)
-        go_env = go_proj.get(".env.example").content
-        self.assertIn("STORAGE_ENDPOINT", go_env)
-        self.assertIn("STORAGE_BUCKET", go_env)
-        self.assertIn("STORAGE_ACCESS_KEY", go_env)
-        self.assertIn("STORAGE_SECRET_KEY", go_env)
+        web_env = NextjsWebAdapter().generate(ir).get(".env.example").content
+        self.assertIn("NEXT_PUBLIC_UPLOAD_SOURCES", web_env)
+        for adapter in (PythonBackendAdapter(), GoBackendAdapter()):
+            env = adapter.generate(ir).get(".env.example").content
+            for name in ("STORAGE_DRIVER", "S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "LOCAL_STORAGE_DIR"):
+                self.assertIn(name, env)
+            self.assertNotIn("minioadmin", env)

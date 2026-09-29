@@ -65,11 +65,13 @@ def python_auth_file(ir: ApplicationIR) -> str:
         "    except jwt.PyJWTError as error:\n"
         '        raise HTTPException(status_code=401, detail="invalid_token") from error\n\n\n'
         "def require_roles(*required: str):\n"
-        '    """Dependency factory: verify the token, then require any one of `required` in its roles claim."""\n\n'
+        '    """Dependency factory: verify the token, then require any one of `required` in its roles claim.\n\n'
+        "    The app's admin passes every role check (as it does require_owner): the admin console is\n"
+        '    theirs, and only an admin can make someone an admin."""\n\n'
         "    async def _guard(authorization: str | None = Header(default=None)) -> dict[str, Any]:\n"
         "        claims = await require_auth(authorization)\n"
         '        held = claims.get("roles") or []\n'
-        "        if not isinstance(held, list) or not set(held) & set(required):\n"
+        '        if not isinstance(held, list) or not set(held) & (set(required) | {"admin"}):\n'
         '            raise HTTPException(status_code=403, detail="forbidden")\n'
         "        return claims\n\n"
         "    return _guard\n\n\n"
@@ -163,6 +165,10 @@ def go_auth_file(ir: ApplicationIR) -> str:
         "\t\tif s, ok := v.(string); ok {\n"
         "\t\t\theld[s] = true\n"
         "\t\t}\n"
+        "\t}\n"
+        "\t// The app's admin passes every role check, as in RequireOwner.\n"
+        "\tif held[\"admin\"] {\n"
+        "\t\treturn true\n"
         "\t}\n"
         "\tfor _, want := range required {\n"
         "\t\tif held[want] {\n"

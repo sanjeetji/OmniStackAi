@@ -237,7 +237,10 @@ QUEUE = [
      "resolves through the console) and one transient dev-server 404; check against a production "
      "build. Seen in PC-100: the proxy route reads BACKEND_INTERNAL_URL or NEXT_PUBLIC_API_URL, not "
      "the API_URL the preview sets, which is the 503 above; dev-mode HMR websockets fail through the "
-     "console proxy; an app whose API has no sign-in routes still shows 'Sign in'."),
+     "console proxy; an app whose API has no sign-in routes still shows 'Sign in'. Seen in PC-102: "
+     "the planner can declare a required <entity>_id for an entity it gives no API (a job posting's "
+     "recruiter_id with no /recruiters), so no form can fill it, and an entity whose only create is "
+     "nested (/job_postings/{id}/applications) gets no 'New' in the admin console."),
     ("PC-102", "Rich text and file uploads in generated apps: a rich-text field type edited with "
      "tiptap and rendered safely, and attachment fields uploaded to storage (uppy)",
      "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-100",
@@ -247,7 +250,13 @@ QUEUE = [
      "a URL today and no backend (Python, Go, Node) has an upload endpoint or storage; needs a "
      "founder decision on storage (local disk on the API vs S3-compatible - MinIO locally, R2/S3 in "
      "production), then an upload endpoint with size/type limits in each backend and uppy in the "
-     "console."),
+     "console. Founder's decision 2026-09-29: Cloudflare R2 (dev and prod), AWS S3 as the production "
+     "alternative, the local disk as the fallback; no MinIO. Done 2026-09-29 for the default Python "
+     "backend and the web and admin apps: per-field rules from the requirement (planner or the "
+     "field's name), content checked on the server, R2/S3/local chosen from the platform's .env "
+     "(production needs keys only), Uppy with device, camera, web link and Google Drive / Dropbox / "
+     "OneDrive / Box through a self-hosted Companion; proven in the preview and in a published "
+     "production stack. Rich text moved to PC-104; Go and Node uploads to PC-105."),
     ("PC-104", "Rich text in generated apps: a rich_text field type the planner can choose, "
      "edited with tiptap and rendered safely", "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-102",
      "Split from PC-102. A field type the planner picks for long formatted content (descriptions, "
