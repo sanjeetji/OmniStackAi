@@ -930,7 +930,16 @@ const styles = StyleSheet.create({
                 continue
             if lifecycle is not None and f.name == lifecycle.field:
                 continue  # R-590: moved only by its transitions, from the panel below
-            state_inits.append(f"  const [{f.name}, set{_to_pascal(f.name)}] = useState(initial?.{f.name} ? String(initial.{f.name}) : '');")
+            if f.type is FieldType.RICH_TEXT:
+                # PC-104: mobile edits formatted text as plain paragraphs (never as raw HTML).
+                state_inits.append(
+                    f"  const [{f.name}, set{_to_pascal(f.name)}] = useState(initial?.{f.name} ? String(initial.{f.name})"
+                    ".replace(/<\\/(p|h[1-6]|li|blockquote|pre)>/gi, '\\n\\n').replace(/<br\\s*\\/?>/gi, '\\n')"
+                    ".replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>')"
+                    ".replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/&amp;/g, '&').replace(/\\n{3,}/g, '\\n\\n').trim() : '');"
+                )
+            else:
+                state_inits.append(f"  const [{f.name}, set{_to_pascal(f.name)}] = useState(initial?.{f.name} ? String(initial.{f.name}) : '');")
             form_inputs.append(
                 f'        <Input\n'
                 f'          label="{f.name.capitalize()}"\n'
@@ -939,7 +948,13 @@ const styles = StyleSheet.create({
                 f'          placeholder="Enter {f.name}"\n'
                 f'        />'
             )
-            if f.type in (FieldType.INT, FieldType.FLOAT):
+            if f.type is FieldType.RICH_TEXT:
+                payload_assignments.append(
+                    f"      payload.{f.name} = {f.name}.split(/\\n{{2,}}/).filter((part) => part.trim())"
+                    ".map((part) => '<p>' + part.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')"
+                    ".replace(/\\n/g, '<br>') + '</p>').join('');"
+                )
+            elif f.type in (FieldType.INT, FieldType.FLOAT):
                 payload_assignments.append(f"      payload.{f.name} = Number({f.name}) || 0;")
             elif f.type is FieldType.BOOL:
                 payload_assignments.append(f"      payload.{f.name} = {f.name}.toLowerCase() === 'true';")

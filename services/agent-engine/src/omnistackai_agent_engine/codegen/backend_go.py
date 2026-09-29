@@ -27,6 +27,7 @@ from .seed_sql import render_postgres_seed
 _GO_TYPE: dict[FieldType, str] = {
     FieldType.STRING: "string",
     FieldType.TEXT: "string",
+    FieldType.RICH_TEXT: "string",
     FieldType.UUID: "string",
     FieldType.INT: "int64",
     FieldType.FLOAT: "float64",
@@ -106,6 +107,12 @@ def _models_file(ir: ApplicationIR) -> str:
         import_names.append("time")
     if needs_json:
         import_names.append("encoding/json")
+    # PC-104: rich text is cleaned with bluemonday before it is stored.
+    from .rich_text import go_policy, go_sanitize_method, has_rich_text, rich_fields
+
+    if has_rich_text(ir):
+        import_names.append("github.com/microcosm-cc/bluemonday")
+    import_names.sort()  # one import block: gofmt orders it alphabetically
     if import_names:
         lines.append("import (")
         lines.extend(f'\t"{name}"' for name in import_names)
@@ -155,6 +162,10 @@ def _models_file(ir: ApplicationIR) -> str:
             lines.append(f"\t{name.ljust(name_width)} {kind.ljust(type_width)} {tag}")
         lines.append("}")
         lines.append("")
+        if rich_fields(entity):
+            lines.append(go_sanitize_method(entity, _pascal))
+    if has_rich_text(ir):
+        lines.append(go_policy())
     return "\n".join(lines) + "\n"
 
 
@@ -265,6 +276,7 @@ def _handlers_file_wired(
     validated_entities: frozenset[str] = frozenset(),
     filtered_entities: frozenset[str] = frozenset(),
     transitions: tuple = (),
+    rich_entities: frozenset[str] = frozenset(),
 ) -> str:
     """Handlers as methods on *Handlers; unambiguous CRUD calls the store, the rest stay 501."""
 
@@ -346,6 +358,8 @@ def _handlers_file_wired(
             lines.append('\t\thttp.Error(w, "invalid body", http.StatusBadRequest)\n\t\treturn\n\t}')
             if wiring.entity in validated_entities:
                 lines.append("\tif !validateStruct(w, m) {\n\t\treturn\n\t}")
+            if wiring.entity in rich_entities:
+                lines.append("\tm.SanitizeRichText() // PC-104")
             lines.append(f"\tid, err := store.Create{wiring.entity}(r.Context(), h.DB, m)")
             lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append('\twriteJSON(w, http.StatusCreated, map[string]string{"id": id})')
@@ -356,6 +370,8 @@ def _handlers_file_wired(
             lines.append('\t\thttp.Error(w, "invalid body", http.StatusBadRequest)\n\t\treturn\n\t}')
             if wiring.entity in validated_entities:
                 lines.append("\tif !validateStruct(w, m) {\n\t\treturn\n\t}")
+            if wiring.entity in rich_entities:
+                lines.append("\tm.SanitizeRichText() // PC-104")
             lines.append(f"\tupdated, err := store.Update{wiring.entity}(r.Context(), h.DB, id, m)")
             lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append("\tif updated == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
@@ -522,6 +538,10 @@ class GoBackendAdapter:
             go_mod += f"\nrequire {GOLANG_JWT_REQUIRE}\n"
         if has_validation:
             go_mod += f"\nrequire {VALIDATOR_REQUIRE}\n"
+        from .rich_text import GO_REQUIRE, has_rich_text, rich_fields
+
+        if has_rich_text(ir):
+            go_mod += f"\nrequire {GO_REQUIRE}\n"
 
         stack_note = (
             "Go net/http with a PostgreSQL data-access layer (pgx driver)."
@@ -578,6 +598,7 @@ class GoBackendAdapter:
                 _handlers_file_wired(
                     by_segment[segment], repo_entities, slug, fk_by_entity, validated_entities, filtered_entities,
                     tuple(r for r in transition_routes(ir) if r.path.strip('/').split('/')[0] == segment),
+                    frozenset(e.name for e in ir.entities if rich_fields(e)),
                 )
                 if has_db
                 else _handlers_file(by_segment[segment])

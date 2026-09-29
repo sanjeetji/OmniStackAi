@@ -56,6 +56,7 @@ _ADMIN_SEED_ROW = (
 _PG_TYPE: dict[FieldType, str] = {
     FieldType.STRING: "TEXT",
     FieldType.TEXT: "TEXT",
+    FieldType.RICH_TEXT: "TEXT",
     FieldType.INT: "BIGINT",
     FieldType.FLOAT: "DOUBLE PRECISION",
     FieldType.BOOL: "BOOLEAN",

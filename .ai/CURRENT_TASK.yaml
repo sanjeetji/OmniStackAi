@@ -1,9 +1,9 @@
 task_id: PC-104
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
 tracker_row: PC-104
 started_at: "2026-09-29"
-completed_at: null
+completed_at: "2026-09-29"
 branch: platform-completion
 objective: >-
   Rich text in generated apps. A rich_text field type the planner chooses for long formatted
@@ -31,5 +31,10 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - "A plan with no detail screen has no page that shows a whole article (lists show a plain excerpt); page design can add one - PC-101 checks what readers can reach"
+found_and_fixed:
+  - "the built-in publication template planned an article's body as plain text although the prompt asked for headings and lists: the template writes rich text, and a prompt's formatting cues upgrade content fields deterministically"
+  - "the editor lost text typed after a toolbar click: a new StarterKit on every render rebuilt it, a form a keystroke behind reset it, and toolbar buttons took its focus - extensions are created once, only values the editor never produced are loaded, and buttons keep focus"
+  - "the Node sanitizer dropped the safe rel it had just added (rel was not in its allowlist)"
+  - "Go imports were emitted unsorted in one block (gofmt reorders them)"

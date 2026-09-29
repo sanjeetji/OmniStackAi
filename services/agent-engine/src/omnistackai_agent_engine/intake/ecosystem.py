@@ -153,7 +153,8 @@ DOMAIN_ENTITIES: dict[str, tuple[Entity, ...]] = {
         Entity("Comment", (_ID, Field("body", FieldType.TEXT)), relations=(_rel("post", "Post"),)),
     ),
     "blog-cms": (
-        Entity("Article", (_ID, Field("title", FieldType.STRING), Field("body", FieldType.TEXT), Field("published", FieldType.BOOL))),
+        # PC-104: an article is formatted content.
+        Entity("Article", (_ID, Field("title", FieldType.STRING), Field("body", FieldType.RICH_TEXT), Field("published", FieldType.BOOL))),
         Entity("Comment", (_ID, Field("body", FieldType.TEXT)), relations=(_rel("article", "Article"),)),
     ),
     # Fallback for the `custom-application` scope (no known domain).

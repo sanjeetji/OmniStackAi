@@ -99,8 +99,9 @@ def build_app_from_ir(
     # chat edit (which assembles from the plan alone) keeps the project's look.
     if prompt:
         from ..codegen.design_direction import with_design_direction
+        from ..codegen.rich_text import with_rich_text
 
-        ir = with_design_direction(ir, prompt)
+        ir = with_rich_text(with_design_direction(ir, prompt), prompt)
     started = time.perf_counter()
     project = assemble_project(
         ir,
@@ -264,6 +265,13 @@ def build_ecosystem_from_plan(
     """
     from ..codegen.ecosystem_assembler import assemble_ecosystem, surface_directory, union_ir
 
+    if prompt:
+        # PC-104: formatting asked for in the prompt reaches every app's plan (one shared backend).
+        from dataclasses import replace as _replace
+
+        from ..codegen.rich_text import with_rich_text
+
+        plan = _replace(plan, apps=tuple(_replace(app, ir=with_rich_text(app.ir, prompt)) for app in plan.apps))
     project = assemble_ecosystem(plan, provider=provider, prompt=prompt)
     # PC-099: the plan the workspace keeps carries the ecosystem's design direction (the same one
     # the assembler applied), so the console can say what it looks like.

@@ -262,7 +262,10 @@ QUEUE = [
      "Split from PC-102. A field type the planner picks for long formatted content (descriptions, "
      "articles, notes); stored as HTML sanitized on the server (Python, Go and Node), edited with "
      "tiptap in the admin console and web forms, rendered with a second sanitizing pass in the web "
-     "app and as plain text on mobile."),
+     "app and as plain text on mobile. Done 2026-09-29: rich_text type; nh3 / bluemonday / "
+     "sanitize-html on every write; tiptap editor in web forms and the admin console; DOMPurify on "
+     "display; plain words in tables and on mobile; the planner and the publication template use it, "
+     "and a prompt that asks for formatting upgrades content fields deterministically."),
     ("PC-105", "File uploads in the Go and Node backends", "1 Vibe Mode live", "Both", "Not Started",
      "P1", "PC-102", "Split from PC-102, which builds uploads for the default Python backend: the "
      "same /uploads and /files endpoints, the same per-field rules and content checks, and the same "

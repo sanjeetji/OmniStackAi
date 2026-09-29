@@ -58,7 +58,8 @@ def _python_writable_columns(entity: Entity, workflow=None) -> list[str]:
 
 
 def _searchable_fields(entity: Entity) -> list[str]:
-    return [field.name for field in entity.fields if field.type in (FieldType.STRING, FieldType.TEXT, FieldType.ATTACHMENT)]
+    return [field.name for field in entity.fields
+            if field.type in (FieldType.STRING, FieldType.TEXT, FieldType.RICH_TEXT, FieldType.ATTACHMENT)]
 
 
 def _sql_columns(names: list[str]) -> str:

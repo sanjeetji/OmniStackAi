@@ -139,6 +139,9 @@ def _system_instruction(example_name: str) -> str:
         "  e.g. resume [\"accept:pdf|word\", \"max_size_mb:10\"], product photos [\"accept:images\", \"max_files:8\"],\n"
         "  invoice [\"accept:pdf|images|spreadsheets\"]. Groups: images, documents, pdf, word, spreadsheets,\n"
         "  presentations, audio, video, archives, medical; or extensions such as pdf|docx|xlsx|csv.\n"
+        # PC-104: formatted content.
+        "  For long formatted content people write (an article or blog post body, a product, job or course\n"
+        "  description, notes with headings and lists) use \"rich_text\"; for short plain text use \"string\"/\"text\".\n"
         "- In an api 'path', use lower_snake_case for literal segments and camelCase for any {param} "
         "placeholder (e.g. {productId}, not {product_id}), matching the template below.\n"
         "\n"

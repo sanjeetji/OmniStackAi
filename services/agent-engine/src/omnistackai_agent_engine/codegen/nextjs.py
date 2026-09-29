@@ -40,6 +40,7 @@ DESIGN_SYSTEM_PRO: dict[str, str] = {
 from .auth_pages import forgot_password_page, reset_password_page
 from .upload_policy import has_uploads, policy_for
 from .uploads import FILE_UPLOADER, UPLOAD_LIBRARIES, field_key
+from .rich_text import RICH_TEXT_CSS, RICH_TEXT_EDITOR, RICH_TEXT_LIBRARIES, RICH_TEXT_VIEW
 from .brand import apply_brand
 from .brand_project import web_brand_ts
 from .errors import GenerationError
@@ -50,6 +51,7 @@ from .route_wiring import Op, Wiring, fk_relations, wire_endpoint
 _FIELD_TS: dict[FieldType, str] = {
     FieldType.STRING: "string",
     FieldType.TEXT: "string",
+    FieldType.RICH_TEXT: "string",
     FieldType.UUID: "string",
     FieldType.DATETIME: "string",
     FieldType.INT: "number",
@@ -2169,7 +2171,7 @@ def _filterable_fields_for_entity(entity: Entity) -> list[tuple[Field, str, list
     return res
 
 
-def _field_value_jsx(field: Field, expr: str) -> str:
+def _field_value_jsx(field: Field, expr: str, full: bool = False) -> str:
     """R-302: renders an accessible formatted value or badge for a field expression.
 
     - Boolean fields render an emerald/slate status pill badge.
@@ -2197,6 +2199,12 @@ def _field_value_jsx(field: Field, expr: str) -> str:
         )
     if field.type == FieldType.DATETIME:
         return f'{{{expr} ? new Date({expr}).toLocaleDateString() : "-"}}'
+    # PC-104: formatted text in full on a record's page (sanitized again), words only elsewhere.
+    if field.type == FieldType.RICH_TEXT:
+        return f"<RichText html={{{expr}}} />" if full else f'{{plainText({expr}, 60) || "-"}}'
+    # PC-102: a record's page shows its files as links and thumbnails.
+    if field.type == FieldType.ATTACHMENT and full:
+        return f"<FileList value={{{expr}}} />"
     if field.type == FieldType.TEXT:
         return (
             f'{{{expr} ? (String({expr}).length > 60 ? '
@@ -3005,6 +3013,8 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             )
         elif f.type == FieldType.DATETIME:
             val_expr = '{(item as any).' + f.name + ' ? new Date((item as any).' + f.name + ').toLocaleDateString() : "-"}'
+        elif f.type == FieldType.RICH_TEXT:
+            val_expr = '{plainText((item as any).' + f.name + ', 60) || "-"}'  # PC-104: the words only
         elif f.type == FieldType.TEXT:
             val_expr = (
                 '{(item as any).' + f.name + ' ? (String((item as any).' + f.name + ').length > 60 ? '
@@ -4027,6 +4037,19 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
                 '        </div>',
             ])
+        elif f.type == FieldType.RICH_TEXT:
+            # PC-104: formatted text, edited with tiptap; the API cleans it before storing it.
+            lines.extend([
+                '        <div style={{ marginBottom: 16 }}>',
+                '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
+                '          <RichTextEditor',
+                '            value={String((formData as any).' + f.name + ' ?? "")}',
+                '            onChange={(html) => { setFormData((prev) => ({ ...prev, ' + f.name + ': html })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
+                f'            placeholder="Write the {label.lower()}..."',
+                '          />',
+                '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
+                '        </div>',
+            ])
         elif f.type == FieldType.ATTACHMENT:
             # PC-102: the upload window, with this field's own rules (types, size, count).
             policy = policy_for(f)
@@ -4673,7 +4696,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         for f in entity.fields:
             flabel = _title_case(f.name)
             is_id_field = f.name == "id" or f.type == FieldType.UUID or f.name.endswith("_id")
-            val_jsx = _field_value_jsx(f, f"(item as any).{f.name}")
+            val_jsx = _field_value_jsx(f, f"(item as any).{f.name}", full=True)
             if is_id_field:
                 dd_content = (
                     f'            <dd style={{{{ margin: 0, color: "#1e293b", display: "flex", alignItems: "center", gap: 8 }}}}>'
@@ -72192,8 +72215,11 @@ _GLOBALS_CSS = (
 
 
 def render_globals_css() -> str:
-    """Return the base global stylesheet for generated Next.js App Router applications."""
-    return _GLOBALS_CSS
+    """Return the base global stylesheet for generated Next.js App Router applications.
+
+    PC-104: it carries the typography for formatted text (the editor and <RichText>).
+    """
+    return _GLOBALS_CSS + RICH_TEXT_CSS
 
 
 # ---------------------------------------------------------------------------
@@ -73324,6 +73350,32 @@ def _ui_component_files() -> list[GeneratedFile]:
     ]
 
 
+_COMPONENT_IMPORTS = (
+    # (what the page uses, the name to import, where it comes from)
+    ("<RichTextEditor", "RichTextEditor", "@/components/rich-text-editor"),
+    ("<RichText ", "RichText", "@/components/rich-text"),
+    ("plainText(", "plainText", "@/components/rich-text"),
+    ("<FileList", "FileList", "@/components/file-uploader"),
+    ("<FileUploader", "FileUploader", "@/components/file-uploader"),
+)
+
+
+def _with_component_imports(content: str) -> str:
+    """Add the imports a generated page needs for formatted text and files, once, after "use client"."""
+    needed: dict[str, list[str]] = {}
+    for marker, name, module in _COMPONENT_IMPORTS:
+        already = re.search(r"import \{[^}]*\b" + name + r"\b[^}]*\} from", content)
+        if marker in content and not already:
+            needed.setdefault(module, []).append(name)
+    if not needed:
+        return content
+    block = "".join(f'import {{ {", ".join(names)} }} from "{module}";\n' for module, names in needed.items())
+    first, sep, rest = content.partition("\n")
+    if first.strip().strip(";") in ('"use client"', "'use client'"):
+        return first + sep + block + rest
+    return block + content
+
+
 def _layout_file(ir: ApplicationIR, admin_shell: bool = False) -> str:
     auth = needs_auth(ir)
     auth_import = 'import { AuthProvider } from "@/components/auth-provider";\n' if auth else ""
@@ -73844,8 +73896,8 @@ def _component_props(source: str, *, max_type_chars: int = 28) -> list[str]:
 # overview/screen prompts stay ≈12k chars (≈3k tokens), leaving room for a 4k-token page under 8k.
 _COMPACT_DATA_LAYER_CHARS = 5_000
 # PC-050: 400 chars went to the INSTALLED LIBRARIES block (charts, motion, forms), which is worth more
-# to a page than the tail of the component list.
-_COMPACT_COMPONENTS_CHARS = 3_600
+# to a page than the tail of the component list; PC-104: 100 more to how rich text is shown.
+_COMPACT_COMPONENTS_CHARS = 3_500
 _COMPACT_DESIGN_TOKENS_CHARS = 1_000
 
 
@@ -73983,6 +74035,8 @@ class NextjsWebAdapter:
                 **DESIGN_SYSTEM_PRO,
                 # PC-102: the upload window (used by @/components/file-uploader, not by model pages).
                 **UPLOAD_LIBRARIES,
+                # PC-104: the rich-text editor and the second sanitizing pass on display.
+                **RICH_TEXT_LIBRARIES,
             },
             "devDependencies": {
                 "@types/node": "22.10.2", "@types/react": "18.3.12",
@@ -74009,6 +74063,9 @@ class NextjsWebAdapter:
             *_component_files(ir),
             # PC-102: the upload window (the admin console's forms import it in every app).
             GeneratedFile("components/file-uploader.tsx", FILE_UPLOADER),
+            # PC-104: formatted text - the editor, and the safe view of it.
+            GeneratedFile("components/rich-text-editor.tsx", RICH_TEXT_EDITOR),
+            GeneratedFile("components/rich-text.tsx", RICH_TEXT_VIEW),
             *_ui_component_files(),
             GeneratedFile("lib/utils.ts", _LIB_UTILS),
             # R-544: the brand reaches the app through this one file. Tailwind maps `primary` to
@@ -74016,7 +74073,7 @@ class NextjsWebAdapter:
             # substituting here is what makes a red brand actually produce a red app. A default
             # brand returns the stylesheet byte for byte unchanged.
             GeneratedFile("styles/tokens.css", apply_brand(_DESIGN_TOKENS_CSS, ir.brand)),
-            GeneratedFile("app/globals.css", _GLOBALS_CSS),
+            GeneratedFile("app/globals.css", render_globals_css()),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
             GeneratedFile("app/global-error.tsx", _GLOBAL_ERROR_PAGE),
             GeneratedFile("app/not-found.tsx", _NOT_FOUND_PAGE),
@@ -74117,6 +74174,9 @@ class NextjsWebAdapter:
                 continue
             files.append(GeneratedFile(f"app/{route_dir}/route.ts", _route_file(apis)))
 
+        # PC-102/PC-104: a page that shows formatted text or files imports exactly what it uses.
+        files = [GeneratedFile(f.path, _with_component_imports(f.content))
+                 if f.path.startswith("app/") and f.path.endswith(".tsx") else f for f in files]
         if ir.brand.style:
             # PC-099: a project with a design direction gets its components in its own colours.
             from .design_direction import theme_component

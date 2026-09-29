@@ -22,7 +22,7 @@ from ..application_ir import Entity, Field, FieldType
 
 _NUMBER = re.compile(r"^-?\d+(?:\.\d+)?$")
 _NUMERIC_TYPES = frozenset({FieldType.INT, FieldType.FLOAT})
-_STRING_TYPES = frozenset({FieldType.STRING, FieldType.TEXT})
+_STRING_TYPES = frozenset({FieldType.STRING, FieldType.TEXT, FieldType.RICH_TEXT})
 
 
 def filter_fields(entity: Entity) -> list[tuple[Field, str]]:

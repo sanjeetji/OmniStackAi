@@ -21,6 +21,9 @@ def _field_to_schema(field: Field) -> dict[str, Any]:
     schema: dict[str, Any] = {}
     if field.type in (FieldType.STRING, FieldType.TEXT):
         schema["type"] = "string"
+    elif field.type is FieldType.RICH_TEXT:
+        # PC-104: HTML, sanitized by the API on every write.
+        schema.update({"type": "string", "contentMediaType": "text/html"})
     elif field.type is FieldType.INT:
         schema["type"] = "integer"
     elif field.type is FieldType.FLOAT:

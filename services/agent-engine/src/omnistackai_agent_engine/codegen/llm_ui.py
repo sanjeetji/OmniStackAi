@@ -93,6 +93,7 @@ INSTALLED LIBRARIES (optional; chart ONLY real data from the hooks):
 - 'recharts' (ResponsiveContainer width="100%" height={260} + AreaChart/BarChart/LineChart/PieChart, XAxis, YAxis, Tooltip)
 - 'framer-motion' { motion, AnimatePresence }; 'date-fns' { format, formatDistanceToNow }; 'sonner' { toast } (Toaster is mounted)
 - '@tanstack/react-table'; 'react-hook-form' { useForm } + 'zod' { z } + '@hookform/resolvers/zod' { zodResolver }; 'cmdk'; 'vaul'
+- HTML fields: <RichText html={x}/> or plainText(x) ('@/components/rich-text')
 RICH CUSTOM COMPONENTS (from '@/components/<file>' — for advanced/data-heavy UI):
 - StatCard compound: <StatCard><StatCardHeader title="Label" icon="📊" /><StatCardValue value="123" subtext="info" /></StatCard>
 - DataGrid: { columns: Array<{ key: string, header: string }>, data: any[], sortable?: boolean }  (columns use `header`, never `label`)

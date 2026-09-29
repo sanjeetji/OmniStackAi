@@ -122,6 +122,8 @@ class FieldType(StrEnum):
     UUID = "uuid"
     JSON = "json"
     ATTACHMENT = "attachment"
+    #: PC-104: long formatted content (an article's body, a description), stored as sanitized HTML.
+    RICH_TEXT = "rich_text"
 
 
 class RelationKind(StrEnum):

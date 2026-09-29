@@ -92,7 +92,7 @@ def _field_specs(entity: Entity, ir: ApplicationIR, listable: dict[str, dict[Op,
     """The FIELDS array entries (as TS object literals) and the imports relations need."""
     specs: list[str] = []
     imports: list[str] = []
-    long_kinds = {FieldType.TEXT, FieldType.JSON}
+    long_kinds = {FieldType.TEXT, FieldType.JSON, FieldType.RICH_TEXT}
     shown = 0
     for field in entity.fields:
         rules = parse_field_rules(field)
@@ -815,8 +815,10 @@ import {
 import { ApiError, extractFieldErrors } from "@/lib/api";
 import { RecordMap, type MapPoint } from "./record-map";
 import { FileList, FileUploader } from "@/components/file-uploader";
+import { RichTextEditor } from "@/components/rich-text-editor";
+import { plainText } from "@/components/rich-text";
 
-export type FieldKind = "string" | "text" | "int" | "float" | "bool" | "datetime" | "uuid" | "json" | "attachment";
+export type FieldKind = "string" | "text" | "rich_text" | "int" | "float" | "bool" | "datetime" | "uuid" | "json" | "attachment";
 export type Row = { id: string } & Record<string, unknown>;
 
 export interface FieldSpec {
@@ -869,6 +871,11 @@ function fieldSchema(field: FieldSpec): z.ZodTypeAny {
       if (!value || !value.trim()) return !field.required;
       try { JSON.parse(value); return true; } catch { return false; }
     }, "Enter valid JSON");
+  }
+  if (field.kind === "rich_text") {
+    // PC-104: HTML from the editor; "required" means some words, not just empty formatting.
+    const html = z.string();
+    return field.required ? html.refine((v) => plainText(v).length > 0, `${field.label} is required`) : z.preprocess(blank, html.optional());
   }
   if (field.kind === "attachment") {
     // PC-102: a stored file's key (or a list of keys), set by the upload window.
@@ -942,6 +949,8 @@ function Cell({ field, value, options }: { field: FieldSpec; value: unknown; opt
       return <span className="tabular-nums">{Number(value).toLocaleString()}</span>;
     case "attachment":
       return <FileList value={value} compact />;
+    case "rich_text":
+      return <span>{plainText(value, 80) || "—"}</span>;
     case "json":
       return <code className="text-xs">{JSON.stringify(value).slice(0, 60)}</code>;
     default: {
@@ -986,6 +995,11 @@ function FieldInput({ field, form, options }: { field: FieldSpec; form: ReturnTy
       return <input type="number" step={field.kind === "int" ? 1 : "any"} {...register} className={base} />;
     case "datetime":
       return <input type="datetime-local" {...register} className={base} />;
+    case "rich_text":
+      return (
+        <RichTextEditor id={field.name} value={String(form.watch(field.name) ?? "")}
+          onChange={(html) => form.setValue(field.name, html, { shouldDirty: true, shouldValidate: form.formState.isSubmitted })} />
+      );
     case "attachment":
       return field.upload ? (
         <FileUploader {...field.upload} value={form.watch(field.name)}

@@ -27,6 +27,7 @@ from .seed_sql import render_postgres_seed
 _PY_TYPE: dict[FieldType, str] = {
     FieldType.STRING: "str",
     FieldType.TEXT: "str",
+    FieldType.RICH_TEXT: "str",
     FieldType.UUID: "str",
     FieldType.INT: "int",
     FieldType.FLOAT: "float",
@@ -92,7 +93,14 @@ def _models_file(ir: ApplicationIR) -> str:
     typing_imports = [name for name, use in (("Literal", needs_literal), ("Optional", needs_optional)) if use]
     if typing_imports:
         lines.append(f"from typing import {', '.join(typing_imports)}")
-    lines.append("from pydantic import BaseModel, Field" if needs_field else "from pydantic import BaseModel")
+    # PC-104: rich text is cleaned by a validator on every create and update.
+    from .rich_text import has_rich_text, python_validator, rich_fields
+
+    pydantic_names = ["BaseModel", *(["Field"] if needs_field else []), *(["field_validator"] if has_rich_text(ir) else [])]
+    lines.append(f"from pydantic import {', '.join(pydantic_names)}")
+    if has_rich_text(ir):
+        lines.append("")
+        lines.append("from app.rich_text import clean_html")
     lines.append("")
     if not ir.entities:
         lines.append("# No entities in the IR.")
@@ -134,6 +142,8 @@ def _models_file(ir: ApplicationIR) -> str:
         if entity.relations:
             rels = ", ".join(f"{r.name}->{r.target_entity}" for r in entity.relations)
             lines.append(f"    # relations: {rels}")
+        if rich_fields(entity):
+            lines.extend(python_validator(rich_fields(entity)))
     return "\n".join(lines) + "\n"
 
 
@@ -338,6 +348,10 @@ class PythonBackendAdapter:
         requirements = "fastapi==0.115.0\nuvicorn[standard]==0.30.6\npydantic==2.9.2\n"
         if uploads:
             requirements += "".join(f"{line}\n" for line in PYTHON_UPLOAD_REQUIREMENTS)
+        from .rich_text import PYTHON_REQUIREMENT, has_rich_text, python_module
+
+        if has_rich_text(ir):
+            requirements += f"{PYTHON_REQUIREMENT}\n"
         if has_db:
             requirements += f"{PSYCOPG_REQUIREMENT}\n"
         if has_auth:
@@ -365,6 +379,8 @@ class PythonBackendAdapter:
         ]
         if uploads:
             files.extend(GeneratedFile(path, content) for path, content in python_upload_files(ir, has_auth))
+        if has_rich_text(ir):
+            files.append(GeneratedFile("app/rich_text.py", python_module()))
         if has_auth:
             files.append(GeneratedFile("app/auth.py", python_auth_file(ir)))
             files.append(GeneratedFile("app/routers/auth.py", python_auth_router_file(ir)))

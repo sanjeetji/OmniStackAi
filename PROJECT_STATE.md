@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-104 (2026-09-29): rich text.** A rich_text field type edited with tiptap, cleaned on every write in all three backends (nh3, bluemonday, sanitize-html) and again on display (DOMPurify); plain words in tables and on mobile. Proven against each API and through the admin console.
 > **PC-102 (2026-09-29): file uploads.** Per-field rules from the requirement; Uppy with device, camera, link and cloud drives (Companion); server-side content checks; R2 dev/prod, AWS S3 or local disk from the platform .env - production needs keys only. Proven in the preview and a published production stack. Rich text PC-104, Go/Node uploads PC-105.
 > **PC-103 (2026-09-29): relations in Go and Node.** Both backends now write and read foreign keys and let the database set declared timestamps; the Node API type-checks again with accounts. Proven against Postgres with both generated servers.
 > **PC-100 (2026-09-29): a modern admin panel.** App shell with sidebar and Ctrl/Cmd+K command menu; a dashboard read only from the API; a page per entity (server-sorted/searched table, bulk delete, CSV, validated create/edit drawer, related records by name, maps); invented figures refused in model pages. Fixed in the Python API: /orders 500, foreign keys unwritable, required created_at.
