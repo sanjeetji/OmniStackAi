@@ -1,50 +1,33 @@
-task_id: PC-100
-status: completed
-phase: Platform Completion — 1 Vibe Mode live (modern-UI block, 5 of 6)
-tracker_row: PC-100
+task_id: PC-103
+status: in_progress
+phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
+tracker_row: PC-103
 started_at: "2026-09-29"
-completed_at: "2026-09-29"
+completed_at: null
 branch: platform-completion
 objective: >-
-  A modern admin panel. The generated admin console gets an app shell (collapsible sidebar with
-  every entity and page, a top bar, a command menu on Ctrl/Cmd+K, a phone-width drawer), a dashboard
-  built only from real data (record counts, a chart of them, the latest records per entity - no
-  invented figures), and a management page per entity: a sortable, searchable, paginated table with
-  row selection, bulk delete, CSV export, and create/edit in a drawer whose form is validated from
-  the plan's field rules, with related records picked from a list. It uses only the operations the
-  plan's API really has, in the project's design direction, and entities with coordinates get a
-  map. Model-written pages anywhere are refused when they show invented figures.
+  The Go and Node backends accept what the Python backend now does: a foreign key (a product's
+  category_id) is written on create and update, and a created_at/updated_at the plan declares is
+  set by the database rather than required from the client. Proven by running each generated
+  backend against Postgres and creating, reading and updating a record with a relation.
 founder_gate: none
-companions:
-  - "Invented-figure check for every model-written page (web and admin): '+12.5%', 'from last month', uptime/latency claims"
-  - "The web dashboard template (admin-panel archetype) loses its invented cockpit and fake progress bars"
-  - "maplibre-gl pinned and allowed; free OpenFreeMap tiles, overridable with NEXT_PUBLIC_MAP_STYLE_URL"
+companions: []
 allowed_paths:
   - services/agent-engine/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
-  - apps/console-web/data/
 forbidden_changes:
-  - no admin capability removed (users and roles, every planned screen, auth)
-  - no number shown that does not come from the API
+  - no change to what the Python backend generates
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live: a built project's admin console - dashboard, a management page with create, edit, bulk delete and CSV - works in the preview against the real API
+  - Live: a generated Go API and a generated Node API each create and update a record with a relation against Postgres
   - scripts/verify.sh passes
 model_tool_trace:
-  routing: deterministic_only  # task verify; the live proof used the free page chain (Gemini)
+  routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "PC-102: rich text (tiptap, with a rich-text field type and safe rendering) and uploads (uppy) - uploads need a founder decision on storage"
-  - "PC-103: the Go and Node backends have the same foreign-key gap the Python one had"
-  - "PC-101: the proxy route ignores the API_URL the preview sets (the 503); dev-mode HMR websockets fail through the console proxy; 'Sign in' shows in apps whose API has no sign-in routes"
-found_and_fixed:
-  - "generated Python API: GET /orders answered 500 in every app with an Order entity (the handler's `order` sort parameter shadowed the imported `order` repository); repositories are imported as <table>_repo"
-  - "generated Python API: no foreign key could be written (the Pydantic model lacked it and inserts skipped it); a product's category came back empty"
-  - "generated Python API: a plan that declares created_at made it required on every create, though the database sets it"
-  - "the admin table's screen-reader-only 'Actions' label escaped its scroll box and widened the page by 146 px at phone width"
-  - "PC-050's 'static 404s' came from screenshots taken on an app's raw port, where a relative API path cannot resolve; through the console the pages are clean"
+deferred: []
+found_and_fixed: []
