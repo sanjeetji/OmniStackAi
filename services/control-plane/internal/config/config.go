@@ -147,7 +147,9 @@ func Load(lookup Lookup) (Config, error) {
 	config.GitHubAppID = valueOrDefault(lookup, "GITHUB_APP_ID", "")
 	config.GitHubAppClientID = valueOrDefault(lookup, "GITHUB_APP_CLIENT_ID", "")
 	config.GitHubAppClientSecret = valueOrDefault(lookup, "GITHUB_APP_CLIENT_SECRET", "")
-	config.GitHubAppPrivateKey = valueOrDefault(lookup, "GITHUB_APP_PRIVATE_KEY", "")
+	// A PEM key cannot span lines in .env (Docker Compose stops reading the file), so it is
+	// written on one line with \n escapes; turn them back into the newlines PEM needs.
+	config.GitHubAppPrivateKey = strings.ReplaceAll(valueOrDefault(lookup, "GITHUB_APP_PRIVATE_KEY", ""), `\n`, "\n")
 
 	// PC-013: the forms .env.example documents - 64 hex characters, base64 of 32 bytes, or 32
 	// plain characters. Before, only base64 was read and a hex key was silently ignored, so no

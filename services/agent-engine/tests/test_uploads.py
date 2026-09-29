@@ -228,3 +228,67 @@ class ThePlannerIsTold(TestCase):
     def test_the_prompt_asks_for_rules_from_the_requirement(self) -> None:
         source = Path(__file__).parents[1].joinpath("src/omnistackai_agent_engine/intake/nl_to_ir.py").read_text()
         self.assertIn("the types the requirement needs, never one fixed type", source)
+
+
+class EachProjectHasItsOwnFolder(TestCase):
+    """Found checking the founder's keys: every project shared the bucket with no folder of its own,
+    so a deleted project's files could not be found. Now projects/<project>/... and a clean-up."""
+
+    R2 = ThePlatformChoosesTheStore.R2_DEV
+
+    def test_previews_and_published_apps_write_under_the_projects_folder(self) -> None:
+        env = upload_environment(project_key="app_4ec4", api_url="http://x", has_companion=False, source=self.R2)
+        self.assertEqual(dict(env.api)["STORAGE_PREFIX"], "projects/app_4ec4")
+        prod = {**ThePlatformChoosesTheStore.R2_PROD}
+        app, _ = production_settings(prod, project_key="app_4ec4")
+        self.assertEqual(app["STORAGE_PREFIX"], "projects/app_4ec4")
+
+    def test_the_generated_storage_puts_every_key_under_the_prefix(self) -> None:
+        source = dict(python_upload_files(_hiring(), has_auth=False))["app/storage.py"]
+        self.assertIn('self.prefix = _env("STORAGE_PREFIX").strip("/")', source)
+        self.assertEqual(source.count("self._key(key)"), 3, "put, exists and the signed link")
+
+    def test_deleting_a_project_removes_its_files_and_only_its_files(self) -> None:
+        from omnistackai_agent_engine.localrun.upload_env import purge_project_files
+
+        with tempfile.TemporaryDirectory() as root:
+            mine, other = Path(root, "app_1", "a.pdf"), Path(root, "app_2", "b.pdf")
+            for path in (mine, other):
+                path.parent.mkdir(parents=True)
+                path.write_bytes(b"%PDF-")
+            report = purge_project_files("app_1", {"OMNISTACKAI_LOCAL_STORAGE_DIR": root})
+            self.assertEqual(report, {"local": "deleted"})
+            self.assertFalse(mine.exists())
+            self.assertTrue(other.exists())
+            self.assertEqual(purge_project_files("app_2", {"OMNISTACKAI_LOCAL_STORAGE_DIR": root}, only=("r2-prod",)), {},
+                             "unpublishing touches production storage only")
+            self.assertTrue(other.exists())
+
+    def test_the_bucket_client_never_deletes_without_a_project_folder_and_hides_its_key(self) -> None:
+        from omnistackai_agent_engine.localrun import s3_lite
+
+        target = s3_lite.S3Target("https://acct.r2.cloudflarestorage.com", "auto", "b", "id", "very-secret")
+        self.assertNotIn("very-secret", repr(target))
+        for prefix in ("", "/", "projects"):
+            with self.assertRaises(s3_lite.S3Error):
+                s3_lite.delete_prefix(target, prefix)
+
+    def test_the_bucket_client_lists_every_page_and_deletes_each_key(self) -> None:
+        from omnistackai_agent_engine.localrun import s3_lite
+
+        pages = [
+            b'<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Contents><Key>projects/p/a</Key></Contents>'
+            b"<NextContinuationToken>t</NextContinuationToken></ListBucketResult>",
+            b'<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Contents><Key>projects/p/b</Key></Contents></ListBucketResult>',
+        ]
+        calls = []
+
+        def fake(target, method, key="", query=None, **_):
+            calls.append((method, key, dict(query or {})))
+            return pages.pop(0) if method == "GET" else b""
+
+        target = s3_lite.S3Target("https://e", "auto", "b", "id", "s")
+        with mock.patch.object(s3_lite, "_request", fake):
+            self.assertEqual(s3_lite.delete_prefix(target, "projects/p/"), 2)
+        self.assertEqual(calls[1][2]["continuation-token"], "t")
+        self.assertEqual([c[1] for c in calls if c[0] == "DELETE"], ["projects/p/a", "projects/p/b"])

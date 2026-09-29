@@ -208,6 +208,10 @@ class StudioWorkspaceStore:
         wpath = self.workspace_path(workspace_id)
         if not wpath.exists():
             return False
+        # PC-102: a deleted project's uploads go too - the local folder and its folder in each bucket.
+        from ..localrun.upload_env import project_key_for, purge_project_files
+
+        purge_project_files(project_key_for(wpath / "repo"))
         shutil.rmtree(wpath)
         return True
 

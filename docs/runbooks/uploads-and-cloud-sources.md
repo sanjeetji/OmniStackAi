@@ -9,6 +9,15 @@ their keys are set (through a self-hosted Uppy Companion).
 Put every value in `.env` only; it is git-ignored. Never paste keys into chat, issues or commits.
 The key names are already in `.env` and `.env.example`.
 
+## Whose keys these are
+
+They are the **platform's** keys (yours, as the operator). The platform gives them to the apps it
+previews and publishes; no key is written into a generated app's code. Every project gets its own
+folder in the bucket (`projects/<project>/...`), and deleting a project deletes its folder.
+Someone who downloads their app and runs it elsewhere sets their own storage in its `.env`
+(`S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`), and a project's own keys
+take precedence over the platform's when it is published.
+
 ## Which storage is used
 
 | `OMNISTACKAI_STORAGE_TARGET` | Tried in order |
@@ -31,21 +40,8 @@ fill in the production keys and set `OMNISTACKAI_STORAGE_TARGET=prod`.
    → `OMNISTACKAI_R2_DEV_ACCOUNT_ID`.
 4. **Create bucket**: name `omnistackai-dev`, location *Automatic*, storage class *Standard*
    → `OMNISTACKAI_R2_DEV_BUCKET=omnistackai-dev`.
-5. Open the bucket → **Settings** → **CORS policy** → **Add CORS policy**, and paste:
-
-   ```json
-   [
-     {
-       "AllowedOrigins": ["http://localhost:4321", "http://127.0.0.1:4321"],
-       "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
-       "AllowedHeaders": ["*"],
-       "ExposeHeaders": ["ETag"],
-       "MaxAgeSeconds": 3600
-     }
-   ]
-   ```
-
-   Browsers upload straight to the bucket, so the bucket must accept requests from the console.
+5. No CORS policy is needed: files reach the bucket through the app's API, and people open them
+   through short-lived signed links (a plain redirect), so the browser never calls the bucket.
 6. Back on the R2 overview: **Manage R2 API Tokens** (or **API** → **Manage API tokens**) →
    **Create API token**:
    - Permissions: **Object Read & Write**
@@ -54,10 +50,9 @@ fill in the production keys and set `OMNISTACKAI_STORAGE_TARGET=prod`.
    - **Create**, then copy the two values at once (the secret is shown only once):
      - **Access Key ID** → `OMNISTACKAI_R2_DEV_ACCESS_KEY_ID`
      - **Secret Access Key** → `OMNISTACKAI_R2_DEV_SECRET_ACCESS_KEY`
-7. Optional, for files meant to be public (such as product photos): bucket → **Settings** →
-   **Public access** → **R2.dev subdomain** → **Allow**, then copy the `https://pub-….r2.dev` URL
-   → `OMNISTACKAI_R2_DEV_PUBLIC_URL`. Leave it empty to keep every file private; files are then
-   served through short-lived signed links, which is the safer default.
+7. Keep **Public access** off and `OMNISTACKAI_R2_DEV_PUBLIC_URL` empty. The apps never use a public
+   address: every file is served through a signed link that expires, so a resume or an ID proof
+   cannot be read by someone who only knows its address.
 8. Run `bash scripts/omnistack.sh restart`.
 
 ## 2. Cloudflare R2 (production)
@@ -68,9 +63,7 @@ Same steps, with a separate bucket and token, so development can never touch pro
 - the same Account ID → `OMNISTACKAI_R2_PROD_ACCOUNT_ID`
 - a token scoped to `omnistackai-prod` only → `OMNISTACKAI_R2_PROD_ACCESS_KEY_ID` and
   `OMNISTACKAI_R2_PROD_SECRET_ACCESS_KEY`
-- CORS `AllowedOrigins`: your production domains (for example `https://app.example.com`)
-- public files: connect a **custom domain** under **Public access** (R2.dev URLs are rate-limited
-  and meant for development) → `OMNISTACKAI_R2_PROD_PUBLIC_URL`
+- public access off, `OMNISTACKAI_R2_PROD_PUBLIC_URL` empty (files are served through signed links)
 - set `OMNISTACKAI_STORAGE_TARGET=prod`
 
 Beyond the free tier, R2 costs about $0.015 per GB a month, with no download fees.
@@ -82,7 +75,7 @@ Used when `OMNISTACKAI_STORAGE_TARGET=prod` and the R2 prod keys are empty.
 1. AWS console → **S3** → **Create bucket**: a unique name (for example `omnistackai-prod-files`),
    your region (for example `ap-south-1`), keep **Block all public access** on
    → `OMNISTACKAI_S3_BUCKET` and `OMNISTACKAI_S3_REGION`.
-2. Bucket → **Permissions** → **CORS**: the same JSON as above, with your production origins.
+2. No CORS rules are needed (see step 5 above).
 3. **IAM** → **Users** → **Create user** (for example `omnistackai-uploads`, no console access) →
    **Attach policies directly** → **Create policy** → JSON:
 
@@ -100,8 +93,6 @@ Used when `OMNISTACKAI_STORAGE_TARGET=prod` and the R2 prod keys are empty.
 4. The user → **Security credentials** → **Create access key** → *Application running outside
    AWS* → copy **Access key** → `OMNISTACKAI_S3_ACCESS_KEY_ID` and **Secret access key**
    → `OMNISTACKAI_S3_SECRET_ACCESS_KEY`.
-5. Optional public files: a CloudFront distribution in front of the bucket
-   → `OMNISTACKAI_S3_PUBLIC_URL`.
 
 ## 4. Local disk (fallback, no account)
 

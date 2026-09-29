@@ -129,6 +129,8 @@ class S3Store:
 
         endpoint = _env("S3_ENDPOINT") or None
         self.bucket = _env("S3_BUCKET")
+        # The app's folder in a shared bucket (set by the platform; empty for a bucket of its own).
+        self.prefix = _env("STORAGE_PREFIX").strip("/")
         self.client = boto3.client(
             "s3",
             endpoint_url=endpoint,
@@ -138,12 +140,15 @@ class S3Store:
             config=Config(signature_version="s3v4", retries={"max_attempts": 3, "mode": "standard"}),
         )
 
+    def _key(self, key: str) -> str:
+        return f"{self.prefix}/{key}" if self.prefix else key
+
     def put(self, key: str, data: BinaryIO, content_type: str) -> None:
-        self.client.upload_fileobj(data, self.bucket, key, ExtraArgs={"ContentType": content_type})
+        self.client.upload_fileobj(data, self.bucket, self._key(key), ExtraArgs={"ContentType": content_type})
 
     def exists(self, key: str) -> bool:
         try:
-            self.client.head_object(Bucket=self.bucket, Key=key)
+            self.client.head_object(Bucket=self.bucket, Key=self._key(key))
             return True
         except Exception:  # noqa: BLE001 - missing and forbidden both mean "cannot serve it"
             return False
@@ -154,7 +159,7 @@ class S3Store:
             "get_object",
             Params={
                 "Bucket": self.bucket,
-                "Key": key,
+                "Key": self._key(key),
                 "ResponseContentType": content_type,
                 "ResponseContentDisposition": f\'{disposition}; filename="{filename}"\',
             },

@@ -99,7 +99,9 @@ def upload_environment(
     api: dict[str, str] = {"LOCAL_STORAGE_DIR": str(Path(local_root).expanduser() / project_key)}
     secrets: list[str] = []
     if settings:
-        api.update({"STORAGE_DRIVER": "s3", **{k: v for k, v in settings.items() if v}})
+        # One folder per project in the shared bucket, so a project's files can be found and deleted.
+        api.update({"STORAGE_DRIVER": "s3", "STORAGE_PREFIX": project_prefix(project_key),
+                    **{k: v for k, v in settings.items() if v}})
         secrets.append(settings["S3_SECRET_ACCESS_KEY"])
     else:
         api["STORAGE_DRIVER"] = "local"
@@ -141,7 +143,45 @@ def upload_environment(
     )
 
 
-def production_settings(source: Mapping[str, str] | None = None) -> tuple[dict[str, str], dict[str, str]]:
+def project_prefix(project_key: str) -> str:
+    return f"projects/{project_key}"
+
+
+def project_key_for(repo_root: Path | str) -> str:
+    """The key a project's files live under - the same for its previews and its published app."""
+    from .plan import _database_name
+
+    return _database_name(Path(repo_root))
+
+
+def purge_project_files(project_key: str, source: Mapping[str, str] | None = None,
+                        only: tuple[str, ...] = ("local", "r2-dev", "r2-prod", "s3")) -> dict[str, object]:
+    """Delete a project's uploads everywhere the platform may have put them: the local disk and the
+    project's folder in each configured store (R2 dev, R2 prod, AWS S3). Returns what was removed;
+    a store that cannot be reached is reported, never raised, so deleting a project still completes."""
+    import shutil
+
+    from .s3_lite import S3Error, delete_prefix, target_from_settings
+
+    source = dict(os.environ if source is None else source)
+    report: dict[str, object] = {}
+    local_root = _get(source, "OMNISTACKAI_LOCAL_STORAGE_DIR") or str(Path.home() / ".omnistackai" / "uploads")
+    folder = Path(local_root).expanduser() / project_key
+    if "local" in only and folder.is_dir():
+        shutil.rmtree(folder, ignore_errors=True)
+        report["local"] = "deleted"
+    stores = {"r2-dev": _r2(source, "DEV"), "r2-prod": _r2(source, "PROD"), "s3": _s3(source)}
+    for name, settings in stores.items():
+        if not settings or name not in only:
+            continue
+        try:
+            report[name] = delete_prefix(target_from_settings(settings), project_prefix(project_key) + "/")
+        except S3Error as error:
+            report[name] = f"not cleaned: {error}"
+    return report
+
+
+def production_settings(source: Mapping[str, str] | None = None, project_key: str = "") -> tuple[dict[str, str], dict[str, str]]:
     """(the app's private settings, the compose settings) for a published app.
 
     Publishing is production, so the order is always R2 prod, then AWS S3, then the local disk
@@ -152,6 +192,8 @@ def production_settings(source: Mapping[str, str] | None = None) -> tuple[dict[s
     store, settings = resolve_store(source)
     app: dict[str, str] = {"STORAGE_DRIVER": "s3", **{k: v for k, v in settings.items() if v}} if settings \
         else {"STORAGE_DRIVER": "local"}
+    if settings and project_key:
+        app["STORAGE_PREFIX"] = project_prefix(project_key)
     sources = ["camera"]
     secret = _get(source, "OMNISTACKAI_COMPANION_SECRET")
     if secret:

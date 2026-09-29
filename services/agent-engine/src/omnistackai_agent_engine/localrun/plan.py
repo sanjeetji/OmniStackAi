@@ -374,7 +374,7 @@ def build_run_plan(
     # which file sources the upload window offers. Every secret is masked in the plan's output.
     from .upload_env import upload_environment
 
-    uploads = upload_environment(project_key=database, api_url=api_url,
+    uploads = upload_environment(project_key=_database_name(root), api_url=api_url,
                                  has_companion=(root / "services" / "companion" / "package.json").is_file())
 
     steps: list[RunStep] = []

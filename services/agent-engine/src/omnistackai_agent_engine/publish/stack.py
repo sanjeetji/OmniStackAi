@@ -261,7 +261,9 @@ class StackPublisher:
             # cloud-drive keys, from the platform's .env; the project's own keys win. Private file.
             from ..localrun.upload_env import production_settings
 
-            storage_env, upload_compose = production_settings()
+            from ..localrun.upload_env import project_key_for
+
+            storage_env, upload_compose = production_settings(project_key=project_key_for(repo))
             app_env = {**storage_env, **app_env}
             app_env_file = self._dir(app_id) / "app.env"
             _write_private(app_env_file, _env_lines(app_env))
@@ -490,6 +492,10 @@ class StackPublisher:
             # PC-012: nothing of a deleted app stays behind - not its release history, and not the
             # secrets its compose.env and secrets.env hold.
             shutil.rmtree(self._dir(app_id), ignore_errors=True)
+            # PC-102: nor its uploads in production storage (the stack's volume went with `down -v`).
+            from ..localrun.upload_env import project_key_for, purge_project_files
+
+            purge_project_files(project_key_for(repo_dir), only=("r2-prod", "s3"))
             return self.status(app_id) | {"message": "Unpublished. Its data is deleted."}
         state.update(status="unpublished", url=None, surfaces=None,
                      message="Unpublished." + ("" if delete_data else " The database is kept."))
