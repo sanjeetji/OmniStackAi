@@ -269,7 +269,10 @@ QUEUE = [
     ("PC-105", "File uploads in the Go and Node backends", "1 Vibe Mode live", "Both", "Not Started",
      "P1", "PC-102", "Split from PC-102, which builds uploads for the default Python backend: the "
      "same /uploads and /files endpoints, the same per-field rules and content checks, and the same "
-     "storage drivers (R2/S3/local) in Go and in Node (Express and Hono)."),
+     "storage drivers (R2/S3/local) in Go and in Node (Express and Hono). Done 2026-09-29: both "
+     "generate the Python contract (same checks, messages, settings, signed links); the generated Go, "
+     "Express and Hono APIs each passed the 19 upload checks on disk and on S3, a Companion link "
+     "import and the sign-in requirement."),
     ("PC-103", "Go and Node backends: relations writable and audit timestamps optional, as the "
      "Python backend now is", "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-100",
      "Found in PC-100 for the Python API (the default backend): no foreign key could be written "

@@ -407,13 +407,14 @@ def _handlers_file_wired(
     return "\n".join(lines) + "\n"
 
 
-def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = (), has_auth: bool = False) -> str:
+def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = (), has_auth: bool = False,
+               uploads: bool = False) -> str:
     lines = ["package main", "", "import ("]
     lines.append('\t"log"')
     lines.append('\t"net/http"')
     lines.append('\t"os"')
     module_imports = []
-    if apis or (has_auth and has_db):
+    if apis or (has_auth and has_db) or uploads:
         module_imports.append(f'\t"{slug}/internal/handlers"')
     if has_db:
         module_imports.append(f'\t"{slug}/internal/store"')
@@ -471,6 +472,10 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
     if has_auth and has_db:
         for handler, (method, path) in _AUTH_ROUTES:
             lines.append(f'\tmux.HandleFunc("{method} {path}", h.{handler})')
+    if uploads:
+        from .uploads_go_node import go_routes
+
+        lines += go_routes(has_auth)
     lines.append('\tport := os.Getenv("PORT")')
     lines.append('\tif port == "" {')
     lines.append('\t\tport = "8080"')
@@ -542,6 +547,13 @@ class GoBackendAdapter:
 
         if has_rich_text(ir):
             go_mod += f"\nrequire {GO_REQUIRE}\n"
+        from .upload_policy import has_uploads
+        from .uploads_go_node import GO_REQUIRES, go_upload_files
+
+        # PC-105: uploads need the database (the records that hold the file keys).
+        uploads = has_db and has_uploads(ir)
+        if uploads:
+            go_mod += "\nrequire (\n" + "".join(f"\t{line}\n" for line in GO_REQUIRES) + ")\n"
 
         stack_note = (
             "Go net/http with a PostgreSQL data-access layer (pgx driver)."
@@ -553,12 +565,12 @@ class GoBackendAdapter:
             env_example += "JWT_SECRET=\n"
             if has_db:
                 env_example += EMAIL_ENV_EXAMPLE
-        # PC-102: the same storage settings as the Python backend (uploads in Go: PC-105).
+        # PC-102/PC-105: the same storage settings as the Python backend.
         env_example += ("# File storage: leave empty for the local disk.\nSTORAGE_DRIVER=auto\nS3_ENDPOINT=\n"
-                        "S3_REGION=\nS3_BUCKET=\nS3_ACCESS_KEY_ID=\nS3_SECRET_ACCESS_KEY=\nLOCAL_STORAGE_DIR=./uploads\n")
+                        "S3_REGION=\nS3_BUCKET=\nS3_ACCESS_KEY_ID=\nS3_SECRET_ACCESS_KEY=\nSTORAGE_PREFIX=\nLOCAL_STORAGE_DIR=./uploads\n")
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
-            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth)),
+            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads)),
             GeneratedFile("internal/models/models.go", _models_file(ir)),
             GeneratedFile(".gitignore", "/bin/\n*.exe\n.env\n"),
             GeneratedFile(".env.example", env_example),
@@ -586,6 +598,8 @@ class GoBackendAdapter:
                 files.append(GeneratedFile("internal/handlers/auth_roles.go", GO_ROLE_MANAGER))
         if has_validation:
             files.append(GeneratedFile("internal/handlers/validate.go", go_validate_file()))
+        if uploads:
+            files += [GeneratedFile(path, content) for path, content in go_upload_files(ir, slug)]
 
         filtered_entities = (
             frozenset(entity.name for entity in ir.entities if filter_fields(entity)) if has_db else frozenset()

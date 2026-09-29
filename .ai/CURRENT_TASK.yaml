@@ -1,9 +1,9 @@
 task_id: PC-105
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
 tracker_row: PC-105
 started_at: "2026-09-29"
-completed_at: null
+completed_at: "2026-09-29"
 branch: platform-completion
 objective: >-
   File uploads in the Go and Node (Express and Hono) backends, the same as the Python backend
@@ -20,6 +20,7 @@ allowed_paths:
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - docs/runbooks/uploads-and-cloud-sources.md
 forbidden_changes:
   - the same refusals as Python; nothing weaker
   - task verify stays offline with 0 model calls
@@ -30,6 +31,14 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+live_proof:
+  - Go, Express and Hono APIs against Postgres - 19/19 upload checks on the local disk and on S3 (moto), objects under projects/<project>/
+  - real XLSX and ODS accepted, an ODT renamed .ods refused; anonymous upload 401 with dev mode off
+  - a web link imported through Companion into each API; a destination not on the list refused (400)
+  - Dropbox reaches its real sign-in page with the founder's redirect address
 blockers: []
 deferred: []
-found_and_fixed: []
+found_and_fixed:
+  - Go and Node apps had upload fields in their forms but no /uploads or /files route behind them
+  - the Node key pattern needed its slashes escaped in a regex literal (tsc caught it)
+  - Go map literals are now emitted aligned, as gofmt writes them

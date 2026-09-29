@@ -4,7 +4,8 @@ Generated apps store uploaded files in **Cloudflare R2** (development and produc
 S3** (production alternative). When no keys are set, they fall back to the **local disk**, so
 nothing breaks without an account and `task verify` stays offline. Users pick files from their
 device, camera or a link out of the box. Google Drive, Dropbox, OneDrive and Box appear once
-their keys are set (through a self-hosted Uppy Companion).
+their keys are set (through a self-hosted Uppy Companion). Every backend the platform generates -
+Python, Go and Node (Express or Hono) - has the same upload checks and reads the same settings.
 
 Put every value in `.env` only; it is git-ignored. Never paste keys into chat, issues or commits.
 The key names are already in `.env` and `.env.example`.
