@@ -160,6 +160,42 @@ class AnEmptyAnswerIsNotAnAnswer(TestCase):
         self.assertEqual(asyncio.run(collect(chain)), "from nvidia")
         self.assertEqual(chain.last_provider_id, "nvidia")
 
+    def test_a_request_too_large_for_one_provider_goes_to_the_next(self) -> None:
+        # PC-106, seen live: Groq's free tier answered 413 (over its tokens-per-minute limit).
+        chain = _chain(_Fake("groq", fail=ProviderHTTPError("413", status_code=413)), _Fake("openrouter", text="ok"))
+        self.assertEqual(asyncio.run(chain.generate(_request())).text, "ok")
+
     def test_the_last_provider_empty_answer_is_still_returned(self) -> None:
         chain = _chain(_Fake("groq", fail=ProviderTimeoutError("slow")), _Fake("ollama", text=""))
         self.assertEqual(asyncio.run(chain.generate(_request())).text, "")
+
+
+class APlanThatStopsPartWayStartsAgainWithTheNextProvider(TestCase):
+    """PC-106, seen live: NVIDIA timed out 120 s into its answer and the build failed, because a
+    stream is never switched once text flows. The planner keeps the whole answer, so it starts over."""
+
+    def test_the_rest_of_the_chain_after_a_provider(self) -> None:
+        chain = _chain(_Fake("groq"), _Fake("openrouter"), _Fake("nvidia"))
+        rest = chain.after("groq", ProviderTimeoutError("slow"))
+        self.assertEqual([e.provider.provider_id for e in rest.entries], ["openrouter", "nvidia"])
+        self.assertIsNone(chain.after("nvidia", ProviderTimeoutError("slow")), "nothing after the last")
+        self.assertIsNone(chain.after("groq", ProviderResponseError("bad")), "not a failure another can fix")
+
+    def test_the_planner_drops_the_partial_answer_and_uses_the_next_provider(self) -> None:
+        from omnistackai_agent_engine.application_ir import example_ir
+        from omnistackai_agent_engine.intake.nl_to_ir import IntakeResult, generate_ir_stream
+        import json
+
+        plan = json.dumps(example_ir("minimal-blog").to_dict())
+        chain = _chain(_Fake("openrouter", text='{"name": "half', fail=ProviderTimeoutError("slow"),
+                             fail_after_first_token=True), _Fake("nvidia", text=plan))
+
+        async def run():
+            return [item async for item in generate_ir_stream("a blog", chain, model_id="m")]
+
+        items = asyncio.run(run())
+        self.assertTrue(any(isinstance(i, str) and "starting the plan again with nvidia" in i for i in items))
+        result = items[-1]
+        self.assertIsInstance(result, IntakeResult)
+        self.assertEqual(result.ir.name, "Minimal Blog")
+        self.assertEqual(chain.last_provider_id, "nvidia", "the record names who wrote the plan")

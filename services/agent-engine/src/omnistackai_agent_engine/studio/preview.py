@@ -169,6 +169,12 @@ class WorkspacePreviewSession:
             res["apps"] = [dict(app) for app in self.apps]
         if self.demo_users is not None:
             res["demo_users"] = [dict(user) for user in self.demo_users]
+        # PC-106: the UI check the runner starts once the preview is ready.
+        from ..localrun.ui_check import read_status
+
+        ui_check = read_status(self.repo_dir, self.started_at)
+        if ui_check is not None:
+            res["ui_check"] = ui_check
         return res
 
 

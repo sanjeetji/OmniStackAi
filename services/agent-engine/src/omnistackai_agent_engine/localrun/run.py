@@ -474,7 +474,11 @@ def start_app(
                 on_phase("start")
 
         await_ready(session, active_plan, health_timeout_seconds, require_ready, emit)
-        warm_pages(active_plan)
+        warmed = warm_pages(active_plan)
+        # PC-106: then every page is checked at phone and desktop width, in the background.
+        from .ui_check import run_ui_check
+
+        run_ui_check(active_plan, after=warmed)
 
         if on_phase is not None:
             on_phase("ready")

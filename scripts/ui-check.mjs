@@ -20,6 +20,8 @@
 //     --app admin=http://127.0.0.1:4321/preview/<id>/admin
 // --login signs in to the console first (previews are served only to their owner). The password
 // can come from UI_CHECK_PASSWORD instead, so it never appears in the process list.
+// Or, on the apps' own ports (how the Studio runs it after every preview, PC-106):
+//   --app web=http://127.0.0.1:<port>/preview/<id>/web --route-api /preview/<id>/api=http://127.0.0.1:<api port>
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -46,6 +48,10 @@ function parseArgs(argv) {
     else if (key === "--out") args.out = value;
     else if (key === "--max-pages") args.maxPages = Number(value);
     else if (key === "--login") args.login = value;
+    else if (key === "--route-api") {
+      const at = value.indexOf("=");
+      args.routeApi = { prefix: value.slice(0, at).replace(/\/$/, ""), target: value.slice(at + 1).replace(/\/$/, "") };
+    }
     else if (key === "--app") {
       const at = value.indexOf("=");
       args.apps.push({ id: value.slice(0, at), url: value.slice(at + 1).replace(/\/$/, "") });
@@ -126,8 +132,22 @@ function inspect() {
 const DEV_COMPILE = /\/_next\/static\/|ChunkLoadError|Loading chunk|\/__nextjs_/;
 
 /** Open one page on one device and list what is wrong with it. The caller closes the context. */
+/** PC-106: `--route-api /preview/<id>/api=http://127.0.0.1:<port>` sends the app's API calls
+ * straight to the API, so a preview can be checked on its own ports without the console. */
+let routeApi = null;
+
 async function view(browser, url, options, storageState, shotPath) {
   const context = await browser.newContext({ ...options, storageState });
+  if (routeApi) {
+    const { prefix, target } = routeApi;
+    await context.route((u) => u.pathname === prefix || u.pathname.startsWith(`${prefix}/`), (route) => {
+      const u = new URL(route.request().url());
+      return route.continue({ url: `${target}${u.pathname.slice(prefix.length) || "/"}${u.search}` });
+    });
+    // Behind the console, /favicon.ico is the console's (next.config rewrite); on an app's own
+    // port it would be the app's root, outside its base path - not something the app serves.
+    await context.route((u) => u.pathname === "/favicon.ico", (route) => route.fulfill({ status: 204 }));
+  }
   const page = await context.newPage();
   const consoleErrors = [];
   const failed = [];
@@ -164,6 +184,7 @@ async function view(browser, url, options, storageState, shotPath) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  routeApi = args.routeApi ?? null;
   const require = createRequire(path.join(path.resolve(args.playwright), "package.json"));
   const { chromium } = require("playwright-core");
   const executablePath = args.chrome ?? CHROME.find((candidate) => existsSync(candidate));

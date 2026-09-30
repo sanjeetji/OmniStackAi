@@ -47,7 +47,9 @@ def _worth_another_provider(error: Exception) -> bool:
     if isinstance(error, ProviderHTTPError):
         status = getattr(error, "status_code", None) or getattr(error, "status", None)
         if isinstance(status, int):
-            return status in (401, 402, 403, 404, 408, 429) or status >= 500
+            # PC-106: 413 too - Groq's free tier answers it for a request over its per-minute token
+            # limit ("rate_limit_exceeded"), which the next provider accepts.
+            return status in (401, 402, 403, 404, 408, 413, 429) or status >= 500
         return True
     return False
 
@@ -127,6 +129,21 @@ class FallbackChainProvider:
                     raise
                 log.warning("%s could not stream (%s); trying %s", entry.provider.provider_id,
                             type(error).__name__, self._entries[index + 1].provider.provider_id)
+
+    def after(self, provider_id: str | None, error: Exception) -> "FallbackChainProvider | None":
+        """The rest of the chain after ``provider_id``, when ``error`` is one another provider can fix.
+
+        PC-106: a stream is never switched once text is flowing - the reader has seen it. A caller
+        that keeps the whole answer (the planner parses it as one JSON document) can instead start
+        the request again with this, discarding what it had.
+        """
+        if not _worth_another_provider(error):
+            return None
+        ids = [e.provider.provider_id for e in self._entries]
+        if provider_id not in ids:
+            return None
+        rest = self._entries[ids.index(provider_id) + 1:]
+        return FallbackChainProvider(rest) if rest else None
 
     def __getattr__(self, name: str) -> Any:
         # Descriptor, profiles and the like come from the primary provider.

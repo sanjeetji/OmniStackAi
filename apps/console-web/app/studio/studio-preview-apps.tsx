@@ -17,7 +17,7 @@ import {
   Square,
   type LucideIcon,
 } from "lucide-react";
-import type { PreviewApp, PreviewDemoUser, PreviewStatus } from "@/lib/control-plane";
+import type { PreviewApp, PreviewDemoUser, PreviewStatus, PreviewUiCheck } from "@/lib/control-plane";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -147,7 +147,39 @@ export function MultiAppPreview({
         )}
       </div>
 
+      {status.ui_check ? <UiCheckStrip check={status.ui_check} /> : null}
       {status.demo_users && status.demo_users.length > 0 ? <DemoLogins users={status.demo_users} /> : null}
+    </div>
+  );
+}
+
+/** PC-106: what the automatic UI check found - every page at phone and desktop width. */
+function UiCheckStrip({ check }: { check: PreviewUiCheck }) {
+  const summary =
+    check.status === "running"
+      ? "Checking every page at phone and desktop width…"
+      : check.status === "passed"
+        ? `All ${check.pages ?? 0} pages look right at phone and desktop width.`
+        : check.status === "failed"
+          ? `${check.failing} of ${check.page_views} page views have a problem.`
+          : check.status === "skipped"
+            ? `UI check skipped: ${check.reason ?? "not available here"}.`
+            : `UI check could not finish${check.reason ? `: ${check.reason}` : "."}`;
+  return (
+    <div className="border-t border-border/60 px-3 py-2 text-xs" role="status" aria-live="polite">
+      <p className={cn("text-muted-foreground", check.status === "failed" && "text-destructive")}>
+        <span className="font-medium text-foreground">UI check</span> · {summary}
+      </p>
+      {check.status === "failed" && check.problems && check.problems.length > 0 ? (
+        <ul className="mt-1 space-y-0.5 text-muted-foreground">
+          {check.problems.map((p) => (
+            <li key={`${p.app}${p.route}${p.device}`} className="truncate" title={p.problem}>
+              {p.app}
+              {p.route} ({p.device}): {p.problem}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

@@ -17,7 +17,16 @@ script exits 1 when any page fails - a failing page is reported, never hidden. A
 Next.js dev server, which can drop a page's chunks while it compiles another page; a page whose only
 errors are those is loaded once more, and if it is then clean the first error is kept as a note.
 
-## Run it
+## After every preview (PC-106)
+
+Once a preview is ready and its pages are warmed, the Studio runs the check by itself on the apps'
+own ports (their API calls routed to the API) and shows the result under the preview. The report
+and screenshots are kept in `~/.omnistackai/workspaces/<project>/logs/ui-check/`. It needs Node,
+Chrome and `playwright-core`, which `scripts/omnistack.sh up` installs once into
+`~/.omnistackai/ui-check` when Chrome is present; without them the Studio says the check was
+skipped and why. `OMNISTACKAI_UI_CHECK=0` turns it off.
+
+## Run it by hand
 
 Playwright is never a dependency of the platform. Install `playwright-core` in a scratch folder
 (it uses the Chrome already on the machine; `--chrome <path>` for another):

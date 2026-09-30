@@ -328,6 +328,18 @@ export interface PreviewStatus {
   kind?: "single" | "multi";
   apps?: PreviewApp[];
   demo_users?: PreviewDemoUser[];
+  /** PC-106: the UI check the Studio runs once the preview is ready (every page, phone and desktop). */
+  ui_check?: PreviewUiCheck;
+}
+
+export interface PreviewUiCheck {
+  status: "running" | "passed" | "failed" | "skipped" | "error";
+  reason?: string;
+  pages?: number;
+  page_views?: number;
+  failing?: number;
+  transient?: number;
+  problems?: { app: string; route: string; device: string; problem: string }[];
 }
 
 /** One app of a multi-app (template) preview. `path` is where the console serves it. */

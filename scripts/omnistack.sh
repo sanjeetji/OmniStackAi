@@ -280,6 +280,37 @@ warm_mobile_modules() {
   rm -rf "$work"
 }
 
+# PC-106: the UI check that runs after every preview drives the Chrome on this machine through
+# playwright-core. Never a dependency of the platform or of a generated app: installed once here,
+# only when Chrome is present, and skipped (the Studio says so) when it is not.
+UI_CHECK_PLAYWRIGHT_VERSION="1.63.0"
+warm_ui_check() {
+  local dir="${OMNISTACKAI_UI_CHECK_PLAYWRIGHT:-$HOME/.omnistackai/ui-check}"
+  local chrome=""
+  for candidate in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" /usr/bin/google-chrome /usr/bin/chromium /usr/bin/chromium-browser; do
+    if [[ -x "$candidate" ]]; then chrome="$candidate"; break; fi
+  done
+  if [[ -z "$chrome" ]]; then
+    warn "no Chrome found - the UI check after each preview will be skipped"
+    return 0
+  fi
+  if [[ -f "$dir/node_modules/playwright-core/package.json" ]] \
+    && grep -q "\"version\": \"$UI_CHECK_PLAYWRIGHT_VERSION\"" "$dir/node_modules/playwright-core/package.json"; then
+    return 0
+  fi
+  if ! command -v npm >/dev/null 2>&1; then
+    warn "npm not found - the UI check after each preview will be skipped"
+    return 0
+  fi
+  step "Preparing the UI check (playwright-core, uses this machine's Chrome)"
+  mkdir -p "$dir"
+  if (cd "$dir" && npm install --no-audit --no-fund --no-save --ignore-scripts "playwright-core@$UI_CHECK_PLAYWRIGHT_VERSION" >/dev/null 2>&1); then
+    ok "UI check ready ($dir)"
+  else
+    warn "could not install playwright-core - the UI check after each preview will be skipped"
+  fi
+}
+
 print_endpoints() {
   local lan; lan="$(lan_address)"
   log ""
@@ -508,6 +539,7 @@ cmd_up() {
   # every project as "not type-checked" -- correct, but not the point of having the check.
   warm_web_modules
   warm_mobile_modules
+  warm_ui_check
   warm_api_env
   warm_preview_image
 

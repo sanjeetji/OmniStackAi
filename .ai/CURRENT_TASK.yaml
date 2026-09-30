@@ -1,9 +1,9 @@
 task_id: PC-106
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
 tracker_row: PC-106
 started_at: "2026-09-30"
-completed_at: null
+completed_at: "2026-09-30"
 branch: platform-completion
 objective: >-
   The three points PC-101 left open. (1) A build whose planning answer stops part-way (a provider
@@ -36,6 +36,13 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+live_proof:
+  - task-tracker preview re-opened through the console checked itself - 23 pages, 46 views, 0 failing - shown in the Studio
+  - real chain from .env with Groq cut off after its first text - plan restarted, written by OpenRouter in 20 s, record names OpenRouter
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - a visitor opening a page in the first minute of a preview, while the warm-up compiles, can still meet a dev-server chunk error
+found_and_fixed:
+  - Groq free tier answers 413 over its per-minute token limit; the chain treated it as final
+  - the build record named the provider that stopped, not the one that wrote the plan
+  - the task tracker's chunk 404 was the check racing the page warm-up

@@ -702,10 +702,30 @@ async def generate_ir_stream(
         timeout_seconds,
     )
     chunks: list[str] = []
-    async for event in provider.stream(request):
-        if event.delta:
-            chunks.append(event.delta)
-            yield event.delta
+    active = provider
+    while True:
+        chunks = []
+        try:
+            async for event in active.stream(request):
+                if event.delta:
+                    chunks.append(event.delta)
+                    yield event.delta
+            break
+        except Exception as error:  # noqa: BLE001 - re-raised unless another provider can answer
+            # PC-106, seen live: a free provider timed out (or was rate-limited) after its answer
+            # had started, and the build failed with providers left untried. The plan is parsed as
+            # one document, so the partial answer is dropped and the request starts again.
+            after = getattr(active, "after", None)
+            failed = getattr(active, "last_provider_id", None)
+            rest = after(failed, error) if callable(after) else None
+            if rest is None:
+                raise
+            yield (f"\n\n[{failed} stopped part-way ({type(error).__name__}); starting the plan again "
+                   f"with {rest.provider_id}]\n\n")
+            active = rest
+    if active is not provider and hasattr(provider, "last_provider_id"):
+        # The build record names the provider that wrote the plan, not the one that stopped.
+        provider.last_provider_id = active.last_provider_id
     text = "".join(chunks)
     ir, repairs = parse_ir_response_with_repairs(text)
     issues = validate_ir(ir)

@@ -271,10 +271,12 @@ QUEUE = [
      "display; plain words in tables and on mobile; the planner and the publication template use it, "
      "and a prompt that asks for formatting upgrades content fields deterministically."),
     ("PC-106", "Planning survives a provider failing mid-answer, and the UI check runs after every "
-     "preview", "1 Vibe Mode live", "Both", "In Progress", "P1", "PC-101",
+     "preview", "1 Vibe Mode live", "Both", "Completed", "P1", "PC-101",
      "Left open by PC-101: builds failed when a free provider timed out or was rate-limited after its "
      "answer had started (the chain never switches mid-stream); the UI check ran only by hand; one "
-     "task-tracker page failed with a Next chunk 404 that was not diagnosed."),
+     "task-tracker page failed with a Next chunk 404 that was not diagnosed. Done 2026-09-30: the planner "
+     "starts again with the rest of the chain (and 413 fails over); the check runs after every preview "
+     "and shows in the Studio; the 404 was the check racing the page warm-up."),
     ("PC-105", "File uploads in the Go and Node backends", "1 Vibe Mode live", "Both", "Not Started",
      "P1", "PC-102", "Split from PC-102, which builds uploads for the default Python backend: the "
      "same /uploads and /files endpoints, the same per-field rules and content checks, and the same "
