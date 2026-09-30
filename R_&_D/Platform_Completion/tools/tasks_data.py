@@ -130,7 +130,9 @@ QUEUE = [
      "WebContainer engine is PC-096."),
     ("PC-096", "In-browser WebContainer preview engine behind the PC-007 engine switch (Node in "
      "the visitor's browser; licence key supplied at PC-070)", "1 Vibe Mode live", "Vibe",
-     "Not Started", "P2", "PC-007",
+     "Pending", "P2", "PC-007",
+     "Blocked on the founder (2026-09-30): needs StackBlitz's commercial licence (decision D-6), a "
+     "paid service - skipped by the queue until decided. "
      "Split out of PC-007 on 2026-09-27: PC-007 delivers the engine switch and the open-source "
      "container engine; WebContainer needs StackBlitz's commercial licence (D-6) and runs Node only, "
      "so Python/Go APIs still need a server-side engine behind it."),
@@ -300,6 +302,15 @@ QUEUE = [
      "write foreign keys and leave declared timestamps to the database; both generated servers "
      "created, read, updated and listed an order with its customer against Postgres. Found: the "
      "Node API failed tsc wherever it had accounts (fixed)."),
+    ("PC-108", "Consumer-grade UI for generated apps: detail, landing, list and empty states that "
+     "read as a finished product, not an operator's tool", "1 Vibe Mode live", "Both", "Not Started",
+     "P1", "PC-101",
+     "Seen in the PC-101 benchmark screenshots: a record's detail page offers an ID box, 'Copy ID', "
+     "'Export JSON' and prev/next buttons to visitors; the landing hero shows an empty image "
+     "placeholder; public lists are admin-style tables with density toggles and CSV export; empty "
+     "states are bare. The templates every build uses (model page design is optional) must look "
+     "finished: cards and readable detail pages for visitors, the operator tools kept in the admin "
+     "console. Proven with the UI check and screenshots on the benchmark prompts."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "
@@ -419,8 +430,11 @@ QUEUE = [
      "from SQL constraints to schema validation and indexes. Lifts the Phase T 'PostgreSQL "
      "only' gate. Covers R-075."),
     ("PC-052", "File uploads and storage in generated apps (S3-compatible, presigned URLs, "
-     "image processing)", "2 Maximum features", "Both", "Not Started", "P1", "",
-     "Local MinIO-style store for dev; any S3 provider on publish. From the architecture plan."),
+     "image processing)", "2 Maximum features", "Both", "Superseded", "P1", "PC-102, PC-105",
+     "Local MinIO-style store for dev; any S3 provider on publish. From the architecture plan. "
+     "Superseded 2026-09-30: PC-102 (Python, per-field rules, content checks, R2/S3/local, cloud "
+     "drives through Companion; the founder chose R2/S3 and no MinIO) and PC-105 (Go and Node) did "
+     "it. Left for later: image processing (resizing, thumbnails)."),
     ("PC-053", "Notifications in generated apps: email, push (Expo and native), in-app, "
      "user preferences", "2 Maximum features", "Both", "Not Started", "P1", "R-568",
      "R-516 gives email. From the architecture plan."),
