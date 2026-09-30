@@ -217,6 +217,11 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
             notes.append(f"lifecycle {label!r}: {entity} has no field {config.get('field')!r}; removed")
             continue
         for transition in config.get("transitions") or ():
+            # PC-101, seen live: a model wrote "to": ["in_progress"]; the whole build failed on it.
+            target = transition.get("to") if isinstance(transition, dict) else None
+            if isinstance(target, list) and len(target) == 1 and isinstance(target[0], str):
+                transition["to"] = target[0]
+                notes.append(f"lifecycle {label!r}: transition target {target!r} read as {target[0]!r}")
             if isinstance(transition, dict) and isinstance(transition.get("roles"), list) and role_ids:
                 unknown = [r for r in transition["roles"] if str(r) not in role_ids]
                 if unknown:

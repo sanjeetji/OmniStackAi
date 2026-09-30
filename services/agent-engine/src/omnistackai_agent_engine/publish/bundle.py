@@ -275,6 +275,8 @@ def compose(layout: Layout) -> str:
             "        NEXT_PUBLIC_UPLOAD_SOURCES: ${UPLOAD_SOURCES:-camera}",
             *(["        NEXT_PUBLIC_COMPANION_URL: /companion",
                f"        NEXT_PUBLIC_REMOTE_UPLOAD_ENDPOINT: http://api:{API_PORT}/uploads"] if layout.has_companion else []),
+            # PC-101: the app's server-side proxy routes reach the API inside the stack.
+            *(["    environment:", f"      API_URL: http://api:{API_PORT}"] if layout.api_kind is not None else []),
             "    restart: unless-stopped",
         ]
     if layout.has_companion:

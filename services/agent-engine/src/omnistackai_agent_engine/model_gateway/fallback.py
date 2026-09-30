@@ -84,6 +84,12 @@ class FallbackChainProvider:
         for index, entry in enumerate(self._entries):
             try:
                 response = await entry.provider.generate(self._request_for(entry, request))
+                # PC-101: a provider that answers with nothing is no better than one that failed
+                # (seen live: a build ended "model returned an empty response" with providers left).
+                if not (getattr(response, "text", "") or "").strip() and index < len(self._entries) - 1:
+                    log.warning("%s answered with nothing; trying %s", entry.provider.provider_id,
+                                self._entries[index + 1].provider.provider_id)
+                    continue
                 self.last_provider_id = entry.provider.provider_id
                 return response
             except Exception as error:  # noqa: BLE001 - classified below
@@ -97,12 +103,24 @@ class FallbackChainProvider:
     async def stream(self, request: GenerateRequest) -> AsyncIterator[Any]:
         for index, entry in enumerate(self._entries):
             started = False
+            held: list[Any] = []  # events before the first text, dropped if this provider says nothing
+            last_entry = index == len(self._entries) - 1
             try:
                 async for event in entry.provider.stream(self._request_for(entry, request)):
+                    if not started and not getattr(event, "delta", "") and not last_entry:
+                        held.append(event)
+                        continue
                     if not started:
                         started = True
                         self.last_provider_id = entry.provider.provider_id
+                        for early in held:
+                            yield early
+                        held = []
                     yield event
+                if not started and not last_entry:
+                    log.warning("%s streamed nothing; trying %s", entry.provider.provider_id,
+                                self._entries[index + 1].provider.provider_id)
+                    continue
                 return
             except Exception as error:  # noqa: BLE001 - classified below
                 if started or not _worth_another_provider(error) or index == len(self._entries) - 1:

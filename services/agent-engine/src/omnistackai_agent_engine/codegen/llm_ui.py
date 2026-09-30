@@ -18,6 +18,7 @@ Guarantees:
 from __future__ import annotations
 
 from ..model_gateway.accounting import discard_attempt
+from .auth_guard import needs_auth
 
 import asyncio
 import logging
@@ -257,6 +258,23 @@ _INVENTED_FIGURES = (
 )
 
 
+# PC-101: an app without accounts has no sign-in page; a button to one is a dead end.
+_SIGN_IN = (
+    re.compile(r"""href=\{?["'`](?:/login|/register|/signup|/sign-in|/sign-up)\b"""),
+    re.compile(r"""(?i)>\s*(?:sign ?in|sign ?up|log ?in)\b"""),
+    re.compile(r"""(?i)["'`](?:sign ?in|sign ?up|log ?in)["'`]"""),
+)
+
+
+def sign_in_offer(content: str) -> str:
+    """The first sign-in link or button in a page, or "" (for apps that have no accounts)."""
+    for pattern in _SIGN_IN:
+        match = pattern.search(content)
+        if match:
+            return match.group(0).strip()
+    return ""
+
+
 def invented_figure(content: str) -> str:
     """The first made-up figure in a page, or "" when it has none (PC-100)."""
     for pattern in _INVENTED_FIGURES:
@@ -266,7 +284,7 @@ def invented_figure(content: str) -> str:
     return ""
 
 
-def clean_and_validate_jsx(raw: str) -> tuple[bool, str, str]:
+def clean_and_validate_jsx(raw: str, *, has_auth: bool = True) -> tuple[bool, str, str]:
     """Strip markdown code blocks and validate import safety and basic syntax.
 
     Returns:
@@ -333,6 +351,17 @@ def clean_and_validate_jsx(raw: str) -> tuple[bool, str, str]:
             f"Invented figure '{invented}'. Show only numbers computed from the hooks' data; leave out "
             "trends, comparisons, uptime and latency the API does not provide, and never hard-code sample data.",
         )
+
+    # 7. PC-101: no sign-in offered in an app that has no accounts.
+    if not has_auth:
+        offer = sign_in_offer(content)
+        if offer:
+            return (
+                False,
+                "",
+                f"Sign-in offered ('{offer}') but this app has no accounts: remove every Sign in / Log in / "
+                "Sign up button and link to /login or /register.",
+            )
 
     return True, content, ""
 
@@ -411,7 +440,9 @@ def _core_rules(ir: ApplicationIR) -> str:
         )
     else:
         auth_rule = (
-            "6. AUTH: this app has NO auth provider — do NOT import '@/components/auth-provider' or call useAuth().\n"
+            "6. AUTH: this app has NO auth provider — do NOT import '@/components/auth-provider' or call useAuth(), "
+            "and it has no accounts: no Sign in / Log in / Sign up buttons, no links to /login or /register "
+            "(ignore any header item above that asks for one).\n"
         )
     return f"""CORE IMPLEMENTATION RULES:
 1. Start with `"use client";`
@@ -699,6 +730,7 @@ async def _synthesize_file(
     outcomes: list[UiSynthesisOutcome] | None,
     log_label: str,
     compact_prompt: str | None = None,
+    has_auth: bool = True,
 ) -> str:
     """Generate one file with a bounded validation→feedback→retry loop. Never raises.
 
@@ -746,7 +778,7 @@ async def _synthesize_file(
         raw = getattr(response, "text", None)
         if raw is None:
             raw = getattr(getattr(response, "message", None), "content", "") or ""
-        valid, cleaned, reason = clean_and_validate_jsx(raw)
+        valid, cleaned, reason = clean_and_validate_jsx(raw, has_auth=has_auth)
         if valid:
             tag = f"{MARKER_PREFIX} ({target.model_id}; attempt {attempt}/{attempts_allowed})\n"
             if outcomes is not None:
@@ -857,6 +889,7 @@ async def synthesize_overview_page(
         outcomes=primary,
         log_label=f"project '{ir.name}' {path}",
         compact_prompt=compact_prompt,
+        has_auth=needs_auth(ir),
     )
     if primary and primary[-1].mode == "deterministic" and failover_provider is not None:
         # One extra pass with the failover provider (preserves the R-462 failover behavior).
@@ -873,6 +906,7 @@ async def synthesize_overview_page(
             outcomes=failover,
             log_label=f"project '{ir.name}' {path} (failover)",
             compact_prompt=compact_prompt,
+            has_auth=needs_auth(ir),
         )
         primary = failover
     if outcomes is not None:
@@ -958,6 +992,7 @@ async def synthesize_screen_page(
         outcomes=outcomes,
         log_label=f"project '{ir.name}' {path}",
         compact_prompt=compact_prompt,
+        has_auth=needs_auth(ir),
     )
 
 

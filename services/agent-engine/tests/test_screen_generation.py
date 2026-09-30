@@ -94,7 +94,7 @@ class ScreenGenerationTests(TestCase):
         self.assertIn("+ New Post", content)
 
         # 8. Role badge
-        self.assertIn("reader", content)
+        self.assertNotIn(">reader<", content)  # PC-101: the role is not shown to visitors
 
     def test_minimal_blog_post_editor_screen(self) -> None:
         ir = example_ir("minimal-blog")
@@ -132,7 +132,7 @@ class ScreenGenerationTests(TestCase):
         self.assertIn("Back to Posts", content)
 
         # 7. Role badge
-        self.assertIn("author", content)
+        self.assertNotIn(">author<", content)  # PC-101: the role is not shown to visitors
 
     def test_rideshare_favourites_collection_screen(self) -> None:
         ir = example_ir("rideshare-favourites")
@@ -204,8 +204,9 @@ class ScreenGenerationTests(TestCase):
         # Must not import missing hook
         self.assertNotIn("useListWidgets", content)
         self.assertIn("WidgetsPage", content)
-        self.assertIn("Role:</strong> member", content)
-        self.assertIn("Components:</strong> list", content)
+        # PC-101: the plan's role and component names are not shown to visitors.
+        self.assertNotIn("Role:</strong>", content)
+        self.assertIn("Not connected to data yet.", content)
 
 
     def test_fallback_screen_when_no_entities_in_ir(self) -> None:
@@ -225,7 +226,7 @@ class ScreenGenerationTests(TestCase):
         content = render_screen_page(ir.screens[0], ir)
         self.assertIn('"use client";', content)
         self.assertIn("AboutPage", content)
-        self.assertIn("Role:</strong> guest", content)
+        self.assertNotIn("Role:</strong>", content)
         self.assertIn('href="/home"', content)
 
     def test_project_generation_emits_screen_pages(self) -> None:

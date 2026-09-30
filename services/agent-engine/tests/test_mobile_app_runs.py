@@ -254,14 +254,13 @@ class ThePreviewRunsAnyNumberOfApps(TestCase):
         self.assertEqual(kinds["admin"], "admin")
         self.assertEqual(kinds["courier-dispatch"], "web")
 
-    def test_a_single_app_project_is_still_single_app(self) -> None:
-        """Nothing about a one-surface project changes."""
+    def test_a_single_app_project_runs_under_its_own_path(self) -> None:
+        """PC-101: one surface gets a base path too, as two always did (see test_admin_console_reachable)."""
         plan = build_run_plan(str(_repo("web")), public_base="/preview/p1")
-        self.assertFalse(plan.multi_app)
-        self.assertEqual(plan.preview_apps(), ())
+        self.assertTrue(plan.multi_app)
         self.assertEqual(dict(
             next(s for s in plan.steps if s.background and s.cwd and "apps/web" in s.cwd).env
-        )["BASE_PATH"], "")
+        )["BASE_PATH"], "/preview/p1/web")
 
     def test_two_surfaces_behave_as_they_did_before(self) -> None:
         plan = build_run_plan(str(_repo("web", "admin")), public_base="/preview/p1",

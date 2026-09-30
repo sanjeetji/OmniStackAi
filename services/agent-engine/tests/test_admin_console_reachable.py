@@ -98,19 +98,22 @@ class AProjectWithAConsoleIsAMultiAppPreview(TestCase):
 
 
 class AProjectWithoutAConsoleIsUnchanged(TestCase):
-    def test_a_single_app_project_is_not_multi(self) -> None:
+    def test_a_single_app_project_also_runs_under_its_own_path(self) -> None:
+        # PC-101: served at the preview's root it had no base path: its scripts and links left the
+        # preview, the proxy had to rewrite its HTML (a hydration mismatch on every page) and the
+        # browser was sent to the API's loopback address. It now runs like every other app.
         plan = build_run_plan(_repo_with("web"), public_base=PUBLIC_BASE)
         self.assertTrue(plan.has_web)
         self.assertFalse(plan.has_admin)
-        self.assertFalse(plan.multi_app)
-        self.assertEqual(plan.preview_apps(), ())
+        self.assertTrue(plan.multi_app)
+        self.assertEqual([a["id"] for a in plan.preview_apps() if a["kind"] != "api"], ["web"])
 
-    def test_a_single_app_project_keeps_serving_at_the_root(self) -> None:
+    def test_a_single_app_project_gets_a_base_path_and_a_relative_api(self) -> None:
         plan = build_run_plan(_repo_with("web"), public_base=PUBLIC_BASE, api_port=8000)
         env = _env_of(plan, "apps/web")
-        self.assertEqual(env["BASE_PATH"], "")
-        # And keeps the absolute api url it has always had.
-        self.assertEqual(env["NEXT_PUBLIC_API_URL"], "http://127.0.0.1:8000")
+        self.assertEqual(env["BASE_PATH"], f"{PUBLIC_BASE.rstrip('/')}/web")
+        self.assertEqual(env["NEXT_PUBLIC_API_URL"], f"{PUBLIC_BASE.rstrip('/')}/api")
+        self.assertEqual(env["API_URL"], "http://127.0.0.1:8000", "server-side routes call the API directly")
 
     def test_without_a_public_base_nothing_becomes_multi(self) -> None:
         """The CLI paths (`task app:run`) pass no public base and must keep working."""
@@ -167,9 +170,9 @@ class ReadinessFollowsTheBasePath(TestCase):
         # The proxy still targets the bare origin, so the two must not be confused.
         self.assertNotEqual(plan.web_health_url, plan.web_url)
 
-    def test_a_single_app_project_probes_the_root(self) -> None:
+    def test_a_single_app_project_probes_its_base_path(self) -> None:
         plan = build_run_plan(_repo_with("web"), public_base=PUBLIC_BASE)
-        self.assertEqual(plan.web_health_url, plan.web_url)
+        self.assertTrue(plan.web_health_url.endswith("/web"))
         self.assertEqual(plan.admin_health_url, "")
 
     def test_the_admin_console_is_waited_for(self) -> None:

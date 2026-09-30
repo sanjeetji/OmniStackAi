@@ -204,7 +204,9 @@ _THEME_SWAPS: tuple[tuple[str, str], ...] = (
     ("#3b82f6", "var(--color-primary)"),
     ("#1d4ed8", "var(--color-primary-hover)"),
     ("#1e40af", "var(--color-primary-focus)"),
-    ("#4f46e5", "var(--color-accent)"),
+    # PC-101: the library uses this indigo as a strong fill under white text; the accent is often a
+    # light colour (cyan, amber) where white text fails contrast, the primary never is.
+    ("#4f46e5", "var(--color-primary)"),
     ("#dbeafe", "var(--color-primary-subtle)"),
     ("#eff6ff", "var(--color-primary-subtle)"),
     ("#bfdbfe", "var(--color-primary-subtle)"),

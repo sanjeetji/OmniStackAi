@@ -1,9 +1,9 @@
 task_id: PC-101
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
 tracker_row: PC-101
 started_at: "2026-09-29"
-completed_at: null
+completed_at: "2026-09-30"
 branch: platform-completion
 objective: >-
   A UI quality check for ordinary Vibe builds, and the defects seen while building PC-050 to PC-102:
@@ -37,6 +37,23 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+live_proof:
+  - benchmark prompts built through the console, every page checked at 390 and 1360 px
+  - "first round: blog 3/6 page views failing, food 4/58, clinic 3/58, task tracker 15/72, store not built"
+  - "last round: blog 0/6, food 0/58, clinic 0/58, store 0/46, task tracker 2/32 (stepper contrast, fixed after)"
+  - "task tracker after the detail-page and slug fixes: 1/46 (a dev-server chunk 404 on admin/users at phone width, not diagnosed)"
+  - Expo app tsc clean under pnpm; the PC-099 error returns when @types/node is hidden
+  - preview reload socket 101 for the owner, 404 without a session
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - planning on free providers fails some builds (rate limits, a 120 s timeout mid-answer; the chain never switches once text flows)
+  - the UI check runs on demand, not automatically after every build
+found_and_fixed:
+  - one-app previews had no base path (scripts and links left the preview, HTML rewrite hydration mismatch, loopback API url)
+  - first-visit dev compiles dropped chunks; pages are warmed after the preview is ready
+  - forms with an upload field crashed server rendering (Uppy built during render)
+  - subtle text, lifecycle stepper and brand foreground below WCAG AA
+  - no app icon (favicon 404); role pills and raw ids in breadcrumbs; plan internals on the fallback page
+  - dev admin lacked the admin role; Go dev roles never matched role checks
+  - an empty provider answer ended builds; a one-item list transition target failed builds
+  - a list-only detail page did not compile; /x/{id} beside /x/{xId}/y stopped next dev (one slug name per level)

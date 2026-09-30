@@ -72,6 +72,8 @@ class LlmFileSpec:
     prompt: str
     fallback: str
     compact_prompt: str | None = None
+    #: PC-101: an app without accounts must not offer sign-in.
+    has_auth: bool = True
 
 
 def llm_file_specs(
@@ -85,6 +87,7 @@ def llm_file_specs(
     the staff dashboard, which is what every web app used to fall back to here.
     """
     from .archetype import Archetype, detect_archetype
+    from .auth_guard import needs_auth
     from .llm_ui import _deterministic_page_for
 
     archetype = (Archetype.ADMIN_PANEL if flavour == "admin" else detect_archetype(ir, user_prompt)).value
@@ -100,6 +103,7 @@ def llm_file_specs(
             build_ui_synthesis_prompt(ir, user_prompt, archetype=archetype, **grounding),
             _deterministic_page_for(ir, archetype, flavour)(),
             build_ui_synthesis_prompt(ir, user_prompt, archetype=archetype, **compact),
+            needs_auth(ir),
         )
     }
     if synthesize_screens:
@@ -110,6 +114,7 @@ def llm_file_specs(
                 build_screen_synthesis_prompt(screen, ir, user_prompt, **grounding),
                 _screen_page(screen, ir),
                 build_screen_synthesis_prompt(screen, ir, user_prompt, **compact),
+                needs_auth(ir),
             )
     return specs
 
@@ -223,7 +228,7 @@ async def _repair_one(
         raw = getattr(response, "text", None)
         if raw is None:
             raw = getattr(getattr(response, "message", None), "content", "") or ""
-        valid, cleaned, reason = clean_and_validate_jsx(raw)
+        valid, cleaned, reason = clean_and_validate_jsx(raw, has_auth=spec.has_auth)
         if valid:
             tag = f"{MARKER_PREFIX} ({target.model_id}; compile-repair {attempt}/{attempts_allowed})\n"
             if outcomes is not None:

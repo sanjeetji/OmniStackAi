@@ -141,3 +141,25 @@ class ResolutionBuildsTheChainFromSettings(TestCase):
         with mock.patch.dict("os.environ", self.ENV, clear=True):
             provider, _, _, _ = resolve_generation_provider_from_env(load_dotenv=False, provider_id="groq")
         self.assertFalse(isinstance(provider, FallbackChainProvider))
+
+
+class AnEmptyAnswerIsNotAnAnswer(TestCase):
+    """PC-101, seen live: Groq was rate-limited, OpenRouter answered with nothing, and the build
+    ended "model returned an empty response" with two providers still untried."""
+
+    def test_generate_moves_on_from_an_empty_answer(self) -> None:
+        chain = _chain(_Fake("openrouter", text="   "), _Fake("nvidia", text="from nvidia"))
+        self.assertEqual(asyncio.run(chain.generate(_request())).text, "from nvidia")
+        self.assertEqual(chain.last_provider_id, "nvidia")
+
+    def test_stream_moves_on_from_an_empty_stream(self) -> None:
+        async def collect(chain):
+            return "".join([event.delta async for event in chain.stream(_request())])
+
+        chain = _chain(_Fake("openrouter", text=""), _Fake("nvidia", text="from nvidia"))
+        self.assertEqual(asyncio.run(collect(chain)), "from nvidia")
+        self.assertEqual(chain.last_provider_id, "nvidia")
+
+    def test_the_last_provider_empty_answer_is_still_returned(self) -> None:
+        chain = _chain(_Fake("groq", fail=ProviderTimeoutError("slow")), _Fake("ollama", text=""))
+        self.assertEqual(asyncio.run(chain.generate(_request())).text, "")

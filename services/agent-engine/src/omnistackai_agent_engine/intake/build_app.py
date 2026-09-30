@@ -102,6 +102,10 @@ def build_app_from_ir(
         from ..codegen.rich_text import with_rich_text
 
         ir = with_rich_text(with_design_direction(ir, prompt), prompt)
+    # PC-101: every record a form must point at can be listed (and so picked).
+    from ..codegen.reachable_references import with_detail_screens, with_reachable_references
+
+    ir = with_detail_screens(with_reachable_references(ir))
     started = time.perf_counter()
     project = assemble_project(
         ir,

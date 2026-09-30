@@ -130,7 +130,11 @@ export function luminance(colour) {
 }
 
 /** Black or white — whichever is actually readable on this colour. */
-export const readableOn = (colour) => (luminance(colour) > 0.45 ? '#0f172a' : '#ffffff');
+// Whichever of white or near-black text has more contrast (PC-101; the same rule as brand.py).
+export const readableOn = (colour) => {
+  const lum = luminance(colour);
+  return (lum + 0.05) / (luminance('#0f172a') + 0.05) > 1.05 / (lum + 0.05) ? '#0f172a' : '#ffffff';
+};
 
 export function lightPalette(primary) {
   return {

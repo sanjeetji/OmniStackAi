@@ -75,6 +75,22 @@ def _route_dir(path: str) -> str:
     return "/".join(mapped)
 
 
+def _one_slug_per_level(route_dir: str, slugs: dict[str, str]) -> str:
+    """PC-101: one dynamic segment name per level, the first one seen.
+
+    Next.js refuses `/projects/[id]` beside `/projects/[projectId]/tasks` ("different slug names for
+    the same dynamic path") and the preview never starts; `tsc` does not see it. The proxy routes
+    forward the request path as it is and never read their params, so renaming the folder is safe.
+    """
+    parts: list[str] = []
+    for segment in route_dir.split("/"):
+        parent = "/".join(parts)
+        if segment.startswith("[") and segment.endswith("]") and not segment.startswith("[..."):
+            segment = slugs.setdefault(parent, segment)
+        parts.append(segment)
+    return "/".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # R-461: Auth-provider context, login page, register page
 # ---------------------------------------------------------------------------
@@ -1530,19 +1546,39 @@ def summarize_data_layer(ir: ApplicationIR, *, max_chars: int = 12_000) -> str:
     return _truncate("\n".join(parts), max_chars)
 
 
+def _app_icon(ir: ApplicationIR) -> str:
+    """The app's initial on its brand colour (Next serves app/icon.svg under the base path)."""
+    initial = next((c for c in ir.name if c.isalnum()), "A").upper()
+    color = ir.brand.primary_color if re.fullmatch(r"#[0-9a-fA-F]{6}", ir.brand.primary_color or "") else "#1e3a8a"
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+        f'<rect width="64" height="64" rx="14" fill="{color}"/>'
+        '<text x="32" y="43" text-anchor="middle" font-family="system-ui, sans-serif" font-size="32" '
+        f'font-weight="700" fill="#ffffff">{initial}</text></svg>\n'
+    )
+
+
 def _route_file(apis: list[ApiEndpoint]) -> str:
     lines = [
         'import { NextResponse } from "next/server";',
         "",
+        # PC-101: this runs on the server, so it needs the API's own address (API_URL, set by the
+        # preview and the published stack). NEXT_PUBLIC_API_URL is the browser's address - in a
+        # preview a path like /preview/<id>/api that a server cannot fetch, which answered 503.
+        "const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || \"\";",
         "const BACKEND_URL =",
+        '  process.env.API_URL ||',
         '  process.env.BACKEND_INTERNAL_URL ||',
-        '  process.env.NEXT_PUBLIC_API_URL ||',
+        '  (PUBLIC_API.startsWith("http://") || PUBLIC_API.startsWith("https://") ? PUBLIC_API : "") ||',
         '  "http://127.0.0.1:8000";',
+        "// The app may be served under a base path (a preview); the API is not.",
+        'const BASE_PATH = (process.env.BASE_PATH || process.env.NEXT_PUBLIC_BASE_PATH || "").replace(/\\/$/, "");',
         "",
         "async function proxyRequest(request: Request, method: string, targetPath: string) {",
         "  try {",
         "    const url = new URL(request.url);",
-        '    const targetUrl = `${BACKEND_URL.replace(/\\/$/, "")}${url.pathname}${url.search}`;',
+        "    const path = BASE_PATH && url.pathname.startsWith(BASE_PATH) ? url.pathname.slice(BASE_PATH.length) || \"/\" : url.pathname;",
+        '    const targetUrl = `${BACKEND_URL.replace(/\\/$/, "")}${path}${url.search}`;',
         "",
         "    const headers: Record<string, string> = {",
         '      accept: "application/json",',
@@ -1949,7 +1985,7 @@ def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
         '                            type="button"',
         f'                            onClick={{() => {{ {search_setter}(""); {s_var}.setSearch(""); }}}}',
         f'                            aria-label="Clear {child_lower} search"',
-        '                            style={{ position: "absolute", right: 6, background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 2 }}',
+        '                            style={{ position: "absolute", right: 6, background: "transparent", border: "none", color: "var(--color-text-subtle)", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 2 }}',
         "                          >",
         "                            &times;",
         "                          </button>",
@@ -2562,8 +2598,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "        <div>",
         '          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
         '            <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>',
-        '            <span style={{ color: "#94a3b8" }}>/</span>',
-        f'            <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}}}>{screen.role}</span>',
+        # PC-101: the screen's role was shown here as a pill ("customer", "public"); it means nothing to a visitor.
         "          </div>",
         f'          <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{title}</h1>',
         "        </div>",
@@ -2610,7 +2645,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         '                type="button"',
         '                onClick={() => { setSearchInput(""); setSearch(""); searchInputRef.current?.focus(); }}',
         '                aria-label="Clear search"',
-        '                style={{ position: "absolute", right: 8, background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 2 }}',
+        '                style={{ position: "absolute", right: 8, background: "transparent", border: "none", color: "var(--color-text-subtle)", cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 2 }}',
         "              >",
         "                &times;",
         "              </button>",
@@ -3775,8 +3810,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         )
 
     lines.extend([
-        '          <span style={{ color: "#94a3b8" }}>/</span>',
-        f'          <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}}}>{screen.role}</span>',
+        # PC-101: the screen's role was shown here as a pill ("customer", "public"); it means nothing to a visitor.
         "        </div>",
         '        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>',
     ])
@@ -3988,7 +4022,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 amber_threshold = int(rules.max_length * 0.9)
                 lines.extend([
                     '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>',
-                    '            <span style={{ fontSize: 12, color: "#94a3b8" }}>Max ' + str(rules.max_length) + ' characters</span>',
+                    '            <span style={{ fontSize: 12, color: "var(--color-text-subtle)" }}>Max ' + str(rules.max_length) + ' characters</span>',
                     '            <span style={{ fontSize: 12, color: String((formData as any).' + f.name + ' ?? "").length >= ' + str(amber_threshold) + ' ? "#b45309" : "#94a3b8", marginLeft: "auto" }}>',
                     '              {String((formData as any).' + f.name + ' ?? "").length} / ' + str(rules.max_length),
                     '            </span>',
@@ -4019,7 +4053,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 max_label = str(rules.maximum) if rules.maximum is not None else "+\u221e"
                 lines.extend([
                     '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>',
-                    '            <span style={{ fontSize: 12, color: "#94a3b8" }}>Range: ' + min_label + ' to ' + max_label + '</span>',
+                    '            <span style={{ fontSize: 12, color: "var(--color-text-subtle)" }}>Range: ' + min_label + ' to ' + max_label + '</span>',
                     '          </div>',
                 ])
             lines.append('        </div>')
@@ -4107,7 +4141,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 amber_threshold = int(rules.max_length * 0.9)
                 lines.extend([
                     '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>',
-                    '            <span style={{ fontSize: 12, color: "#94a3b8" }}>Max ' + str(rules.max_length) + ' characters</span>',
+                    '            <span style={{ fontSize: 12, color: "var(--color-text-subtle)" }}>Max ' + str(rules.max_length) + ' characters</span>',
                     '            <span style={{ fontSize: 12, color: String((formData as any).' + f.name + ' ?? "").length >= ' + str(amber_threshold) + ' ? "#b45309" : "#94a3b8", marginLeft: "auto" }}>',
                     '              {String((formData as any).' + f.name + ' ?? "").length} / ' + str(rules.max_length),
                     '            </span>',
@@ -4272,7 +4306,8 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             if collection_screen
             else []
         ),
-        f'    {{ label: selectedId ? `{name} #${{selectedId}}` : "{name} Details" }},',
+        # PC-101: the breadcrumb showed "Article #<uuid>" - the id means nothing to a reader.
+        f'    {{ label: selectedId ? "{_title_case(name)}" : "{_title_case(name)} details" }},',
         "  ];",
         "",
         "  useEffect(() => {",
@@ -4311,6 +4346,15 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
 
     if Op.GET in ops:
         lines.append(f"  const {{ data: item, loading, error, refetch }} = use{name}(selectedId);")
+    elif can_list:
+        # PC-101: no GET by id - the record is found in the list (a plan's detail screen for a
+        # list-only entity; the page referenced `item` and never defined it, so it did not compile).
+        lines.extend([
+            "  const item = currentIndex >= 0 && listItems ? listItems[currentIndex] : null;",
+            "  const loading = loadingList;",
+            "  const error = null as Error | null;",
+            "  const refetch = async () => {};",
+        ])
 
     if uses_confirm_detail:
         lines.append("  const { confirmAsync, confirmProps } = useConfirm();  // R-304")
@@ -4483,8 +4527,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         )
 
     lines.extend([
-        '            <span style={{ color: "#94a3b8" }}>/</span>',
-        f'            <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}}}>{screen.role}</span>',
+        # PC-101: the screen's role was shown here as a pill ("customer", "public"); it means nothing to a visitor.
         "          </div>",
         f'          <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{title}</h1>',
         "        </div>",
@@ -4518,7 +4561,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
 
     if can_list:
         lines.extend([
-            '        <span style={{ color: "#94a3b8", fontSize: 13 }}>or</span>',
+            '        <span style={{ color: "var(--color-text-subtle)", fontSize: 13 }}>or</span>',
             "        <select",
             f'          aria-label="Select {name}"',
             '          value={selectedId ?? ""}',
@@ -4575,14 +4618,14 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "              ))}",
             "            </div>",
             "          ) : (",
-            f'            !loadingList && <p style={{{{ margin: 0, color: "#94a3b8", fontSize: 13 }}}}>No {plural} found.</p>',
+            f'            !loadingList && <p style={{{{ margin: 0, color: "var(--color-text-subtle)", fontSize: 13 }}}}>No {plural} found.</p>',
             "          )}",
             "        </div>",
             "      )}",
             "",
         ])
 
-    if Op.GET in ops:
+    if Op.GET in ops or can_list:
         lines.extend([
             "      {loading && (",
             '        <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>',
@@ -4953,8 +4996,6 @@ def _fallback_screen_page(screen: Screen, ir: ApplicationIR, entity: Entity | No
     # data now says so, and the build report names it.
     page_name = f"{_pascal(screen.id)}Page"
     title = _title_case(screen.id)
-    components = ", ".join(screen.components) or "none"
-    actions = ", ".join(screen.actions) or "none"
 
     lines: list[str] = [
         '"use client";',
@@ -4968,20 +5009,10 @@ def _fallback_screen_page(screen: Screen, ir: ApplicationIR, entity: Entity | No
         '        <header style={{ marginBottom: 28 }}>',
         '          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>',
         '            <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#4f46e5", textDecoration: "none", fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 8, background: "rgba(99, 102, 241, 0.08)", border: "1px solid rgba(99, 102, 241, 0.15)" }}>&larr; Overview</Link>',
-        '            <span style={{ color: "#cbd5e1" }}>/</span>',
-        f'            <span style={{{{ fontSize: 12, padding: "3px 10px", background: "#f1f5f9", color: "#475569", borderRadius: 9999, fontWeight: 600, border: "1px solid #e2e8f0" }}}}><strong>Role:</strong> {screen.role}</span>',
-        f'            <span style={{{{ fontSize: 12, padding: "3px 10px", background: "rgba(255, 255, 255, 0.8)", color: "#64748b", borderRadius: 9999, border: "1px solid #e2e8f0" }}}}><strong>Components:</strong> {components}</span>',
-        f'            <span style={{{{ fontSize: 12, padding: "3px 10px", background: "rgba(255, 255, 255, 0.8)", color: "#64748b", borderRadius: 9999, border: "1px solid #e2e8f0" }}}}><strong>Actions:</strong> {actions}</span>',
         '          </div>',
         f'          <h1 style={{{{ margin: "0 0 8px", fontSize: 32, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.03em" }}}}>{title}</h1>',
-        '          <p style={{ margin: 0, color: "#64748b", fontSize: 15 }}>Operational workspace screen</p>',
         '        </header>',
         '        <div style={{ background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(16px)", border: "1px solid #e2e8f0", borderRadius: 20, padding: 32, boxShadow: "0 20px 40px -15px rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(226, 232, 240, 0.6)" }}>',
-        '          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24, padding: 16, background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>',
-        f'            <div><span style={{{{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}}}>Authorization</span><span style={{{{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}}}>{screen.role}</span></div>',
-        f'            <div><span style={{{{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}}}>Components</span><span style={{{{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}}}>{components}</span></div>',
-        f'            <div><span style={{{{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}}}>Available Actions</span><span style={{{{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}}}>{actions}</span></div>',
-        '          </div>',
     ]
 
     # PC-004: these were buttons with no handler — they looked like features and did nothing. The
@@ -5176,7 +5207,7 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
                     '                  <span style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #eff6ff, #dbeafe)", color: "#2563eb", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13 }}>' + initial + '</span>',
                     f'                  <p style={{{{ fontSize: 14, fontWeight: 700, color: "#334155", margin: 0 }}}}>{escaped_entity_name}</p>',
                     '                </div>',
-                    '                <span style={{ fontSize: 14, color: "#94a3b8" }}>&rarr;</span>',
+                    '                <span style={{ fontSize: 14, color: "var(--color-text-subtle)" }}>&rarr;</span>',
                     '              </div>',
                     '              <p style={{ fontSize: 36, fontWeight: 800, letterSpacing: "-0.03em", color: "#0f172a", margin: "0 0 6px" }}>',
                     f"                {{{var}.loading ? \"…\" : {var}.error ? \"—\" : {var}.total}}",
@@ -5234,7 +5265,7 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
                 "            }}>",
                 '              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>',
                 f'                <p style={{{{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: 0 }}}}>{escaped_title}</p>',
-                '                <span style={{ fontSize: 14, color: "#94a3b8" }}>&rarr;</span>',
+                '                <span style={{ fontSize: 14, color: "var(--color-text-subtle)" }}>&rarr;</span>',
                 "              </div>",
                 '              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
                 f'                <span style={{{{ fontSize: 12, color: "#64748b", fontWeight: 500 }}}}>{escaped_intent_label}</span>',
@@ -5552,7 +5583,7 @@ def _navbar_component(ir: ApplicationIR, extra_links: tuple[tuple[str, str], ...
         for s in collection_screens:
             s_title = _title_case(s.id)
             s_role = s.role.strip()
-            role_span = f' <span style={{{{ fontSize: 10, padding: "1px 5px", background: "#334155", color: "#94a3b8", borderRadius: 4 }}}}>{s_role}</span>' if s_role and s_role.lower() not in ("public", "anon", "anonymous", "") else ""
+            role_span = f' <span style={{{{ fontSize: 10, padding: "1px 5px", background: "#334155", color: "var(--color-text-subtle)", borderRadius: 4 }}}}>{s_role}</span>' if s_role and s_role.lower() not in ("public", "anon", "anonymous", "") else ""
             col_items.append(
                 f'          <Link href="/{s.id}" onClick={{() => setSidebarOpen(false)}} style={{{{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, fontSize: 13, fontWeight: pathname === "/{s.id}" ? 700 : 500, color: pathname === "/{s.id}" ? "#ffffff" : "#cbd5e1", background: pathname === "/{s.id}" ? "#1e293b" : "transparent", textDecoration: "none", marginBottom: 2 }}}}>\n'
                 f'            <span style={{{{ display: "flex", alignItems: "center", gap: 8 }}}}><span>📁</span> {s_title}</span>{role_span}\n'
@@ -5570,7 +5601,7 @@ def _navbar_component(ir: ApplicationIR, extra_links: tuple[tuple[str, str], ...
         for s in form_screens_list:
             s_title = _title_case(s.id)
             s_role = s.role.strip()
-            role_span = f' <span style={{{{ fontSize: 10, padding: "1px 5px", background: "#334155", color: "#94a3b8", borderRadius: 4 }}}}>{s_role}</span>' if s_role and s_role.lower() not in ("public", "anon", "anonymous", "") else ""
+            role_span = f' <span style={{{{ fontSize: 10, padding: "1px 5px", background: "#334155", color: "var(--color-text-subtle)", borderRadius: 4 }}}}>{s_role}</span>' if s_role and s_role.lower() not in ("public", "anon", "anonymous", "") else ""
             form_items.append(
                 f'          <Link href="/{s.id}" onClick={{() => setSidebarOpen(false)}} style={{{{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, fontSize: 13, fontWeight: pathname === "/{s.id}" ? 700 : 500, color: pathname === "/{s.id}" ? "#ffffff" : "#cbd5e1", background: pathname === "/{s.id}" ? "#1e293b" : "transparent", textDecoration: "none", marginBottom: 2 }}}}>\n'
                 f'            <span style={{{{ display: "flex", alignItems: "center", gap: 8 }}}}><span>⚡</span> {s_title}</span>{role_span}\n'
@@ -5588,7 +5619,7 @@ def _navbar_component(ir: ApplicationIR, extra_links: tuple[tuple[str, str], ...
         for s in other_screens:
             s_title = _title_case(s.id)
             s_role = s.role.strip()
-            role_span = f' <span style={{{{ fontSize: 10, padding: "1px 5px", background: "#334155", color: "#94a3b8", borderRadius: 4 }}}}>{s_role}</span>' if s_role and s_role.lower() not in ("public", "anon", "anonymous", "") else ""
+            role_span = f' <span style={{{{ fontSize: 10, padding: "1px 5px", background: "#334155", color: "var(--color-text-subtle)", borderRadius: 4 }}}}>{s_role}</span>' if s_role and s_role.lower() not in ("public", "anon", "anonymous", "") else ""
             other_items.append(
                 f'          <Link href="/{s.id}" onClick={{() => setSidebarOpen(false)}} style={{{{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, fontSize: 13, fontWeight: pathname === "/{s.id}" ? 700 : 500, color: pathname === "/{s.id}" ? "#ffffff" : "#cbd5e1", background: pathname === "/{s.id}" ? "#1e293b" : "transparent", textDecoration: "none", marginBottom: 2 }}}}>\n'
                 f'            <span style={{{{ display: "flex", alignItems: "center", gap: 8 }}}}><span>📌</span> {s_title}</span>{role_span}\n'
@@ -5916,7 +5947,7 @@ def _navbar_component(ir: ApplicationIR, extra_links: tuple[tuple[str, str], ...
         '            </span>\n'
         '            <div>\n'
         f'              <span style={{{{ display: "block", fontWeight: 700, fontSize: 14, letterSpacing: "-0.01em" }}}}>{escaped_name}</span>\n'
-        '              <span style={{ display: "block", fontSize: 11, color: "#94a3b8" }}>Enterprise Workspace</span>\n'
+        '              <span style={{ display: "block", fontSize: 11, color: "var(--color-text-subtle)" }}>Enterprise Workspace</span>\n'
         '            </div>\n'
         '          </Link>\n'
         '          <button\n'
@@ -5926,7 +5957,7 @@ def _navbar_component(ir: ApplicationIR, extra_links: tuple[tuple[str, str], ...
         '            style={{\n'
         '              background: "transparent",\n'
         '              border: "none",\n'
-        '              color: "#94a3b8",\n'
+        '              color: "var(--color-text-subtle)",\n'
         '              fontSize: 16,\n'
         '              cursor: "pointer",\n'
         '              padding: "4px 8px",\n'
@@ -5940,12 +5971,12 @@ def _navbar_component(ir: ApplicationIR, extra_links: tuple[tuple[str, str], ...
         f'{sidebar_groups_str}\n'
         '        </div>\n\n'
         '        <div style={{ padding: "14px 16px", borderTop: "1px solid #1e293b", background: "#0b132b" }}>\n'
-        '          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, color: "#94a3b8" }}>\n'
+        '          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, color: "var(--color-text-subtle)" }}>\n'
         '            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>\n'
         '              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />\n'
         '              System Live\n'
         '            </span>\n'
-        '            <kbd style={{ fontSize: 10, padding: "2px 5px", background: "#1e293b", borderRadius: 4, border: "1px solid #334155", color: "#94a3b8" }}>⌘B</kbd>\n'
+        '            <kbd style={{ fontSize: 10, padding: "2px 5px", background: "#1e293b", borderRadius: 4, border: "1px solid #334155", color: "var(--color-text-subtle)" }}>⌘B</kbd>\n'
         '          </div>\n'
         '        </div>\n'
         '      </aside>\n'
@@ -6068,7 +6099,7 @@ _TOAST_COMPONENT = (
     '        style={{\n'
     '          border: "none",\n'
     '          background: "transparent",\n'
-    '          color: "#94a3b8",\n'
+    '          color: "var(--color-text-subtle)",\n'
     '          cursor: "pointer",\n'
     '          padding: 2,\n'
     '          display: "inline-flex",\n'
@@ -6563,7 +6594,7 @@ _BREADCRUMBS_COMPONENT = (
     '                  aria-hidden="true"\n'
     "                  style={{\n"
     '                    margin: "0 8px",\n'
-    '                    color: "#94a3b8",\n'
+    '                    color: "var(--color-text-subtle)",\n'
     '                    userSelect: "none",\n'
     "                  }}\n"
     "                >\n"
@@ -6957,7 +6988,7 @@ _PAGINATION_COMPONENT = (
     "              return (\n"
     "                <span\n"
     '                  key={`ellipsis-${idx}`}\n'
-    '                  style={{ padding: "0 4px", color: "#94a3b8", fontSize: 13 }}\n'
+    '                  style={{ padding: "0 4px", color: "var(--color-text-subtle)", fontSize: 13 }}\n'
     '                  aria-hidden="true"\n'
     "                >\n"
     "                  &hellip;\n"
@@ -9687,7 +9718,7 @@ _DROPDOWN_MENU_COMPONENT = (
     '        <span\n'
     '          style={{\n'
     '            fontSize: 11,\n'
-    '            color: "#94a3b8",\n'
+    '            color: "var(--color-text-subtle)",\n'
     '            fontFamily: "monospace",\n'
     '            letterSpacing: 0.5,\n'
     '          }}\n'
@@ -11005,7 +11036,7 @@ _FORM_CONTROLS_COMPONENT = (
     '              border: "none",\n'
     '              padding: 2,\n'
     '              cursor: "pointer",\n'
-    '              color: "#94a3b8",\n'
+    '              color: "var(--color-text-subtle)",\n'
     '            }}\n'
     '          >\n'
     '            <svg\n'
@@ -12041,7 +12072,7 @@ _DATE_PICKER_COMPONENT = (
     '                          ? "var(--color-text-disabled, #cbd5e1)"\n'
     '                          : item.isCurrentMonth\n'
     '                          ? "var(--color-text, #0f172a)"\n'
-    '                          : "var(--color-text-tertiary, #94a3b8)",\n'
+    '                          : "var(--color-text-tertiary, #64748b)",\n'
     '                        fontWeight: selected || today ? 600 : 400,\n'
     '                        fontSize: 13,\n'
     '                        cursor: item.isDisabled ? "not-allowed" : "pointer",\n'
@@ -12296,7 +12327,7 @@ _DATE_PICKER_COMPONENT = (
     '          borderRadius: "var(--radius-md, 6px)",\n'
     '          color: formattedValue\n'
     '            ? "var(--color-text, #0f172a)"\n'
-    '            : "var(--color-text-secondary, #94a3b8)",\n'
+    '            : "var(--color-text-secondary, #64748b)",\n'
     '          fontSize: 14,\n'
     '          cursor: disabled ? "not-allowed" : readOnly ? "default" : "pointer",\n'
     '          outline: "none",\n'
@@ -12352,7 +12383,7 @@ _DATE_PICKER_COMPONENT = (
     '                justifyContent: "center",\n'
     '                padding: 2,\n'
     '                cursor: "pointer",\n'
-    '                color: "var(--color-text-secondary, #94a3b8)",\n'
+    '                color: "var(--color-text-secondary, #64748b)",\n'
     '                borderRadius: "50%",\n'
     '              }}\n'
     '            >\n'
@@ -12695,7 +12726,7 @@ _DATA_GRID_COMPONENT = (
     '                          display: "inline-flex",\n'
     '                          flexDirection: "column",\n'
     '                          fontSize: 10,\n'
-    '                          color: isSorted ? "var(--color-primary, #2563eb)" : "var(--color-text-tertiary, #94a3b8)",\n'
+    '                          color: isSorted ? "var(--color-primary, #2563eb)" : "var(--color-text-tertiary, #64748b)",\n'
     '                        }}\n'
     '                      >\n'
     '                        {sortDirection === "asc" ? (\n'
@@ -13168,7 +13199,7 @@ _COMMAND_PALETTE_COMPONENT = (
     '                border: "none",\n'
     '                padding: 2,\n'
     '                cursor: "pointer",\n'
-    '                color: "var(--color-text-secondary, #94a3b8)",\n'
+    '                color: "var(--color-text-secondary, #64748b)",\n'
     '              }}\n'
     '            >\n'
     '              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">\n'
@@ -13229,7 +13260,7 @@ _COMMAND_PALETTE_COMPONENT = (
     '                    fontWeight: 700,\n'
     '                    textTransform: "uppercase",\n'
     '                    letterSpacing: "0.05em",\n'
-    '                    color: "var(--color-text-tertiary, #94a3b8)",\n'
+    '                    color: "var(--color-text-tertiary, #64748b)",\n'
     '                  }}\n'
     '                >\n'
     '                  {groupName}\n'
@@ -13339,7 +13370,7 @@ _COMMAND_PALETTE_COMPONENT = (
     '            padding: "8px 16px",\n'
     '            borderTop: "1px solid var(--color-border, #e2e8f0)",\n'
     '            fontSize: 12,\n'
-    '            color: "var(--color-text-tertiary, #94a3b8)",\n'
+    '            color: "var(--color-text-tertiary, #64748b)",\n'
     '            backgroundColor: "var(--color-bg-subtle, #f8fafc)",\n'
     '          }}\n'
     '        >\n'
@@ -16177,7 +16208,7 @@ _STAT_CARD_COMPONENT = (
     '        <div\n'
     '          style={{\n'
     '            fontSize: "var(--font-size-xs, 12px)",\n'
-    '            color: "var(--color-text-subtle, #94a3b8)",\n'
+    '            color: "var(--color-text-subtle, #64748b)",\n'
     '            marginTop: "2px",\n'
     '          }}\n'
     '        >\n'
@@ -16251,7 +16282,7 @@ _STAT_CARD_COMPONENT = (
     '        <span>{value}</span>\n'
     '      </span>\n'
     '      {comparison && (\n'
-    '        <span style={{ fontSize: "var(--font-size-xs, 12px)", color: "var(--color-text-subtle, #94a3b8)" }}>\n'
+    '        <span style={{ fontSize: "var(--font-size-xs, 12px)", color: "var(--color-text-subtle, #64748b)" }}>\n'
     '          {comparison}\n'
     '        </span>\n'
     '      )}\n'
@@ -16373,7 +16404,7 @@ _STAT_CARD_COMPONENT = (
     '        paddingTop: "10px",\n'
     '        borderTop: "1px solid var(--color-border-subtle, #e2e8f0)",\n'
     '        fontSize: "var(--font-size-xs, 12px)",\n'
-    '        color: "var(--color-text-subtle, #94a3b8)",\n'
+    '        color: "var(--color-text-subtle, #64748b)",\n'
     '        display: "flex",\n'
     '        alignItems: "center",\n'
     '        justifyContent: "space-between",\n'
@@ -17035,7 +17066,7 @@ _TREE_VIEW_COMPONENT = (
     '                background: "transparent",\n'
     '                cursor: "pointer",\n'
     '                fontSize: 14,\n'
-    '                color: "#94a3b8",\n'
+    '                color: "var(--color-text-subtle)",\n'
     '                padding: 0,\n'
     '                lineHeight: 1,\n'
     '              }}\n'
@@ -17064,7 +17095,7 @@ _TREE_VIEW_COMPONENT = (
     '            style={{\n'
     '              padding: "8px 12px",\n'
     '              fontSize: 13,\n'
-    '              color: "#94a3b8",\n'
+    '              color: "var(--color-text-subtle)",\n'
     '              fontStyle: "italic",\n'
     '            }}\n'
     '          >\n'
@@ -17843,11 +17874,11 @@ _TAG_INPUT_COMPONENT = (
     '    >\n'
     '      <div style={getContainerStyle()}>\n'
     '        {prefixIcon ? (\n'
-    '          <span style={{ display: "flex", alignItems: "center", color: "#94a3b8" }}>\n'
+    '          <span style={{ display: "flex", alignItems: "center", color: "var(--color-text-subtle)" }}>\n'
     '            {prefixIcon}\n'
     '          </span>\n'
     '        ) : (\n'
-    '          <span style={{ display: "flex", alignItems: "center", color: "#94a3b8" }}>\n'
+    '          <span style={{ display: "flex", alignItems: "center", color: "var(--color-text-subtle)" }}>\n'
     '            <TagIcon />\n'
     '          </span>\n'
     '        )}\n'
@@ -17960,7 +17991,7 @@ _TAG_INPUT_COMPONENT = (
     '              padding: 2,\n'
     '              display: "flex",\n'
     '              alignItems: "center",\n'
-    '              color: "#94a3b8",\n'
+    '              color: "var(--color-text-subtle)",\n'
     '              marginLeft: "auto",\n'
     '            }}\n'
     '          >\n'
@@ -18489,7 +18520,7 @@ _CODE_BLOCK_COMPONENT = (
     '    case "boolean":\n'
     '      return { color: "#f472b6", fontWeight: 600 }; // Rose pink\n'
     '    case "operator":\n'
-    '      return { color: "#94a3b8" }; // Cool grey\n'
+    '      return { color: "var(--color-text-subtle)" }; // Cool grey\n'
     '    case "punctuation":\n'
     '      return { color: "#64748b" }; // Muted punctuation\n'
     '    case "variable":\n'
@@ -18742,7 +18773,7 @@ _CODE_BLOCK_COMPONENT = (
     '              padding: "2px 7px",\n'
     '              borderRadius: "4px",\n'
     '              backgroundColor: "rgba(255, 255, 255, 0.07)",\n'
-    '              color: "#94a3b8",\n'
+    '              color: "var(--color-text-subtle)",\n'
     '              letterSpacing: "0.5px",\n'
     '            }}\n'
     '          >\n'
@@ -18888,7 +18919,7 @@ _CODE_BLOCK_COMPONENT = (
     '              borderRadius: "16px",\n'
     '              border: "1px solid rgba(255, 255, 255, 0.12)",\n'
     '              backgroundColor: "rgba(255, 255, 255, 0.05)",\n'
-    '              color: "#94a3b8",\n'
+    '              color: "var(--color-text-subtle)",\n'
     '              fontSize: "11.5px",\n'
     '              fontWeight: 500,\n'
     '              cursor: "pointer",\n'
@@ -19304,7 +19335,7 @@ _RADIAL_GAUGE_COMPONENT = (
     '            fontSize: `calc(${config.fontSize} * 0.45)`,\n'
     '            fontWeight: 500,\n'
     '            marginLeft: "2px",\n'
-    '            color: "#94a3b8",\n'
+    '            color: "var(--color-text-subtle)",\n'
     '          }}\n'
     '        >\n'
     '          {unit}\n'
@@ -19330,7 +19361,7 @@ _RADIAL_GAUGE_COMPONENT = (
     '      style={{\n'
     '        fontSize: config.labelSize,\n'
     '        fontWeight: 600,\n'
-    '        color: "#94a3b8",\n'
+    '        color: "var(--color-text-subtle)",\n'
     '        textTransform: "uppercase",\n'
     '        letterSpacing: "0.8px",\n'
     '        marginTop: "4px",\n'
@@ -28353,7 +28384,7 @@ _COMBOBOX_COMPONENT = (
     '          {multiple ? (\n'
     '            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", flex: 1 }}>\n'
     '              {selectedValues.length === 0 ? (\n'
-    '                <span style={{ color: "#94a3b8", userSelect: "none" }}>{placeholder}</span>\n'
+    '                <span style={{ color: "var(--color-text-subtle)", userSelect: "none" }}>{placeholder}</span>\n'
     '              ) : (\n'
     '                selectedValues.map((val) => {\n'
     '                  const opt = options.find((o) => o.value === val);\n'
@@ -28399,7 +28430,7 @@ _COMBOBOX_COMPONENT = (
     '              {selectedValues[0] ? (\n'
     '                options.find((o) => o.value === selectedValues[0])?.label || selectedValues[0]\n'
     '              ) : (\n'
-    '                <span style={{ color: "#94a3b8", userSelect: "none" }}>{placeholder}</span>\n'
+    '                <span style={{ color: "var(--color-text-subtle)", userSelect: "none" }}>{placeholder}</span>\n'
     '              )}\n'
     '            </div>\n'
     '          )}\n\n'
@@ -28489,7 +28520,7 @@ _COMBOBOX_COMPONENT = (
     '                  style={{\n'
     '                    padding: "12px",\n'
     '                    textAlign: "center",\n'
-    '                    color: "#94a3b8",\n'
+    '                    color: "var(--color-text-subtle)",\n'
     '                    fontSize: sizeStyles.fontSize,\n'
     '                  }}\n'
     '                >\n'
@@ -29748,7 +29779,7 @@ _NOTIFICATION_CENTER_COMPONENT = (
     '            {notifications.length === 0 ? (\n'
     '              <div style={{\n'
     '                padding: "32px 16px", textAlign: "center",\n'
-    '                color: isNeon ? "rgba(248,250,252,0.45)" : "var(--color-text-muted, #94a3b8)",\n'
+    '                color: isNeon ? "rgba(248,250,252,0.45)" : "var(--color-text-muted, #64748b)",\n'
     '                fontSize: sc.fontSize,\n'
     '              }}>\n'
     '                No notifications\n'
@@ -30218,7 +30249,7 @@ _SIDEBAR_COMPONENT = (
     '        fontWeight: 600,\n'
     '        letterSpacing: "0.05em",\n'
     '        textTransform: "uppercase",\n'
-    '        color: "#94a3b8",\n'
+    '        color: "var(--color-text-subtle)",\n'
     '        overflow: "hidden",\n'
     '        textOverflow: "ellipsis",\n'
     '        whiteSpace: "nowrap",\n'
@@ -31219,7 +31250,7 @@ _TOUR_COMPONENT = (
     '                padding: "2px 6px",\n'
     '                borderRadius: "9999px",\n'
     '                backgroundColor: "rgba(255, 255, 255, 0.08)",\n'
-    '                color: "#94a3b8",\n'
+    '                color: "var(--color-text-subtle)",\n'
     '                fontWeight: 500,\n'
     '                flexShrink: 0,\n'
     '              }}\n'
@@ -31236,7 +31267,7 @@ _TOUR_COMPONENT = (
     '              style={{\n'
     '                background: "transparent",\n'
     '                border: "none",\n'
-    '                color: "#94a3b8",\n'
+    '                color: "var(--color-text-subtle)",\n'
     '                cursor: "pointer",\n'
     '                padding: "4px",\n'
     '                display: "inline-flex",\n'
@@ -46839,7 +46870,7 @@ _FLOW_CANVAS_COMPONENT = (
     '      </div>\n'
     '\n'
     '      {node.description && (\n'
-    '        <div style={{ fontSize, color: "#94a3b8", lineHeight: 1.4, marginTop: 4 }}>\n'
+    '        <div style={{ fontSize, color: "var(--color-text-subtle)", lineHeight: 1.4, marginTop: 4 }}>\n'
     '          {node.description}\n'
     '        </div>\n'
     '      )}\n'
@@ -47766,7 +47797,7 @@ _TERMINAL_COMPONENT = (
     '          style={{\n'
     '            background: "transparent",\n'
     '            border: "none",\n'
-    '            color: "#94a3b8",\n'
+    '            color: "var(--color-text-subtle)",\n'
     '            cursor: "pointer",\n'
     '            padding: "4px 8px",\n'
     '            fontSize: 14,\n'
@@ -48003,7 +48034,7 @@ _TERMINAL_COMPONENT = (
     '          <span style={{ color: isNeon ? "#22d3ee" : isTerminal ? "#4ade80" : "#3b82f6" }}>\n'
     '            {user}@{hostname}\n'
     '          </span>\n'
-    '          <span style={{ color: "#94a3b8" }}>:</span>\n'
+    '          <span style={{ color: "var(--color-text-subtle)" }}>:</span>\n'
     '          <span style={{ color: isNeon ? "#c084fc" : isTerminal ? "#fbbf24" : "#e2e8f0" }}>\n'
     '            {cwd || "~"}\n'
     '          </span>\n'
@@ -48369,7 +48400,7 @@ _TERMINAL_COMPONENT = (
     '                      style={{\n'
     '                        background: "transparent",\n'
     '                        border: "none",\n'
-    '                        color: "#94a3b8",\n'
+    '                        color: "var(--color-text-subtle)",\n'
     '                        cursor: "pointer",\n'
     '                        fontSize: 12\n'
     '                      }}\n'
@@ -48424,7 +48455,7 @@ _TERMINAL_COMPONENT = (
     '                  borderRadius: 4,\n'
     '                  padding: "2px 6px",\n'
     '                  fontSize: 10,\n'
-    '                  color: "#94a3b8",\n'
+    '                  color: "var(--color-text-subtle)",\n'
     '                  cursor: "pointer"\n'
     '                }}\n'
     '              >\n'
@@ -48442,7 +48473,7 @@ _TERMINAL_COMPONENT = (
     '                  borderRadius: 4,\n'
     '                  padding: "2px 6px",\n'
     '                  fontSize: 10,\n'
-    '                  color: "#94a3b8",\n'
+    '                  color: "var(--color-text-subtle)",\n'
     '                  cursor: "pointer"\n'
     '                }}\n'
     '              >\n'
@@ -49812,7 +49843,7 @@ _SPREADSHEET_COMPONENT = (
     '        cellSelected: { background: "#eff6ff", outline: "2px solid #2563eb" },\n'
     '        cellInRange: { background: "#dbeafe" },\n'
     '        toolbar: { background: "#f1f5f9", borderBottom: "1px solid #e2e8f0" },\n'
-    '        rowNum: { background: "#f8fafc", color: "#94a3b8", borderRight: "1px solid #e2e8f0" },\n'
+    '        rowNum: { background: "#f8fafc", color: "var(--color-text-subtle)", borderRight: "1px solid #e2e8f0" },\n'
     '        neonGlow: "none",\n'
     '      };\n'
     '    case "glass":\n'
@@ -49821,7 +49852,7 @@ _SPREADSHEET_COMPONENT = (
     '          border: "1px solid rgba(148,163,184,0.15)", borderRadius: 14,\n'
     '          boxShadow: "0 8px 40px rgba(0,0,0,0.4)" },\n'
     '        header: { background: "rgba(30,41,59,0.6)", borderBottom: "1px solid rgba(148,163,184,0.15)",\n'
-    '          color: "#94a3b8" },\n'
+    '          color: "var(--color-text-subtle)" },\n'
     '        cell: { background: "rgba(15,23,42,0.5)", borderRight: "1px solid rgba(148,163,184,0.08)",\n'
     '          borderBottom: "1px solid rgba(148,163,184,0.08)", color: "#e2e8f0" },\n'
     '        cellSelected: { background: "rgba(59,130,246,0.25)", outline: "2px solid #3b82f6" },\n'
@@ -50746,7 +50777,7 @@ _CHAT_COMPONENT = (
     '        sidebarItemActive: { background: "rgba(59,130,246,0.2)", color: "#93c5fd" },\n'
     '        bubbleUser: { background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", color: "#ffffff", borderRadius: "16px 16px 4px 16px" },\n'
     '        bubbleBot: { background: "rgba(30,41,59,0.7)", color: "#e2e8f0", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "16px 16px 16px 4px" },\n'
-    '        bubbleSystem: { background: "rgba(30,41,59,0.4)", color: "#94a3b8", border: "1px solid rgba(148,163,184,0.08)" },\n'
+    '        bubbleSystem: { background: "rgba(30,41,59,0.4)", color: "var(--color-text-subtle)", border: "1px solid rgba(148,163,184,0.08)" },\n'
     '        inputContainer: { background: "rgba(30,41,59,0.4)", borderTop: "1px solid rgba(148,163,184,0.15)" },\n'
     '        input: { background: "rgba(15,23,42,0.6)", border: "1px solid rgba(148,163,184,0.2)", color: "#f8fafc" },\n'
     '        sendBtn: { background: "#3b82f6", color: "#ffffff", hover: "#2563eb" },\n'
@@ -50783,7 +50814,7 @@ _CHAT_COMPONENT = (
     '        sidebarItemActive: { background: "rgba(59,130,246,0.2)", color: "#60a5fa" },\n'
     '        bubbleUser: { background: "#2563eb", color: "#ffffff", borderRadius: "16px 16px 4px 16px" },\n'
     '        bubbleBot: { background: "#1e293b", color: "#e2e8f0", border: "1px solid #334155", borderRadius: "16px 16px 16px 4px" },\n'
-    '        bubbleSystem: { background: "#1e293b", color: "#94a3b8", border: "1px solid #334155" },\n'
+    '        bubbleSystem: { background: "#1e293b", color: "var(--color-text-subtle)", border: "1px solid #334155" },\n'
     '        inputContainer: { background: "#1e293b", borderTop: "1px solid #334155" },\n'
     '        input: { background: "#0f172a", border: "1px solid #334155", color: "#f8fafc" },\n'
     '        sendBtn: { background: "#2563eb", color: "#ffffff", hover: "#1d4ed8" },\n'
@@ -71865,7 +71896,7 @@ _DESIGN_TOKENS_CSS = (
     "  --color-surface-active: #e2e8f0;\n\n"
     "  --color-text: #0f172a;\n"
     "  --color-text-muted: #64748b;\n"
-    "  --color-text-subtle: #94a3b8;\n"
+    "  --color-text-subtle: #64748b;\n"  # PC-101: #94a3b8 was 2.6:1 on white; text must reach 4.5:1
     "  --color-text-inverse: #ffffff;\n\n"
     "  --color-border: #e2e8f0;\n"
     "  --color-border-subtle: #f1f5f9;\n"
@@ -72000,7 +72031,7 @@ _DESIGN_TOKENS_CSS = (
     "  --color-surface-active: #475569;\n\n"
     "  --color-text: #f8fafc;\n"
     "  --color-text-muted: #94a3b8;\n"
-    "  --color-text-subtle: #64748b;\n"
+    "  --color-text-subtle: #94a3b8;\n"
     "  --color-text-inverse: #0f172a;\n\n"
     "  --color-border: #1e293b;\n"
     "  --color-border-subtle: #1e293b;\n"
@@ -72066,7 +72097,7 @@ _DESIGN_TOKENS_CSS = (
     "    --color-surface-active: #475569;\n\n"
     "    --color-text: #f8fafc;\n"
     "    --color-text-muted: #94a3b8;\n"
-    "    --color-text-subtle: #64748b;\n"
+    "    --color-text-subtle: #94a3b8;\n"
     "    --color-text-inverse: #0f172a;\n\n"
     "    --color-border: #1e293b;\n"
     "    --color-border-subtle: #1e293b;\n"
@@ -72879,7 +72910,7 @@ _ERROR_PAGE = (
     '      <h1 style={{ fontSize: 26, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>Something went wrong</h1>\n'
     '      <p style={{ color: "#64748b", margin: "0 0 24px", lineHeight: 1.6 }}>An unexpected error occurred while rendering this page. You can try again, or return to the overview.</p>\n'
     "      {error?.digest ? (\n"
-    '        <p style={{ color: "#94a3b8", fontSize: 12, margin: "0 0 24px" }}>Reference: {error.digest}</p>\n'
+    '        <p style={{ color: "var(--color-text-subtle)", fontSize: 12, margin: "0 0 24px" }}>Reference: {error.digest}</p>\n'
     "      ) : null}\n"
     '      <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>\n'
     '        <button onClick={() => reset()} style={{ padding: "10px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Try again</button>\n'
@@ -73584,7 +73615,7 @@ def _opengraph_image_file(ir: ApplicationIR) -> str:
         '        <h1 style={{ fontSize: "64px", fontWeight: "bold", margin: "0 0 16px 0", letterSpacing: "-0.02em" }}>\n'
         f"          {escaped_name}\n"
         "        </h1>\n"
-        '        <p style={{ fontSize: "28px", color: "#94a3b8", textAlign: "center", maxWidth: "800px", margin: 0 }}>\n'
+        '        <p style={{ fontSize: "28px", color: "var(--color-text-subtle)", textAlign: "center", maxWidth: "800px", margin: 0 }}>\n'
         f"          {escaped_desc}\n"
         "        </p>\n"
         "      </div>\n"
@@ -74060,6 +74091,9 @@ class NextjsWebAdapter:
                           "NEXT_PUBLIC_UPLOAD_SOURCES=camera\nNEXT_PUBLIC_COMPANION_URL=\nNEXT_PUBLIC_REMOTE_UPLOAD_ENDPOINT=\n"),
             GeneratedFile("README.md", f"# {app_title}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
             GeneratedFile("app/layout.tsx", _layout_file(ir, admin_shell=self._flavour == "admin")),
+            # PC-101: without an icon the browser asked the site root for /favicon.ico - outside the
+            # app when it runs under a base path (a preview), which logged a 404 on every page.
+            GeneratedFile("app/icon.svg", _app_icon(ir)),
             *_component_files(ir),
             # PC-102: the upload window (the admin console's forms import it in every app).
             GeneratedFile("components/file-uploader.tsx", FILE_UPLOADER),
@@ -74147,8 +74181,9 @@ class NextjsWebAdapter:
             files.append(GeneratedFile("app/reset-password/page.tsx", reset_password_page(ir)))
 
         by_dir: dict[str, list[ApiEndpoint]] = {}
+        slugs: dict[str, str] = {}  # parent dir -> the dynamic segment name used under it
         for api in ir.apis:
-            route_dir = _route_dir(api.path) or "api"
+            route_dir = _one_slug_per_level(_route_dir(api.path) or "api", slugs)
             by_dir.setdefault(route_dir, []).append(api)
         # PC-008, found live: a plan that declared its own POST /login got a proxy route at
         # app/login/route.ts beside the sign-in page, and `next build` refuses a page and a route at

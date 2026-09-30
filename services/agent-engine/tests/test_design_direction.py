@@ -122,7 +122,9 @@ class TheComponentsWearTheBrand(TestCase):
         self.assertIn('background: "var(--color-primary)"', out)
         self.assertIn('fill="#2563eb"', out, "an SVG attribute cannot take a variable")
         self.assertIn("bg-[var(--color-primary-hover)]", out)
-        self.assertIn("var(--color-accent)", out)
+        # PC-101: the library's indigo carries white text, so it becomes the primary, never the
+        # accent (often light: white on cyan was 2.4:1).
+        self.assertIn("linear-gradient(var(--color-primary), var(--color-primary))", out)
         canvas = 'ctx = el.getContext("2d"); ctx.fillStyle = "#2563eb";'
         self.assertEqual(theme_component(canvas), canvas, "a canvas cannot read a variable")
 

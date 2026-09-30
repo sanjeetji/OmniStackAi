@@ -143,6 +143,9 @@ class ReactNativeAdapter:
             },
             "devDependencies": {
                 "@babel/core": "^7.20.0",
+                # PC-101: types `process.env.EXPO_PUBLIC_*` (Expo inlines it at bundle time). Under
+                # pnpm it is not hoisted from Expo's own dependencies, so tsc reported `process` unknown.
+                "@types/node": "^20.14.0",
                 "@types/react": "~18.2.45",
                 "typescript": "~5.3.3",
             },

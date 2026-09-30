@@ -135,7 +135,7 @@ class BreadcrumbsTests(unittest.TestCase):
         self.assertIn("<Breadcrumbs items={breadcrumbs} />", content)
         self.assertIn('{ label: "Overview", href: "/" }', content)
         self.assertIn('{ label: "Posts", href: "/posts" }', content)
-        self.assertIn('{ label: selectedId ? `Post #${selectedId}` : "Post Details" }', content)
+        self.assertIn('{ label: selectedId ? "Post" : "Post details" }', content)  # PC-101: no raw id
 
     def test_detail_screen_renders_breadcrumbs_without_collection(self) -> None:
         """Verify detail screen breadcrumbs gracefully omit collection link when absent."""
@@ -147,7 +147,7 @@ class BreadcrumbsTests(unittest.TestCase):
         self.assertIn("<Breadcrumbs items={breadcrumbs} />", content)
         self.assertIn('{ label: "Overview", href: "/" }', content)
         self.assertNotIn('{ label: "Posts", href: "/posts" }', content)
-        self.assertIn('{ label: selectedId ? `Post #${selectedId}` : "Post Details" }', content)
+        self.assertIn('{ label: selectedId ? "Post" : "Post details" }', content)  # PC-101: no raw id
 
     def test_form_screen_renders_breadcrumbs_create_mode(self) -> None:
         """Verify form screen renders Breadcrumbs with New/Edit item label."""

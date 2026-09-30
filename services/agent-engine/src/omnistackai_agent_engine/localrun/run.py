@@ -15,6 +15,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -284,6 +285,52 @@ class _Probe:
     cap: float = float("inf")
 
 
+def page_routes(app_dir: Path) -> list[str]:
+    """Every static page route of a Next app ("/", "/orders", ...), from its app/ directory."""
+    root = app_dir / "app"
+    routes: list[str] = []
+    for page in sorted(root.rglob("page.tsx")):
+        parts = [p for p in page.parent.relative_to(root).parts if not (p.startswith("(") and p.endswith(")"))]
+        if any(p.startswith("[") or p.startswith("_") or p.startswith("@") for p in parts):
+            continue  # dynamic, private or parallel segments cannot be requested as they are
+        routes.append("/" + "/".join(parts))
+    return sorted(routes)
+
+
+def warm_pages(plan: RunPlan) -> threading.Thread | None:
+    """PC-101: compile every page of each web app once, in the background, after it is ready.
+
+    A preview runs the Next.js dev server, which compiles a page the first time it is asked for.
+    Found by the UI check: the first visit to a page while another one compiled could miss its
+    chunks (a 404 under /_next/, a ChunkLoadError, a blank page) - what a person opening a fresh
+    preview would meet. One request per page, one at a time, so they are compiled before anyone
+    opens them. Errors are ignored: this only saves time and never decides readiness.
+    """
+    targets: list[str] = []
+    surfaces = plan.web_surfaces or (("web", plan.web_url), ("admin", plan.admin_url))
+    base = plan.public_base.rstrip("/")
+    for app_id, url in surfaces:
+        app_dir = Path(plan.repo_dir) / "apps" / app_id
+        if not url or not (app_dir / "app").is_dir():
+            continue
+        prefix = f"{base}/{app_id}" if plan.multi_app else ""
+        targets += [f"{url.rstrip('/')}{prefix}{route if route != '/' else ''}" for route in page_routes(app_dir)]
+    if not targets:
+        return None
+
+    def _warm() -> None:
+        for target in targets:
+            try:
+                with urllib.request.urlopen(target, timeout=120) as response:  # noqa: S310 - loopback only
+                    response.read(1)
+            except Exception:  # noqa: BLE001 - warming never fails a preview
+                continue
+
+    thread = threading.Thread(target=_warm, name="warm-pages", daemon=True)
+    thread.start()
+    return thread
+
+
 def _readiness_probes(plan: RunPlan) -> list[_Probe]:
     probes: list[_Probe] = []
     if plan.backend_kind != "none":
@@ -427,6 +474,7 @@ def start_app(
                 on_phase("start")
 
         await_ready(session, active_plan, health_timeout_seconds, require_ready, emit)
+        warm_pages(active_plan)
 
         if on_phase is not None:
             on_phase("ready")

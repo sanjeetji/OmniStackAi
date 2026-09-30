@@ -125,7 +125,7 @@ def web_lifecycle_component(ir: ApplicationIR, workflow: Workflow, *, has_auth: 
         "          <li key={state} aria-current={state === current ? \"step\" : undefined}\n"
         "            style={{ padding: \"4px 10px\", borderRadius: 999, fontSize: 12, fontWeight: 600, textTransform: \"capitalize\",\n"
         "              background: state === current ? \"#4f46e5\" : i < position ? \"#e0e7ff\" : \"#f1f5f9\",\n"
-        "              color: state === current ? \"#fff\" : i < position ? \"#3730a3\" : \"#64748b\" }}>\n"
+        "              color: state === current ? \"#fff\" : i < position ? \"#3730a3\" : \"#475569\" }}>\n"  # PC-101: #64748b on #f1f5f9 was 4.3:1
         "            {pretty(state)}\n"
         "          </li>\n"
         "        ))}\n"

@@ -2519,7 +2519,9 @@ fi
 for guard in test_next_config_honours_base_path \
   test_each_app_is_started_with_its_base_path \
   test_the_api_base_is_relative_so_it_survives_the_proxy \
-  test_a_single_app_project_keeps_serving_at_the_root; do
+  test_a_single_app_project_gets_a_base_path_and_a_relative_api; do
+  # PC-101: a single-app project now runs under its own base path too (served at the root, its
+  # scripts and links left the preview and its HTML had to be rewritten).
   if ! rg -qF "$guard" "$r542_tests"; then
     printf 'R-542 the reachable-console gate must still check: %s\n' "$guard"
     exit 1
@@ -2776,7 +2778,7 @@ for guard in test_every_app_directory_is_discovered \
   test_discovery_is_deterministic \
   test_each_surface_is_installed_and_started_on_its_own_port \
   test_each_surface_gets_its_own_base_path \
-  test_a_single_app_project_is_still_single_app \
+  test_a_single_app_project_runs_under_its_own_path \
   test_two_surfaces_behave_as_they_did_before; do
   if ! rg -qF "$guard" "$r545_tests"; then
     printf 'R-553 the multi-surface gate must still check: %s\n' "$guard"

@@ -104,6 +104,16 @@ class TheLifecycleIsReal(TestCase):
         self.assertNotIn("/orders/{orderId}/status", [a.path for a in ir.apis])
         self.assertTrue(any("already has a lifecycle" in note for note in repairs))
 
+    def test_a_transition_target_written_as_a_one_item_list_is_read(self) -> None:
+        # PC-101, seen live: "to": ["in_progress"] failed the whole build.
+        data = _plan()
+        data["capabilities"] = [{"kind": "workflow", "name": "order_flow", "config": {
+            "entity": "Order", "field": "status", "states": ["placed", "delivered"], "initial": "placed",
+            "transitions": [{"name": "deliver", "to": ["delivered"], "from": ["placed"], "roles": []}]}}]
+        ir, repairs = parse_ir_response_with_repairs(json.dumps(data))
+        self.assertEqual(workflows_of(ir)[0].transitions[0].to, "delivered")
+        self.assertTrue(any("read as 'delivered'" in note for note in repairs))
+
     def test_unknown_roles_are_not_copied_onto_transitions(self) -> None:
         ir, _ = parse_ir_response_with_repairs(json.dumps(_with_api(_status_api("json", roles=("ghost",)))))
         self.assertTrue(all(r.roles == () for r in transition_routes(ir)))

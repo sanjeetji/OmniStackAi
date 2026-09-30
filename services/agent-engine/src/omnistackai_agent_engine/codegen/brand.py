@@ -71,7 +71,12 @@ def readable_foreground(hex_color: str) -> str:
     A generated app with a yellow brand had white text on yellow buttons before this existed, which
     is a real accessibility failure and not a matter of taste.
     """
-    return "#0f172a" if relative_luminance(hex_color) > 0.45 else "#ffffff"
+    # PC-101: whichever has more contrast. The old cut-off (luminance 0.45) kept white on colours
+    # like cyan #06b6d4 (2.4:1, where the dark text reads at 8:1); the two are equal near 0.2.
+    lum = relative_luminance(hex_color)
+    on_white = 1.05 / (lum + 0.05)
+    on_dark = (lum + 0.05) / (relative_luminance("#0f172a") + 0.05)
+    return "#0f172a" if on_dark > on_white else "#ffffff"
 
 
 # --- the palette a brand implies ----------------------------------------------------------------

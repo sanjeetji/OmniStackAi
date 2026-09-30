@@ -483,6 +483,52 @@ export interface FileUploaderProps {
   disabled?: boolean;
 }
 
+function createUppy(field: string, accept: string[], maxSizeMb: number, maxFiles: number): Uppy<Meta, Body> {
+  const instance = new Uppy<Meta, Body>({
+    meta: { field },
+    autoProceed: false,
+    restrictions: {
+      allowedFileTypes: accept.map((ext) => `.${ext}`),
+      maxFileSize: maxSizeMb * 1024 * 1024,
+      maxNumberOfFiles: maxFiles,
+    },
+  });
+  instance.use(XHRUpload, {
+    endpoint: (file) => (!Array.isArray(file) && file.isRemote && REMOTE_ENDPOINT ? REMOTE_ENDPOINT : `${API}/uploads`),
+    fieldName: "file",
+    formData: true,
+    allowedMetaFields: ["field"],
+    headers: (): Record<string, string> => {
+      const token = typeof localStorage !== "undefined" ? localStorage.getItem("auth_token") : null;
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    },
+    // A refusal (wrong type, too large) will not change on a retry; a dropped connection may.
+    shouldRetry: (xhr) => xhr.status === 0 || xhr.status >= 500,
+    // Show the API's own reason ("This is not a real .pdf file.") rather than "Upload failed".
+    onAfterResponse: (xhr) => {
+      if (xhr.status < 400) return;
+      let detail = `The upload was refused (${xhr.status}).`;
+      try {
+        const body = JSON.parse(xhr.responseText || "{}");
+        if (typeof body.detail === "string") detail = body.detail;
+      } catch {
+        // not JSON: keep the generic words
+      }
+      throw new Error(detail);
+    },
+  });
+  instance.on("upload-error", (_file, error) => instance.info(error?.message || "The upload failed.", "error", 8000));
+  if (SOURCES.has("camera")) instance.use(Webcam, { modes: ["picture", "video-audio"] });
+  if (COMPANION) {
+    if (SOURCES.has("url")) instance.use(Url, { companionUrl: COMPANION });
+    if (SOURCES.has("google-drive")) instance.use(GoogleDrive, { companionUrl: COMPANION });
+    if (SOURCES.has("dropbox")) instance.use(Dropbox, { companionUrl: COMPANION });
+    if (SOURCES.has("onedrive")) instance.use(OneDrive, { companionUrl: COMPANION });
+    if (SOURCES.has("box")) instance.use(Box, { companionUrl: COMPANION });
+  }
+  return instance;
+}
+
 export function FileUploader({ field, accept, maxSizeMb, maxFiles, hint, value, onChange, disabled }: FileUploaderProps) {
   const keys = fileKeys(value);
   const [open, setOpen] = useState(false);
@@ -490,55 +536,18 @@ export function FileUploader({ field, accept, maxSizeMb, maxFiles, hint, value, 
 
   // One instance for the component's life (useState, not useMemo: React may drop a memo). It is
   // not destroyed on unmount: React's development double-mount would destroy it before it drew.
-  const [uppy] = useState(() => {
-    const instance = new Uppy<Meta, Body>({
-      meta: { field },
-      autoProceed: false,
-      restrictions: {
-        allowedFileTypes: accept.map((ext) => `.${ext}`),
-        maxFileSize: maxSizeMb * 1024 * 1024,
-        maxNumberOfFiles: maxFiles,
-      },
-    });
-    instance.use(XHRUpload, {
-      endpoint: (file) => (!Array.isArray(file) && file.isRemote && REMOTE_ENDPOINT ? REMOTE_ENDPOINT : `${API}/uploads`),
-      fieldName: "file",
-      formData: true,
-      allowedMetaFields: ["field"],
-      headers: (): Record<string, string> => {
-        const token = typeof localStorage !== "undefined" ? localStorage.getItem("auth_token") : null;
-        return token ? { Authorization: `Bearer ${token}` } : {};
-      },
-      // A refusal (wrong type, too large) will not change on a retry; a dropped connection may.
-      shouldRetry: (xhr) => xhr.status === 0 || xhr.status >= 500,
-      // Show the API's own reason ("This is not a real .pdf file.") rather than "Upload failed".
-      onAfterResponse: (xhr) => {
-        if (xhr.status < 400) return;
-        let detail = `The upload was refused (${xhr.status}).`;
-        try {
-          const body = JSON.parse(xhr.responseText || "{}");
-          if (typeof body.detail === "string") detail = body.detail;
-        } catch {
-          // not JSON: keep the generic words
-        }
-        throw new Error(detail);
-      },
-    });
-    instance.on("upload-error", (_file, error) => instance.info(error?.message || "The upload failed.", "error", 8000));
-    if (SOURCES.has("camera")) instance.use(Webcam, { modes: ["picture", "video-audio"] });
-    if (COMPANION) {
-      if (SOURCES.has("url")) instance.use(Url, { companionUrl: COMPANION });
-      if (SOURCES.has("google-drive")) instance.use(GoogleDrive, { companionUrl: COMPANION });
-      if (SOURCES.has("dropbox")) instance.use(Dropbox, { companionUrl: COMPANION });
-      if (SOURCES.has("onedrive")) instance.use(OneDrive, { companionUrl: COMPANION });
-      if (SOURCES.has("box")) instance.use(Box, { companionUrl: COMPANION });
-    }
-    return instance;
-  });
+  // PC-101: created in an effect, in the browser only - Uppy's plugins read `location` when they
+  // are set up, so creating it while the page rendered on the server failed every form that
+  // shows an upload field at once ("location is not defined").
+  const [uppy, setUppy] = useState<Uppy<Meta, Body> | null>(null);
+  useEffect(() => {
+    if (!uppy) setUppy(createUppy(field, accept, maxSizeMb, maxFiles));
+  }, [uppy, field, accept, maxSizeMb, maxFiles]);
 
-  useEffect(() => () => uppy.cancelAll(), [uppy]);
+  useEffect(() => () => uppy?.cancelAll(), [uppy]);
 
   useEffect(() => {
+    if (!uppy) return;
     const done = (result: { successful?: UppyFile<Meta, Body>[] }) => {
       const added = (result.successful ?? []).map((f) => f.response?.body?.key).filter((k): k is string => Boolean(k));
       if (added.length === 0) return;
@@ -551,7 +560,7 @@ export function FileUploader({ field, accept, maxSizeMb, maxFiles, hint, value, 
   });
 
   useEffect(() => {
-    uppy.setOptions({ restrictions: { allowedFileTypes: accept.map((ext) => `.${ext}`), maxFileSize: maxSizeMb * 1024 * 1024, maxNumberOfFiles: Math.max(1, maxFiles > 1 ? maxFiles - keys.length : 1) } });
+    uppy?.setOptions({ restrictions: { allowedFileTypes: accept.map((ext) => `.${ext}`), maxFileSize: maxSizeMb * 1024 * 1024, maxNumberOfFiles: Math.max(1, maxFiles > 1 ? maxFiles - keys.length : 1) } });
   }, [uppy, accept, maxSizeMb, maxFiles, keys.length]);
 
   const full = maxFiles > 1 && keys.length >= maxFiles;
@@ -573,12 +582,12 @@ export function FileUploader({ field, accept, maxSizeMb, maxFiles, hint, value, 
         <div className="mt-2 overflow-hidden rounded-md border">
           <div className="flex items-center justify-between border-b bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground">
             <span>Add from your device{SOURCES.size > 0 ? ", camera or other sources" : ""}</span>
-            <button type="button" onClick={() => { uppy.cancelAll(); setOpen(false); }}
+            <button type="button" onClick={() => { uppy?.cancelAll(); setOpen(false); }}
               className="rounded p-1 hover:bg-muted hover:text-foreground" aria-label="Close the upload panel">
               <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
-          <Dashboard uppy={uppy} height={300} width="100%" proudlyDisplayPoweredByUppy={false} note={hint} />
+          {uppy && <Dashboard uppy={uppy} height={300} width="100%" proudlyDisplayPoweredByUppy={false} note={hint} />}
         </div>
       )}
     </div>

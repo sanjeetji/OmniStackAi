@@ -1384,6 +1384,8 @@ export function EntityManager({ title, singular, slug, fields, list, create, upd
                 {!loading && rows.length === 0 && (
                   <tr>
                     <td colSpan={columns.length} className="px-4 py-14 text-center">
+                      {/* PC-101: kept in view on a phone, where the table scrolls sideways. */}
+                      <div className="sticky left-4 w-[calc(100vw-5rem)] md:static md:w-auto">
                       <p className="font-medium">{query ? "Nothing matches your search" : `No ${title.toLowerCase()} yet`}</p>
                       {!query && create && (
                         <button type="button" onClick={() => { setEditing(null); setDrawerOpen(true); }}
@@ -1391,6 +1393,7 @@ export function EntityManager({ title, singular, slug, fields, list, create, upd
                           <Plus className="h-4 w-4" aria-hidden /> Add the first {singular}
                         </button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 )}

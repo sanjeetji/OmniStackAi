@@ -67,14 +67,15 @@ case "$command_name" in
     require_command pnpm
     load_env
     printf 'Starting OmniStackAI console at http://127.0.0.1:%s\n' "$port"
-    (cd "$app_root" && pnpm exec next start -p "$port")
+    # PC-101: server.mjs is `next start` plus the preview reload socket.
+    (cd "$app_root" && NODE_ENV=production node server.mjs start -p "$port")
     ;;
   dev|serve)
     snapshot
     require_command pnpm
     load_env
     printf 'Serving OmniStackAI console (dev) at http://127.0.0.1:%s\n' "$port"
-    (cd "$app_root" && pnpm exec next dev -p "$port")
+    (cd "$app_root" && node server.mjs dev -p "$port")
     ;;
   *)
     printf 'Usage: %s {snapshot|lint|typecheck|build|start|dev|serve}\n' "$0"

@@ -344,7 +344,11 @@ def build_run_plan(
     # app too, and the console then proxies /preview/<id>/web by base path — but base paths were only
     # set with two web apps, so a web + mobile project (no admin) answered 404 in the Studio. The two
     # rules now agree.
-    multi_app = (len(web_apps) > 1 or has_mobile) and bool(public_base)
+    # PC-101: a lone web app too. Served at the console's root path it had no base path of its own:
+    # its links and scripts left /preview/<id>/ (404s, links out of the preview), the proxy had to
+    # rewrite its HTML (a hydration mismatch in every page), and the browser was sent to the API's
+    # loopback address (unreachable from a phone). Every app now runs under /preview/<id>/<app>.
+    multi_app = (bool(web_apps) or has_mobile) and bool(public_base)
     base = public_base.rstrip("/")
 
     # `web` and `admin` keep the ports they were allocated; further surfaces take the extras, and
@@ -512,6 +516,8 @@ def build_run_plan(
                 cwd=str(app_dir),
                 env=(
                     ("NEXT_PUBLIC_API_URL", public_api_url),
+                    # PC-101: the server-side proxy routes call the API directly.
+                    ("API_URL", api_url),
                     ("BASE_PATH", base_path),
                     ("NEXT_PUBLIC_BASE_PATH", base_path),
                     # R-573: the in-app QR swaps localhost for this, so a phone can open the page.

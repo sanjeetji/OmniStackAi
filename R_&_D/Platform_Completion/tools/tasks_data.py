@@ -240,7 +240,11 @@ QUEUE = [
      "console proxy; an app whose API has no sign-in routes still shows 'Sign in'. Seen in PC-102: "
      "the planner can declare a required <entity>_id for an entity it gives no API (a job posting's "
      "recruiter_id with no /recruiters), so no form can fill it, and an entity whose only create is "
-     "nested (/job_postings/{id}/applications) gets no 'New' in the admin console."),
+     "nested (/job_postings/{id}/applications) gets no 'New' in the admin console. Done 2026-09-30: "
+     "scripts/ui-check.mjs (every page, 390 and 1360 px: overflow, console, requests, images, "
+     "contrast); every listed defect fixed, plus what the check found (previews without a base path, "
+     "SSR crash with uploads, contrast, page warm-up). Benchmarks food/clinic/store/blog 0 failing "
+     "pages. Runs on demand, not after every build; free-provider planning failures remain."),
     ("PC-102", "Rich text and file uploads in generated apps: a rich-text field type edited with "
      "tiptap and rendered safely, and attachment fields uploaded to storage (uppy)",
      "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-100",

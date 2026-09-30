@@ -268,7 +268,7 @@ function authorize(header: string | undefined): {{ claims?: AuthClaims; status?:
   const secret = config.jwtSecret;
   if (!header || !header.startsWith('Bearer ')) {{
     if (process.env.OMNISTACKAI_DEV_MODE === '1' || DEV_SECRETS.includes(secret)) {{
-      return {{ claims: {{ sub: 'dev-admin', roles: [...ROLES], email: 'admin@example.local' }} }};
+      return {{ claims: {{ sub: 'dev-admin', roles: [...ROLES, 'admin'], email: 'admin@example.local' }} }};
     }}
     if (!secret) return {{ status: 500, detail: 'auth_not_configured' }};
     return {{ status: 401, detail: 'unauthorized' }};

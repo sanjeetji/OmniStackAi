@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-101 (2026-09-30): UI quality check.** `scripts/ui-check.mjs` checks every page of a preview at phone and desktop width (overflow, console, requests, images, contrast). It found and PC-101 fixed: previews without a base path, the proxy 503, the reload socket, SSR crash with uploads, contrast, missing detail pages, unfillable references. Benchmarks food/clinic/store/blog now 0 failing pages.
 > **PC-105 (2026-09-29): uploads in Go and Node.** The Go, Express and Hono backends take and serve files exactly as Python does (same checks, messages, storage settings and signed links). Each generated API passed the 19 upload checks on disk and on S3; Dropbox sign-in confirmed.
 > **PC-104 (2026-09-29): rich text.** A rich_text field type edited with tiptap, cleaned on every write in all three backends (nh3, bluemonday, sanitize-html) and again on display (DOMPurify); plain words in tables and on mobile. Proven against each API and through the admin console.
 > **PC-102 (2026-09-29): file uploads.** Per-field rules from the requirement; Uppy with device, camera, link and cloud drives (Companion); server-side content checks; R2 dev/prod, AWS S3 or local disk from the platform .env - production needs keys only. Proven in the preview and a published production stack. Rich text PC-104, Go/Node uploads PC-105.

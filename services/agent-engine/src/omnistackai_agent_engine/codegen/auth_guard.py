@@ -57,7 +57,7 @@ def python_auth_file(ir: ApplicationIR) -> str:
         "    secret = _secret()\n"
         '    if not authorization or not authorization.startswith("Bearer "):\n'
         '        if os.environ.get("OMNISTACKAI_DEV_MODE") == "1" or secret in ("local-dev-secret", "dev-secret", "change-me-in-production"):\n'
-        '            return {"sub": "dev-admin", "roles": list(ROLES), "email": "admin@example.local", "dev_session": True}\n'
+        '            return {"sub": "dev-admin", "roles": [*ROLES, "admin"], "email": "admin@example.local", "dev_session": True}\n'
         '        raise HTTPException(status_code=401, detail="unauthorized")\n'
         '    token = authorization[len("Bearer "):]\n'
         "    try:\n"
@@ -114,7 +114,7 @@ def go_auth_file(ir: ApplicationIR) -> str:
         '\tauth := r.Header.Get("Authorization")\n'
         '\tif !strings.HasPrefix(auth, "Bearer ") {\n'
         '\t\tif os.Getenv("OMNISTACKAI_DEV_MODE") == "1" || secret == "local-dev-secret" || secret == "dev-secret" {\n'
-        '\t\t\treturn jwt.MapClaims{"sub": "dev-admin", "roles": Roles, "email": "admin@example.local"}, http.StatusOK, ""\n'
+        '\t\t\treturn jwt.MapClaims{"sub": "dev-admin", "roles": append(append([]string{}, Roles...), "admin"), "email": "admin@example.local"}, http.StatusOK, ""\n'
         '\t\t}\n'
         '\t\treturn nil, http.StatusUnauthorized, "unauthorized"\n'
         "\t}\n"
@@ -156,8 +156,17 @@ def go_auth_file(ir: ApplicationIR) -> str:
         "\t}\n"
         "}\n\n"
         "func hasAnyRole(claims jwt.MapClaims, required []string) bool {\n"
-        '\traw, ok := claims["roles"].([]any)\n'
-        "\tif !ok {\n"
+        "\t// A verified token decodes roles as []any; the dev session builds them as []string (PC-101:\n"
+        "\t// read as []any alone, the dev admin failed every role check).\n"
+        "\tvar raw []any\n"
+        '\tswitch v := claims["roles"].(type) {\n'
+        "\tcase []any:\n"
+        "\t\traw = v\n"
+        "\tcase []string:\n"
+        "\t\tfor _, s := range v {\n"
+        "\t\t\traw = append(raw, s)\n"
+        "\t\t}\n"
+        "\tdefault:\n"
         "\t\treturn false\n"
         "\t}\n"
         "\theld := map[string]bool{}\n"
