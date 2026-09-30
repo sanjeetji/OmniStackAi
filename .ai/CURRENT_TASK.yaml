@@ -1,22 +1,23 @@
-task_id: PC-107
-status: completed
+task_id: PC-108
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
-tracker_row: PC-107
+tracker_row: PC-108
 started_at: "2026-09-30"
-completed_at: "2026-09-30"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Close the gap PC-106 left: a visitor opening a page in the first minute of a preview, while the
-  page warm-up compiled routes, could meet a dev-server chunk error. A preview now reports ready only
-  once every page is compiled (shown as "Preparing pages" in the Studio, bounded so a slow app is
-  never held for long). Also remove the benchmark projects PC-101 built under bench-* test accounts,
-  which nothing depends on.
+  The template pages every build uses read as a finished consumer product in the web app: lists as
+  cards with the record's title, a short summary, its image and status; a detail page that shows
+  the record, formatted, with a clear way back - no ID box, "Copy ID", "Export JSON" or density
+  toggles for visitors; a landing page without an empty image placeholder; empty states that say
+  what to do next. The operator tools stay in the admin app. Proven with the UI check and
+  screenshots.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
-  - services/control-plane/
   - apps/console-web/
+  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -24,23 +25,14 @@ allowed_paths:
   - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - only projects owned by bench-*@example.com accounts are deleted
+  - the admin app keeps its operator tools
 required_gates:
-  - Live: a preview started from the console reports ready after its pages are compiled, and every page then loads clean
+  - Live: generated web apps' pages pass the UI check at phone and desktop width, and their screenshots show the consumer layouts
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-live_proof:
-  - preview showed "Preparing pages" 0 -> 27 of 27 and became ready at 13 s
-  - 610 asset requests through the console, 16 in parallel - 0 errors (before - 2 of 366 answered 404)
-  - three full visitor runs of the UI check through the console, 46 page views each - 0 problems, 0 transient
-  - 21 benchmark projects deleted through DELETE /projects/{id}?purge=true (all 204); workspaces gone
 blockers: []
-deferred:
-  - the eight bench-* test accounts remain (no account deletion in the platform); they hold no projects
-found_and_fixed:
-  - the "dev-server chunk 404s" were the console proxy's per-file preview lookups timing out and answered as 404
-  - the control plane kept only two idle connections to the Studio per host
-  - a first fix cloned the transport before the Studio-token wrapper; its calls had no token (caught live)
+deferred: []
+found_and_fixed: []

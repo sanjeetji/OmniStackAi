@@ -303,7 +303,7 @@ QUEUE = [
      "created, read, updated and listed an order with its customer against Postgres. Found: the "
      "Node API failed tsc wherever it had accounts (fixed)."),
     ("PC-108", "Consumer-grade UI for generated apps: detail, landing, list and empty states that "
-     "read as a finished product, not an operator's tool", "1 Vibe Mode live", "Both", "Not Started",
+     "read as a finished product, not an operator's tool", "1 Vibe Mode live", "Both", "In Progress",
      "P1", "PC-101",
      "Seen in the PC-101 benchmark screenshots: a record's detail page offers an ID box, 'Copy ID', "
      "'Export JSON' and prev/next buttons to visitors; the landing hero shows an empty image "
