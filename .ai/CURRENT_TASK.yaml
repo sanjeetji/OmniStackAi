@@ -1,48 +1,38 @@
-task_id: PC-014
-status: completed
+task_id: R-574
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: PC-014
+tracker_row: R-574
 started_at: "2026-09-30"
-completed_at: "2026-09-30"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Local models as a first-class path. The platform asks Ollama which models are installed instead
-  of trusting the setting (a configured model that is not installed is replaced by the best
-  installed one that fits, and said so; with none, the message says exactly which model to pull);
-  it recommends a model for the machine from its memory and shows it in `omnistack.sh status`; and a
-  whole build - plan, compile repair and page design - runs on Ollama alone when local is preferred.
+  Store publishing from the Studio, complete except for the owner's accounts (the founder adds them
+  later, D-7 / PC-070). A project's mobile app can be checked, built (EAS, in Expo's cloud) and
+  submitted to Google Play and the App Store from the console, with the store credentials kept as
+  the project's secrets: EXPO_TOKEN and EAS_PROJECT_ID; a Play service-account JSON; an App Store
+  Connect API key (non-interactive - no Apple ID password or 2FA). Key files exist only while a
+  command runs. Without credentials the Studio lists exactly which are missing and where to get them.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
-  - scripts/
+  - services/control-plane/
   - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/
-  - .env.example
 forbidden_changes:
+  - no store account, key or certificate is created or embedded; credentials come only from project secrets
   - task verify stays offline with 0 model calls
-  - no model is downloaded without the founder asking
 required_gates:
-  - Live: a build runs start to finish on the local Ollama model with no cloud call
+  - Live - without credentials the console lists what is missing per store; the eas-cli commands run against a generated app and report the account step as the only one left
   - scripts/verify.sh passes
 model_tool_trace:
-  routing: local_only_for_live_proof
-  local_calls: 13
-  cloud_calls: 3
-live_proof:
-  - console build of a reading list planned by qwen2.5-coder:14b (202 s), type-checked cleanly
-  - page design with local preferred - chain "ollama" only; every call recorded as ollama-local
-  - the 3 cloud calls were the second run's page design before the patient readiness fix (found and fixed)
+  routing: deterministic_only
+  local_calls: 0
+  cloud_calls: 0
 blockers: []
-deferred:
-  - on a 16 GB machine the 14b model's designed pages did not compile after local repairs; templates were kept
-found_and_fixed:
-  - ecosystem pages asked Ollama for a model named "default" (recorder wrapper)
-  - "author" as a field made a reading list a three-app ecosystem
-  - a lost 1.5 s readiness race sent local-only page design to Gemini
-  - a local model's page with prose around its code block was refused as truncated
-  - page design committed an unrelated lockfile when every page was put back
+deferred: []
+found_and_fixed: []

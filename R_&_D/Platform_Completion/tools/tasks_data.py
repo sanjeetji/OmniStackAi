@@ -324,7 +324,7 @@ QUEUE = [
      "status, PREFER_LOCAL keeps page design local; a console build ran with no cloud call. On a 16 GB "
      "machine the 14b model's designed pages did not compile - templates kept."),
     ("R-574", "Store publishing for React Native apps: EAS build and submit to Play Store and "
-     "App Store, proven with real accounts", "1 Vibe Mode live", "Both", "Pending", "P1",
+     "App Store, proven with real accounts", "1 Vibe Mode live", "Both", "In Progress", "P1",
      "PC-003", "R-546/R-547 generate the EAS config. Everything up to the upload is built and "
      "tested; the Apple and Google accounts (D-7) are plugged in at PC-070. Covers R-062, R-063."),
     ("PC-049", "Managed database for published apps: provision PostgreSQL (Neon, Supabase or "
