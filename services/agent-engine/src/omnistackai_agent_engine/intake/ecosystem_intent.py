@@ -57,13 +57,40 @@ class EcosystemIntent:
         return "complete" if self.build_ecosystem else "customer-only"
 
 
+#: Words that name a record's fields. An actor word listed among them is a field too.
+_FIELD_WORDS = frozenset((
+    "title", "name", "date", "price", "status", "description", "note", "notes", "email", "phone",
+    "isbn", "genre", "rating", "cover", "category", "tags", "tag", "quantity", "amount", "summary",
+    "body", "image", "photo", "url", "link", "address", "priority", "due", "deadline", "year",
+))
+
+
+def _without_field_lists(text: str) -> str:
+    """Drop actor words that sit alone in a list of a record's fields (PC-014, found live).
+
+    "books with a title, author, a short note and a read/unread status" named no author - it named
+    a field - yet it built a three-app publishing platform. A list item that is only an actor word,
+    beside items that are field words, is a field. "customers, restaurants and drivers" has no field
+    words, so it still names three kinds of people.
+    """
+    out = []
+    for sentence in re.split(r"[.!?\n]", text):
+        items = [i.strip() for i in re.split(r",|;|:|\band\b|\bwith\b", sentence)]
+        words = [re.sub(r"^(a|an|the|its|their)\s+", "", i) for i in items]
+        if sum(1 for w in words if any(f in re.findall(r"[a-z]+", w) for f in _FIELD_WORDS)) >= 2:
+            actor_words = {w for group in _ACTOR_GROUPS.values() for w in group}
+            items = [i for i, w in zip(items, words) if w not in actor_words]
+        out.append(", ".join(items))
+    return ". ".join(out)
+
+
 def named_actors(prompt: str) -> tuple[str, ...]:
     """The kinds of person this prompt names, deduplicated by role group and sorted.
 
     Matched on word boundaries so "drivers" counts and "driven" does not, and so "storage" is not
     read as a "store".
     """
-    text = (prompt or "").lower()
+    text = _without_field_lists((prompt or "").lower())
     found = set()
     for group, words in _ACTOR_GROUPS.items():
         for word in words:

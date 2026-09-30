@@ -46,16 +46,34 @@ def _load_dotenv_if_needed() -> None:
         curr = curr.parent
 
 
-def is_ollama_ready(base_url: str | None = None) -> bool:
+def prefers_local() -> bool:
+    """OMNISTACKAI_PREFER_LOCAL: build on the local model (PC-014: plan, repair and pages alike)."""
+    return os.environ.get("OMNISTACKAI_PREFER_LOCAL", "").strip().lower() in ("1", "true", "yes")
+
+
+def is_ollama_ready(base_url: str | None = None, *, timeout: float = 1.5) -> bool:
     """Check if local Ollama daemon is reachable and responding."""
     import urllib.request
     url = (base_url or os.environ.get("OMNISTACKAI_OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip("/")
     try:
         req = urllib.request.Request(f"{url}/api/tags", headers={"User-Agent": "omnistackai"})
-        with urllib.request.urlopen(req, timeout=1.5) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status == 200
     except Exception:
         return False
+
+
+def ollama_ready_patiently(tries: int = 3, timeout: float = 5.0) -> bool:
+    """PC-014, found live: with local preferred, one 1.5 s check that lost a race sent a build's
+    pages to the cloud. When the person asked for local, Ollama gets a few patient tries first."""
+    import time as _time
+
+    for attempt in range(tries):
+        if is_ollama_ready(timeout=timeout):
+            return True
+        if attempt < tries - 1:
+            _time.sleep(1.0)
+    return False
 
 
 def resolve_generation_provider_from_env(
@@ -138,7 +156,7 @@ def resolve_generation_provider_from_env(
         cloud_selection = "google"
 
     # If preference is local and Ollama is online, use Ollama immediately
-    if env_prefer_local and is_ollama_ready():
+    if env_prefer_local and ollama_ready_patiently():
         logger.info("Local Ollama is ready and preferred; routing to Ollama")
         provider, default_model, max_output, timeout = build_ollama_provider_from_env()
         eff_model = (model_id or default_model).strip()
@@ -264,6 +282,8 @@ def page_provider_choice(provider_id: str | None = None) -> str | None:
     build's own default resolution (for example a local model)."""
     if provider_id:
         return provider_id.strip().lower()
+    if prefers_local() and ollama_ready_patiently():
+        return None  # PC-014: the default resolution, which stays on the local model
     chosen = (os.environ.get(PAGE_PROVIDER_ENV) or "").strip().lower()
     if chosen:
         return "google" if chosen == "gemini" else chosen
@@ -363,7 +383,15 @@ def resolve_page_providers_from_env(
     specs = resolve_provider_specs()
     cloud_timeout = _env_number(PAGE_CLOUD_TIMEOUT_ENV, 240.0)
     chain: list[tuple[ModelProvider, str, int, float]] = []
-    for provider, model in page_chain_spec():
+    spec_order = page_chain_spec()
+    local = prefers_local()
+    ready = ollama_ready_patiently() if local else False
+    if local and ready:
+        # PC-014: local preferred means every model call stays on this machine, pages included.
+        spec_order = [("ollama", None)]
+    logger.warning("page providers: %s (local preferred: %s, Ollama answering: %s)",
+                ", ".join(p for p, _ in spec_order), local, ready)
+    for provider, model in spec_order:
         try:
             if provider in ("ollama", "local"):
                 if not is_ollama_ready():

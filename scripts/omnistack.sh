@@ -772,6 +772,10 @@ cmd_status() {
   if [[ "$code" == "200" ]]; then
     local model; model="$(ollama_model)"
     ok "ollama (local)  $OLLAMA_URL  reachable${model:+  model $model}"
+    # PC-014: what is installed, what this machine should run, and what builds will use.
+    # Best effort: status never depends on the interpreter (see ollama_model).
+    PYTHONPATH="$repo_root/services/agent-engine/src" python3 -m omnistackai_agent_engine.model_gateway.local_models \
+      2>/dev/null | sed 's/^/                  /' || true
   else
     warn "ollama (local)  $OLLAMA_URL  not reachable (cloud providers will be used)"
   fi

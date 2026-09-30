@@ -1,9 +1,9 @@
 task_id: PC-014
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: PC-014
 started_at: "2026-09-30"
-completed_at: null
+completed_at: "2026-09-30"
 branch: platform-completion
 objective: >-
   Local models as a first-class path. The platform asks Ollama which models are installed instead
@@ -31,8 +31,18 @@ required_gates:
   - scripts/verify.sh passes
 model_tool_trace:
   routing: local_only_for_live_proof
-  local_calls: 0
-  cloud_calls: 0
+  local_calls: 13
+  cloud_calls: 3
+live_proof:
+  - console build of a reading list planned by qwen2.5-coder:14b (202 s), type-checked cleanly
+  - page design with local preferred - chain "ollama" only; every call recorded as ollama-local
+  - the 3 cloud calls were the second run's page design before the patient readiness fix (found and fixed)
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - on a 16 GB machine the 14b model's designed pages did not compile after local repairs; templates were kept
+found_and_fixed:
+  - ecosystem pages asked Ollama for a model named "default" (recorder wrapper)
+  - "author" as a field made a reading list a three-app ecosystem
+  - a lost 1.5 s readiness race sent local-only page design to Gemini
+  - a local model's page with prose around its code block was refused as truncated
+  - page design committed an unrelated lockfile when every page was put back

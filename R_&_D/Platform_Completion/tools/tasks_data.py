@@ -314,12 +314,15 @@ QUEUE = [
      "card lists and reading views in the web app, operator pages kept in the admin app, no empty "
      "hero box; proven on the hiring portal and content hub with real records."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
-     "a model per machine", "1 Vibe Mode live", "Both", "In Progress", "P1", "",
+     "a model per machine", "1 Vibe Mode live", "Both", "Completed", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "
      "qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not "
      "configured with — detect installed models instead of trusting the setting. PC-098 "
      "(2026-09-28): the founder replaced 7b with qwen2.5-coder:14b; the Ollama adapter now sends "
-     "num_ctx (long prompts were cut silently) and page design sizes it to 16k context / 6k answer."),
+     "num_ctx (long prompts were cut silently) and page design sizes it to 16k context / 6k answer. "
+     "Done 2026-09-30: installed models detected at start, a model recommended per machine in "
+     "status, PREFER_LOCAL keeps page design local; a console build ran with no cloud call. On a 16 GB "
+     "machine the 14b model's designed pages did not compile - templates kept."),
     ("R-574", "Store publishing for React Native apps: EAS build and submit to Play Store and "
      "App Store, proven with real accounts", "1 Vibe Mode live", "Both", "Pending", "P1",
      "PC-003", "R-546/R-547 generate the EAS config. Everything up to the upload is built and "

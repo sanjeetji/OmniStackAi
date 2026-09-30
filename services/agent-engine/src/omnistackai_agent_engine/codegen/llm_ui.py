@@ -295,7 +295,19 @@ def clean_and_validate_jsx(raw: str, *, has_auth: bool = True) -> tuple[bool, st
 
     content = raw.strip()
 
-    # 1. Strip markdown code fences if model enclosed in ```tsx ... ```
+    # 1. PC-014, found live: a local model wrote "Here is the page:" before its code block (or a
+    # note after it), and a complete page was rejected as "truncated". When the answer holds fenced
+    # blocks, the page is the block with the default export; the prose around it is dropped.
+    if "```" in content and not content.startswith("```"):
+        blocks = re.findall(r"```[a-zA-Z]*\n(.*?)(?:```|$)", content, re.S)
+        page = next((b for b in blocks if "export default" in b), None)
+        if page is not None:
+            content = page.strip()
+    elif content.startswith("```") and content.count("```") >= 2:
+        first = re.match(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
+        if first is not None and "export default" in first.group(1):
+            content = first.group(1).strip()
+    # Strip markdown code fences if model enclosed in ```tsx ... ```
     if content.startswith("```"):
         lines = content.splitlines()
         if lines and lines[0].startswith("```"):
@@ -586,15 +598,38 @@ class UiSynthesisOutcome:
         }
 
 
+def _default_model_id(provider: ModelProvider) -> str:
+    """The model a provider was built for, looking through wrappers (the usage recorder).
+
+    PC-014, found live: with no model named (a prompt-built ecosystem's pages), the recorder around
+    the local provider has no profiles(), so "default" was asked for and Ollama answered
+    UnknownModelError - every page fell back to its template on a local-only build.
+    """
+    inner = provider
+    for _ in range(5):
+        profiles = getattr(inner, "profiles", None)
+        if callable(profiles):
+            found = profiles()
+            if found:
+                return found[0].descriptor.model.model_id
+        named = getattr(inner, "_profiles", None)
+        if isinstance(named, dict) and named:
+            return sorted(named)[0]
+        single = getattr(inner, "_descriptor", None) or getattr(inner, "descriptor", None)
+        model = getattr(getattr(single, "model", None), "model_id", None)
+        if isinstance(model, str) and model:
+            return model
+        inner = getattr(inner, "_inner", None)
+        if inner is None:
+            break
+    return "default"
+
+
 def _resolve_target(provider: ModelProvider, model_id: str | None) -> tuple[ModelRef, int]:
     from ..model_gateway.contracts import ModelRef
 
     provider_id = getattr(provider, "provider_id", "auto")
-    if not model_id:
-        profiles = getattr(provider, "profiles", lambda: ())()
-        resolved_model_id = profiles[0].descriptor.model.model_id if profiles else "default"
-    else:
-        resolved_model_id = model_id
+    resolved_model_id = model_id or _default_model_id(provider)
     target = ModelRef(provider_id=provider_id, model_id=resolved_model_id)
 
     max_output = 4096

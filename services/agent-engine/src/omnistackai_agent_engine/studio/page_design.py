@@ -427,13 +427,15 @@ async def design_pages(
                 yield {"phase": "page", "path": path, **results[path]}
         yield {"phase": "checked", "app": app, "compiles": ok}
 
-    if changed:
+    designed = sum(1 for r in results.values() if r["status"] == "designed")
+    # PC-014, found live: every page was put back, yet the dependency install's lockfile was
+    # committed as "model-designed pages". Only a designed page is worth that commit.
+    if changed and designed:
         from ..git_service import RepositoryError
 
         try:
             commit_all(str(root), author_name=author_name, author_email=author_email,
-                       message="feat(ui): model-designed pages")
+                       message=f"feat(ui): model-designed pages ({designed})")
         except RepositoryError:
-            pass  # every new page was put back: nothing to record
-    designed = sum(1 for r in results.values() if r["status"] == "designed")
+            pass
     yield {"phase": "summary", "designed": designed, "kept_template": len(results) - designed, "pages": results}

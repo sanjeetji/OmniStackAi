@@ -1444,6 +1444,10 @@ def _preview_enabled() -> bool:
 
 
 def main() -> None:
+    # PC-014: run the local model that is really installed, not only the one the setting names.
+    from ..model_gateway.local_models import apply_installed_local_model
+
+    apply_installed_local_model(log=logging.getLogger(__name__).warning)
     host = os.environ.get("OMNISTACKAI_STUDIO_HOST", "127.0.0.1")
     port = int(os.environ.get("OMNISTACKAI_STUDIO_PORT", "4173"))
     preview_manager = StudioPreviewManager() if _preview_enabled() else None
