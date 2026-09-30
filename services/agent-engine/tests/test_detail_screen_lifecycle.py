@@ -44,6 +44,7 @@ from omnistackai_agent_engine.application_ir import (
 )
 from omnistackai_agent_engine.codegen.nextjs import (
     NextjsWebAdapter,
+    NextjsAdminAdapter,
     render_screen_page,
 )
 
@@ -268,7 +269,7 @@ class DetailScreenLifecycleTests(unittest.TestCase):
     def test_full_project_generation_with_detail_screen(self) -> None:
         """Verify full project generation succeeds with detail screen in IR."""
         ir = _make_test_ir()
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         project = adapter.generate(ir)
         self.assertIn("app/post_detail/page.tsx", project.paths())
         detail_file = project.get("app/post_detail/page.tsx")

@@ -41,6 +41,7 @@ from omnistackai_agent_engine.application_ir import (
 )
 from omnistackai_agent_engine.codegen.nextjs import (
     NextjsWebAdapter,
+    NextjsAdminAdapter,
     render_screen_page,
 )
 
@@ -143,7 +144,7 @@ class CollectionJsonExportTests(unittest.TestCase):
     def test_full_project_generation_contains_json_export(self) -> None:
         """Verify generated full project collection screen contains JSON export."""
         ir = example_ir("minimal-blog")
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         project = adapter.generate(ir)
         post_list = project.get("app/post_list/page.tsx").content
         self.assertIn("handleExportJson", post_list)

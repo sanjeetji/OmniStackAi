@@ -303,14 +303,16 @@ QUEUE = [
      "created, read, updated and listed an order with its customer against Postgres. Found: the "
      "Node API failed tsc wherever it had accounts (fixed)."),
     ("PC-108", "Consumer-grade UI for generated apps: detail, landing, list and empty states that "
-     "read as a finished product, not an operator's tool", "1 Vibe Mode live", "Both", "In Progress",
+     "read as a finished product, not an operator's tool", "1 Vibe Mode live", "Both", "Completed",
      "P1", "PC-101",
      "Seen in the PC-101 benchmark screenshots: a record's detail page offers an ID box, 'Copy ID', "
      "'Export JSON' and prev/next buttons to visitors; the landing hero shows an empty image "
      "placeholder; public lists are admin-style tables with density toggles and CSV export; empty "
      "states are bare. The templates every build uses (model page design is optional) must look "
      "finished: cards and readable detail pages for visitors, the operator tools kept in the admin "
-     "console. Proven with the UI check and screenshots on the benchmark prompts."),
+     "console. Proven with the UI check and screenshots on the benchmark prompts. Done 2026-09-30: "
+     "card lists and reading views in the web app, operator pages kept in the admin app, no empty "
+     "hero box; proven on the hiring portal and content hub with real records."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
      "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "

@@ -18,6 +18,7 @@ Tests:
 15. NextjsWebAdapter.generate emits complete project with subcollection screens.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -266,7 +267,7 @@ class DiffInvarianceAndProjectGenerationTests(TestCase):
             )
 
     def test_project_generation_emits_subcollection_screens(self) -> None:
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         ir = example_ir("minimal-blog")
         project = adapter.generate(ir)
 

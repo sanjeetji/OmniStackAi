@@ -30,6 +30,7 @@ from omnistackai_agent_engine.application_ir import (
 from omnistackai_agent_engine.codegen import (
     GoBackendAdapter,
     NextjsWebAdapter,
+    NextjsAdminAdapter,
     PythonBackendAdapter,
 )
 from omnistackai_agent_engine.codegen.auth_guard import go_auth_file, python_auth_file
@@ -100,7 +101,7 @@ class TestPlatformFeatureCompletenessPhase1(TestCase):
 
     def test_collection_screen_has_search_pagination_and_sort_controls(self) -> None:
         ir = _make_ir()
-        proj = NextjsWebAdapter().generate(ir)
+        proj = NextjsAdminAdapter().generate(ir)
         screen_content = proj.get("app/projects/page.tsx").content
         # Search input and debounce
         self.assertIn('type="search"', screen_content)
@@ -146,14 +147,14 @@ class TestPlatformFeatureCompletenessPhase2(TestCase):
 
     def test_typescript_types_have_audit_timestamps(self) -> None:
         ir = _make_ir()
-        proj = NextjsWebAdapter().generate(ir)
+        proj = NextjsAdminAdapter().generate(ir)
         types_content = proj.get("lib/types.ts").content
         self.assertIn("created_at?: string;", types_content)
         self.assertIn("updated_at?: string;", types_content)
 
     def test_detail_screen_renders_timestamps_footer(self) -> None:
         ir = _make_ir()
-        proj = NextjsWebAdapter().generate(ir)
+        proj = NextjsAdminAdapter().generate(ir)
         detail_content = proj.get("app/project_detail/page.tsx").content
         self.assertIn("Created:", detail_content)
         self.assertIn("Last updated:", detail_content)
@@ -190,7 +191,7 @@ class TestPlatformFeatureCompletenessPhase3(TestCase):
 
     def test_typescript_types_and_hooks_support_owner_fields(self) -> None:
         ir = _make_ir(with_auth=True)
-        proj = NextjsWebAdapter().generate(ir)
+        proj = NextjsAdminAdapter().generate(ir)
         types_content = proj.get("lib/types.ts").content
         self.assertIn("created_by?: string | null;", types_content)
 
@@ -209,7 +210,7 @@ class TestPlatformFeatureCompletenessPhase4(TestCase):
         self.assertIn('"document" TEXT', sql)
 
         # TypeScript maps to string
-        proj = NextjsWebAdapter().generate(ir)
+        proj = NextjsAdminAdapter().generate(ir)
         types_content = proj.get("lib/types.ts").content
         self.assertIn("document?: string;", types_content)
 
@@ -228,7 +229,7 @@ class TestPlatformFeatureCompletenessPhase4(TestCase):
         # PC-102: the settings the generated code really reads. The STORAGE_ENDPOINT/minioadmin
         # placeholders this used to pin were never read by anything (and named a default password).
         ir = _make_ir()
-        web_env = NextjsWebAdapter().generate(ir).get(".env.example").content
+        web_env = NextjsAdminAdapter().generate(ir).get(".env.example").content
         self.assertIn("NEXT_PUBLIC_UPLOAD_SOURCES", web_env)
         for adapter in (PythonBackendAdapter(), GoBackendAdapter()):
             env = adapter.generate(ir).get(".env.example").content

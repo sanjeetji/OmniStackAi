@@ -16,6 +16,7 @@ Tests:
 13. Full project generation via NextjsWebAdapter emits working subcollection deletion code.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 import unittest
 
 from omnistackai_agent_engine.application_ir import (
@@ -315,7 +316,7 @@ class SubcollectionDeletionTests(unittest.TestCase):
             )
 
     def test_full_project_generation_with_subcollection_deletion(self) -> None:
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         ir = _deletable_subcol_ir()
         project = adapter.generate(ir)
 

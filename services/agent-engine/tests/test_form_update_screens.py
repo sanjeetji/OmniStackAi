@@ -17,6 +17,7 @@ Tests:
 14. NextjsWebAdapter emits complete, valid project with update-enabled screens.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -243,7 +244,7 @@ class FormUpdateScreenTests(TestCase):
 
     def test_nextjs_web_adapter_generates_complete_project(self) -> None:
         ir = _update_capable_ir()
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         project = adapter.generate(ir)
 
         self.assertIn("app/article_editor/page.tsx", project.paths())

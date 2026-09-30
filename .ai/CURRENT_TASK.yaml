@@ -1,9 +1,9 @@
 task_id: PC-108
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
 tracker_row: PC-108
 started_at: "2026-09-30"
-completed_at: null
+completed_at: "2026-09-30"
 branch: platform-completion
 objective: >-
   The template pages every build uses read as a finished consumer product in the web app: lists as
@@ -33,6 +33,14 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+live_proof:
+  - every web and admin app of five plans type-checks with the shared cache (0 errors)
+  - hiring portal run through the platform runner with real records - UI check 27 pages, 0 problems; screenshots show cards, avatars, full names
+  - content hub with formatted articles and comments - web pages clean; reading view with lede, body, comments
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - model-written page design remains optional; the templates are what every build gets
+found_and_fixed:
+  - plainText joined words at inline tags ("same day .")
+  - admin boolean badges below contrast ("No" 4.3:1, "Yes" 3.3:1)
+  - killing the live-run script left its dev servers running, which slowed the test suite to a crawl

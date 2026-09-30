@@ -89,15 +89,20 @@ class EveryListHasAPageToReadOne(TestCase):
         self.assertIn("post_detail", [s.id for s in blog.screens])
         files = _files(blog)
         self.assertIn("apps/web/app/post_detail/page.tsx", files)
-        self.assertIn("href={`/post_detail?id=${(item as any).id}`}", files["apps/web/app/post_list/page.tsx"])
+        self.assertIn("href={`/post_detail?id=${encodeURIComponent(String(item.id))}`}", files["apps/web/app/post_list/page.tsx"])
+        self.assertIn("href={`/post_detail?id=${(item as any).id}`}", files["apps/admin/app/post_list/page.tsx"])
         self.assertEqual(with_detail_screens(blog), blog, "idempotent")
 
     def test_a_list_only_entity_detail_page_finds_the_record_in_the_list(self) -> None:
         # Seen in the task-tracker benchmark: the page used `item` and never defined it (tsc failed);
         # checked with tsc against the shared type-check cache, web and admin compile.
-        page = _files(with_detail_screens(example_ir("minimal-blog")))["apps/web/app/post_detail/page.tsx"]
-        self.assertIn("const item = currentIndex >= 0 && listItems ? listItems[currentIndex] : null;", page)
-        self.assertIn("{item && (", page, "the record is shown")
+        files = _files(with_detail_screens(example_ir("minimal-blog")))
+        admin = files["apps/admin/app/post_detail/page.tsx"]
+        self.assertIn("const item = currentIndex >= 0 && listItems ? listItems[currentIndex] : null;", admin)
+        self.assertIn("{item && (", admin, "the record is shown")
+        # PC-108: the web app's reading view finds it in the list the same way.
+        web = files["apps/web/app/post_detail/page.tsx"]
+        self.assertIn("const item = ((list ?? []) as any[]).find((x) => String(x.id) === String(id)) ?? null;", web)
 
 
 class EveryPreviewAppHasItsOwnBasePath(TestCase):

@@ -89,9 +89,12 @@ class TheAppsEditAndShowItSafely(TestCase):
         editor = self.project.get("apps/web/app/post_editor/page.tsx").content
         self.assertIn("<RichTextEditor", editor)
         self.assertIn('import { RichTextEditor } from "@/components/rich-text-editor";', editor)
+        # PC-108: the web app's list shows the words as a card's summary; the admin table as a cell.
         listing = self.project.get("apps/web/app/post_list/page.tsx").content
-        self.assertIn("plainText((item as any).body, 60)", listing)
+        self.assertIn("plainText(item.summary, 160)", listing, "a plan's summary field is the card's teaser")
         self.assertIn('import { plainText } from "@/components/rich-text";', listing)
+        table = self.project.get("apps/admin/app/post_list/page.tsx").content
+        self.assertIn("plainText((item as any).body, 60)", table)
 
     def test_the_view_sanitizes_again_and_never_renders_raw_html_first(self) -> None:
         view = self.project.get("apps/web/components/rich-text.tsx").content

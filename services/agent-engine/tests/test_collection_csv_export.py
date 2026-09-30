@@ -45,6 +45,7 @@ from omnistackai_agent_engine.application_ir import (
 )
 from omnistackai_agent_engine.codegen.nextjs import (
     NextjsWebAdapter,
+    NextjsAdminAdapter,
     render_screen_page,
 )
 
@@ -239,7 +240,7 @@ class CollectionCsvExportTests(unittest.TestCase):
 
     def test_full_project_generation_succeeds(self) -> None:
         """Verify full project generation succeeds and contains collection page with CSV export."""
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         for ir_name in ("minimal-blog", "rideshare-favourites"):
             ir = example_ir(ir_name)
             project = adapter.generate(ir)

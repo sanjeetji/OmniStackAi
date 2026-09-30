@@ -43,7 +43,7 @@ from .llm_ui import (
 )
 from .nextjs import (
     _overview_page,
-    _screen_page,
+    screen_page_for,
     compact_grounding,
     summarize_components,
     summarize_data_layer,
@@ -112,7 +112,7 @@ def llm_file_specs(
             specs[path] = LlmFileSpec(
                 path,
                 build_screen_synthesis_prompt(screen, ir, user_prompt, **grounding),
-                _screen_page(screen, ir),
+                screen_page_for(screen, ir, flavour),
                 build_screen_synthesis_prompt(screen, ir, user_prompt, **compact),
                 needs_auth(ir),
             )

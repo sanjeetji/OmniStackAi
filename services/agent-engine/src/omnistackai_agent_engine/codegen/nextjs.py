@@ -2222,7 +2222,7 @@ def _field_value_jsx(field: Field, expr: str, full: bool = False) -> str:
         return (
             '<span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, '
             f'background: {expr} ? "#dcfce7" : "#f1f5f9", '
-            f'color: {expr} ? "#166534" : "#64748b" }}}}>'
+            f'color: {expr} ? "#166534" : "#475569" }}}}>'  # PC-108: #64748b on #f1f5f9 was 4.3:1
             f'{{{expr} ? "Yes" : "No"}}</span>'
         )
     if enum_rules.enum:
@@ -3035,7 +3035,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             val_expr = (
                 '<span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, '
                 'background: (item as any).' + f.name + ' ? "#dcfce7" : "#f1f5f9", '
-                'color: (item as any).' + f.name + ' ? "#166534" : "#64748b" }}>'
+                'color: (item as any).' + f.name + ' ? "#166534" : "#475569" }}>'  # PC-108: was 4.3:1
                 '{(item as any).' + f.name + ' ? "Yes" : "No"}</span>'
             )
         elif enum_rules.enum:
@@ -5083,6 +5083,27 @@ def _screen_page(screen: Screen, ir: ApplicationIR) -> str:
         return _fallback_screen_page(screen, ir, entity)
 
 
+def screen_page_for(screen: Screen, ir: ApplicationIR, flavour: str = "admin") -> str:
+    """PC-108: the web app's list and detail screens are written for the people who use the app;
+    the admin app (and every other screen) keeps the operator template."""
+    if flavour == "web":
+        entity = _match_entity(screen, ir)
+        if entity is not None:
+            from .visitor_pages import visitor_detail_page, visitor_list_page
+
+            ops = _get_ops_by_entity(ir).get(entity.name, set())
+            companions: dict[str, Screen] = {}
+            for other in ir.screens:
+                if other.id != screen.id and (match := _match_entity(other, ir)) and match.name == entity.name:
+                    companions.setdefault(_screen_intent(other), other)
+            intent = _screen_intent(screen)
+            if intent == "collection" and Op.LIST in ops:
+                return visitor_list_page(screen, entity, ir, ops, companions.get("detail"), companions.get("form"))
+            if intent == "detail" and ops & {Op.GET, Op.LIST}:
+                return visitor_detail_page(screen, entity, ir, ops, companions.get("collection"), companions.get("form"))
+    return _screen_page(screen, ir)
+
+
 def render_screen_page(screen: Screen, ir: ApplicationIR) -> str:
     """Public helper to render a single screen page."""
     return _screen_page(screen, ir)
@@ -5441,9 +5462,26 @@ def _public_home_page(ir: ApplicationIR, archetype: "Archetype | None" = None) -
         if escaped_desc:
             lines.append(f'            <p className="{PREFIX}-lede">{escaped_desc}</p>')
         lines += actions("            ")
+        lines.append("          </div>")
+        # PC-108: this panel was an empty decorative box - a placeholder that looked unfinished.
+        # It now leads straight into the app's sections, or is left out when there are none.
+        if browse:
+            lines += [
+                f'          <nav aria-label="Sections" className="{PREFIX}-panel {PREFIX}-jump">',
+                f'            <p className="{PREFIX}-eyebrow">Jump in</p>',
+                "            <ul>",
+            ]
+            for href, label in browse[:5]:
+                lines += [
+                    "              <li>",
+                    f'                <Link href="{href}">',
+                    f"                  <span>{_escape_ts(label)}</span>",
+                    '                  <span aria-hidden="true">&rarr;</span>',
+                    "                </Link>",
+                    "              </li>",
+                ]
+            lines += ["            </ul>", "          </nav>"]
         lines += [
-            "          </div>",
-            f'          <div aria-hidden="true" className="{PREFIX}-panel" />',
             "        </div>",
             "      </section>",
             "",
@@ -73993,10 +74031,11 @@ def _synthesize_screen_content(
     synthesize_screens: bool = False,
     outcomes: list | None = None,
     grounding: dict | None = None,
+    flavour: str = "admin",
 ) -> str:
     # R-465: per-screen synthesis is an explicit opt-in flag (it replaced a never-set env gate).
     if provider is None or not synthesize_screens:
-        return _screen_page(screen, ir)
+        return screen_page_for(screen, ir, flavour)
     from .llm_ui import synthesize_screen_page_sync
     return synthesize_screen_page_sync(
         screen,
@@ -74160,6 +74199,7 @@ class NextjsWebAdapter:
                         synthesize_screens=synthesize_screens,
                         outcomes=ui_outcomes,
                         grounding=grounding,
+                        flavour=self._flavour,
                     ),
                 )
             )

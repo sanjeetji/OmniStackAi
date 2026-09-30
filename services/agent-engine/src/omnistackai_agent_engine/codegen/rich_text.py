@@ -281,7 +281,9 @@ const ALLOWED_ATTR = ["href", "title", "target", "rel"];
 
 /** The words without the formatting - for tables, previews and search results. */
 export function plainText(html: unknown, max = 0): string {
-  const text = typeof html === "string" ? html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+  // Block tags separate words; inline ones (<strong>, <a>) do not (PC-108: "same day ." read oddly).
+  const text = typeof html === "string" ? html.replace(/<\/?(p|h[1-6]|li|ul|ol|blockquote|pre|div|br)\b[^>]*>/gi, " ")
+    .replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim() : "";
   return max > 0 && text.length > max ? `${text.slice(0, max).trimEnd()}...` : text;
 }

@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-108 (2026-09-30): consumer-grade web pages.** Lists are card grids (images, avatars, summaries, facts, search, empty states); detail pages are reading views; operator tools stay in the admin app; no empty hero box.
 > **PC-107 (2026-09-30): previews ready when ready.** "Preparing pages" until every page is compiled; the sporadic chunk 404s were the console proxy looking the preview up once per file (now cached, and the control plane keeps connections to the Studio). 0 errors in 610 parallel requests and three full UI checks. Benchmark projects removed.
 > **PC-106 (2026-09-30): planning failover and the UI check after every preview.** A plan whose provider stops part-way starts again with the next one (and Groq's 413 now fails over); every preview checks itself once ready and the Studio shows the result. Proven live.
 > **PC-101 (2026-09-30): UI quality check.** `scripts/ui-check.mjs` checks every page of a preview at phone and desktop width (overflow, console, requests, images, contrast). It found and PC-101 fixed: previews without a base path, the proxy 503, the reload socket, SSR crash with uploads, contrast, missing detail pages, unfillable references. Benchmarks food/clinic/store/blog now 0 failing pages.

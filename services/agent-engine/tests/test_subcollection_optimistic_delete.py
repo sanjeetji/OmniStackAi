@@ -6,6 +6,7 @@ effect prunes ids once the subcollection refetch removes them. Applies in both t
 master-detail screen and the dedicated detail screen.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -124,14 +125,14 @@ class ScopeAndSafetyTests(TestCase):
 
     def test_generated_project_renders_optimistic_child_delete(self) -> None:
         # End-to-end via the adapter, using an IR whose subcollection child is deletable.
-        proj = NextjsWebAdapter().generate(_ir(with_child_delete=True))
+        proj = NextjsAdminAdapter().generate(_ir(with_child_delete=True))
         pages = [proj.get(p).content for p in proj.paths() if p.endswith("page.tsx")]
         self.assertTrue(any("commentsSubcolDeleting" in p for p in pages))
 
     def test_example_projects_still_generate(self) -> None:
         # The bundled examples have no deletable subcollection child; generation must remain unaffected.
         for name in ("minimal-blog", "rideshare-favourites"):
-            proj = NextjsWebAdapter().generate(example_ir(name))
+            proj = NextjsAdminAdapter().generate(example_ir(name))
             for p in proj.paths():
                 if p.endswith("page.tsx"):
                     self.assertNotIn("SubcolDeleting", proj.get(p).content)

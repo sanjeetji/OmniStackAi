@@ -113,7 +113,10 @@ class SpecTests(unittest.TestCase):
 
         self.assertEqual(llm_file_specs(ir, "a blog", flavour="admin")["app/page.tsx"].fallback, dashboard_page(ir))
         screen = ir.screens[0]
-        self.assertEqual(specs[f"app/{screen.id}/page.tsx"].fallback, _screen_page(screen, ir))
+        # PC-108: the web app's list and detail fall back to the visitor pages, as the generator builds them.
+        from omnistackai_agent_engine.codegen.nextjs import screen_page_for
+
+        self.assertEqual(specs[f"app/{screen.id}/page.tsx"].fallback, screen_page_for(screen, ir, "web"))
 
     def test_screens_can_be_excluded(self) -> None:
         self.assertEqual(list(llm_file_specs(_ir(), "a blog", synthesize_screens=False)), ["app/page.tsx"])

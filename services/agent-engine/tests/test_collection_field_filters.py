@@ -1,5 +1,6 @@
 """Tests for Task R-278: Collection Screen Boolean & Enum Field Filtering in Generated Next.js Web App."""
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 import unittest
 
 from omnistackai_agent_engine.application_ir.ir import (
@@ -241,7 +242,7 @@ class CollectionFieldFiltersTests(unittest.TestCase):
 
     def test_minimal_blog_full_adapter_generate(self) -> None:
         ir = example_ir("minimal-blog")
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         project = adapter.generate(ir)
         self.assertIn("app/post_list/page.tsx", project.paths())
         post_list = project.get("app/post_list/page.tsx")

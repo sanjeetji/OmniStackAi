@@ -936,7 +936,7 @@ function Cell({ field, value, options }: { field: FieldSpec; value: unknown; opt
   switch (field.kind) {
     case "bool":
       return (
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
+        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? "bg-success/15 text-emerald-800 dark:text-emerald-300" : "bg-muted text-muted-foreground"}`}>
           {value ? "Yes" : "No"}
         </span>
       );

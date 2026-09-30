@@ -5,6 +5,7 @@ pendingDeleteIds overlay and roll them back (row reappears + error toast) if the
 reconcile effect prunes ids once refetch removes them. Self-contained in the collection screen.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 import unittest
 
 from omnistackai_agent_engine.application_ir import (
@@ -126,7 +127,7 @@ class ScopeAndSafetyTests(unittest.TestCase):
         self.assertEqual(_list_page(description="First"), _list_page(description="A different description"))
 
     def test_demo_project_generates(self) -> None:
-        proj = NextjsWebAdapter().generate(_make_ir())
+        proj = NextjsAdminAdapter().generate(_make_ir())
         pages = [proj.get(p).content for p in proj.paths() if p.endswith("page.tsx")]
         self.assertTrue(any("pendingDeleteIds" in p for p in pages))
 

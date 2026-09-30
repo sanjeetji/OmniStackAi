@@ -10,6 +10,7 @@ Tests:
 7. Generated projects (minimal-blog and rideshare-favourites) include search clear buttons and form first-field autofocus.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -90,7 +91,7 @@ def _test_ir(description: str = "Test search clear and autofocus") -> Applicatio
 class SearchClearAndAutofocusTests(TestCase):
     def setUp(self) -> None:
         self.ir = _test_ir()
-        self.adapter = NextjsWebAdapter()
+        self.adapter = NextjsAdminAdapter()
 
     def test_collection_search_renders_clear_button(self) -> None:
         screen = next(s for s in self.ir.screens if s.id == "item_list")

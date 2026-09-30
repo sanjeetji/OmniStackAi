@@ -5,6 +5,7 @@ top-level collection search (R-280) and driven by the race-safe R-286 useList<Ch
 Applies to both the collection master-detail screen and the dedicated detail screen.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -126,7 +127,7 @@ class ScopeAndSafetyTests(TestCase):
             )
 
     def test_demo_project_renders_debounced_subcollection_search(self) -> None:
-        proj = NextjsWebAdapter().generate(example_ir("minimal-blog"))
+        proj = NextjsAdminAdapter().generate(example_ir("minimal-blog"))
         pages = [proj.get(p).content for p in proj.paths() if p.endswith("page.tsx")]
         self.assertTrue(
             any('const [commentsSubcolSearch, setCommentsSubcolSearch] = useState("");' in p for p in pages),

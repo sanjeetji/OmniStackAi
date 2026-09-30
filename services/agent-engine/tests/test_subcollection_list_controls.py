@@ -6,6 +6,7 @@ already-generated useList<Child>By<Parent> hook (setSearch / setSort / setPage).
 (the search input is uncontrolled). Diff invariant across ir.description.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -144,7 +145,7 @@ class ScopeAndSafetyTests(TestCase):
             )
 
     def test_demo_projects_render_subcollection_controls(self) -> None:
-        proj = NextjsWebAdapter().generate(example_ir("minimal-blog"))
+        proj = NextjsAdminAdapter().generate(example_ir("minimal-blog"))
         pages = [proj.get(p).content for p in proj.paths() if p.endswith("page.tsx")]
         self.assertTrue(
             any("commentsSubcol.totalPages > 1 && (" in p for p in pages),

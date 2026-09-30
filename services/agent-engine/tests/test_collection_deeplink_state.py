@@ -1,6 +1,7 @@
 """Tests for Task R-280: Deep-Linked Collection List State + Debounced, Race-Safe Search.
 
 The generated useList<Entities> hook must sync sort/order/q/page/pageSize to the URL and hydrate them
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 from the URL on mount, and its refetch must abort the previous in-flight request. The collection screen
 search input must debounce its committed query. Rule-free of ir.description (diff invariant).
 """
@@ -27,6 +28,7 @@ from omnistackai_agent_engine.application_ir.ir import (
 )
 from omnistackai_agent_engine.application_ir.examples import example_ir
 from omnistackai_agent_engine.codegen import NextjsWebAdapter, render_hooks, render_screen_page
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 
 
 def _make_ir(description: str = "Test App") -> ApplicationIR:
@@ -161,7 +163,7 @@ class DiffInvarianceTests(unittest.TestCase):
 class DemoProjectsTests(unittest.TestCase):
     def test_demo_projects_generate_with_deeplink_and_debounce(self) -> None:
         for name in ("minimal-blog", "rideshare-favourites"):
-            proj = NextjsWebAdapter().generate(example_ir(name))
+            proj = NextjsAdminAdapter().generate(example_ir(name))
             hooks = proj.get("lib/hooks.ts").content
             self.assertIn("window.history.replaceState", hooks)
             self.assertIn("new AbortController()", hooks)

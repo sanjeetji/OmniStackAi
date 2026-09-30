@@ -15,6 +15,7 @@ from omnistackai_agent_engine.application_ir import (
 )
 from omnistackai_agent_engine.codegen.nextjs import (
     NextjsWebAdapter,
+    NextjsAdminAdapter,
     render_screen_page,
 )
 
@@ -82,7 +83,7 @@ class ColumnVisibilityTests(unittest.TestCase):
 
     def test_adapter_generate_outputs_column_visibility_controls(self) -> None:
         """NextjsWebAdapter.generate outputs column visibility controls in collection screen."""
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         project = adapter.generate(self.ir)
         screen_file = project.get("app/post_list/page.tsx")
         self.assertIsNotNone(screen_file)

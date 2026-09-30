@@ -281,7 +281,10 @@ class SwitchTests(unittest.TestCase):
         project = NextjsWebAdapter().generate(ir, provider=stub, prompt="Build a fleet app")
         self.assertEqual(len(stub.requests), 1)  # overview only
         for screen in ir.screens:
-            self.assertEqual(project.get(f"app/{screen.id}/page.tsx").content, _screen_page(screen, ir))
+            # PC-108: the web app's deterministic screens are the visitor pages where they apply.
+            from omnistackai_agent_engine.codegen.nextjs import screen_page_for
+
+            self.assertEqual(project.get(f"app/{screen.id}/page.tsx").content, screen_page_for(screen, ir, "web"))
 
     def test_opt_in_synthesizes_every_screen(self) -> None:
         ir = _make_ir()

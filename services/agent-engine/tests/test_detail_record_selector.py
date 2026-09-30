@@ -44,6 +44,7 @@ from omnistackai_agent_engine.application_ir import (
 )
 from omnistackai_agent_engine.codegen.nextjs import (
     NextjsWebAdapter,
+    NextjsAdminAdapter,
     render_screen_page,
 )
 
@@ -299,7 +300,7 @@ class DetailRecordSelectorTests(unittest.TestCase):
     def test_minimal_blog_full_adapter_generate(self) -> None:
         """Verify NextjsWebAdapter generates full project with detail screen support."""
         ir = _make_test_ir()
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         project = adapter.generate(ir)
         paths = set(project.paths())
         self.assertIn("app/post_detail/page.tsx", paths)

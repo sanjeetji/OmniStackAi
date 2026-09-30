@@ -23,7 +23,7 @@ from omnistackai_agent_engine.application_ir import example_ir
 from omnistackai_agent_engine.codegen.backend_go import GoBackendAdapter
 from omnistackai_agent_engine.codegen.backend_node import NodeBackendAdapter
 from omnistackai_agent_engine.codegen.backend_python import PythonBackendAdapter
-from omnistackai_agent_engine.codegen.nextjs import NextjsWebAdapter
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter, NextjsWebAdapter
 from omnistackai_agent_engine.codegen.react_native import ReactNativeAdapter
 from omnistackai_agent_engine.intake.nl_to_ir import parse_ir_response
 
@@ -53,7 +53,7 @@ def _get(project, path):
 
 
 class TheWebShowsTheLifecycle(TestCase):
-    PROJECT = NextjsWebAdapter().generate(IR)
+    PROJECT = NextjsAdminAdapter().generate(IR)
 
     def test_a_panel_per_workflow(self) -> None:
         panel = _get(self.PROJECT, "components/lifecycle/post-lifecycle.tsx")
@@ -84,7 +84,7 @@ class TheWebShowsTheLifecycle(TestCase):
 
         ir = dataclasses.replace(IR, screens=IR.screens + (Screen(id="post_detail", role="author",
                                  components=("detail",), actions=("view",), navigation=()),))
-        pages = [f.content for f in NextjsWebAdapter().generate(ir).files()
+        pages = [f.content for f in NextjsAdminAdapter().generate(ir).files()
                  if f.path == "app/post_detail/page.tsx"]
         self.assertTrue(pages)
         self.assertIn("<PostLifecycle record={item} onChanged={() => refetch()} />", pages[0])
@@ -95,7 +95,7 @@ class TheWebShowsTheLifecycle(TestCase):
                 self.assertNotIn('name="status"', f.content, f.path)
 
     def test_no_panel_without_a_workflow(self) -> None:
-        paths = NextjsWebAdapter().generate(PLAIN).paths()
+        paths = NextjsAdminAdapter().generate(PLAIN).paths()
         self.assertFalse([p for p in paths if p.startswith("components/lifecycle/")])
 
 

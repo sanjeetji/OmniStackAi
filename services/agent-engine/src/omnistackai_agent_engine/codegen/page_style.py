@@ -118,6 +118,16 @@ def page_stylesheet() -> str:
   border: 1px solid var(--color-border, var(--color-neutral-200));
   box-shadow: var(--shadow-lg);
 }}
+/* PC-108: the split hero's panel leads into the app's sections. */
+.{PREFIX}-jump {{ min-height: 0; padding: var(--space-6); align-self: center; }}
+.{PREFIX}-jump ul {{ margin: var(--space-3) 0 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }}
+.{PREFIX}-jump a {{
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4); border-radius: var(--radius-md);
+  background: var(--color-surface); border: 1px solid var(--color-border, var(--color-neutral-200));
+  color: var(--color-text); font-weight: 600; text-decoration: none;
+}}
+.{PREFIX}-jump a:hover {{ border-color: var(--color-primary); color: var(--color-primary); }}
 .{PREFIX}-card {{
   padding: var(--space-6);
   border-radius: var(--radius-lg);

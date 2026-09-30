@@ -7,6 +7,7 @@ Verifies keyboard navigation in generated Next.js collection screens:
 - Preserves 100% diff-invariance across ir.description changes.
 """
 
+from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter  # PC-108: operator pages live in the admin app
 from unittest import TestCase
 
 from omnistackai_agent_engine.application_ir import (
@@ -116,7 +117,7 @@ class CollectionKeyboardNavigationTests(TestCase):
 
     def test_generated_project_includes_keyboard_nav(self) -> None:
         for name in ("minimal-blog", "rideshare-favourites"):
-            proj = NextjsWebAdapter().generate(example_ir(name))
+            proj = NextjsAdminAdapter().generate(example_ir(name))
             match_path = next((p for p in proj.paths() if p.endswith("post_list/page.tsx") or p.endswith("favourites/page.tsx")), None)
             self.assertIsNotNone(match_path)
             f = proj.get(match_path)

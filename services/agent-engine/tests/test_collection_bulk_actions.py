@@ -45,6 +45,7 @@ from omnistackai_agent_engine.application_ir import (
 )
 from omnistackai_agent_engine.codegen.nextjs import (
     NextjsWebAdapter,
+    NextjsAdminAdapter,
     _collection_screen_page,
     render_screen_page,
 )
@@ -264,7 +265,7 @@ class CollectionBulkActionsTests(unittest.TestCase):
         self.assertEqual(content1, content2, "Collection screen must not depend on ir.description!")
 
     def test_full_project_generation_succeeds(self) -> None:
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         for ir_name in ("minimal-blog", "rideshare-favourites"):
             ir = example_ir(ir_name)
             project = adapter.generate(ir)

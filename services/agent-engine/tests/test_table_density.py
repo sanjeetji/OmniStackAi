@@ -14,6 +14,7 @@ from omnistackai_agent_engine.application_ir import (
 )
 from omnistackai_agent_engine.codegen.nextjs import (
     NextjsWebAdapter,
+    NextjsAdminAdapter,
     render_screen_page,
 )
 
@@ -78,7 +79,7 @@ class TableDensityTests(unittest.TestCase):
         self.assertEqual(p1, p2)
 
     def test_adapter_generate_includes_density_controls(self) -> None:
-        adapter = NextjsWebAdapter()
+        adapter = NextjsAdminAdapter()
         project = adapter.generate(self.ir)
         screen_file = project.get("app/post_list/page.tsx")
         self.assertIsNotNone(screen_file)
