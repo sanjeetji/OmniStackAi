@@ -1,42 +1,39 @@
-task_id: R-574
-status: completed
+task_id: PC-063
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: R-574
+tracker_row: PC-063
 started_at: "2026-09-30"
-completed_at: "2026-09-30"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Store publishing from the Studio, complete except for the owner's accounts (the founder adds them
-  later, D-7 / PC-070). A project's mobile app can be checked, built (EAS, in Expo's cloud) and
-  submitted to Google Play and the App Store from the console, with the store credentials kept as
-  the project's secrets: EXPO_TOKEN and EAS_PROJECT_ID; a Play service-account JSON; an App Store
-  Connect API key (non-interactive - no Apple ID password or 2FA). Key files exist only while a
-  command runs. Without credentials the Studio lists exactly which are missing and where to get them.
+  Android emulator preview without Android Studio. The Studio sets up the SDK command-line tools
+  (checksum-verified), a system image and one virtual device on the owner's request; boots it
+  headless; installs Expo Go for the app's Expo SDK and opens the project's mobile preview on it;
+  and shows its screen in the console with taps, swipes, text and back/home. The console also shows
+  the mobile preview itself (the exp:// link a phone opens), which it did not render before.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
   - services/control-plane/
   - apps/console-web/
+  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - no store account, key or certificate is created or embedded; credentials come only from project secrets
+  - nothing is downloaded without the owner pressing Set up; verify never downloads the SDK or boots a device
+  - Android Studio is not installed or required
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - without credentials the console lists what is missing per store; the eas-cli commands run against a generated app and report the account step as the only one left
+  - Live - on this Mac, set up from the console, boot headless, open a generated app in Expo Go and drive it from the Studio
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - a real build and upload with the founder's Expo, Google Play and Apple accounts (PC-070, D-7)
-found_and_fixed:
-  - generated eas.json submitted with $EXPO_APPLE_ID-style placeholders eas-cli never substitutes; now the API key path, with IDs filled per command
-  - generated app.config.js had no EAS project ID; it reads EAS_PROJECT_ID
-  - a rejected Expo token surfaced as a bare 'GraphQL request failed'; now says to replace EXPO_TOKEN
+deferred: []
+found_and_fixed: []
