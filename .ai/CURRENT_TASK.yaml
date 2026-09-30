@@ -1,26 +1,23 @@
-task_id: PC-101
-status: completed
+task_id: PC-106
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
-tracker_row: PC-101
-started_at: "2026-09-29"
-completed_at: "2026-09-30"
+tracker_row: PC-106
+started_at: "2026-09-30"
+completed_at: null
 branch: platform-completion
 objective: >-
-  A UI quality check for ordinary Vibe builds, and the defects seen while building PC-050 to PC-102:
-  the preview's API proxy route answering 503 (it reads BACKEND_INTERNAL_URL/NEXT_PUBLIC_API_URL,
-  not the API_URL the preview sets); dev-server HMR websockets and static-resource 404s through the
-  console proxy; "Sign in" shown in apps with no sign-in routes; a required <entity>_id for an
-  entity with no API that no form can fill; entities whose only create is nested getting no "New"
-  in the admin console; the Expo app failing tsc on `process`; a plan with no detail screen having
-  no page to read a full record. Every build's pages are screenshotted at phone and desktop width
-  and checked deterministically (overflow, console errors, failed requests, broken images,
-  contrast); a failing page is reported, never hidden.
+  The three points PC-101 left open. (1) A build whose planning answer stops part-way (a provider
+  timeout or rate limit after text has started) starts that answer again with the next provider in
+  the chain instead of failing. (2) The UI check runs by itself once a preview is ready - every page
+  at phone and desktop width - and its result is kept with the project and shown in the Studio; it
+  needs no model and stays optional (skipped, and said so, when no browser is available). (3) The
+  task tracker's last failure (a Next chunk 404 on the admin Users page at phone width) is diagnosed.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
   - services/control-plane/
-  - apps/
+  - apps/console-web/
   - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
@@ -29,31 +26,16 @@ allowed_paths:
   - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
+  - Playwright never becomes a dependency of a generated app
   - no new paid service or infrastructure
 required_gates:
-  - Live: benchmark prompts built through the console; every page of each checked at phone and desktop width with no overflow, console error, failed request or broken image
+  - Live: a build whose first provider fails mid-answer completes with the next one
+  - Live: a preview started from the console gets its UI check result without anyone running it
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-live_proof:
-  - benchmark prompts built through the console, every page checked at 390 and 1360 px
-  - "first round: blog 3/6 page views failing, food 4/58, clinic 3/58, task tracker 15/72, store not built"
-  - "last round: blog 0/6, food 0/58, clinic 0/58, store 0/46, task tracker 2/32 (stepper contrast, fixed after)"
-  - "task tracker after the detail-page and slug fixes: 1/46 (a dev-server chunk 404 on admin/users at phone width, not diagnosed)"
-  - Expo app tsc clean under pnpm; the PC-099 error returns when @types/node is hidden
-  - preview reload socket 101 for the owner, 404 without a session
 blockers: []
-deferred:
-  - planning on free providers fails some builds (rate limits, a 120 s timeout mid-answer; the chain never switches once text flows)
-  - the UI check runs on demand, not automatically after every build
-found_and_fixed:
-  - one-app previews had no base path (scripts and links left the preview, HTML rewrite hydration mismatch, loopback API url)
-  - first-visit dev compiles dropped chunks; pages are warmed after the preview is ready
-  - forms with an upload field crashed server rendering (Uppy built during render)
-  - subtle text, lifecycle stepper and brand foreground below WCAG AA
-  - no app icon (favicon 404); role pills and raw ids in breadcrumbs; plan internals on the fallback page
-  - dev admin lacked the admin role; Go dev roles never matched role checks
-  - an empty provider answer ended builds; a one-item list transition target failed builds
-  - a list-only detail page did not compile; /x/{id} beside /x/{xId}/y stopped next dev (one slug name per level)
+deferred: []
+found_and_fixed: []
