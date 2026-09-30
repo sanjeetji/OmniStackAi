@@ -91,8 +91,9 @@ class NoCredentialIsEverEmbedded(TestCase):
     def test_secrets_are_referenced_by_name_not_value(self) -> None:
         eas = json.loads(_files()["eas.json"].content)
         ios = eas["submit"]["production"]["ios"]
-        for value in ios.values():
-            self.assertTrue(value.startswith("$"), f"{value} should be an env reference")
+        # R-574: eas-cli never substitutes "$NAME" here; the key is a git-ignored file and the IDs
+        # are filled in from the project's secrets for the one upload.
+        self.assertEqual(ios, {"ascApiKeyPath": "./credentials/asc-api-key.p8"})
         android = eas["submit"]["production"]["android"]
         self.assertTrue(android["serviceAccountKeyPath"].endswith(".json"))
         self.assertIn("credentials/", android["serviceAccountKeyPath"])
@@ -232,14 +233,11 @@ class EveryCredentialHasATemplateEntry(TestCase):
     def test_an_env_template_is_generated(self) -> None:
         self.assertIn(".env.example", self.files)
 
-    def test_every_variable_eas_json_references_is_in_it(self) -> None:
-        """A referenced variable with no template entry is one a publisher will not know to set."""
-        import re
-
-        eas = self.files["eas.json"].content
-        referenced = set(re.findall(r"\$([A-Z][A-Z0-9_]+)", eas))
-        self.assertTrue(referenced, "expected eas.json to reference env vars")
-        for name in referenced:
+    def test_every_variable_eas_reads_is_in_it(self) -> None:
+        """A variable with no template entry is one a publisher will not know to set (the names
+        eas-cli 24.8.0 reads for a non-interactive App Store key, R-574)."""
+        for name in ("EXPO_TOKEN", "EAS_PROJECT_ID", "EXPO_ASC_API_KEY_PATH", "EXPO_ASC_KEY_ID",
+                     "EXPO_ASC_ISSUER_ID", "EXPO_APPLE_TEAM_ID", "ASC_APP_ID"):
             with self.subTest(name=name):
                 self.assertIn(name, self.env)
 
@@ -262,7 +260,8 @@ class EveryCredentialHasATemplateEntry(TestCase):
                 continue
             value = line.split("=", 1)[1].strip()
             with self.subTest(line=line):
-                self.assertTrue(value == "" or "example.com" in value, value)
+                # a path to the git-ignored key file is not a credential
+                self.assertTrue(value == "" or "example.com" in value or value.startswith("./credentials/"), value)
 
     def test_env_files_are_git_ignored(self) -> None:
         ignore = self.files[".gitignore"].content

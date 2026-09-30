@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-574 (2026-09-30): store publishing.** Publish -> App stores checks, builds (EAS cloud) and uploads a project's mobile app with the owner's credentials as project secrets; missing ones are listed with where to get them. Proven through the console up to Expo's account check; real accounts at PC-070.
 > **PC-014 (2026-09-30): local models.** Installed models detected and a model recommended per machine (status shows it); `OMNISTACKAI_PREFER_LOCAL=1` keeps plan, repairs and page design local. Proven: a console build planned and designed on qwen2.5-coder:14b with no cloud call.
 > **PC-108 (2026-09-30): consumer-grade web pages.** Lists are card grids (images, avatars, summaries, facts, search, empty states); detail pages are reading views; operator tools stay in the admin app; no empty hero box.
 > **PC-107 (2026-09-30): previews ready when ready.** "Preparing pages" until every page is compiled; the sporadic chunk 404s were the console proxy looking the preview up once per file (now cached, and the control plane keeps connections to the Studio). 0 errors in 610 parallel requests and three full UI checks. Benchmark projects removed.

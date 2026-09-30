@@ -137,6 +137,7 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /projects/{id}/live", handleProjectLive(deps, "", http.MethodPost))
 	mux.HandleFunc("POST /projects/{id}/live/rollback", handleProjectLive(deps, "/rollback", http.MethodPost))
 	mux.HandleFunc("POST /projects/{id}/live/unpublish", handleProjectLive(deps, "/unpublish", http.MethodPost))
+	mux.HandleFunc("POST /projects/{id}/stores", handleProjectStores(deps))
 	mux.HandleFunc("POST /projects/{id}/problems", handleProjectProblemsCheck(deps))
 	mux.HandleFunc("GET /projects/{id}/problems", handleProjectProblemsGet(deps))
 	// POST /projects/{id}/seo/audit and POST /projects/{id}/seo/suggest are owned by the seo
@@ -1098,6 +1099,54 @@ func handleProjectEstimate(deps Deps) http.HandlerFunc {
 			}
 		}
 		writeJSON(w, http.StatusOK, out)
+	}
+}
+
+// storesBudget bounds a store request: the first run installs eas-cli, and an upload can take minutes.
+const storesBudget = 15 * time.Minute
+
+// handleProjectStores forwards a Google Play / App Store request for a project the user owns
+// (R-574): check, build or submit its mobile app. The store credentials are the project's own
+// secrets, added here exactly as a publish adds them; the reply never carries them back.
+func handleProjectStores(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if controller := http.NewResponseController(w); controller != nil {
+			_ = controller.SetWriteDeadline(time.Now().Add(storesBudget + time.Minute))
+		}
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		var in struct {
+			Platform string `json:"platform"`
+			Action   string `json:"action"`
+		}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&in); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid body")
+			return
+		}
+		if in.Action == "" {
+			in.Action = "check"
+		}
+		// Nothing goes to a store from an unverified account (PC-012); checking is fine.
+		if in.Action != "check" && !account.RequireVerified(w, user) {
+			return
+		}
+		payload := map[string]any{"platform": in.Platform, "action": in.Action}
+		if deps.SecretsStore != nil {
+			if sec, err := deps.SecretsStore.ForProject(r.Context(), id); err == nil && len(sec) > 0 {
+				payload["env"] = sec
+			}
+		}
+		body, _ := json.Marshal(payload)
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/stores"
+		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, bytes.NewReader(body), storesBudget)
 	}
 }
 

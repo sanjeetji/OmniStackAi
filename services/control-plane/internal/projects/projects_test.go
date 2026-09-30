@@ -1092,3 +1092,54 @@ func TestProjectLive_Endpoints(t *testing.T) {
 		t.Error("a foreign user's publish reached the Studio")
 	}
 }
+
+// R-574: the store endpoint forwards platform and action for the owner only, and nothing goes to a
+// store from an unverified account (checking what is missing is always allowed).
+func TestProjectStores_Endpoint(t *testing.T) {
+	pStore := newFakeProjectStore()
+	owner := auth.User{EmailVerified: true, ID: "usr-store-a", Email: "a@example.com"}
+	unverified := auth.User{EmailVerified: false, ID: "usr-store-a", Email: "a@example.com"}
+	stranger := auth.User{EmailVerified: true, ID: "usr-store-b", Email: "b@example.com"}
+	proj, _ := pStore.CreateProject(context.Background(), owner.ID, "Store App", "")
+
+	var got []map[string]any
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/workspaces/"+proj.ID+"/stores" || r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		got = append(got, body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":false,"missing":[{"name":"EXPO_TOKEN"}]}`))
+	}))
+	defer mock.Close()
+
+	post := func(user auth.User, body string) int {
+		server := setupTestServer(t, fakeAuthStore{user: user}, pStore, mock.URL)
+		req, _ := http.NewRequest(http.MethodPost, server.URL+"/projects/"+proj.ID+"/stores", strings.NewReader(body))
+		req.Header.Set("Authorization", testBearer)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	if code := post(owner, `{"platform":"android","action":"check"}`); code != http.StatusOK {
+		t.Fatalf("check = %d, want 200", code)
+	}
+	if len(got) != 1 || got[0]["platform"] != "android" || got[0]["action"] != "check" {
+		t.Fatalf("forwarded %v, want platform and action", got)
+	}
+	if code := post(unverified, `{"platform":"ios","action":"build"}`); code == http.StatusOK || len(got) != 1 {
+		t.Errorf("an unverified account's build = %d and reached the Studio %d times, want refused", code, len(got)-1)
+	}
+	if code := post(unverified, `{"platform":"ios","action":"check"}`); code != http.StatusOK {
+		t.Errorf("an unverified account's check = %d, want 200", code)
+	}
+	if code := post(stranger, `{"platform":"android","action":"build"}`); code != http.StatusNotFound {
+		t.Errorf("a stranger's build = %d, want 404", code)
+	}
+}

@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 439 |
+| Completed | 440 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
-| Pending | 96 |
+| Pending | 95 |
 | Not Started | 507 |
 | Superseded | 13 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1129** |
 
-Open work queue: **93** tasks (P0: 4, P1: 43, P2: 32, P3: 14).
+Open work queue: **92** tasks (P0: 4, P1: 42, P2: 32, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -84,7 +84,7 @@ Open work queue: **93** tasks (P0: 4, P1: 43, P2: 32, P3: 14).
 | 36 | PC-103 | Go and Node backends: relations writable and audit timestamps optional, as the Python backend now is | Completed | P1 | Both | PC-100 |  | Found in PC-100 for the Python API (the default backend): no foreign key could be written (the model lacked it and inserts skipped it) and a declared created_at was required on create. The Go models have the same gap (type Order has no CustomerId); check the Node backend too, and run the admin console's create/edit against each. Done 2026-09-29: Go and Node read and write foreign keys and leave declared timestamps to the database; both generated servers created, read, updated and listed an order with its customer against Postgres. Found: the Node API failed tsc wherever it had accounts (fixed). |
 | 37 | PC-108 | Consumer-grade UI for generated apps: detail, landing, list and empty states that read as a finished product, not an operator's tool | Completed | P1 | Both | PC-101 |  | Seen in the PC-101 benchmark screenshots: a record's detail page offers an ID box, 'Copy ID', 'Export JSON' and prev/next buttons to visitors; the landing hero shows an empty image placeholder; public lists are admin-style tables with density toggles and CSV export; empty states are bare. The templates every build uses (model page design is optional) must look finished: cards and readable detail pages for visitors, the operator tools kept in the admin console. Proven with the UI check and screenshots on the benchmark prompts. Done 2026-09-30: card lists and reading views in the web app, operator pages kept in the admin app, no empty hero box; proven on the hiring portal and content hub with real records. |
 | 38 | PC-014 | Local/offline models as a first-class path: build fully on Ollama, recommend a model per machine | Completed | P1 | Both |  | GA-03, GA-04, GA-05, GAP-EVALS, PG-18, PG-19, R-080, R-194 | Ollama adapter exists (R-003/R-006). Found in PC-084: .env names qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not configured with — detect installed models instead of trusting the setting. PC-098 (2026-09-28): the founder replaced 7b with qwen2.5-coder:14b; the Ollama adapter now sends num_ctx (long prompts were cut silently) and page design sizes it to 16k context / 6k answer. Done 2026-09-30: installed models detected at start, a model recommended per machine in status, PREFER_LOCAL keeps page design local; a console build ran with no cloud call. On a 16 GB machine the 14b model's designed pages did not compile - templates kept. |
-| 39 | R-574 | Store publishing for React Native apps: EAS build and submit to Play Store and App Store, proven with real accounts | Pending | P1 | Both | PC-003 | R-062, R-063, R-546 | R-546/R-547 generate the EAS config. Everything up to the upload is built and tested; the Apple and Google accounts (D-7) are plugged in at PC-070. |
+| 39 | R-574 | Store publishing for React Native apps: EAS build and submit to Play Store and App Store, proven with real accounts | Completed | P1 | Both | PC-003 | R-062, R-063 | R-546/R-547 generate the EAS config. Everything up to the upload is built and tested; the Apple and Google accounts (D-7) are plugged in at PC-070. Done 2026-09-30: Publish -> App stores checks, builds and uploads with the owner's credentials as project secrets (missing ones listed with where to get them); proven through the console up to Expo's account check with a made-up token. The real-account run is PC-070/PC-071. |
 | 40 | PC-049 | Managed database for published apps: provision PostgreSQL (Neon, Supabase or self-hosted) and run migrations and seeds on publish | Not Started | P0 | Vibe |  | ARCH-SUPABASE | A live URL needs a live database. Provider interface with a local Docker implementation; MongoDB Atlas once PC-048 exists. From the architecture plan. PC-008 (2026-09-27) delivered the per-app PostgreSQL in Docker with a migration ledger; left: hosted providers (Neon/Supabase), backups, and follow-on migrations for schema changes after first publish (today a changed 0001_init.sql is not re-applied to a live database). |
 | 41 | PC-063 | Android emulator preview without Android Studio: SDK command-line bootstrap, headless emulator, auto-install, streamed into the Studio | Not Started | P1 | Both |  | R-052 | See NATIVE_MOBILE_PREVIEW_PLAN.md. Open source first; local on the founder's Mac, then hosted in PC-065. |
 | | | **Phase 2 Maximum features**: Every prompt yields the most complete product the IR can express. | | | | | | |
@@ -173,7 +173,7 @@ Open work queue: **93** tasks (P0: 4, P1: 43, P2: 32, P3: 14).
 | 121 | PC-046 | Local Mac agent for iOS builds and simulators | Not Started | P3 | Engineering | R-576 | R-054, R-161 |  |
 | | | **Phase 6 Go-live (credentials last)**: The founder supplies accounts and keys; every live proof is run; the platform opens to real users. | | | | | | |
 | 122 | PC-070 | Credentials handover: founder supplies cloud, database, payment, email, Apple and Google accounts and keys; each is plugged in without code changes | Not Started | P0 | Platform | Phases 1-5 |  | Everything before this is built so that only keys and secrets are missing. Keys go into the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7. |
-| 123 | PC-071 | Live proof of every 'Completed - needs live proof' item with the real accounts | Not Started | P0 | Platform | PC-070 |  | Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. |
+| 123 | PC-071 | Live proof of every 'Completed - needs live proof' item with the real accounts | Not Started | P0 | Platform | PC-070 | R-546 | Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. |
 | 124 | PC-015 | Private beta with real users: product KPIs, minimal support tooling, feedback | Not Started | P0 | Platform | PC-071 | PG-15, R-051, R-107, R-513 | The platform is not 'live' until strangers use it. |
 | | | **Phase 7 Win the category**: Measure against every competitor and close each gap until we lead. Done last, after native and go-live, by founder decision (2026-09-26). | | | | | | |
 | 125 | PC-083 | Head-to-head benchmark: the same 20 prompts on OmniStackAI, Lovable, Bolt, v0, Emergent and Replit; score UI quality, working features, build success and time | Not Started | P1 | Both | PC-015 |  | Without measurement 'best' is an opinion. Re-run every quarter (PC-087). |
@@ -1312,6 +1312,7 @@ What each tracker phase asks for, and where it is covered:
 | R-565 | An ecosystem is built with the backend the user asked for. | Completed | 2026-09-25 |  |
 | R-566 | An entity's lifecycle, and who may move it. | Completed | 2026-09-26 |  |
 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | Completed | 2026-09-26 | Works for templates only today; generated projects must install on a real phone. |
+| R-574 | Store publishing for React Native apps: EAS build and submit to Play Store and App Store, proven with real accounts | Completed | 2026-09-30 | R-546/R-547 generate the EAS config. Everything up to the upload is built and tested; the Apple and Google accounts (D-7) are plugged in at PC-070. Done 2026-09-30: Publish -> App stores checks, builds and uploads with the owner's credentials as project secrets (missing ones listed with where to get them); proven through the console up to Expo's account check with a made-up token. The real-account run is PC-070/PC-071. |
 | R-584 | An edit can change a project, not only add to it. | Completed | 2026-09-25 |  |
 | R-586 | The CareClinic seed generator stops reading the clock. | Completed | 2026-09-25 |  |
 | R-587 | Generated Go is gofmt-clean. | Completed | 2026-09-25 |  |

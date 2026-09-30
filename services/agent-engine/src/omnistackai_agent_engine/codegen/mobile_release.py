@@ -235,10 +235,11 @@ def eas_json() -> GeneratedFile:
                     "serviceAccountKeyPath": "./credentials/play-service-account.json",
                     "track": "internal",
                 },
+                # R-574: an App Store Connect API key, the non-interactive way (an Apple ID needs a
+                # password and a 2FA code). eas.json does not expand variables: the Studio's store
+                # release fills ascApiKeyId, ascApiKeyIssuerId and ascAppId for the one submit.
                 "ios": {
-                    "appleId": "$EXPO_APPLE_ID",
-                    "ascAppId": "$EXPO_ASC_APP_ID",
-                    "appleTeamId": "$EXPO_APPLE_TEAM_ID",
+                    "ascApiKeyPath": "./credentials/asc-api-key.p8",
                 },
             }
         },
@@ -330,17 +331,23 @@ EXPO_TOKEN=
 # Apple (needed for `eas submit --platform ios`; Apple Developer Program, 99 USD/year)
 # ---------------------------------------------------------------------------
 
-# The Apple ID email you sign in to developer.apple.com with. Example: you@yourcompany.com
-EXPO_APPLE_ID=
+# An App Store Connect API key (App Store Connect -> Users and Access -> Integrations ->
+# App Store Connect API -> Generate, role App Manager). The .p8 file goes to
+# credentials/asc-api-key.p8; these two are shown beside it.
+EXPO_ASC_KEY_ID=
+EXPO_ASC_ISSUER_ID=
+EXPO_ASC_API_KEY_PATH=./credentials/asc-api-key.p8
 
 # Your 10-character Team ID. developer.apple.com -> Membership details -> Team ID.
-# Ten letters and digits, e.g. A1B2C3D4E5
 EXPO_APPLE_TEAM_ID=
 
-# The App Store Connect app ID — the numeric id of the listing, NOT the bundle identifier.
-# Create the app in App Store Connect first; the id is in the URL and in App Information.
-# All digits, e.g. 6478123456
-EXPO_ASC_APP_ID=
+# The App Store Connect app ID - the numeric id of the listing, NOT the bundle identifier.
+# Create the app in App Store Connect first; it is in App Information. Put it in eas.json
+# (submit.production.ios.ascAppId) for a manual submit; the Studio fills it from the project's secrets.
+ASC_APP_ID=
+
+# The EAS project this app builds under (expo.dev -> the project's ID).
+EAS_PROJECT_ID=
 
 # ---------------------------------------------------------------------------
 # Google Play (needed for `eas submit --platform android`; Play Console, 25 USD once)
@@ -448,9 +455,14 @@ listing in each store console.
 | --- | --- |
 | Expo access token | the `EXPO_TOKEN` environment variable |
 | Google Play service account JSON | `credentials/play-service-account.json` |
-| Apple ID | the `EXPO_APPLE_ID` environment variable |
-| App Store Connect app ID | the `EXPO_ASC_APP_ID` environment variable |
+| EAS project ID | the `EAS_PROJECT_ID` environment variable |
+| App Store Connect API key (.p8) | `credentials/asc-api-key.p8` |
+| its key ID and issuer ID | `EXPO_ASC_KEY_ID`, `EXPO_ASC_ISSUER_ID` |
 | Apple Team ID | the `EXPO_APPLE_TEAM_ID` environment variable |
+| App Store Connect app ID | `ascAppId` in `eas.json` (submit.production.ios) |
+
+From the Studio, all of these are the project's secrets instead, and **Publish -> App stores**
+runs the build and the submit for you.
 
 `eas.json` refers to each of these by name. No key is stored in this repository.
 

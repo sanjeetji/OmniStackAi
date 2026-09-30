@@ -231,6 +231,8 @@ module.exports = () => ({
       permissions: [],
     },
     web: { favicon: './assets/favicon.png' },
+    // R-574: the EAS project this app builds under (expo.dev -> the project's ID).
+    ...(process.env.EAS_PROJECT_ID ? { extra: { eas: { projectId: process.env.EAS_PROJECT_ID } } } : {}),
   },
 });
 """,

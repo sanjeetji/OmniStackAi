@@ -324,9 +324,12 @@ QUEUE = [
      "status, PREFER_LOCAL keeps page design local; a console build ran with no cloud call. On a 16 GB "
      "machine the 14b model's designed pages did not compile - templates kept."),
     ("R-574", "Store publishing for React Native apps: EAS build and submit to Play Store and "
-     "App Store, proven with real accounts", "1 Vibe Mode live", "Both", "In Progress", "P1",
+     "App Store, proven with real accounts", "1 Vibe Mode live", "Both", "Completed", "P1",
      "PC-003", "R-546/R-547 generate the EAS config. Everything up to the upload is built and "
-     "tested; the Apple and Google accounts (D-7) are plugged in at PC-070. Covers R-062, R-063."),
+     "tested; the Apple and Google accounts (D-7) are plugged in at PC-070. Covers R-062, R-063. "
+     "Done 2026-09-30: Publish -> App stores checks, builds and uploads with the owner's credentials "
+     "as project secrets (missing ones listed with where to get them); proven through the console up "
+     "to Expo's account check with a made-up token. The real-account run is PC-070/PC-071."),
     ("PC-049", "Managed database for published apps: provision PostgreSQL (Neon, Supabase or "
      "self-hosted) and run migrations and seeds on publish", "1 Vibe Mode live", "Vibe",
      "Not Started", "P0", "", "A live URL needs a live database. Provider interface with a "
@@ -805,7 +808,7 @@ for _id in ("R-081", "R-082", "R-083", "R-084", "R-085", "R-086", "R-087", "R-08
 # Completed in CHANGELOG but only in code, never run against a real external account.
 NEEDS_LIVE_PROOF = {
     "R-509": "PC-008", "R-510": "PC-008", "R-511": "PC-013", "R-512": "R-567",
-    "R-513": "PC-015", "R-516": "PC-012", "R-546": "R-574",
+    "R-513": "PC-015", "R-516": "PC-012", "R-546": "PC-071",
 }
 
 # --- Other R_&_D sources (specs, plans, gap analysis) ------------------------------------------

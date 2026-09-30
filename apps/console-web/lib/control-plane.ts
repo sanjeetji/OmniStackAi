@@ -2624,6 +2624,34 @@ export function actOnProjectLive(
   });
 }
 
+// ── R-574: the mobile app to Google Play and the App Store ────────────────────────────────────
+
+export type StorePlatform = "android" | "ios";
+export type StoreAction = "check" | "build" | "submit";
+
+export interface StoreResult {
+  platform: StorePlatform;
+  action: StoreAction;
+  ok: boolean;
+  missing: { name: string; what: string; where: string }[];
+  warnings: string[];
+  output: string;
+  details: { app?: string; can_build?: boolean; can_submit?: boolean; build_id?: string; url?: string; status?: string };
+}
+
+export function actOnProjectStores(
+  token: string,
+  projectId: string,
+  platform: StorePlatform,
+  action: StoreAction,
+): Promise<StoreResult> {
+  return callControlPlane<StoreResult>(`/projects/${encodeURIComponent(projectId)}/stores`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ platform, action }),
+  });
+}
+
 // ── PC-010: the cost of a build or edit, before it starts ──────────────────────────────────────
 
 export type CostEstimate = {

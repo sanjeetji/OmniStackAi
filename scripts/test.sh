@@ -2642,7 +2642,7 @@ fi
 
 # R-547: a named credential with no template entry is one a publisher will not know to set, and a
 # flat placeholder icon reads as unfinished.
-for guard in test_every_variable_eas_json_references_is_in_it \
+for guard in test_every_variable_eas_reads_is_in_it \
   test_each_entry_says_where_the_value_comes_from \
   test_the_template_holds_no_real_credential \
   test_two_projects_get_different_marks \

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LivePublishPanel } from "@/components/live-publish-panel";
+import { StorePublishPanel } from "@/components/store-publish-panel";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -229,6 +230,7 @@ export function PublishDialog({
         </DialogHeader>
 
         <LivePublishPanel projectId={projectId} />
+        <StorePublishPanel projectId={projectId} />
         <p className="text-xs font-medium text-muted-foreground">Or: web app only, to Vercel or Netlify</p>
 
         {loading ? (

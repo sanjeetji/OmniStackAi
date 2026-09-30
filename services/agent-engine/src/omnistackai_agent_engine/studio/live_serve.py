@@ -1582,6 +1582,25 @@ def main() -> None:
 
     publisher = StackPublisher()
 
+    def workspace_stores(ws_id: str, body: dict) -> dict:
+        """R-574: the mobile app to Google Play / the App Store. Credentials are the project's
+        secrets, passed by the control plane per request (body["env"]) and never kept."""
+        from pathlib import Path as _Path
+
+        from ..publish.store_release import check, release
+
+        if not workspace_store.exists(ws_id):
+            raise KeyError(ws_id)
+        platform = str(body.get("platform") or "")
+        action = str(body.get("action") or "check")
+        if platform not in ("android", "ios") or action not in ("check", "build", "submit"):
+            raise ValueError("platform must be android or ios, action check, build or submit")
+        secrets = {k: str(v) for k, v in (body.get("env") or {}).items() if isinstance(k, str)}
+        repo = _Path(workspace_store.repo_path(ws_id))
+        if action == "check":
+            return check(repo, platform, secrets).to_dict()
+        return release(repo, platform, action, secrets).to_dict()
+
     def workspace_live(ws_id: str, action: str, body: dict) -> dict:
         """PC-008: the whole app at a live URL. Publishing runs in the background; poll the status."""
         if not workspace_store.exists(ws_id):
@@ -1685,6 +1704,7 @@ def main() -> None:
         "workspace_preview_stop_fn": workspace_preview_stop,
         "workspace_design_stream_fn": workspace_design_stream,
         "workspace_live_fn": workspace_live,
+        "workspace_stores_fn": workspace_stores,
         "estimate_fn": estimate,
         "workspace_problems_check_fn": workspace_problems_check,
         "workspace_problems_get_fn": workspace_problems_get,

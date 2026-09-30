@@ -138,6 +138,7 @@ def _make_handler(
     workspace_preview_status_fn: PreviewBuildFn | None = None,
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_live_fn: Callable[[str, str, dict], dict] | None = None,
+    workspace_stores_fn: Callable[[str, dict], dict] | None = None,
     estimate_fn: Callable[..., dict] | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
@@ -380,6 +381,21 @@ def _make_handler(
             try:
                 res = workspace_preview_status_fn(ws_id)
                 self._send_json(200, res)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_stores(self, ws_id: str) -> None:
+            """R-574: check, build or submit the project's mobile app for Google Play or the App Store."""
+            if workspace_stores_fn is None:
+                self._send_json(404, {"error": "store publishing is not enabled"})
+                return
+            body = self._read_json_body() if int(self.headers.get("Content-Length", 0) or 0) > 0 else {}
+            try:
+                self._send_json(200, workspace_stores_fn(ws_id, body if isinstance(body, dict) else {}))
+            except KeyError:
+                self._send_json(404, {"error": "workspace not found"})
+            except ValueError as error:
+                self._send_json(400, {"error": str(error)})
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
 
@@ -1925,6 +1941,10 @@ def _make_handler(
             if ws_edit_id is not None:
                 self._handle_workspace_edit(ws_edit_id)
                 return
+            ws_stores_id = self._workspace_id_for_suffix(path_only, "/stores")
+            if ws_stores_id is not None:
+                self._handle_workspace_stores(ws_stores_id)
+                return
             for suffix, action in (("/live/rollback", "rollback"), ("/live/unpublish", "unpublish"),
                                    ("/live", "publish")):
                 ws_live_id = self._workspace_id_for_suffix(path_only, suffix)
@@ -2116,6 +2136,7 @@ def create_studio_server(
     workspace_preview_status_fn: PreviewBuildFn | None = None,
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_live_fn: Callable[[str, str, dict], dict] | None = None,
+    workspace_stores_fn: Callable[[str, dict], dict] | None = None,
     estimate_fn: Callable[..., dict] | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
@@ -2209,6 +2230,7 @@ def create_studio_server(
             workspace_preview_status_fn=workspace_preview_status_fn,
             workspace_preview_stop_fn=workspace_preview_stop_fn,
             workspace_live_fn=workspace_live_fn,
+            workspace_stores_fn=workspace_stores_fn,
             estimate_fn=estimate_fn,
             workspace_problems_check_fn=workspace_problems_check_fn,
             workspace_problems_get_fn=workspace_problems_get_fn,

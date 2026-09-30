@@ -116,6 +116,13 @@ export default function ProjectManagePage({
   const [activeSection, setActiveSection] = useState<
     "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "payments" | "analytics"
   >("general");
+  // R-574: a link can open a section directly (the store panel sends people to Secrets).
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("section");
+    if (wanted === "secrets" || wanted === "publish" || wanted === "connectors") {
+      void Promise.resolve().then(() => setActiveSection(wanted));
+    }
+  }, []);
 
   // General Form state
   const [name, setName] = useState("");
