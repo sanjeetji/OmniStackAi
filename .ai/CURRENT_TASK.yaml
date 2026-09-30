@@ -1,46 +1,38 @@
-task_id: PC-108
-status: completed
-phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
-tracker_row: PC-108
+task_id: PC-014
+status: in_progress
+phase: Platform Completion — 1 Vibe Mode live
+tracker_row: PC-014
 started_at: "2026-09-30"
-completed_at: "2026-09-30"
+completed_at: null
 branch: platform-completion
 objective: >-
-  The template pages every build uses read as a finished consumer product in the web app: lists as
-  cards with the record's title, a short summary, its image and status; a detail page that shows
-  the record, formatted, with a clear way back - no ID box, "Copy ID", "Export JSON" or density
-  toggles for visitors; a landing page without an empty image placeholder; empty states that say
-  what to do next. The operator tools stay in the admin app. Proven with the UI check and
-  screenshots.
+  Local models as a first-class path. The platform asks Ollama which models are installed instead
+  of trusting the setting (a configured model that is not installed is replaced by the best
+  installed one that fits, and said so; with none, the message says exactly which model to pull);
+  it recommends a model for the machine from its memory and shows it in `omnistack.sh status`; and a
+  whole build - plan, compile repair and page design - runs on Ollama alone when local is preferred.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
-  - apps/console-web/
   - scripts/
+  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/
+  - .env.example
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - the admin app keeps its operator tools
+  - no model is downloaded without the founder asking
 required_gates:
-  - Live: generated web apps' pages pass the UI check at phone and desktop width, and their screenshots show the consumer layouts
+  - Live: a build runs start to finish on the local Ollama model with no cloud call
   - scripts/verify.sh passes
 model_tool_trace:
-  routing: deterministic_only
+  routing: local_only_for_live_proof
   local_calls: 0
   cloud_calls: 0
-live_proof:
-  - every web and admin app of five plans type-checks with the shared cache (0 errors)
-  - hiring portal run through the platform runner with real records - UI check 27 pages, 0 problems; screenshots show cards, avatars, full names
-  - content hub with formatted articles and comments - web pages clean; reading view with lede, body, comments
 blockers: []
-deferred:
-  - model-written page design remains optional; the templates are what every build gets
-found_and_fixed:
-  - plainText joined words at inline tags ("same day .")
-  - admin boolean badges below contrast ("No" 4.3:1, "Yes" 3.3:1)
-  - killing the live-run script left its dev servers running, which slowed the test suite to a crawl
+deferred: []
+found_and_fixed: []

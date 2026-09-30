@@ -314,7 +314,7 @@ QUEUE = [
      "card lists and reading views in the web app, operator pages kept in the admin app, no empty "
      "hero box; proven on the hiring portal and content hub with real records."),
     ("PC-014", "Local/offline models as a first-class path: build fully on Ollama, recommend "
-     "a model per machine", "1 Vibe Mode live", "Both", "Pending", "P1", "",
+     "a model per machine", "1 Vibe Mode live", "Both", "In Progress", "P1", "",
      "Ollama adapter exists (R-003/R-006). Covers R-080, R-194. Found in PC-084: .env names "
      "qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not "
      "configured with — detect installed models instead of trusting the setting. PC-098 "
