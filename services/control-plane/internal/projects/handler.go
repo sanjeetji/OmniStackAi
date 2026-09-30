@@ -138,6 +138,7 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /projects/{id}/live/rollback", handleProjectLive(deps, "/rollback", http.MethodPost))
 	mux.HandleFunc("POST /projects/{id}/live/unpublish", handleProjectLive(deps, "/unpublish", http.MethodPost))
 	mux.HandleFunc("POST /projects/{id}/stores", handleProjectStores(deps))
+	registerDevice(mux, deps)
 	mux.HandleFunc("POST /projects/{id}/problems", handleProjectProblemsCheck(deps))
 	mux.HandleFunc("GET /projects/{id}/problems", handleProjectProblemsGet(deps))
 	// POST /projects/{id}/seo/audit and POST /projects/{id}/seo/suggest are owned by the seo

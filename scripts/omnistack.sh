@@ -780,6 +780,10 @@ cmd_status() {
     warn "ollama (local)  $OLLAMA_URL  not reachable (cloud providers will be used)"
   fi
 
+  # PC-063: the Android emulator the Studio can run (set up from a mobile app's preview tab).
+  PYTHONPATH="$repo_root/services/agent-engine/src" python3 -m omnistackai_agent_engine.mobile_device.android status \
+    2>/dev/null | sed 's/^/  /' || true
+
   print_endpoints
 }
 

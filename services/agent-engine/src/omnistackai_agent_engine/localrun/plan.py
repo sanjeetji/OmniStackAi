@@ -450,7 +450,10 @@ def build_run_plan(
             RunStep(
                 label=f"start backend API (uvicorn) on {api_url}",
                 program=".venv/bin/uvicorn",
-                args=("app.main:app", "--host", "127.0.0.1", "--port", str(api_port)),
+                # PC-063: a mobile app calls the API from another device (a phone, the emulator) at
+                # this machine's LAN address, which a loopback-only API refused - every call failed
+                # with "Network request failed". Only a project with a mobile app listens on the LAN.
+                args=("app.main:app", "--host", "0.0.0.0" if has_mobile else "127.0.0.1", "--port", str(api_port)),
                 cwd=str(api_dir),
                 env=(("DATABASE_URL", database_url), ("JWT_SECRET", jwt_secret)) + uploads.api + extra_tuples,
                 background=True,

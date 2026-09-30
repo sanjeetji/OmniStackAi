@@ -16,7 +16,7 @@ import os
 import re
 from collections.abc import AsyncIterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Callable
+from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urlparse
 
 from ..intake.ecosystem import propose_ecosystem
@@ -139,6 +139,8 @@ def _make_handler(
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_live_fn: Callable[[str, str, dict], dict] | None = None,
     workspace_stores_fn: Callable[[str, dict], dict] | None = None,
+    android_device_fn: Callable[[str, dict], Any] | None = None,
+    workspace_device_fn: Callable[[str, dict], dict] | None = None,
     estimate_fn: Callable[..., dict] | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
@@ -383,6 +385,51 @@ def _make_handler(
                 self._send_json(200, res)
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
+
+        def _device_call(self, fn: Callable[..., Any] | None, *args: Any) -> Any:
+            """PC-063: run a device operation, mapping its errors to a status; None when one was sent."""
+            if fn is None:
+                self._send_json(404, {"error": "the Android emulator is not enabled on this server"})
+                return None
+            try:
+                return fn(*args)
+            except KeyError:
+                self._send_json(404, {"error": "workspace not found"})
+            except ValueError as error:
+                self._send_json(400, {"error": str(error)})
+            except RuntimeError as error:
+                self._send_json(409, {"error": str(error)})
+            except Exception as error:  # noqa: BLE001
+                self._send_json(502, {"error": str(error)})
+            return None
+
+        def _handle_android_get(self, path: str) -> None:
+            if path.endswith("/screen"):
+                png = self._device_call(android_device_fn, "screen", {})
+                if png is not None:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/png")
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Content-Length", str(len(png)))
+                    self.end_headers()
+                    self.wfile.write(png)
+                return
+            result = self._device_call(android_device_fn, "status", {})
+            if result is not None:
+                self._send_json(200, result)
+
+        def _handle_android_post(self, path: str) -> None:
+            body = self._read_json_body() if int(self.headers.get("Content-Length", 0) or 0) > 0 else {}
+            body = body if isinstance(body, dict) else {}
+            result = self._device_call(android_device_fn, "input" if path.endswith("/input") else "act", body)
+            if result is not None:
+                self._send_json(200, result)
+
+        def _handle_workspace_device(self, ws_id: str) -> None:
+            body = self._read_json_body() if int(self.headers.get("Content-Length", 0) or 0) > 0 else {}
+            result = self._device_call(workspace_device_fn, ws_id, body if isinstance(body, dict) else {})
+            if result is not None:
+                self._send_json(200, result)
 
         def _handle_workspace_stores(self, ws_id: str) -> None:
             """R-574: check, build or submit the project's mobile app for Google Play or the App Store."""
@@ -1257,6 +1304,8 @@ def _make_handler(
                                                      (query.get("model_id") or [None])[0]))
                 except Exception as error:  # noqa: BLE001
                     self._send_json(502, {"error": str(error)})
+            elif urlparse(self.path).path in ("/api/device/android", "/api/device/android/screen"):
+                self._handle_android_get(urlparse(self.path).path)
             elif self.path == "/api/preview":
                 if status_fn is None:
                     self._send_json(404, {"error": "preview controls are not enabled"})
@@ -1941,6 +1990,13 @@ def _make_handler(
             if ws_edit_id is not None:
                 self._handle_workspace_edit(ws_edit_id)
                 return
+            if path_only in ("/api/device/android", "/api/device/android/input"):
+                self._handle_android_post(path_only)
+                return
+            ws_device_id = self._workspace_id_for_suffix(path_only, "/device")
+            if ws_device_id is not None:
+                self._handle_workspace_device(ws_device_id)
+                return
             ws_stores_id = self._workspace_id_for_suffix(path_only, "/stores")
             if ws_stores_id is not None:
                 self._handle_workspace_stores(ws_stores_id)
@@ -2137,6 +2193,8 @@ def create_studio_server(
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_live_fn: Callable[[str, str, dict], dict] | None = None,
     workspace_stores_fn: Callable[[str, dict], dict] | None = None,
+    android_device_fn: Callable[[str, dict], Any] | None = None,
+    workspace_device_fn: Callable[[str, dict], dict] | None = None,
     estimate_fn: Callable[..., dict] | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
@@ -2231,6 +2289,8 @@ def create_studio_server(
             workspace_preview_stop_fn=workspace_preview_stop_fn,
             workspace_live_fn=workspace_live_fn,
             workspace_stores_fn=workspace_stores_fn,
+            android_device_fn=android_device_fn,
+            workspace_device_fn=workspace_device_fn,
             estimate_fn=estimate_fn,
             workspace_problems_check_fn=workspace_problems_check_fn,
             workspace_problems_get_fn=workspace_problems_get_fn,

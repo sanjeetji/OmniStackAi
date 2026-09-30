@@ -99,6 +99,17 @@ class TheMobileAppIsStarted(TestCase):
         self.assertTrue(base.endswith(f":{API_PORT}"), base)
 
 
+    def test_the_api_listens_where_the_app_calls_it(self) -> None:
+        """PC-063: the app was given the LAN address while the API listened on loopback only, so
+        every call from a phone or the emulator failed with "Network request failed"."""
+        api = next(s for s in self.plan.steps if s.program.endswith("uvicorn"))
+        self.assertEqual(api.args[api.args.index("--host") + 1], "0.0.0.0")
+
+    def test_without_a_mobile_app_the_api_stays_on_loopback(self) -> None:
+        plan = build_run_plan(str(_repo("web", "admin", backend=True)), public_base="/preview/p1", api_port=API_PORT)
+        api = next(s for s in plan.steps if s.program.endswith("uvicorn"))
+        self.assertEqual(api.args[api.args.index("--host") + 1], "127.0.0.1")
+
 class ThePhoneGetsSomethingToScan(TestCase):
     def test_the_preview_reports_an_expo_url(self) -> None:
         plan = build_run_plan(str(_repo("web", "admin", "mobile")), public_base="/preview/p1")

@@ -346,11 +346,13 @@ export interface PreviewUiCheck {
 export interface PreviewApp {
   id: string;
   name: string;
-  kind: "web" | "admin" | "pwa" | "api";
+  kind: "web" | "admin" | "pwa" | "api" | "mobile";
   port: number;
   path: string;
   url: string;
   ready: boolean;
+  /** A mobile (Expo) app: the exp:// link Expo Go opens (R-545). */
+  scan?: string;
 }
 
 /** A local demo login shipped with a template, shown next to the preview. */
@@ -2649,6 +2651,62 @@ export function actOnProjectStores(
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ platform, action }),
+  });
+}
+
+// ── PC-063: the Android emulator the Studio runs on this machine ─────────────────────────────
+
+export type AndroidState = "not_set_up" | "setting_up" | "stopped" | "booting" | "running" | "stopping" | "in_use";
+
+export type AndroidStatus = {
+  state: AndroidState;
+  have?: Record<string, boolean>;
+  device?: string;
+  system_image?: string;
+  setup_size?: string;
+  log?: string[];
+  error?: string;
+};
+
+export type AndroidInput =
+  | { kind: "tap"; x: number; y: number }
+  | { kind: "swipe"; x: number; y: number; x2: number; y2: number }
+  | { kind: "text"; text: string }
+  | { kind: "key"; key: "back" | "home" | "enter" | "delete" | "apps" };
+
+export function getAndroidStatus(token: string): Promise<AndroidStatus> {
+  return callControlPlane<AndroidStatus>("/device/android", { headers: { Authorization: `Bearer ${token}` } });
+}
+
+export function actOnAndroid(token: string, action: "setup" | "boot" | "stop"): Promise<AndroidStatus> {
+  return callControlPlane<AndroidStatus>("/device/android", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ action }),
+  });
+}
+
+export function sendAndroidInput(token: string, input: AndroidInput): Promise<{ ok: boolean }> {
+  return callControlPlane<{ ok: boolean }>("/device/android/input", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+/** The emulator's screen as a PNG response (not parsed). */
+export function fetchAndroidScreen(token: string): Promise<Response> {
+  return fetch(`${controlPlaneUrl()}/device/android/screen`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+}
+
+export function openProjectOnAndroid(token: string, projectId: string, app?: string): Promise<{ opened: string }> {
+  return callControlPlane<{ opened: string }>(`/projects/${encodeURIComponent(projectId)}/device`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ app: app ?? "" }),
   });
 }
 

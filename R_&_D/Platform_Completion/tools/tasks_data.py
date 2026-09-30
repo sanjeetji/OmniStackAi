@@ -339,8 +339,15 @@ QUEUE = [
      "first publish (today a changed 0001_init.sql is not re-applied to a live database)."),
     ("PC-063", "Android emulator preview without Android Studio: SDK command-line bootstrap, "
      "headless emulator, auto-install, streamed into the Studio", "1 Vibe Mode live", "Both",
-     "Not Started", "P1", "", "See NATIVE_MOBILE_PREVIEW_PLAN.md. Open source first; local "
-     "on the founder's Mac, then hosted in PC-065. Covers R-052."),
+     "Completed", "P1", "", "See NATIVE_MOBILE_PREVIEW_PLAN.md. Open source first; local "
+     "on the founder's Mac, then hosted in PC-065. Covers R-052. Done 2026-09-30: the preview's "
+     "Mobile tab sets up (checksum-verified, ~1.5 GB once), boots and drives an emulator and opens "
+     "the app in Expo Go; one account holds it at a time. Screenshots, not video, for now."),
+    ("PC-109", "Generated React Native screens read as a finished product: list cards titled by the "
+     "record's name (not its ID), actions inside the card, the same care as PC-108's web pages",
+     "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-063",
+     "Seen on the emulator in PC-063: the chore tracker's list showed each chore by its UUID and a "
+     "clipped red button at the card's edge."),
     # Phase 2 - Maximum features
     ("R-582", "Smarter IR synthesis: multi-pass planning and self-critique before generation",
      "2 Maximum features", "Both", "Not Started", "P1", "", "Where 'more features per prompt' is won."),

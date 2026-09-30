@@ -1601,6 +1601,36 @@ def main() -> None:
             return check(repo, platform, secrets).to_dict()
         return release(repo, platform, action, secrets).to_dict()
 
+    from ..mobile_device.android import AndroidDevice, expo_sdk_major
+
+    android = AndroidDevice()
+
+    def android_device(op: str, body: dict) -> dict | bytes:
+        """PC-063: the one Android emulator this machine runs for the Studio."""
+        if op == "status":
+            return android.status()
+        if op == "act":
+            return android.start(str(body.get("action") or ""))
+        if op == "screen":
+            return android.screen()
+        if op == "input":
+            return android.input(body)
+        raise ValueError(f"unknown device operation {op!r}")
+
+    def workspace_device(ws_id: str, body: dict) -> dict:
+        """PC-063: open the project's running mobile preview in Expo Go on the emulator."""
+        from pathlib import Path as _Path
+
+        if not workspace_store.exists(ws_id):
+            raise KeyError(ws_id)
+        status = preview_manager.workspace_status(ws_id) if preview_manager is not None else {}
+        mobiles = [a for a in (status.get("apps") or []) if a.get("kind") == "mobile" and a.get("scan")]
+        app = next((a for a in mobiles if a.get("id") == body.get("app")), mobiles[0] if mobiles else None)
+        if app is None:
+            raise ValueError("start the preview first - the mobile app runs with it")
+        repo = _Path(workspace_store.repo_path(ws_id))
+        return android.open_expo(app["scan"], expo_sdk_major(repo / "apps" / app["id"]))
+
     def workspace_live(ws_id: str, action: str, body: dict) -> dict:
         """PC-008: the whole app at a live URL. Publishing runs in the background; poll the status."""
         if not workspace_store.exists(ws_id):
@@ -1705,6 +1735,8 @@ def main() -> None:
         "workspace_design_stream_fn": workspace_design_stream,
         "workspace_live_fn": workspace_live,
         "workspace_stores_fn": workspace_stores,
+        "android_device_fn": android_device,
+        "workspace_device_fn": workspace_device,
         "estimate_fn": estimate,
         "workspace_problems_check_fn": workspace_problems_check,
         "workspace_problems_get_fn": workspace_problems_get,

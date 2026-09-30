@@ -15,11 +15,13 @@ import {
   Server,
   Smartphone,
   Square,
+  TabletSmartphone,
   type LucideIcon,
 } from "lucide-react";
 import type { PreviewApp, PreviewDemoUser, PreviewStatus, PreviewUiCheck } from "@/lib/control-plane";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MobilePreview } from "@/components/mobile-preview";
 import { cn } from "@/lib/utils";
 
 const KIND_ICON: Record<PreviewApp["kind"], LucideIcon> = {
@@ -27,6 +29,7 @@ const KIND_ICON: Record<PreviewApp["kind"], LucideIcon> = {
   admin: LayoutDashboard,
   pwa: Smartphone,
   api: Server,
+  mobile: TabletSmartphone,
 };
 
 const PHASE_LABELS: Record<string, string> = {
@@ -42,8 +45,9 @@ const FRAME_HEIGHT = "h-[calc(100dvh-18rem)] min-h-[480px]";
 
 /**
  * Preview for template projects that run several apps sharing one API (R-520). Shows one app at a
- * time with a switcher. Mobile (PWA) apps render in a phone frame. The template's demo logins are
- * listed underneath.
+ * time with a switcher. Mobile (PWA) apps render in a phone frame; a native (Expo) app opens by QR
+ * on the owner's phone or on the Android emulator (PC-063). The template's demo logins are listed
+ * underneath.
  */
 export function MultiAppPreview({
   projectId,
@@ -75,6 +79,7 @@ export function MultiAppPreview({
   const base = `/preview/${encodeURIComponent(projectId)}`;
   const src = `${base}/${encodeURIComponent(selected.id)}`;
   const isPhone = selected.kind === "pwa";
+  const isNative = selected.kind === "mobile";
 
   return (
     <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
@@ -115,11 +120,13 @@ export function MultiAppPreview({
             </a>
           </Button>
         ) : null}
-        <Button asChild variant="ghost" size="icon-sm" aria-label={`Open ${selected.name} in a new tab`}>
-          <a href={src} target="_blank" rel="noreferrer">
-            <ExternalLink aria-hidden="true" />
-          </a>
-        </Button>
+        {isNative ? null : (
+          <Button asChild variant="ghost" size="icon-sm" aria-label={`Open ${selected.name} in a new tab`}>
+            <a href={src} target="_blank" rel="noreferrer">
+              <ExternalLink aria-hidden="true" />
+            </a>
+          </Button>
+        )}
         <Button type="button" variant="outline" size="sm" onClick={onRestart} disabled={busy}>
           <RefreshCw className={cn(busy && "animate-spin")} aria-hidden="true" />
           Restart
@@ -131,7 +138,9 @@ export function MultiAppPreview({
       </div>
 
       <div className="bg-muted/40 p-3">
-        {isPhone ? (
+        {isNative ? (
+          <MobilePreview projectId={projectId} app={selected} />
+        ) : isPhone ? (
           <div className="mx-auto w-[390px] max-w-full rounded-[2.75rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl dark:border-neutral-700">
             <div className="mx-auto mb-1 h-5 w-28 rounded-b-2xl bg-neutral-900 dark:bg-neutral-700" aria-hidden="true" />
             <iframe
