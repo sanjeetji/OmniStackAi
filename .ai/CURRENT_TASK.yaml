@@ -1,24 +1,21 @@
-task_id: PC-106
-status: completed
+task_id: PC-107
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
-tracker_row: PC-106
+tracker_row: PC-107
 started_at: "2026-09-30"
-completed_at: "2026-09-30"
+completed_at: null
 branch: platform-completion
 objective: >-
-  The three points PC-101 left open. (1) A build whose planning answer stops part-way (a provider
-  timeout or rate limit after text has started) starts that answer again with the next provider in
-  the chain instead of failing. (2) The UI check runs by itself once a preview is ready - every page
-  at phone and desktop width - and its result is kept with the project and shown in the Studio; it
-  needs no model and stays optional (skipped, and said so, when no browser is available). (3) The
-  task tracker's last failure (a Next chunk 404 on the admin Users page at phone width) is diagnosed.
+  Close the gap PC-106 left: a visitor opening a page in the first minute of a preview, while the
+  page warm-up compiled routes, could meet a dev-server chunk error. A preview now reports ready only
+  once every page is compiled (shown as "Preparing pages" in the Studio, bounded so a slow app is
+  never held for long). Also remove the benchmark projects PC-101 built under bench-* test accounts,
+  which nothing depends on.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
-  - services/control-plane/
   - apps/console-web/
-  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -26,23 +23,14 @@ allowed_paths:
   - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - Playwright never becomes a dependency of a generated app
-  - no new paid service or infrastructure
+  - only projects owned by bench-*@example.com accounts are deleted
 required_gates:
-  - Live: a build whose first provider fails mid-answer completes with the next one
-  - Live: a preview started from the console gets its UI check result without anyone running it
+  - Live: a preview started from the console reports ready after its pages are compiled, and every page then loads clean
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-live_proof:
-  - task-tracker preview re-opened through the console checked itself - 23 pages, 46 views, 0 failing - shown in the Studio
-  - real chain from .env with Groq cut off after its first text - plan restarted, written by OpenRouter in 20 s, record names OpenRouter
 blockers: []
-deferred:
-  - a visitor opening a page in the first minute of a preview, while the warm-up compiles, can still meet a dev-server chunk error
-found_and_fixed:
-  - Groq free tier answers 413 over its per-minute token limit; the chain treated it as final
-  - the build record named the provider that stopped, not the one that wrote the plan
-  - the task tracker's chunk 404 was the check racing the page warm-up
+deferred: []
+found_and_fixed: []
