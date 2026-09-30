@@ -47,6 +47,8 @@ class LocalAppSession:
         self.engine = "local"
         self.mobile_ready = False
         self._stopped = False
+        #: PC-107: the page warm-up started once the apps answered (None when there is nothing to warm).
+        self.warming: "PageWarmer | None" = None
 
     def is_alive(self) -> bool:
         """True only when this session is not stopped and every owned process is still running."""
@@ -297,16 +299,45 @@ def page_routes(app_dir: Path) -> list[str]:
     return sorted(routes)
 
 
-def warm_pages(plan: RunPlan) -> threading.Thread | None:
-    """PC-101: compile every page of each web app once, in the background, after it is ready.
+class PageWarmer(threading.Thread):
+    """Compiles every page of each web app once; ``done``/``total`` say how far it is."""
+
+    def __init__(self, targets_by_app: dict[str, list[str]]) -> None:
+        super().__init__(name="warm-pages", daemon=True)
+        self._targets_by_app = targets_by_app
+        self.total = sum(len(t) for t in targets_by_app.values())
+        self.done = 0
+        self._lock = threading.Lock()
+
+    def _warm_app(self, targets: list[str]) -> None:
+        for target in targets:  # one at a time per app: a dev server compiles one page at a time
+            try:
+                with urllib.request.urlopen(target, timeout=120) as response:  # noqa: S310 - loopback only
+                    response.read(1)
+            except Exception:  # noqa: BLE001 - warming never fails a preview
+                pass
+            with self._lock:
+                self.done += 1
+
+    def run(self) -> None:
+        workers = [threading.Thread(target=self._warm_app, args=(t,), daemon=True) for t in self._targets_by_app.values()]
+        for worker in workers:  # the apps are separate dev servers: warmed side by side
+            worker.start()
+        for worker in workers:
+            worker.join()
+
+
+def warm_pages(plan: RunPlan) -> PageWarmer | None:
+    """PC-101: compile every page of each web app once, after it is ready.
 
     A preview runs the Next.js dev server, which compiles a page the first time it is asked for.
     Found by the UI check: the first visit to a page while another one compiled could miss its
     chunks (a 404 under /_next/, a ChunkLoadError, a blank page) - what a person opening a fresh
-    preview would meet. One request per page, one at a time, so they are compiled before anyone
-    opens them. Errors are ignored: this only saves time and never decides readiness.
+    preview would meet. PC-107: the Studio reports the preview ready only once this has finished
+    (bounded), so nobody opens a page while it runs. Errors are ignored: a page that fails to
+    compile here fails the same way when opened, and the UI check reports it.
     """
-    targets: list[str] = []
+    targets_by_app: dict[str, list[str]] = {}
     surfaces = plan.web_surfaces or (("web", plan.web_url), ("admin", plan.admin_url))
     base = plan.public_base.rstrip("/")
     for app_id, url in surfaces:
@@ -314,21 +345,12 @@ def warm_pages(plan: RunPlan) -> threading.Thread | None:
         if not url or not (app_dir / "app").is_dir():
             continue
         prefix = f"{base}/{app_id}" if plan.multi_app else ""
-        targets += [f"{url.rstrip('/')}{prefix}{route if route != '/' else ''}" for route in page_routes(app_dir)]
-    if not targets:
+        targets_by_app[app_id] = [f"{url.rstrip('/')}{prefix}{route if route != '/' else ''}" for route in page_routes(app_dir)]
+    if not any(targets_by_app.values()):
         return None
-
-    def _warm() -> None:
-        for target in targets:
-            try:
-                with urllib.request.urlopen(target, timeout=120) as response:  # noqa: S310 - loopback only
-                    response.read(1)
-            except Exception:  # noqa: BLE001 - warming never fails a preview
-                continue
-
-    thread = threading.Thread(target=_warm, name="warm-pages", daemon=True)
-    thread.start()
-    return thread
+    warmer = PageWarmer(targets_by_app)
+    warmer.start()
+    return warmer
 
 
 def _readiness_probes(plan: RunPlan) -> list[_Probe]:
@@ -475,6 +497,8 @@ def start_app(
 
         await_ready(session, active_plan, health_timeout_seconds, require_ready, emit)
         warmed = warm_pages(active_plan)
+        # PC-107: the caller reports the preview ready once this is done (see studio/preview.py).
+        session.warming = warmed
         # PC-106: then every page is checked at phone and desktop width, in the background.
         from .ui_check import run_ui_check
 

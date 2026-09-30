@@ -271,10 +271,12 @@ QUEUE = [
      "display; plain words in tables and on mobile; the planner and the publication template use it, "
      "and a prompt that asks for formatting upgrades content fields deterministically."),
     ("PC-107", "A preview is ready only once its pages are compiled; benchmark projects removed",
-     "1 Vibe Mode live", "Both", "In Progress", "P2", "PC-106",
+     "1 Vibe Mode live", "Both", "Completed", "P2", "PC-106",
      "Left by PC-106: a page opened in the first minute of a preview, while the warm-up compiled routes, "
      "could meet a dev-server chunk error. And the PC-101 benchmark projects under bench-* test accounts "
-     "are no longer needed."),
+     "are no longer needed. Done 2026-09-30: previews report ready after the warm-up; the real cause "
+     "was the console proxy looking the preview up once per file (cached; control-plane connections "
+     "kept); 21 benchmark projects deleted through the platform."),
     ("PC-106", "Planning survives a provider failing mid-answer, and the UI check runs after every "
      "preview", "1 Vibe Mode live", "Both", "Completed", "P1", "PC-101",
      "Left open by PC-101: builds failed when a free provider timed out or was rate-limited after its "

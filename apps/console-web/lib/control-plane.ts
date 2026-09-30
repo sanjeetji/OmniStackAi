@@ -318,7 +318,7 @@ export function getBuildTurns(token: string, buildId: string): Promise<BuildTurn
 export interface PreviewStatus {
   status: "idle" | "starting" | "stopped" | "error" | "unavailable" | "ready";
   message: string;
-  phase?: "idle" | "install" | "migrate" | "start" | "ready" | "stopped" | "error";
+  phase?: "idle" | "install" | "migrate" | "start" | "warm" | "ready" | "stopped" | "error";
   elapsed_ms?: number;
   web_url?: string;
   api_url?: string;

@@ -34,3 +34,20 @@ func TestNoTokenChangesNothing(t *testing.T) {
 		t.Error("an empty token must leave the transport untouched")
 	}
 }
+
+// PC-107: Install keeps more idle connections to the Studio, and the token still goes with every
+// call. (A client cloned from the default transport before Install carried no token at all.)
+func TestInstallKeepsConnectionsAndTheToken(t *testing.T) {
+	saved := http.DefaultTransport
+	defer func() { http.DefaultTransport = saved }()
+	base := &http.Transport{}
+	http.DefaultTransport = base
+	Install("http://studio.local:4173", "s3cret")
+	wrapped, ok := http.DefaultTransport.(*transport)
+	if !ok || wrapped.base != base || wrapped.token != "s3cret" {
+		t.Fatalf("the default transport must carry the Studio token, got %#v", http.DefaultTransport)
+	}
+	if base.MaxIdleConnsPerHost != 64 || base.MaxIdleConns != 128 {
+		t.Fatalf("idle connections per host = %d, want 64", base.MaxIdleConnsPerHost)
+	}
+}

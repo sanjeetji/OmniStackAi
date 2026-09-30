@@ -52,6 +52,7 @@ const PHASE_LABELS: Record<string, string> = {
   install: "Installing dependencies…",
   migrate: "Running database migrations…",
   start: "Starting development servers…",
+  warm: "Preparing pages…",
   ready: "Application ready",
 };
 

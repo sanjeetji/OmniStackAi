@@ -34,6 +34,7 @@ const PHASE_LABELS: Record<string, string> = {
   build: "Building the apps",
   migrate: "Setting up the database and demo data",
   start: "Starting the apps",
+  warm: "Preparing pages",
   ready: "Ready",
 };
 
@@ -195,7 +196,10 @@ function StartingPanel({ status, apps }: { status: PreviewStatus; apps: PreviewA
         <span className="text-muted-foreground tabular-nums">{seconds}s</span>
       </div>
       <p className="mt-1 text-pretty text-sm text-muted-foreground">
-        {status.message} The first start installs dependencies and can take a few minutes.
+        {status.message}{" "}
+        {status.phase === "warm"
+          ? "Each page is opened once first, so every page is ready when you open it."
+          : "The first start installs dependencies and can take a few minutes."}
       </p>
       <ul className="mt-3 grid gap-1.5">
         {apps.map((app) => {

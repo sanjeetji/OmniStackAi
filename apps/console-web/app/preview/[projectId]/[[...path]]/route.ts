@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectPreview, type PreviewApp } from "@/lib/control-plane";
+import { ControlPlaneError, getProjectPreview, type PreviewApp, type PreviewStatus } from "@/lib/control-plane";
 import { getSessionToken } from "@/lib/session";
 
 interface RouteParams {
@@ -10,6 +10,49 @@ interface RouteParams {
 }
 
 const ALLOWED_LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+
+/**
+ * PC-107: one preview lookup per page load, not one per file. Every request through this proxy
+ * asked the control plane (which asks the Studio) for the preview; a page's 10-20 parallel script
+ * and style requests made as many lookups, some ran past the control plane's deadline, and each
+ * failure was answered as a 404 - a missing chunk and a broken page, seen as "dev-server errors".
+ * A lookup is reused for a few seconds per session and project (so access is still checked per
+ * user), concurrent requests share one lookup, and a lookup that fails for any reason other than
+ * "not yours / not found" falls back to the last answer for a short while.
+ */
+const PREVIEW_FRESH_MS = 3_000;
+const PREVIEW_STALE_OK_MS = 30_000;
+type PreviewEntry = { at: number; value?: PreviewStatus; pending?: Promise<PreviewStatus> };
+const previewLookups = new Map<string, PreviewEntry>();
+
+function isDenied(error: unknown): boolean {
+  return error instanceof ControlPlaneError && [401, 403, 404].includes(error.status);
+}
+
+function resolvePreview(token: string, projectId: string): Promise<PreviewStatus> {
+  const key = `${token}\u0000${projectId}`;
+  const entry = previewLookups.get(key);
+  if (entry?.value && Date.now() - entry.at < PREVIEW_FRESH_MS) return Promise.resolve(entry.value);
+  if (entry?.pending) return entry.pending;
+  if (previewLookups.size > 500) {
+    for (const [k, e] of previewLookups) if (!e.pending && Date.now() - e.at > PREVIEW_STALE_OK_MS) previewLookups.delete(k);
+  }
+  const last: PreviewEntry = { at: entry?.at ?? 0, value: entry?.value };
+  const pending = getProjectPreview(token, projectId).then(
+    (value) => {
+      previewLookups.set(key, { at: Date.now(), value });
+      return value;
+    },
+    (error: unknown) => {
+      previewLookups.set(key, last);
+      if (!isDenied(error) && last.value && Date.now() - last.at < PREVIEW_STALE_OK_MS) return last.value;
+      if (isDenied(error)) previewLookups.delete(key);
+      throw error;
+    },
+  );
+  previewLookups.set(key, { ...last, pending });
+  return pending;
+}
 
 async function handleProxy(request: NextRequest, { params }: RouteParams): Promise<Response> {
   // Check if preview proxy is explicitly disabled via env var
@@ -29,10 +72,16 @@ async function handleProxy(request: NextRequest, { params }: RouteParams): Promi
   // Resolve verified preview status and ports server-side via control-plane
   let preview;
   try {
-    preview = await getProjectPreview(token, projectId);
-  } catch {
-    // Foreign project or non-existent project returns 404 (never leak foreign existence)
-    return NextResponse.json({ error: "project not found" }, { status: 404 });
+    preview = await resolvePreview(token, projectId);
+  } catch (error) {
+    if (isDenied(error)) {
+      // Foreign project or non-existent project returns 404 (never leak foreign existence)
+      return NextResponse.json({ error: "project not found" }, { status: 404 });
+    }
+    // PC-107: the control plane could not answer in time - not a missing project. Worth a retry.
+    return NextResponse.json({ error: "preview status unavailable, try again" }, {
+      status: 503, headers: { "Retry-After": "1" },
+    });
   }
 
   if (preview.status !== "ready" || !preview.web_url) {

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from threading import RLock, Thread
 import os
+import threading
 import time
 from typing import Any, Callable, Mapping
 import urllib.parse
@@ -1108,7 +1109,45 @@ class StudioPreviewManager:
                 ws_sess.message = "The generated web app and admin console are running locally."
             else:
                 ws_sess.message = "The generated application is running locally."
+            self._hold_until_warm(ws_sess, session)
             return ws_sess.to_dict()
+
+    #: PC-107: how long a preview may stay in "Preparing pages" before it is reported ready anyway.
+    WARM_CAP_SECONDS = 180.0
+
+    def _hold_until_warm(self, ws_sess: WorkspacePreviewSession, session: Any) -> None:
+        """Report the preview as starting until every page has been compiled once.
+
+        PC-106 left this gap: the page warm-up ran after the preview was reported ready, and a
+        visitor opening a page in that first minute could meet a dev-server chunk error while
+        another route compiled. The Studio now shows "Preparing pages: n of m" instead, and the
+        preview becomes ready when the warm-up is done, or after WARM_CAP_SECONDS at most.
+        """
+        warmer = getattr(session, "warming", None)
+        if warmer is None or not warmer.is_alive():
+            return
+        ready_message = ws_sess.message
+        ws_sess.status = "starting"
+        ws_sess.phase = "warm"
+        ws_sess.message = f"Preparing pages: {warmer.done} of {warmer.total}"
+        cap = self.WARM_CAP_SECONDS
+
+        def _watch() -> None:
+            deadline = time.time() + cap
+            while warmer.is_alive() and time.time() < deadline:
+                warmer.join(timeout=1.0)
+                with self._lock:
+                    if ws_sess.cancelled or ws_sess.phase != "warm":
+                        return
+                    ws_sess.message = f"Preparing pages: {warmer.done} of {warmer.total}"
+            with self._lock:
+                if ws_sess.cancelled or ws_sess.phase != "warm":
+                    return
+                ws_sess.status = "ready"
+                ws_sess.phase = "ready"
+                ws_sess.message = ready_message
+
+        threading.Thread(target=_watch, name="preview-warm-watch", daemon=True).start()
 
     def _replace_workspace_locked(self, ws_id: str, ws_sess: WorkspacePreviewSession) -> None:
         existing = self._workspaces.get(ws_id)

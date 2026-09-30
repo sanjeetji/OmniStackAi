@@ -1,9 +1,9 @@
 task_id: PC-107
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live (follow-ups of the modern-UI block)
 tracker_row: PC-107
 started_at: "2026-09-30"
-completed_at: null
+completed_at: "2026-09-30"
 branch: platform-completion
 objective: >-
   Close the gap PC-106 left: a visitor opening a page in the first minute of a preview, while the
@@ -15,6 +15,7 @@ founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
+  - services/control-plane/
   - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
@@ -31,6 +32,15 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+live_proof:
+  - preview showed "Preparing pages" 0 -> 27 of 27 and became ready at 13 s
+  - 610 asset requests through the console, 16 in parallel - 0 errors (before - 2 of 366 answered 404)
+  - three full visitor runs of the UI check through the console, 46 page views each - 0 problems, 0 transient
+  - 21 benchmark projects deleted through DELETE /projects/{id}?purge=true (all 204); workspaces gone
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - the eight bench-* test accounts remain (no account deletion in the platform); they hold no projects
+found_and_fixed:
+  - the "dev-server chunk 404s" were the console proxy's per-file preview lookups timing out and answered as 404
+  - the control plane kept only two idle connections to the Studio per host
+  - a first fix cloned the transport before the Studio-token wrapper; its calls had no token (caught live)

@@ -56,6 +56,15 @@ func Wrap(base http.RoundTripper, studioURL, token string) http.RoundTripper {
 }
 
 // Install wraps http.DefaultTransport for the whole process.
+//
+// PC-107: it also keeps more idle connections to the Studio. The default keeps two per host, so a
+// page load through the console's preview proxy - a dozen asset requests, each checking the
+// preview - opened fresh connections from the container to the host, some stalled past the 15 s
+// deadline, and each became a 404 and a missing script in the preview.
 func Install(studioURL, token string) {
+	if base, ok := http.DefaultTransport.(*http.Transport); ok {
+		base.MaxIdleConns = 128
+		base.MaxIdleConnsPerHost = 64
+	}
 	http.DefaultTransport = Wrap(http.DefaultTransport, studioURL, token)
 }

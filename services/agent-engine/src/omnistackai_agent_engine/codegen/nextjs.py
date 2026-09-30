@@ -73700,6 +73700,10 @@ _NEXT_CONFIG = (
     "  poweredByHeader: false,\n"
     '  allowedDevOrigins: ["127.0.0.1", ...extraDevOrigins],\n'
     "  env: { NEXT_PUBLIC_BASE_PATH: basePath },\n"
+    "  // PC-107: the dev server keeps only a few pages compiled and drops the rest after a short\n"
+    "  // idle time; opening a dropped page recompiles it, and a page opened meanwhile can miss its\n"
+    "  // chunks. A preview compiles every page once at start, and they stay compiled for an hour.\n"
+    "  onDemandEntries: { maxInactiveAge: 60 * 60 * 1000, pagesBufferLength: 200 },\n"
     "  async headers() {\n"
     '    return [{ source: "/:path*", headers: securityHeaders }];\n'
     "  },\n"
