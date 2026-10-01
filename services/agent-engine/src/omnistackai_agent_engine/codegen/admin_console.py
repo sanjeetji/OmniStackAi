@@ -240,6 +240,10 @@ def nav_file(ir: ApplicationIR, has_auth: bool) -> str:
 
     if has_auth and money_of(ir) is not None:  # PC-113: the books, refunds and payouts
         items.append({"href": "/money", "label": "Money", "icon": "dashboard", "group": "Overview"})
+    from ..application_ir.jobs import jobs_of
+
+    if has_auth and jobs_of(ir) is not None:  # R-568: what the app does on its own
+        items.append({"href": "/scheduled-jobs", "label": "Scheduled jobs", "icon": "dashboard", "group": "Overview"})
     if has_auth:
         items.append({"href": "/users", "label": "Users and roles", "icon": "users", "group": "Access"})
     return (

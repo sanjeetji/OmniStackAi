@@ -397,8 +397,16 @@ QUEUE = [
      "2 Maximum features", "Both", "Completed", "P1", "R-567",
      "R-567 built the API on every backend; the generated pages do not call it yet. Done 2026-10-01: "
      "a Pay panel on chargeable records, a Wallet page, an admin Money page; proven in a browser."),
-    ("R-568", "Background jobs and scheduling", "2 Maximum features", "Both", "Not Started", "P1",
-     "", ""),
+    ("R-568", "Background jobs and scheduling", "2 Maximum features", "Both", "Completed", "P1",
+     "", "Done 2026-10-01: a `jobs` capability - schedules over an entity (which rows by state and age, how "
+     "often, a workflow transition / set fields / delete), compiled to one bounded SQL statement each and run "
+     "by every backend on a Postgres scheduler (SKIP LOCKED, retries with backoff, dead runs an admin "
+     "retries); a Scheduled jobs page in the admin console; planned from the prompt. 28/28 live on Python, "
+     "Go, Express and Hono; 8/8 in a browser. A time of day is PC-117; reminders are PC-053."),
+    ("PC-117", "Scheduled jobs at a time of day ('every night at 2am', in the app's time zone)",
+     "2 Maximum features", "Both", "Not Started", "P3", "R-568",
+     "R-568 runs a schedule every N minutes/hours/days from its first run; a nightly job at a set hour "
+     "needs an anchor and a time zone."),
     ("R-569", "Realtime channels: tracking, notifications, live status", "2 Maximum features",
      "Both", "Not Started", "P1", "", ""),
     ("R-571", "Escape hatch: behaviour the IR declares and the model implements, verified",

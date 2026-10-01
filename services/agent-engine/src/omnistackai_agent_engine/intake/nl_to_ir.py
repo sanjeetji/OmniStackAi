@@ -136,6 +136,22 @@ def _system_instruction(example_name: str) -> str:
             "(email, password, role) and records who created each record. A profile with real data "
             "(bio, avatar) may be an entity named Profile, never holding a password.\n"
         )
+    if "jobs" in CAPABILITY_KINDS.implemented():
+        # R-568: what the app does on its own, on a clock.
+        capability_rules += (
+            "\nScheduled jobs (optional, only when the prompt asks for something to happen on its own):\n"
+            "- 'cancel unpaid orders after 30 minutes', 'mark invoices overdue once the due date "
+            "passes', 'delete drafts older than 30 days': add ONE 'jobs' capability with a schedule "
+            "per rule: {\"kind\": \"jobs\", \"name\": \"app_jobs\", \"config\": {\"schedules\": [{\"name\": "
+            "\"cancel_unpaid_orders\", \"entity\": \"Order\", \"every\": \"5m\", \"where\": {\"paid\": [false]}, "
+            "\"older_than\": {\"field\": \"created_at\", \"age\": \"30m\"}, \"do\": {\"transition\": \"cancel\"}}]}}\n"
+            "- every: how often to look, 1m to 7d (\"5m\", \"1h\", \"1d\"). where: a field and the values "
+            "it must hold. older_than: a datetime field and an age (\"0m\" means the time has passed - "
+            "a due date). At least one of where/older_than.\n"
+            "- do: {\"transition\": <a transition of the entity's workflow>}, {\"set\": {\"is_overdue\": "
+            "true}} (never the workflow's own field) or {\"delete\": true}.\n"
+            "- Reminders and emails are not scheduled jobs yet; do not invent them.\n"
+        )
     field_types = ", ".join(t.value for t in FieldType)
     # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming
     # `flutter` here told the model to choose a profile the assembler then discarded, which is how
@@ -648,12 +664,13 @@ def parse_ir_response_with_repairs(text: str) -> tuple[ApplicationIR, tuple[str,
 
 def _with_prompt_ownership(ir: ApplicationIR, prompt: str) -> tuple[ApplicationIR, tuple[str, ...]]:
     """R-570: rules for what the prompt itself calls private, when the plan left them out; R-567:
-    the same for money the prompt says is paid."""
+    the same for money the prompt says is paid; R-568: for what it says happens on its own."""
+    from .jobs_intent import jobs_from_prompt
     from .money_intent import money_from_prompt
     from .ownership_intent import ownership_from_prompt
 
     data = ir.to_dict()
-    notes = ownership_from_prompt(prompt, data) + money_from_prompt(prompt, data)
+    notes = ownership_from_prompt(prompt, data) + money_from_prompt(prompt, data) + jobs_from_prompt(prompt, data)
     if not notes:
         return ir, ()
     return ApplicationIR.from_dict(data), tuple(notes)

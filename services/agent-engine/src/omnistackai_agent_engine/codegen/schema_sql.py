@@ -345,6 +345,14 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         blocks.append(MONEY_SCHEMA)
         blocks.append("")
 
+    # R-568: the scheduler's tables, when the app has scheduled jobs.
+    from ..application_ir.jobs import jobs_of
+    from .jobs_sql import JOBS_SCHEMA
+
+    if jobs_of(ir) is not None:
+        blocks.append(JOBS_SCHEMA)
+        blocks.append("")
+
     # R-461: dev admin seed row.
     if auth:
         blocks.append(_ADMIN_SEED_ROW)

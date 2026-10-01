@@ -1,8 +1,9 @@
 task_id: R-568
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: R-568
 started_at: "2026-10-01"
+completed_at: "2026-10-01"
 branch: platform-completion
 objective: >-
   Background jobs and scheduling in generated apps. A `jobs` capability declares scheduled rules over
@@ -27,3 +28,10 @@ forbidden_changes:
 required_gates:
   - Live - on Python, Go, Express and Hono through the platform's runner, a schedule cancels only the rows it should, runs are recorded, a failing run retries and ends dead, an admin retries it
   - scripts/verify.sh passes
+found_and_fixed:
+  - Placeholder order differs between drivers ($n for Go/Node, positional %s for Python); every scheduler statement numbers its placeholders in order and the converter refuses one that does not.
+  - A schedule over every row of a table every minute is refused (a where or older_than is required).
+deferred:
+  - PC-117 - a time of day ("every night at 2am") with a time zone; schedules run every N from their first run.
+  - PC-053 - reminders and emails on a schedule build on this scheduler.
+  - PC-116 - (from the payments proof) the storefront's dead "List with us" link.

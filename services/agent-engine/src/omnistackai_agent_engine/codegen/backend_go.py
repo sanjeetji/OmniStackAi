@@ -473,7 +473,7 @@ def _forced_auth(ir: ApplicationIR) -> frozenset:
 
 def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = (), has_auth: bool = False,
                uploads: bool = False, forced_auth: frozenset = frozenset(), owned_transitions: frozenset = frozenset(),
-               money: bool = False) -> str:
+               money: bool = False, jobs: bool = False) -> str:
     lines = ["package main", "", "import ("]
     lines.append('\t"log"')
     lines.append('\t"net/http"')
@@ -512,6 +512,8 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
         lines.append("\tif err != nil {\n\t\tlog.Fatal(err)\n\t}")
         lines.append("\tdefer db.Close()")
         lines.append("\th := handlers.New(db)")
+        if jobs:  # R-568: the scheduler runs beside the server
+            lines.append("\tgo h.RunScheduler()")
         lines.append("")
     lines.append("\tmux := http.NewServeMux()")
     lines.append('\tmux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {')
@@ -550,6 +552,11 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
         for method, path, handler, guarded in GO_MONEY_ROUTES:
             target = f"handlers.RequireAuth(h.{handler})" if guarded else f"h.{handler}"
             lines.append(f'\tmux.HandleFunc("{method} {path}", {target})')
+    if jobs:  # R-568: the admin's view of scheduled jobs
+        from .jobs_go import GO_JOBS_ROUTES
+
+        for method, path, handler in GO_JOBS_ROUTES:
+            lines.append(f'\tmux.HandleFunc("{method} {path}", handlers.RequireAuth(h.{handler}))')
     lines.append('\tport := os.Getenv("PORT")')
     lines.append('\tif port == "" {')
     lines.append('\t\tport = "8080"')
@@ -649,14 +656,22 @@ class GoBackendAdapter:
         money = has_db and has_auth and money_of(ir) is not None
         if money:
             env_example += MONEY_ENV_EXAMPLE
+        from ..application_ir.jobs import jobs_of
+        from .jobs_go import go_jobs_file
+        from .jobs_python import JOBS_ENV_EXAMPLE
+
+        jobs = has_db and has_auth and jobs_of(ir) is not None
+        if jobs:
+            env_example += JOBS_ENV_EXAMPLE
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
-            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads, money=money,
+            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads, money=money, jobs=jobs,
                                                 forced_auth=_forced_auth(ir) if has_db else frozenset(),
                                                 owned_transitions=frozenset(r.path for r in transition_routes(ir)
                                                                             if _owned_transition(_rules(ir), r) is not None) if has_db else frozenset())),
             GeneratedFile("internal/models/models.go", _models_file(ir)),
             *([GeneratedFile("internal/handlers/money.go", go_money_file(ir))] if money else []),
+            *([GeneratedFile("internal/handlers/jobs.go", go_jobs_file(ir))] if jobs else []),
             GeneratedFile(".gitignore", "/bin/\n*.exe\n.env\n"),
             GeneratedFile(".env.example", env_example),
             GeneratedFile(

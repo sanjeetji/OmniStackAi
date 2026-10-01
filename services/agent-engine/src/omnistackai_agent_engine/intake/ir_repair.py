@@ -288,6 +288,7 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
         kept.append(capability)
     if "capabilities" in data:
         data["capabilities"] = kept
+    _repair_jobs(data, entities, notes)
 
 
 #: Names a model gives "the user this belongs to". Not "author": an Author is often a real entity.
@@ -446,3 +447,75 @@ def repair_ir_dict(data: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...
 
     data["apis"] = kept
     return data, tuple(notes)
+
+
+def _repair_jobs(data: dict[str, Any], entities: dict[str, Any], notes: list[str]) -> None:
+    """R-568: one jobs capability, whose schedules name the plan's entities, fields and transitions.
+
+    A schedule that cannot be made to fit is dropped with a note rather than failing the build: the
+    rest of the app is still worth building, and the note says what was left out.
+    """
+    from ..application_ir.errors import InvalidIRError
+    from ..application_ir.ir import _check_job_values
+    from ..application_ir.jobs import AUDIT_FIELDS, Schedule
+
+    capabilities = data.get("capabilities")
+    if not isinstance(capabilities, list):
+        return
+    jobs = [c for c in capabilities if isinstance(c, dict) and c.get("kind") == "jobs"]
+    if not jobs:
+        return
+    raw: list[Any] = []
+    for capability in jobs:
+        config = capability.get("config")
+        raw += (config.get("schedules") or []) if isinstance(config, dict) else []
+    if len(jobs) > 1:
+        notes.append("jobs: the schedules of several jobs capabilities merged into one")
+    workflows = {
+        str((c.get("config") or {}).get("entity")): c.get("config") or {}
+        for c in capabilities if isinstance(c, dict) and c.get("kind") == "workflow"
+    }
+    kept: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        label = f"schedule {item.get('name')!r}"
+        named = str(item.get("entity") or "")
+        entity = resolve_entity_reference(named, list(entities)) if named else None
+        if entity is None:
+            notes.append(f"jobs: {label} names {named!r}, which is not in the plan; removed")
+            continue
+        item["entity"] = entity
+        types = {str(f.get("name")): str(f.get("type")) for f in entities[entity].get("fields") or () if isinstance(f, dict)}
+        for audit in AUDIT_FIELDS:
+            types.setdefault(audit, "datetime")
+        workflow = workflows.get(entity) or {}
+        try:
+            schedule = Schedule.from_dict(item)
+            for name, values in schedule.where:
+                if name not in types:
+                    raise InvalidIRError(f"{entity} has no field {name!r}")
+                _check_job_values(label, name, types[name], values)
+            if schedule.older_than is not None and types.get(schedule.older_than[0]) != "datetime":
+                raise InvalidIRError(f"{schedule.older_than[0]!r} is not a datetime field of {entity}")
+            if schedule.transition is not None and schedule.transition not in {
+                    str(t.get("name")) for t in workflow.get("transitions") or () if isinstance(t, dict)}:
+                raise InvalidIRError(f"{entity} has no transition {schedule.transition!r}")
+            for name, value in schedule.set:
+                if name not in types or name == workflow.get("field"):
+                    raise InvalidIRError(f"{name!r} cannot be set on {entity}")
+                _check_job_values(label, name, types[name], (value,))
+        except InvalidIRError as error:
+            notes.append(f"jobs: {label} removed ({error})")
+            continue
+        if any(k.get("name") == item.get("name") for k in kept):
+            notes.append(f"jobs: a second {label} removed")
+            continue
+        kept.append(item)
+    first = jobs[0]
+    data["capabilities"] = [c for c in capabilities if not (isinstance(c, dict) and c.get("kind") == "jobs")]
+    if kept:
+        first["config"] = {"schedules": kept[:16]}
+        data["capabilities"].append(first)
+    else:
+        notes.append("jobs: no schedule left; removed")

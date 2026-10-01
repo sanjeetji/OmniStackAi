@@ -751,6 +751,50 @@ class ApplicationIR:
                 raise InvalidIRError(f"screen {screen.id!r} references unknown role {screen.role!r}")
         self._validate_workflows()
 
+    def _validate_jobs(self, entities_by_name: dict) -> None:
+        from .jobs import API_PREFIX, AUDIT_FIELDS, RESERVED_TABLES, jobs_of
+        from .workflow import workflows_of
+
+        if len([c for c in self.capabilities if c.kind == "jobs"]) > 1:
+            raise InvalidIRError("an app has one jobs capability")
+        jobs = jobs_of(self)
+        if jobs is None:
+            return
+        for entity in self.entities:
+            table = re.sub(r"(?<!^)(?=[A-Z])", "_", entity.name).lower()
+            if table in RESERVED_TABLES:
+                raise InvalidIRError(f"entity {entity.name} would take the scheduler's table {table!r}")
+        for api in self.apis:
+            if api.path == API_PREFIX or api.path.startswith(API_PREFIX + "/"):
+                raise InvalidIRError(f"{api.path} is the scheduler's; an app's own routes cannot use {API_PREFIX}")
+        workflows = {w.entity: w for w in workflows_of(self)}
+        for schedule in jobs.schedules:
+            label = f"schedule {schedule.name!r}"
+            entity = entities_by_name.get(schedule.entity)
+            if entity is None:
+                raise InvalidIRError(f"{label} names unknown entity {schedule.entity!r}")
+            fields = {f.name: f.type.value for f in entity.fields}
+            for audit in AUDIT_FIELDS:
+                fields.setdefault(audit, "datetime")
+
+            def kind_of(name: str) -> str:
+                if name not in fields:
+                    raise InvalidIRError(f"{label}: {schedule.entity} has no field {name!r}")
+                return fields[name]
+
+            for name, values in schedule.where:
+                _check_job_values(label, name, kind_of(name), values)
+            if schedule.older_than is not None and kind_of(schedule.older_than[0]) != "datetime":
+                raise InvalidIRError(f"{label}: older_than needs a datetime field, not {schedule.older_than[0]!r}")
+            workflow = workflows.get(schedule.entity)
+            if schedule.transition is not None:
+                if workflow is None or schedule.transition not in {t.name for t in workflow.transitions}:
+                    raise InvalidIRError(f"{label}: {schedule.entity} has no workflow transition {schedule.transition!r}")
+            for name, value in schedule.set:
+                if workflow is not None and name == workflow.field:
+                    raise InvalidIRError(f"{label}: {name} is {schedule.entity}'s lifecycle; use a transition")
+                _check_job_values(label, name, kind_of(name), (value,))
+
     def _validate_workflows(self) -> None:
         """Check every workflow against the rest of the IR (R-566).
 
@@ -806,6 +850,9 @@ class ApplicationIR:
             for role in money.refund_roles:
                 if role not in role_ids and role != "admin":
                     raise InvalidIRError(f"money lets unknown role {role!r} refund")
+        # R-568: a schedule names a declared entity, its fields (of the right kind) and its workflow's
+        # transitions; the scheduler's own tables and routes are not the app's to take.
+        self._validate_jobs(entities_by_name)
         # R-570: an ownership rule names an entity and roles this application has, once per entity.
         from .ownership import ownership_rules
 
@@ -915,3 +962,14 @@ class ApplicationIR:
             )
         except (KeyError, TypeError) as error:
             raise InvalidIRError(f"IR document is structurally invalid: {error}") from error
+
+
+def _check_job_values(label: str, name: str, kind: str, values: tuple) -> None:
+    """R-568: a schedule compares and sets a field only with values of its kind."""
+    for value in values:
+        ok = (isinstance(value, bool) if kind == "bool"
+              else isinstance(value, (int, float)) and not isinstance(value, bool) if kind in ("int", "float")
+              else isinstance(value, str) if kind in ("string", "text", "uuid")
+              else False)
+        if not ok:
+            raise InvalidIRError(f"{label}: {name} is a {kind} field; {value!r} does not fit")

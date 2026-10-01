@@ -278,6 +278,8 @@ def _with_prompt_rules_for_plan(plan, prompt: str):
         config = capability.config
         if capability.kind == "money":
             return {c.get("entity") for c in config.get("charges") or ()}
+        if capability.kind == "jobs":  # R-568
+            return {s.get("entity") for s in config.get("schedules") or ()}
         return {config.get("entity")}
 
     apps = []

@@ -74248,10 +74248,21 @@ class NextjsWebAdapter:
                 files.append(GeneratedFile("app/wallet/page.tsx", WALLET_PAGE))
                 files = [GeneratedFile(f.path, _navbar_component(ir, (("/wallet", "Wallet"),)))
                          if f.path == "components/navbar.tsx" else f for f in files]
+        # R-568: the admin watches what the app does on its own.
+        from ..application_ir.jobs import jobs_of
+
+        has_jobs = self._flavour == "admin" and needs_auth(ir) and jobs_of(ir) is not None
+        if has_jobs:
+            from .jobs_ui import JOBS_CLIENT, JOBS_PAGE, JOBS_PAGE_PATH
+
+            files.append(GeneratedFile("lib/jobs.ts", JOBS_CLIENT))
+            files.append(GeneratedFile(JOBS_PAGE_PATH, JOBS_PAGE))
         if self._flavour == "admin" and needs_auth(ir):
+            from .jobs_ui import JOBS_NAV
             from .role_manager import ADMIN_USERS_PAGE
 
             links = (("/money", "Money"),) if has_money else ()
+            links += (JOBS_NAV,) if has_jobs else ()
             files = [GeneratedFile(f.path, _navbar_component(ir, (*links, ("/users", "Users and roles"))))
                      if f.path == "components/navbar.tsx" else f for f in files]
             files.append(GeneratedFile("app/users/page.tsx", ADMIN_USERS_PAGE))

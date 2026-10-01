@@ -189,3 +189,14 @@ CAPABILITY_KINDS.register(
         validator=validate_money_config,
     )
 )
+
+from .jobs import validate_jobs_config  # noqa: E402
+
+CAPABILITY_KINDS.register(
+    CapabilityKind(
+        name="jobs",
+        summary="scheduled rules the app runs on its own: expire, mark overdue, clean up (R-568)",
+        implemented=True,
+        validator=validate_jobs_config,
+    )
+)
