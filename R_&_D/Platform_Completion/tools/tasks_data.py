@@ -360,9 +360,10 @@ QUEUE = [
      "enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. "
      "Assigned-to visibility (a driver's deliveries) is PC-111."),
     ("PC-110", "The preview runner runs Node backends (Express, Hono) as it runs Python and Go",
-     "2 Maximum features", "Both", "Not Started", "P1", "",
+     "2 Maximum features", "Both", "Completed", "P1", "",
      "Found in R-570: localrun recognises only requirements.txt and go.mod, so a Node API is never started "
-     "in a preview; R-570's Node proof ran the API by hand."),
+     "in a preview; R-570's Node proof ran the API by hand. Done 2026-10-01: schema applied as the app's "
+     "role, dependencies installed once, tsx started on the shared contract; Express and Hono proven."),
     ("PC-111", "Assigned-to visibility: a record visible to the user it is assigned to (a driver's "
      "deliveries), beside R-570's creator ownership", "2 Maximum features", "Both", "Not Started", "P1",
      "R-570", "A creator rule cannot express 'the orders assigned to me'; the planner is told not to use one."),

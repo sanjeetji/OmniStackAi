@@ -265,6 +265,9 @@ def _backend_kind(api_dir: Path) -> str:
         return "python"
     if (api_dir / "go.mod").is_file() or (api_dir / "main.go").is_file():
         return "go"
+    # PC-110: the Node (Express / Hono) API. It used to be "none", so a preview never started it.
+    if (api_dir / "package.json").is_file() and (api_dir / "src" / "index.ts").is_file():
+        return "node"
     return "none"
 
 
@@ -412,6 +415,19 @@ def build_run_plan(
     steps.append(admin_sql("lock the platform database to its owner",
                            f'REVOKE CONNECT ON DATABASE "{maintenance_db}" FROM PUBLIC;', tolerate=True))
     migrations_dir = api_dir / "migrations"
+    # PC-110: a Node API ships its schema and seed at its root rather than as migrations.
+    node_sql = [api_dir / name for name in ("schema.sql", "seed.sql")
+                if backend_kind == "node" and (api_dir / name).is_file() and (api_dir / name).read_text().strip()]
+    for migration in node_sql:
+        steps.append(
+            RunStep(
+                label=f"apply {migration.name}",
+                program="docker",
+                args=("exec", "-i", db_container, "psql", "-U", app_role, "-d", database, "-v", "ON_ERROR_STOP=1"),
+                stdin_file=str(migration),
+                env=pg_env,
+            )
+        )
     if migrations_dir.is_dir():
         for migration in sorted(migrations_dir.glob("*.sql")):
             steps.append(
@@ -456,6 +472,32 @@ def build_run_plan(
                 args=("app.main:app", "--host", "0.0.0.0" if has_mobile else "127.0.0.1", "--port", str(api_port)),
                 cwd=str(api_dir),
                 env=(("DATABASE_URL", database_url), ("JWT_SECRET", jwt_secret)) + uploads.api + extra_tuples,
+                background=True,
+            )
+        )
+    elif backend_kind == "node":
+        # PC-110: as Python and Go - its own database role, the same secret and port contract.
+        steps.append(
+            RunStep(
+                label="install backend dependencies (pnpm)",
+                program="pnpm",
+                # As the web apps: pnpm 11 refuses unapproved build scripts (esbuild, under tsx),
+                # and esbuild's binary comes as a platform package that needs none.
+                args=("install", "--ignore-scripts", "--ignore-workspace"),
+                cwd=str(api_dir),
+            )
+        )
+        steps.append(
+            RunStep(
+                label=f"start backend API (node) on {api_url}",
+                program="./node_modules/.bin/tsx",
+                args=("src/index.ts",),
+                cwd=str(api_dir),
+                env=(
+                    ("DATABASE_URL", database_url),
+                    ("JWT_SECRET", jwt_secret),
+                    ("PORT", str(api_port)),
+                ) + uploads.api + extra_tuples,
                 background=True,
             )
         )

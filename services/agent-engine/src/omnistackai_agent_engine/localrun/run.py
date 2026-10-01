@@ -192,6 +192,9 @@ def _should_skip(step: RunStep) -> bool:
         cwd / "node_modules" / ".bin" / "next"
     ).exists():
         return True
+    # PC-110: the Node API, once its dependencies (and the tsx that runs it) are installed.
+    if step.label.startswith("install backend dependencies (pnpm)") and (cwd / "node_modules" / ".bin" / "tsx").exists():
+        return True
     # R-545: the Expo app installs into its own directory and has no `next` binary.
     if step.label.startswith("install mobile dependencies") and (
         cwd / "node_modules" / ".bin" / "expo"

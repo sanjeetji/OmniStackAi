@@ -1,9 +1,9 @@
 task_id: PC-110
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: PC-110
 started_at: "2026-10-01"
-completed_at: null
+completed_at: "2026-10-01"
 branch: platform-completion
 objective: >-
   The preview runner runs Node backends (Express, Hono) as it runs Python and Go: recognises the API,
@@ -28,4 +28,5 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed: []
+found_and_fixed:
+  - pnpm 11 refused esbuild's build script during the API install; installed with --ignore-scripts like the web apps
