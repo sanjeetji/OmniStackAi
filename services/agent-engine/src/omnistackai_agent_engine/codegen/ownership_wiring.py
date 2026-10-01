@@ -34,7 +34,10 @@ def owned_transition(rules: dict[str, OwnershipRule], route) -> OwnershipRule | 
     """A lifecycle transition open to any role on an owner-scoped entity is the owner's to make.
 
     A transition that names roles was granted to those roles on purpose (a courier accepts an order a
-    customer created), so it stays role-only.
+    customer created), so it stays role-only - unless the rule names an assignee (PC-111): then the
+    role makes the move only on records assigned to them, so one driver cannot pick up another's.
     """
     rule = rules.get(route.workflow.entity)
-    return rule if rule is not None and rule.writes_own and not route.roles else None
+    if rule is None or not rule.writes_own:
+        return None
+    return rule if not route.roles or rule.assignee else None

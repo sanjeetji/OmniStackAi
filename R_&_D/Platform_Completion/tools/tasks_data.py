@@ -365,8 +365,10 @@ QUEUE = [
      "in a preview; R-570's Node proof ran the API by hand. Done 2026-10-01: schema applied as the app's "
      "role, dependencies installed once, tsx started on the shared contract; Express and Hono proven."),
     ("PC-111", "Assigned-to visibility: a record visible to the user it is assigned to (a driver's "
-     "deliveries), beside R-570's creator ownership", "2 Maximum features", "Both", "Not Started", "P1",
-     "R-570", "A creator rule cannot express 'the orders assigned to me'; the planner is told not to use one."),
+     "deliveries), beside R-570's creator ownership", "2 Maximum features", "Both", "Completed", "P1",
+     "R-570", "A creator rule cannot express 'the orders assigned to me'; the planner is told not to use one. "
+     "Done 2026-10-01: an ownership rule's `assignee` field; drivers see and move only what is assigned "
+     "to them, only see_all roles assign; proven on Python, Go, Express and Hono."),
     ("PC-112", "Plans do not declare a User entity beside the app's accounts", "2 Maximum features", "Both",
      "Not Started", "P2", "", "Seen in R-570's private-notes build: the plan declared User(email, "
      "password_hash) next to the generated accounts table."),

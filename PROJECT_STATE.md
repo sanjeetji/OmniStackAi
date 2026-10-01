@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-111 (2026-10-01): assigned-to visibility.** An ownership rule's assignee (Order.driver_id): drivers see and work on what is assigned to them, dispatchers assign, customers keep their own. Proven on all four backends.
 > **PC-110 (2026-10-01): Node previews.** A generated Express or Hono API now starts in the preview like Python and Go; proven with R-570's 19 checks on both.
 > **R-570 (2026-10-01): ownership.** Every created record names its creator; an `ownership` rule keeps users to their own records in the Python, Go and Node APIs (404 otherwise), planned from prompts like "private notes". Proven live on all three backends and through a console build.
 > **PC-063 (2026-09-30): Android emulator in the Studio.** The preview's Mobile tab shows the QR for a phone and an emulator set up, booted and driven from the console with no Android Studio; the app opens in Expo Go and loads its data. One account at a time; iOS is PC-064.

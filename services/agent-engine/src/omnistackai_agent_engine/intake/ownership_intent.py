@@ -10,8 +10,9 @@ the plan has none for that entity:
 
 An owner is the user who *created* the record. "A driver sees only their own orders" means the
 orders a driver is *assigned*, which a customer created - a creator rule would hide every order from
-every driver - so "their own" is left to the model, which is told the difference, and assigned-to
-visibility is a later rule kind.
+every driver. When the subject is one of the plan's roles, that is read as an assignee rule
+(PC-111): the orders carry a `driver_id`, a driver sees the ones assigned to them, and the plan's
+coordinating roles (a dispatcher, a manager) assign them.
 """
 
 from __future__ import annotations
@@ -20,6 +21,14 @@ import re
 from typing import Any
 
 from .ir_repair import _drop_owner_reference, resolve_entity_reference
+
+_ASSIGNED = re.compile(
+    r"\b(?P<role>[a-z]+?)s?\s+(?:can\s+|should\s+|will\s+)?(?:only\s+)?(?:sees?|views?|gets?|handles?|works?\s+on)\s+"
+    r"(?:only\s+)?(?:their|his|her|the)\s+(?:own\s+|assigned\s+)(?P<thing>[a-z]+)",
+    re.IGNORECASE,
+)
+#: Roles that coordinate others' work: they assign, so they see everything.
+_COORDINATORS = ("dispatcher", "manager", "operator", "coordinator", "staff", "supervisor")
 
 _OWN_PHRASES = (
     re.compile(r"\b(?:private|personal)\s+(?P<a>[a-z]+)(?:\s+(?P<b>[a-z]+))?", re.IGNORECASE),
@@ -64,4 +73,36 @@ def ownership_from_prompt(prompt: str, data: dict[str, Any]) -> list[str]:
             target = next(e for e in data["entities"] if isinstance(e, dict) and e.get("name") == entity)
             _drop_owner_reference(target, entity, notes)
             notes.append(f"'{match.group(0)}': each user sees and changes only their own {entity} records")
+    notes += _assigned_from_prompt(prompt, data, entities, ruled, names)
+    return notes
+
+
+def _assigned_from_prompt(prompt: str, data: dict[str, Any], entities: list[str], ruled: set[str],
+                          names: set[str]) -> list[str]:
+    """PC-111: "a driver sees only their own orders" -> Order assigned to a driver (driver_id)."""
+    roles = [str(r.get("id")) for r in data.get("roles") or () if isinstance(r, dict) and r.get("id")]
+    notes: list[str] = []
+    for match in _ASSIGNED.finditer(prompt):
+        role = match.group("role").lower()
+        if role not in roles:
+            continue
+        entity = _entity_for(match.group("thing"), entities)
+        if entity is None or entity in ruled:
+            continue
+        target = next(e for e in data["entities"] if isinstance(e, dict) and e.get("name") == entity)
+        field = f"{role}_id"
+        fields = target.setdefault("fields", [])
+        if not any(isinstance(f, dict) and f.get("name") == field for f in fields):
+            fields.append({"name": field, "type": "uuid", "required": False})
+        see_all = [r for r in roles if r in _COORDINATORS]
+        name = f"{entity.lower()}_assignment"
+        while name in names:
+            name += "_"
+        data["capabilities"].append({"kind": "ownership", "name": name, "config": {
+            "entity": entity, "read": "own", "write": "own", "see_all": see_all, "assignee": field}})
+        ruled.add(entity)
+        names.add(name)
+        who = ", ".join(see_all) or "admin"
+        notes.append(f"'{match.group(0)}': each {role} sees the {entity} records assigned to them "
+                     f"({entity}.{field}); {who} assign them; each creator sees their own")
     return notes

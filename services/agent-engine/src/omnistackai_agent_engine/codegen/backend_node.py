@@ -302,6 +302,18 @@ export function ownerScope(claims: AuthClaims | undefined, seeAll: string[]): st
   return ownerOf(claims) ?? NOBODY;
 }}
 
+/** Does this user see and assign every record (admin always) - PC-111. */
+export function seesAll(claims: AuthClaims | undefined, seeAll: string[]): boolean {{
+  return holdsAny(claims, seeAll);
+}}
+
+/** canTouch, or the row is assigned to this user (PC-111). */
+export function canTouchAssigned(claims: AuthClaims | undefined, owner: string | null | undefined,
+                                 assignee: string | null | undefined, seeAll: string[]): boolean {{
+  if (canTouch(claims, owner, seeAll)) return true;
+  return !!assignee && ownerScope(claims, seeAll) === assignee;
+}}
+
 /** May this user see or change a row created by `owner`. */
 export function canTouch(claims: AuthClaims | undefined, owner: string | null | undefined, seeAll: string[]): boolean {{
   const scope = ownerScope(claims, seeAll);
@@ -388,7 +400,7 @@ export async function checkDbHealth(): Promise<boolean> {
 """
 
 
-def _db_repository_file(entity: Entity, workflow=None, records_creator: bool = False) -> str:
+def _db_repository_file(entity: Entity, workflow=None, records_creator: bool = False, assignee: str | None = None) -> str:
     tbl = table_name(entity.name)
     # R-590: the lifecycle field is never written here; a new row takes the initial state from the
     # column DEFAULT and only a transition moves it after that.
@@ -424,15 +436,26 @@ def _db_repository_file(entity: Entity, workflow=None, records_creator: bool = F
     return (result.rows[0].owner as string | null) ?? null;
   }}
 """
+        # PC-111: "own" includes the rows assigned to the user.
+        mine = f"({creator_col} = $3 OR {sql_identifier(assignee)} = $3)" if assignee else f"{creator_col} = $3"
+        mine_by = f"({creator_col} = $2 OR {sql_identifier(assignee)} = $2)" if assignee else f"{creator_col} = $2"
+        if assignee:
+            owner_methods += f"""
+  /** The user a row is assigned to (null if nobody) - PC-111. */
+  static async assigneeOf(id: string): Promise<string | null> {{
+    const result = await pool.query('SELECT {sql_identifier(assignee)}::text AS assignee FROM {sql_identifier(tbl)} WHERE id = $1', [id]);
+    return (result.rows[0]?.assignee as string | null) ?? null;
+  }}
+"""
         list_owner = (
             "    if (options.owner) {\n"
-            f"      const scoped = await pool.query('SELECT {col_list} FROM {sql_identifier(tbl)} WHERE {creator_col} = $3 LIMIT $1 OFFSET $2', [limit, offset, options.owner]);\n"
+            f"      const scoped = await pool.query('SELECT {col_list} FROM {sql_identifier(tbl)} WHERE {mine} LIMIT $1 OFFSET $2', [limit, offset, options.owner]);\n"
             f"      return scoped.rows as {entity.name}[];\n"
             "    }\n"
         )
         listby_owner = (
             "    if (owner) {\n"
-            f"      const scoped = await pool.query(`SELECT {col_list} FROM {sql_identifier(tbl)} WHERE \"${{relationCol}}\" = $1 AND {creator_col} = $2`, [parentId, owner]);\n"
+            f"      const scoped = await pool.query(`SELECT {col_list} FROM {sql_identifier(tbl)} WHERE \"${{relationCol}}\" = $1 AND {mine_by}`, [parentId, owner]);\n"
             f"      return scoped.rows as {entity.name}[];\n"
             "    }\n"
         )
@@ -496,6 +519,11 @@ export class {entity.name}Repository {{
 """
 
 
+def _rule_assignee(ir: ApplicationIR, entity_name: str) -> str | None:
+    rule = rules_by_entity(ir).get(entity_name)
+    return rule.assignee if rule is not None and rule.reads_own else None
+
+
 def _node_guard(api: ApiEndpoint, scoped: bool) -> str:
     """The route's middleware: its roles (R-570: Node CRUD used to ignore them), or sign-in - which an
     owner-scoped operation needs whatever the plan said."""
@@ -515,17 +543,25 @@ def _node_auth_names(apis, repo_entities, fk_by_entity, transitions, rules, crea
             used.add("requireRoles")
         elif guard:
             used.add("requireAuth")
+        rule = rules.get(wiring.entity) if wiring else None
         if scoped and wiring.op in (Op.LIST, Op.LIST_BY):
             used.add("ownerScope")
+        elif scoped and rule.assignee and wiring.op in (Op.GET, Op.UPDATE):
+            used.add("canTouchAssigned")
         elif scoped:
             used.add("canTouch")
+        if rule is not None and rule.assignee and wiring.op in (Op.CREATE, Op.UPDATE):
+            used.add("seesAll")
         if wiring is not None and wiring.op is Op.CREATE and wiring.entity in creator_entities:
             used.add("ownerOf")
     if transitions:
         used.add("requireAuth")
-    if any(owned_transition(rules, route) is not None for route in transitions):
-        used.add("canTouch")
-    return [n for n in ("requireAuth", "requireRoles", "ownerOf", "ownerScope", "canTouch") if n in used] or ["requireAuth"]
+    for route in transitions:
+        owned = owned_transition(rules, route)
+        if owned is not None:
+            used.add("canTouchAssigned" if owned.assignee and route.roles else "canTouch")
+    names = ("requireAuth", "requireRoles", "ownerOf", "ownerScope", "canTouch", "canTouchAssigned", "seesAll")
+    return [n for n in names if n in used] or ["requireAuth"]
 
 
 def _express_router_file(
@@ -600,7 +636,11 @@ def _express_router_file(
             lines.append(f"router.{method}('{rel_express}', {middleware_str}async (req: Request, res: Response) => {{")
             if scoped:
                 lines.append(f"  const owner = await {ent}Repository.ownerOf(String(req.params.{param}));")
-                lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
+                if rule.assignee:  # PC-111: the user it is assigned to may read and change it
+                    lines.append(f"  const assignee = await {ent}Repository.assigneeOf(String(req.params.{param}));")
+                    lines.append(f"  if (owner === undefined || !canTouchAssigned((req as any).user, owner, assignee, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
+                else:
+                    lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
             lines.append(f"  const item = await {ent}Repository.getById(String(req.params.{param}));")
             lines.append("  if (!item) return res.status(404).json({ error: 'not_found', message: 'Item not found' });")
             lines.append("  res.json(item);")
@@ -612,6 +652,8 @@ def _express_router_file(
             lines.append("    return res.status(400).json({ error: 'validation_error', details: parsed.error.format() });")
             lines.append("  }")
             creator_arg = ", ownerOf((req as any).user)" if ent in creator_entities else ""
+            if rule is not None and rule.assignee:
+                lines.append(f"  if (!seesAll((req as any).user, {see_all})) (parsed.data as any).{rule.assignee} = null; // PC-111: only {', '.join(rule.bypass_roles)} assign")
             lines.append(f"  const created = await {ent}Repository.create(parsed.data{creator_arg});")
             lines.append("  res.status(201).json(created);")
             lines.append("});")
@@ -620,11 +662,17 @@ def _express_router_file(
             lines.append(f"router.{method}('{rel_express}', {middleware_str}async (req: Request, res: Response) => {{")
             if scoped:
                 lines.append(f"  const owner = await {ent}Repository.ownerOf(String(req.params.{param}));")
-                lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
+                if rule.assignee:  # PC-111: the user it is assigned to may read and change it
+                    lines.append(f"  const assignee = await {ent}Repository.assigneeOf(String(req.params.{param}));")
+                    lines.append(f"  if (owner === undefined || !canTouchAssigned((req as any).user, owner, assignee, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
+                else:
+                    lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
             lines.append(f"  const parsed = update{ent}Schema.safeParse(req.body);")
             lines.append("  if (!parsed.success) {")
             lines.append("    return res.status(400).json({ error: 'validation_error', details: parsed.error.format() });")
             lines.append("  }")
+            if rule is not None and rule.assignee:
+                lines.append(f"  if (!seesAll((req as any).user, {see_all})) delete (parsed.data as any).{rule.assignee}; // PC-111: the assignment is not theirs to change")
             lines.append(f"  const updated = await {ent}Repository.update(String(req.params.{param}), parsed.data);")
             lines.append("  if (!updated) return res.status(404).json({ error: 'not_found', message: 'Item not found' });")
             lines.append("  res.json(updated);")
@@ -669,7 +717,11 @@ def _express_router_file(
         if owned is not None:
             see = "[" + ", ".join(f"'{r}'" for r in owned.bypass_roles) + "]"
             lines.append(f"  const owner = await {route.workflow.entity}Repository.ownerOf(String(req.params.{route.id_param}));")
-            lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
+            if owned.assignee and route.roles:  # PC-111: a role's move, only on records assigned to them
+                lines.append(f"  const assignee = await {route.workflow.entity}Repository.assigneeOf(String(req.params.{route.id_param}));")
+                lines.append(f"  if (owner === undefined || !canTouchAssigned((req as any).user, owner, assignee, {see})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
+            else:
+                lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
         lines.append(f"  const item = await {route.workflow.entity}Repository.getById(String(req.params.{route.id_param}));")
         lines.append("  if (!item) return res.status(404).json({ error: 'not_found', message: 'Item not found' });")
         lines.append(f"  const allowed = [{allowed_js}];")
@@ -748,7 +800,11 @@ def _hono_router_file(
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
             if scoped:
                 lines.append(f"  const owner = await {ent}Repository.ownerOf(c.req.param('{param}') ?? '');")
-                lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
+                if rule.assignee:  # PC-111: the user it is assigned to may read and change it
+                    lines.append(f"  const assignee = await {ent}Repository.assigneeOf(c.req.param('{param}') ?? '');")
+                    lines.append(f"  if (owner === undefined || !canTouchAssigned((c as any).get('user'), owner, assignee, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
+                else:
+                    lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
             lines.append(f"  const item = await {ent}Repository.getById(c.req.param('{param}') ?? '');")
             lines.append("  if (!item) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
             lines.append("  return c.json(item);")
@@ -761,6 +817,8 @@ def _hono_router_file(
             lines.append("    return c.json({ error: 'validation_error', details: parsed.error.format() }, 400);")
             lines.append("  }")
             creator_arg = ", ownerOf((c as any).get('user'))" if ent in creator_entities else ""
+            if rule is not None and rule.assignee:
+                lines.append(f"  if (!seesAll((c as any).get('user'), {see_all})) (parsed.data as any).{rule.assignee} = null; // PC-111: only {', '.join(rule.bypass_roles)} assign")
             lines.append(f"  const created = await {ent}Repository.create(parsed.data{creator_arg});")
             lines.append("  return c.json(created, 201);")
             lines.append("});")
@@ -769,12 +827,18 @@ def _hono_router_file(
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
             if scoped:
                 lines.append(f"  const owner = await {ent}Repository.ownerOf(c.req.param('{param}') ?? '');")
-                lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
+                if rule.assignee:  # PC-111: the user it is assigned to may read and change it
+                    lines.append(f"  const assignee = await {ent}Repository.assigneeOf(c.req.param('{param}') ?? '');")
+                    lines.append(f"  if (owner === undefined || !canTouchAssigned((c as any).get('user'), owner, assignee, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
+                else:
+                    lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
             lines.append("  const body = await c.req.json();")
             lines.append(f"  const parsed = update{ent}Schema.safeParse(body);")
             lines.append("  if (!parsed.success) {")
             lines.append("    return c.json({ error: 'validation_error', details: parsed.error.format() }, 400);")
             lines.append("  }")
+            if rule is not None and rule.assignee:
+                lines.append(f"  if (!seesAll((c as any).get('user'), {see_all})) delete (parsed.data as any).{rule.assignee}; // PC-111: the assignment is not theirs to change")
             lines.append(f"  const updated = await {ent}Repository.update(c.req.param('{param}') ?? '', parsed.data);")
             lines.append("  if (!updated) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
             lines.append("  return c.json(updated);")
@@ -817,7 +881,11 @@ def _hono_router_file(
         if owned is not None:
             see = "[" + ", ".join(f"'{r}'" for r in owned.bypass_roles) + "]"
             lines.append(f"  const owner = await {route.workflow.entity}Repository.ownerOf(c.req.param('{route.id_param}') ?? '');")
-            lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
+            if owned.assignee and route.roles:  # PC-111: a role's move, only on records assigned to them
+                lines.append(f"  const assignee = await {route.workflow.entity}Repository.assigneeOf(c.req.param('{route.id_param}') ?? '');")
+                lines.append(f"  if (owner === undefined || !canTouchAssigned((c as any).get('user'), owner, assignee, {see})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
+            else:
+                lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
         lines.append(f"  const item = await {route.workflow.entity}Repository.getById(c.req.param('{route.id_param}') ?? '');")
         lines.append("  if (!item) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
         lines.append(f"  const allowed = [{allowed_js}];")
@@ -1159,7 +1227,8 @@ class NodeBackendAdapter:
             files.append(GeneratedFile(
             f"src/db/{table_name(entity.name)}.ts",
             _db_repository_file(entity, next((w for w in workflows_of(ir) if w.entity == entity.name), None),
-                                records_creator=needs_auth(ir) and "created_by" not in {f.name for f in entity.fields}),
+                                records_creator=needs_auth(ir) and "created_by" not in {f.name for f in entity.fields},
+                                assignee=_rule_assignee(ir, entity.name)),
         ))
 
         # 5. Auth Middleware

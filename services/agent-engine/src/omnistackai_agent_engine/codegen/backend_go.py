@@ -320,7 +320,13 @@ def _handlers_file_wired(
             # R-570: someone else's record is not found - saying "not yours" would leak that it exists.
             lines.append(f'\towner, found, ownerErr := store.Owner{wiring.entity}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
             lines.append("\tif ownerErr != nil {\n\t\tdbError(w, ownerErr)\n\t\treturn\n\t}")
-            lines.append(f"\tif !found || !CanTouch(ClaimsFrom(r), owner, {see_all}) {{\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}}")
+            if rule.assignee and wiring.op is not Op.DELETE:
+                # PC-111: the user it is assigned to may read and change it; deleting stays the creator's.
+                lines.append(f'\tassignee, assigneeErr := store.Assignee{wiring.entity}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
+                lines.append("\tif assigneeErr != nil {\n\t\tdbError(w, assigneeErr)\n\t\treturn\n\t}")
+                lines.append(f"\tif !found || !CanTouchAssigned(ClaimsFrom(r), owner, assignee, {see_all}) {{\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}}")
+            else:
+                lines.append(f"\tif !found || !CanTouch(ClaimsFrom(r), owner, {see_all}) {{\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}}")
         owner_arg = ""
         if scoped and wiring.op in (Op.LIST, Op.LIST_BY):
             lines.append(f"\towner := OwnerScope(ClaimsFrom(r), {see_all}) // R-570: only their own, unless they see all")
@@ -377,6 +383,12 @@ def _handlers_file_wired(
             if wiring.entity in rich_entities:
                 lines.append("\tm.SanitizeRichText() // PC-104")
             creator = ", OwnerOf(ClaimsFrom(r))" if wiring.entity in creator_entities else ""
+            if rule is not None and rule.assignee:
+                field = _pascal(rule.assignee)
+                lines.append(f"\tif !SeesAll(ClaimsFrom(r), {see_all}) {{")
+                lines.append(f"\t\tvar unassigned models.{wiring.entity}")
+                lines.append(f"\t\tm.{field} = unassigned.{field} // PC-111: only {', '.join(rule.bypass_roles)} assign")
+                lines.append("\t}")
             lines.append(f"\tid, err := store.Create{wiring.entity}(r.Context(), h.DB, m{creator})")
             lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append('\twriteJSON(w, http.StatusCreated, map[string]string{"id": id})')
@@ -389,6 +401,14 @@ def _handlers_file_wired(
                 lines.append("\tif !validateStruct(w, m) {\n\t\treturn\n\t}")
             if wiring.entity in rich_entities:
                 lines.append("\tm.SanitizeRichText() // PC-104")
+            if rule is not None and rule.assignee:
+                field = _pascal(rule.assignee)
+                lines.append(f"\tif !SeesAll(ClaimsFrom(r), {see_all}) {{")
+                lines.append(f"\t\t// PC-111: the assignment is not theirs to change.")
+                lines.append(f"\t\tif current, getErr := store.Get{wiring.entity}(r.Context(), h.DB, id); getErr == nil && current != nil {{")
+                lines.append(f"\t\t\tm.{field} = current.{field}")
+                lines.append("\t\t}")
+                lines.append("\t}")
             lines.append(f"\tupdated, err := store.Update{wiring.entity}(r.Context(), h.DB, id, m)")
             lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append("\tif updated == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
@@ -414,7 +434,13 @@ def _handlers_file_wired(
             see = ", ".join(f'"{role}"' for role in owned.bypass_roles)
             lines.append(f'\towner, found, ownerErr := store.Owner{route.workflow.entity}(r.Context(), h.DB, r.PathValue("{route.id_param}"))')
             lines.append("\tif ownerErr != nil {\n\t\tdbError(w, ownerErr)\n\t\treturn\n\t}")
-            lines.append(f"\tif !found || !CanTouch(ClaimsFrom(r), owner, {see}) {{\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}}")
+            if owned.assignee and route.roles:
+                # PC-111: a move granted to a role is made only on records assigned to the caller.
+                lines.append(f'\tassignee, assigneeErr := store.Assignee{route.workflow.entity}(r.Context(), h.DB, r.PathValue("{route.id_param}"))')
+                lines.append("\tif assigneeErr != nil {\n\t\tdbError(w, assigneeErr)\n\t\treturn\n\t}")
+                lines.append(f"\tif !found || !CanTouchAssigned(ClaimsFrom(r), owner, assignee, {see}) {{\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}}")
+            else:
+                lines.append(f"\tif !found || !CanTouch(ClaimsFrom(r), owner, {see}) {{\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}}")
         lines.append(f'\titem, err := store.Get{route.workflow.entity}(r.Context(), h.DB, r.PathValue("{route.id_param}"))')
         lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
         lines.append("\tif item == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")

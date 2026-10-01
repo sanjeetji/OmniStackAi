@@ -796,6 +796,14 @@ class ApplicationIR:
             for role in rule.see_all:
                 if role not in role_ids and role != "admin":
                     raise InvalidIRError(f"ownership of {rule.entity} lets unknown role {role!r} see all")
+            if rule.assignee is not None:
+                # PC-111: the assignee is a field of the entity that can hold a user's id.
+                field = next((f for f in entities_by_name[rule.entity].fields if f.name == rule.assignee), None)
+                if field is None:
+                    raise InvalidIRError(f"ownership of {rule.entity} names assignee field {rule.assignee!r}, "
+                                         f"which {rule.entity} does not have")
+                if field.type.value not in ("uuid", "string"):
+                    raise InvalidIRError(f"ownership assignee {rule.entity}.{rule.assignee} must be a uuid field")
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {

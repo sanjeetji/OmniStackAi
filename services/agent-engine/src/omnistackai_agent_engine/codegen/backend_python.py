@@ -148,6 +148,10 @@ def _models_file(ir: ApplicationIR) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _assignee_arg(rule) -> str:
+    return f', "{rule.assignee}"' if rule is not None and rule.assignee else ""
+
+
 def _router_file(
     segment: str,
     apis: list[ApiEndpoint],
@@ -170,7 +174,9 @@ def _router_file(
         rule = rules.get(wiring.entity) if wiring is not None else None
         scoped = owner_scoped_op(rule, wiring)
         auth = api.auth or scoped
-        claims = wiring is not None and auth and (wiring.op is Op.CREATE or scoped)
+        # PC-111: with an assignee, a create or change also needs to know whether the caller may assign.
+        assigns = rule is not None and rule.assignee is not None and wiring.op in (Op.CREATE, Op.UPDATE)
+        claims = wiring is not None and auth and (wiring.op is Op.CREATE or scoped or assigns)
         plans.append((api, wiring, rule, scoped, auth, claims))
     owned_transitions = [(route, owned_transition(rules, route)) for route in transitions]
 
@@ -187,6 +193,8 @@ def _router_file(
              or any(rule for _, rule in owned_transitions)),
             ("owner_of", any(claims and w.op is Op.CREATE for _, w, _, _, _, claims in plans)),
             ("owner_scope", any(scoped and w.op in (Op.LIST, Op.LIST_BY) for _, w, _, scoped, _, _ in plans)),
+            ("sees_all", any(r is not None and r.assignee and claims and w.op in (Op.CREATE, Op.UPDATE)
+                             for _, w, r, _, _, claims in plans)),
         )
         if use
     ]
@@ -261,7 +269,7 @@ def _router_file(
             lines.append(f"async def {fn}({wiring.id_param}: str{extra}) -> dict:")
             lines.append(f"    row = await {wiring.table}_repo.get_{wiring.table}({wiring.id_param})")
             if scoped:
-                lines.append(f"    if row is None or not can_touch(row, claims, {bypass}):  # R-570: not theirs is not found")
+                lines.append(f"    if row is None or not can_touch(row, claims, {bypass}{_assignee_arg(rule)}):  # R-570: not theirs is not found")
             else:
                 lines.append("    if row is None:")
             lines.append('        raise HTTPException(status_code=404, detail="not_found")')
@@ -272,17 +280,35 @@ def _router_file(
             lines.append(f"async def {fn}(payload: {wiring.entity}{extra}) -> dict:")
             if wants_claims:
                 lines.append("    # R-570: who created it comes from the verified token, never from the request.")
-            lines.append(f"    return await {wiring.table}_repo.create_{wiring.table}(payload.model_dump(){creator})")
+            if wants_claims and rule is not None and rule.assignee:
+                lines.append("    data = payload.model_dump()")
+                lines.append(f"    if not sees_all(claims, {bypass}):")
+                lines.append(f'        data["{rule.assignee}"] = None  # PC-111: only {", ".join(rule.bypass_roles)} assign')
+                lines.append(f"    return await {wiring.table}_repo.create_{wiring.table}(data{creator})")
+            else:
+                lines.append(f"    return await {wiring.table}_repo.create_{wiring.table}(payload.model_dump(){creator})")
         else:  # UPDATE or DELETE
-            extra = f", {claims_param}" if scoped else ""
+            extra = f", {claims_param}" if wants_claims else ""
             payload = f", payload: {wiring.entity}" if wiring.op is Op.UPDATE else ""
             lines.append(f"async def {fn}({wiring.id_param}: str{payload}{extra}) -> dict:")
-            if scoped:
+            assigns = wiring.op is Op.UPDATE and wants_claims and rule is not None and rule.assignee
+            if scoped or assigns:
+                # Deleting stays the creator's (PC-111): the assignee may change a record, not remove it.
+                assignee = _assignee_arg(rule) if wiring.op is Op.UPDATE else ""
                 lines.append(f"    current = await {wiring.table}_repo.get_{wiring.table}({wiring.id_param})")
-                lines.append(f"    if current is None or not can_touch(current, claims, {bypass}):  # R-570: only the owner")
+                if scoped:
+                    lines.append(f"    if current is None or not can_touch(current, claims, {bypass}{assignee}):  # R-570: only the owner")
+                else:
+                    lines.append("    if current is None:")
                 lines.append('        raise HTTPException(status_code=404, detail="not_found")')
             if wiring.op is Op.UPDATE:
-                lines.append(f"    row = await {wiring.table}_repo.update_{wiring.table}({wiring.id_param}, payload.model_dump())")
+                if assigns:
+                    lines.append("    data = payload.model_dump()")
+                    lines.append(f"    if not sees_all(claims, {bypass}):")
+                    lines.append(f'        data["{rule.assignee}"] = current.get("{rule.assignee}")  # PC-111: the assignment is not theirs to change')
+                    lines.append(f"    row = await {wiring.table}_repo.update_{wiring.table}({wiring.id_param}, data)")
+                else:
+                    lines.append(f"    row = await {wiring.table}_repo.update_{wiring.table}({wiring.id_param}, payload.model_dump())")
                 lines.append("    if row is None:")
                 lines.append('        raise HTTPException(status_code=404, detail="not_found")')
                 lines.append("    return row")
@@ -301,13 +327,18 @@ def _router_file(
         lines.append("")
         lines.append(f'@router.post("{route.path}"{guard})')
         if owned is not None:
-            # R-570: a transition open to any role on an owner-scoped entity is the owner's to make.
-            lines.append(f"async def {route.function}({route.id_param}: str, claims: dict = Depends(require_auth)) -> dict:")
+            # R-570: a transition open to any role on an owner-scoped entity is the owner's to make;
+            # PC-111: one granted to a role is made only on records assigned to the caller.
+            guard_fn = f"require_roles({role_args})" if role_args else "require_auth"
+            lines[-1] = f'@router.post("{route.path}")'
+            lines.append(f"async def {route.function}({route.id_param}: str, claims: dict = Depends({guard_fn})) -> dict:")
         else:
             lines.append(f"async def {route.function}({route.id_param}: str) -> dict:")
         lines.append(f"    row = await {route.table}_repo.get_{route.table}({route.id_param})")
         if owned is not None:
-            lines.append(f"    if row is None or not can_touch(row, claims, {owned.bypass_roles!r}):")
+            # The assignee makes the moves granted to their role; a move open to no role is the creator's.
+            assignee = _assignee_arg(owned) if route.roles else ""
+            lines.append(f"    if row is None or not can_touch(row, claims, {owned.bypass_roles!r}{assignee}):")
         else:
             lines.append("    if row is None:")
         lines.append('        raise HTTPException(status_code=404, detail="not_found")')

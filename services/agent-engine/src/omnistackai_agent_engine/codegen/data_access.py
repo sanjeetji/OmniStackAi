@@ -126,16 +126,23 @@ def _owner_scoped(body: str) -> str:
     return "\n".join(out)
 
 
-_SCOPED_HELPER = (
-    "def _scoped(owner: str | None) -> tuple[str, tuple]:\n"
-    '    """R-570: the table, or only `owner`\'s rows of it (None: every row)."""\n'
-    "    if owner is None:\n"
-    "        return TABLE, ()\n"
-    "    return f'(SELECT * FROM {TABLE} WHERE \"created_by\" = %s) AS scoped', (owner,)\n\n\n"
-)
+def _scoped_helper(assignee: str | None = None) -> str:
+    """`_scoped(owner)`: the table, or only `owner`'s rows - created by them, or (PC-111) assigned to them."""
+    where = 'WHERE "created_by" = %s'
+    params = "(owner,)"
+    if assignee:
+        where += f" OR {sql_identifier(assignee)} = %s"
+        params = "(owner, owner)"
+    return (
+        "def _scoped(owner: str | None) -> tuple[str, tuple]:\n"
+        '    """R-570: the table, or only `owner`\'s rows of it (None: every row)."""\n'
+        "    if owner is None:\n"
+        "        return TABLE, ()\n"
+        f"    return f'(SELECT * FROM {{TABLE}} {where}) AS scoped', {params}\n\n\n"
+    )
 
 
-def _python_repository(entity: Entity, workflow=None, owner_scoped: bool = False) -> str:
+def _python_repository(entity: Entity, workflow=None, owner_scoped: bool = False, assignee: str | None = None) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
     insert_cols = _python_writable_columns(entity, workflow)
@@ -238,7 +245,7 @@ def _python_repository(entity: Entity, workflow=None, owner_scoped: bool = False
         list_body, count_body = _owner_scoped(list_body), _owner_scoped(count_body)
         owner_kw = ", owner: str | None = None"
         scope_line = "    src, src_params = _scoped(owner)\n"
-        scoped_helper = _SCOPED_HELPER
+        scoped_helper = _scoped_helper(assignee)
     return (
         f'"""Data access for {entity.name} (table "{table}"). '
         'Values are parameterized; identifiers are fixed."""\n'
@@ -433,6 +440,13 @@ def _reads_own(ir: ApplicationIR, entity_name: str) -> bool:
     return rule is not None and rule.reads_own
 
 
+def _assignee(ir: ApplicationIR, entity_name: str) -> str | None:
+    from ..application_ir.ownership import ownership_for_entity
+
+    rule = ownership_for_entity(ir, entity_name)
+    return rule.assignee if rule is not None and rule.reads_own else None
+
+
 def _has_auth(ir: ApplicationIR) -> bool:
     from .auth_guard import needs_auth
 
@@ -449,7 +463,7 @@ def python_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, st
             (
                 f"app/repositories/{table_name(entity.name)}.py",
                 _python_repository(entity, _workflows_by_entity(ir).get(entity.name),
-                                   owner_scoped=_reads_own(ir, entity.name)),
+                                   owner_scoped=_reads_own(ir, entity.name), assignee=_assignee(ir, entity.name)),
             )
         )
     return files
@@ -471,14 +485,19 @@ def _go_store(slug: str) -> str:
         "// ownedSource is the table, or only owner's rows of it (\"\" means every row). The owner is a\n"
         "// verified token's user id, checked against ownerID again here, so it can be written into the\n"
         "// SQL without renumbering every query's $N placeholders; anything else matches no row.\n"
-        "func ownedSource(table, owner string) string {\n"
+        "func ownedSource(table, owner, assignee string) string {\n"
         "\tif owner == \"\" {\n"
         "\t\treturn table\n"
         "\t}\n"
         "\tif !ownerID.MatchString(owner) {\n"
         "\t\towner = \"00000000-0000-0000-0000-000000000000\"\n"
         "\t}\n"
-        "\treturn \"(SELECT * FROM \" + table + \" WHERE \\\"created_by\\\" = '\" + owner + \"') AS scoped\"\n"
+        "\twhere := \" WHERE \\\"created_by\\\" = '\" + owner + \"'\"\n"
+        "\tif assignee != \"\" {\n"
+        "\t\t// PC-111: and the rows assigned to them (assignee is a column name from the generator).\n"
+        "\t\twhere += \" OR \" + assignee + \"::text = '\" + owner + \"'\"\n"
+        "\t}\n"
+        "\treturn \"(SELECT * FROM \" + table + where + \") AS scoped\"\n"
         "}\n\n"
         "// Open connects to PostgreSQL using DATABASE_URL via the pgx database/sql driver.\n"
         "func Open() (*sql.DB, error) {\n"
@@ -515,7 +534,7 @@ def _go_owner_scoped(body: str, sql_table: str, go_sql_table: str) -> str:
 
 
 def _go_entity_store(entity: Entity, slug: str, workflow=None, owner_scoped: bool = False,
-                     has_auth: bool = False) -> str:
+                     has_auth: bool = False, assignee: str | None = None) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
     pascal = entity.name
@@ -626,15 +645,25 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None, owner_scoped: boo
         )
 
     owner_param = scope_line = ""
+    owner_lookup = ""
     if owner_scoped:
         go_list_query = _go_owner_scoped(go_list_query, sql_table, go_sql_table)
         go_count_query = _go_owner_scoped(go_count_query, sql_table, go_sql_table)
         owner_param = ", owner string"
-        scope_line = f"\tsrc := ownedSource(`{sql_table}`, owner)\n"
+        scope_line = f"\tsrc := ownedSource(`{sql_table}`, owner, `{sql_identifier(assignee) if assignee else ''}`)\n"
     creator_param = ", createdBy string" if records_creator else ""
-    owner_lookup = ""
+    if assignee:
+        owner_lookup += (
+            f"// Assignee{pascal} is the user a row is assigned to (\"\" if nobody) - PC-111.\n"
+            f"func Assignee{pascal}(ctx context.Context, db *sql.DB, id string) (string, error) {{\n"
+            "\tvar a sql.NullString\n"
+            f"\terr := db.QueryRowContext(ctx, `SELECT {sql_identifier(assignee)}::text FROM {sql_table} WHERE {sql_identifier('id')} = $1`, id).Scan(&a)\n"
+            "\tif err == sql.ErrNoRows {\n\t\treturn \"\", nil\n\t}\n"
+            "\treturn a.String, err\n"
+            "}\n\n"
+        )
     if has_auth:
-        owner_lookup = (
+        owner_lookup += (
             f"// Owner{pascal} is who created a row (\"\" if nobody); found is false when there is no such row.\n"
             f"func Owner{pascal}(ctx context.Context, db *sql.DB, id string) (owner string, found bool, err error) {{\n"
             "\tvar o sql.NullString\n"
@@ -660,7 +689,7 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None, owner_scoped: boo
         f"{go_list_query}"
         "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
         "\tdefer rows.Close()\n"
-        f"\tvar out []models.{pascal}\n"
+        f"\tout := []models.{pascal}{{}} // an empty list is [], not null\n"
         "\tfor rows.Next() {\n"
         f"\t\tvar m models.{pascal}\n"
         f"\t\tif err := rows.Scan({scan_targets}); err != nil {{\n\t\t\treturn nil, err\n\t\t}}\n"
@@ -694,7 +723,7 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None, owner_scoped: boo
         f"{go_count_query}"
         "\treturn count, err\n"
         "}\n\n"
-        + _go_filtered_lists(entity, table, col_list, scan_targets, cols, owner_scoped)
+        + _go_filtered_lists(entity, table, col_list, scan_targets, cols, owner_scoped, assignee)
     )
 
 
@@ -758,7 +787,7 @@ def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targ
 
 
 def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: str, cols: list[str] | None = None,
-                       owner_scoped: bool = False) -> str:
+                       owner_scoped: bool = False, assignee: str | None = None) -> str:
     pascal = entity.name
     sql_table = sql_identifier(table)
     go_sql_table = _go_string_fragment(sql_table)
@@ -855,7 +884,7 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
             sub_list_query = _go_owner_scoped(sub_list_query, sql_table, go_sql_table)
             sub_count_query = _go_owner_scoped(sub_count_query, sql_table, go_sql_table)
             owner_param = ", owner string"
-            scope_line = f"\tsrc := ownedSource(`{sql_table}`, owner)\n"
+            scope_line = f"\tsrc := ownedSource(`{sql_table}`, owner, `{sql_identifier(assignee) if assignee else ''}`)\n"
         parts.append(
             "\n"
             f"{filters_helper}"
@@ -865,7 +894,7 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
             f"{sub_list_query}"
             "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
             "\tdefer rows.Close()\n"
-            f"\tvar out []models.{pascal}\n"
+            f"\tout := []models.{pascal}{{}} // an empty list is [], not null\n"
             "\tfor rows.Next() {\n"
             f"\t\tvar m models.{pascal}\n"
             f"\t\tif err := rows.Scan({scan_targets}); err != nil {{\n\t\t\treturn nil, err\n\t\t}}\n"
@@ -889,7 +918,8 @@ def go_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, str]]:
             (
                 f"internal/store/{table_name(entity.name)}.go",
                 _go_entity_store(entity, slug, _workflows_by_entity(ir).get(entity.name),
-                                 owner_scoped=_reads_own(ir, entity.name), has_auth=_has_auth(ir)),
+                                 owner_scoped=_reads_own(ir, entity.name), has_auth=_has_auth(ir),
+                                 assignee=_assignee(ir, entity.name)),
             )
         )
     return files

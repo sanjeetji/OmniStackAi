@@ -1,9 +1,9 @@
 task_id: PC-111
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: PC-111
 started_at: "2026-10-01"
-completed_at: null
+completed_at: "2026-10-01"
 branch: platform-completion
 objective: >-
   Assigned-to visibility beside R-570's creator ownership. An ownership rule may name an assignee
@@ -31,4 +31,5 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed: []
+found_and_fixed:
+  - an empty list from a generated Go backend was JSON null, not []

@@ -196,7 +196,7 @@ class GoEnforcesIt(TestCase):
         self.assertIn('!CanTouch(ClaimsFrom(r), owner, "manager", "admin")', orders)
         store = self.files["internal/store/order.go"]
         self.assertRegex(store, r"NULLIF\(\$\d+, ''\)::uuid\) RETURNING")
-        self.assertIn("src := ownedSource(`\"order\"`, owner)", store)
+        self.assertIn("src := ownedSource(`\"order\"`, owner, ``)", store)
         self.assertIn("func OwnerOrder(", store)
         self.assertIn("ownerID.MatchString(owner)", self.files["internal/store/store.go"])
 
@@ -249,3 +249,69 @@ class ADeleteWithoutASchemaIsStillWired(TestCase):
         wiring = wire_endpoint(api, frozenset({"Note", "Tag"}))
         self.assertEqual((wiring.op, wiring.entity, wiring.id_param), (Op.DELETE, "Note", "noteId"))
         self.assertIsNone(wire_endpoint(ApiEndpoint(HttpMethod.DELETE, "/sessions/{id}"), frozenset({"Note"})))
+
+
+DELIVERY = {"entity": "Order", "read": "own", "write": "own", "see_all": ["manager"], "assignee": "driver_id"}
+
+
+def _delivery_plan() -> dict:
+    data = _plan(DELIVERY, workflow=False)
+    data["roles"].append({"id": "driver", "permissions": []})
+    order = next(e for e in data["entities"] if e["name"] == "Order")
+    order["fields"].append({"name": "driver_id", "type": "uuid", "required": False})
+    data["capabilities"].insert(0, {"kind": "workflow", "name": "delivery", "config": {
+        "entity": "Order", "field": "status", "states": ["placed", "picked_up", "cancelled"], "initial": "placed",
+        "transitions": [{"name": "pick_up", "to": "picked_up", "from": ["placed"], "roles": ["driver"]},
+                        {"name": "cancel", "to": "cancelled", "from": ["placed"], "roles": []}]}})
+    return data
+
+
+class AssignedRecordsArePartOfOwnership(TestCase):
+    """PC-111: a delivery is the customer's, the assigned driver's, and the dispatcher's - nobody else's."""
+
+    def test_the_assignee_is_a_uuid_field_of_the_entity(self) -> None:
+        self.assertEqual(ownership_for_entity(ApplicationIR.from_dict(_delivery_plan()), "Order").assignee, "driver_id")
+        bad = _delivery_plan()
+        bad["capabilities"][1]["config"]["assignee"] = "courier_id"
+        with self.assertRaises(InvalidIRError):
+            ApplicationIR.from_dict(bad)
+
+    def test_python(self) -> None:
+        files = _files(PythonBackendAdapter(), ApplicationIR.from_dict(_delivery_plan()))
+        orders = files["app/routers/orders.py"]
+        ast.parse(orders)
+        fn = lambda name: orders.split(f"async def {name}(")[1].split("\n@router")[0]
+        self.assertIn('can_touch(row, claims, (\'manager\', \'admin\'), "driver_id")', fn("get_orders_orderid"))
+        self.assertIn('data["driver_id"] = None', fn("post_orders"), "a customer cannot assign")
+        self.assertIn('data["driver_id"] = current.get("driver_id")', fn("put_orders_orderid"))
+        self.assertIn('Depends(require_roles("driver"))', fn("pick_up_order"))
+        self.assertIn('"driver_id"):', fn("pick_up_order"), "a driver moves only what is assigned to them")
+        self.assertNotIn('"driver_id"', fn("cancel_order"), "a move open to no role is the creator's")
+        self.assertIn('OR "driver_id" = %s) AS scoped', files["app/repositories/order.py"])
+
+    def test_go(self) -> None:
+        files = _files(GoBackendAdapter(), ApplicationIR.from_dict(_delivery_plan()))
+        orders = files["internal/handlers/orders.go"]
+        self.assertIn("CanTouchAssigned(ClaimsFrom(r), owner, assignee,", orders)
+        self.assertIn("m.DriverId = unassigned.DriverId", orders)
+        self.assertIn("m.DriverId = current.DriverId", orders)
+        self.assertIn('ownedSource(`"order"`, owner, `"driver_id"`)', files["internal/store/order.go"])
+        self.assertIn("out := []models.Order{}", files["internal/store/order.go"], "an empty list is [], not null")
+
+    def test_node(self) -> None:
+        for adapter in (ExpressBackendAdapter(), HonoBackendAdapter()):
+            with self.subTest(adapter=type(adapter).__name__):
+                files = _files(adapter, ApplicationIR.from_dict(_delivery_plan()))
+                orders = files["src/routes/orders.ts"]
+                self.assertIn("canTouchAssigned(", orders)
+                self.assertIn("(parsed.data as any).driver_id = null", orders)
+                self.assertIn("delete (parsed.data as any).driver_id", orders)
+                self.assertIn('OR "driver_id" = $3', files["src/db/order.ts"])
+
+    def test_a_role_that_sees_its_own_records_reads_as_an_assignment(self) -> None:
+        data = {"entities": [{"name": "Order", "fields": [{"name": "id", "type": "uuid"}]}],
+                "roles": [{"id": "customer"}, {"id": "driver"}, {"id": "dispatcher"}], "capabilities": []}
+        ownership_from_prompt("A driver sees only their own orders", data)
+        self.assertEqual(data["capabilities"][0]["config"], {
+            "entity": "Order", "read": "own", "write": "own", "see_all": ["dispatcher"], "assignee": "driver_id"})
+        self.assertIn("driver_id", [f["name"] for f in data["entities"][0]["fields"]])

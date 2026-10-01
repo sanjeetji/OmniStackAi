@@ -119,9 +119,12 @@ def _system_instruction(example_name: str) -> str:
             "- read 'own': each user lists and opens only the records they created; read 'all': "
             "everyone can read them. write 'own': only the creator may edit or delete. see_all: "
             "roles that see and change every record (admin always does).\n"
-            "- A public catalogue (products, posts) is read 'all', write 'own'. Do NOT use ownership "
-            "for records assigned to someone who did not create them (a courier's deliveries); "
-            "give that role see_all instead.\n"
+            "- A public catalogue (products, posts) is read 'all', write 'own'.\n"
+            "- Records assigned to someone who did not create them (a courier's deliveries, an "
+            "agent's tickets): add an 'assignee' naming a uuid field that holds that user's id, e.g. "
+            '{"entity": "Order", "read": "own", "write": "own", "see_all": ["dispatcher"], '
+            '"assignee": "driver_id"} with a uuid field driver_id on Order. The assignee sees and '
+            "works on what is assigned to them; see_all roles assign.\n"
         )
     field_types = ", ".join(t.value for t in FieldType)
     # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming

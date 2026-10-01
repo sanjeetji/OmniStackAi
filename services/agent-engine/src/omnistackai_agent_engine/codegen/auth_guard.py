@@ -94,10 +94,13 @@ def python_auth_file(ir: ApplicationIR) -> str:
         "    if sees_all(claims, roles):\n"
         "        return None\n"
         "    return owner_of(claims) or NOBODY\n\n\n"
-        "def can_touch(row: dict[str, Any], claims: dict[str, Any], roles: tuple[str, ...]) -> bool:\n"
-        '    """R-570: whether this user may see or change `row` of an owner-scoped entity."""\n'
+        "def can_touch(row: dict[str, Any], claims: dict[str, Any], roles: tuple[str, ...], assignee: str | None = None) -> bool:\n"
+        '    """R-570: may this user see or change `row` of an owner-scoped entity - its creator, or\n'
+        '    (PC-111) the user it is assigned to."""\n'
         "    scope = owner_scope(claims, roles)\n"
-        '    return scope is None or str(row.get("created_by") or "") == scope\n\n\n'
+        '    if scope is None or str(row.get("created_by") or "") == scope:\n'
+        "        return True\n"
+        '    return assignee is not None and str(row.get(assignee) or "") == scope\n\n\n'
         "def require_owner(owner_id: str | None = None):\n"
         '    """Dependency: ensure authenticated user matches owner_id or possesses the admin role."""\n\n'
         "    async def _guard(authorization: str | None = Header(default=None)) -> dict[str, Any]:\n"
@@ -188,6 +191,17 @@ def go_auth_file(ir: ApplicationIR) -> str:
         "func CanTouch(claims jwt.MapClaims, owner string, seeAll ...string) bool {\n"
         "\tscope := OwnerScope(claims, seeAll...)\n"
         "\treturn scope == \"\" || scope == owner\n"
+        "}\n\n"
+        "// CanTouchAssigned: CanTouch, or the row is assigned to this user (PC-111).\n"
+        "func CanTouchAssigned(claims jwt.MapClaims, owner, assignee string, seeAll ...string) bool {\n"
+        "\tif CanTouch(claims, owner, seeAll...) {\n"
+        "\t\treturn true\n"
+        "\t}\n"
+        "\treturn assignee != \"\" && OwnerScope(claims, seeAll...) == assignee\n"
+        "}\n\n"
+        "// SeesAll: this user sees and assigns every record of the entity (admin always).\n"
+        "func SeesAll(claims jwt.MapClaims, seeAll ...string) bool {\n"
+        "\treturn hasAnyRole(claims, seeAll)\n"
         "}\n\n"
         "// RequireAuth rejects a request whose JWT is missing or invalid.\n"
         "func RequireAuth(next http.HandlerFunc) http.HandlerFunc {\n"

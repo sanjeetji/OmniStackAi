@@ -20,6 +20,10 @@ the verified token; a client cannot set it, because it is not part of any reques
     write  "own": only the record's creator may change or delete it
            "all": anyone the endpoint's roles allow may
     see_all  roles that see and change every record regardless (admin always does)
+    assignee (PC-111) a field holding the user a record is assigned to - a delivery's driver:
+             "own" then also means "assigned to me". The assignee may read and change the record
+             and make the transitions their role is granted (only on records assigned to them);
+             deleting stays the creator's; only see_all roles set or change the assignment.
 
 Refusals answer 404, not 403: telling a stranger "this exists but is not yours" is itself a leak.
 The rule is enforced by the API, never only by hiding things in the interface, and an owner-scoped
@@ -46,6 +50,7 @@ class OwnershipRule:
     read: str = "all"
     write: str = "own"
     see_all: tuple[str, ...] = ()
+    assignee: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.entity, str) or not self.entity.strip():
@@ -58,6 +63,8 @@ class OwnershipRule:
             if not isinstance(role, str) or not _ROLE.match(role):
                 raise InvalidIRError(f"ownership see_all role must be lower_snake_case: {role!r}")
         object.__setattr__(self, "see_all", roles)
+        if self.assignee is not None and not _ROLE.match(str(self.assignee)):
+            raise InvalidIRError(f"ownership assignee must name a lower_snake_case field: {self.assignee!r}")
 
     @property
     def reads_own(self) -> bool:
@@ -76,7 +83,7 @@ class OwnershipRule:
     def from_config(cls, config: dict[str, Any]) -> "OwnershipRule":
         if not isinstance(config, dict):
             raise InvalidIRError("an ownership config must be an object")
-        unknown = set(config) - {"entity", "read", "write", "see_all"}
+        unknown = set(config) - {"entity", "read", "write", "see_all", "assignee"}
         if unknown:
             raise InvalidIRError(f"unknown ownership keys: {', '.join(sorted(unknown))}")
         return cls(
@@ -84,10 +91,14 @@ class OwnershipRule:
             read=config.get("read", "all"),
             write=config.get("write", "own"),
             see_all=tuple(config.get("see_all") or ()),
+            assignee=config.get("assignee") or None,
         )
 
     def to_config(self) -> dict[str, Any]:
-        return {"entity": self.entity, "read": self.read, "write": self.write, "see_all": list(self.see_all)}
+        config = {"entity": self.entity, "read": self.read, "write": self.write, "see_all": list(self.see_all)}
+        if self.assignee:
+            config["assignee"] = self.assignee
+        return config
 
 
 def validate_ownership_config(name: str, config: dict[str, Any]) -> None:
