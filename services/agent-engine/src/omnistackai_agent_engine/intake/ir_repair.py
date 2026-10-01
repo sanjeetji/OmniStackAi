@@ -223,6 +223,41 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
                     notes.append(f"ownership {label!r}: undeclared role(s) {', '.join(map(str, unknown))} dropped")
             kept.append(capability)
             continue
+        if isinstance(config, dict) and capability.get("kind") == "money":
+            # R-567: money is charged for declared entities by number fields, once per app.
+            if any(isinstance(c, dict) and c.get("kind") == "money" for c in kept):
+                notes.append("a second money capability removed (an app has one)")
+                continue
+            charges = []
+            for charge in config.get("charges") or ():
+                if not isinstance(charge, dict):
+                    continue
+                named = str(charge.get("entity") or "")
+                entity = resolve_entity_reference(named, list(entities)) if named else None
+                if entity is None:
+                    notes.append(f"money: {named!r} is not in the plan; its charge removed")
+                    continue
+                fields = {f.get("name"): f for f in entities[entity].get("fields") or () if isinstance(f, dict)}
+                if (fields.get(charge.get("amount")) or {}).get("type") not in ("float", "int"):
+                    number = next((n for n, f in fields.items() if f.get("type") in ("float", "int")
+                                   and any(w in str(n) for w in ("price", "total", "amount", "fee", "cost"))), None)
+                    if number is None:
+                        notes.append(f"money: {entity} has no price field; its charge removed")
+                        continue
+                    notes.append(f"money: {entity}'s price is {number}")
+                    charge["amount"] = number
+                if charge.get("payee") and (fields.get(charge["payee"]) or {}).get("type") not in ("uuid", "string"):
+                    notes.append(f"money: {entity}.{charge['payee']} is not a user field; the platform keeps the sale")
+                    charge.pop("payee")
+                charges.append({**charge, "entity": entity})
+            if not charges:
+                notes.append("money: nothing left to charge for; removed")
+                continue
+            config["charges"] = charges
+            if isinstance(config.get("refund_roles"), list) and role_ids:
+                config["refund_roles"] = [r for r in config["refund_roles"] if str(r) in role_ids or r == "admin"]
+            kept.append(capability)
+            continue
         if not (isinstance(config, dict) and capability.get("kind") == "workflow"):
             kept.append(capability)
             continue

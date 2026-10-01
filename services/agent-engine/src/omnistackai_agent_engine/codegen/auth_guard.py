@@ -25,9 +25,11 @@ GOLANG_JWT_REQUIRE = "github.com/golang-jwt/jwt/v5 v5.2.1"
 def needs_auth(ir: ApplicationIR) -> bool:
     """True when at least one endpoint requires authentication, or an ownership rule makes it so
     (R-570: an owner-scoped read needs to know who is asking, whatever the plan said)."""
+    from ..application_ir.money import money_of
     from ..application_ir.ownership import ownership_rules
 
-    return any(api.auth for api in ir.apis) or bool(ownership_rules(ir))
+    # R-567: money has a payer, a payee and refunders - it needs to know who is asking too.
+    return any(api.auth for api in ir.apis) or bool(ownership_rules(ir)) or money_of(ir) is not None
 
 
 def _role_names(ir: ApplicationIR) -> list[str]:

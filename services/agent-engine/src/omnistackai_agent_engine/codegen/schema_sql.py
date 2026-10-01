@@ -337,6 +337,14 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         blocks.extend(index_statements)
         blocks.append("")
 
+    # R-567: the money tables, when the app takes payments.
+    from ..application_ir.money import money_of
+    from .money_schema import MONEY_SCHEMA
+
+    if money_of(ir) is not None:
+        blocks.append(MONEY_SCHEMA)
+        blocks.append("")
+
     # R-461: dev admin seed row.
     if auth:
         blocks.append(_ADMIN_SEED_ROW)

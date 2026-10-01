@@ -178,3 +178,14 @@ CAPABILITY_KINDS.register(
         validator=validate_ownership_config,
     )
 )
+
+from .money import validate_money_config  # noqa: E402
+
+CAPABILITY_KINDS.register(
+    CapabilityKind(
+        name="money",
+        summary="payments, a double-entry ledger, refunds, commission and payouts (R-567)",
+        implemented=True,
+        validator=validate_money_config,
+    )
+)

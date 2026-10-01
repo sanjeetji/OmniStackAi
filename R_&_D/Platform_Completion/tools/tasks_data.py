@@ -374,7 +374,13 @@ QUEUE = [
      "password_hash) next to the generated accounts table. Done 2026-10-01: the model is told not to; "
      "repair removes a copy of the accounts (and what points at it), a profile keeps its data, no password."),
     ("R-567", "Money: ledgers, payments, payouts, refunds, commission", "2 Maximum features",
-     "Both", "Not Started", "P1", "", "R-512 gives Stripe/Razorpay checkout; this is the ledger."),
+     "Both", "Completed", "P1", "", "R-512 gives Stripe/Razorpay checkout; this is the ledger. Done "
+     "2026-10-01: a `money` capability; every backend gets server-priced checkout, a double-entry ledger, "
+     "commission splits, refunds and payouts, mock offline and verified Stripe/Razorpay webhooks. Real "
+     "provider accounts are PC-070/PC-071; the screens are PC-113."),
+    ("PC-113", "Money in the generated web and admin apps: pay, wallet, payouts, refunds, the books",
+     "2 Maximum features", "Both", "Not Started", "P1", "R-567",
+     "R-567 built the API on every backend; the generated pages do not call it yet."),
     ("R-568", "Background jobs and scheduling", "2 Maximum features", "Both", "Not Started", "P1",
      "", ""),
     ("R-569", "Realtime channels: tracking, notifications, live status", "2 Maximum features",

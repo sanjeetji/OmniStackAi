@@ -1,9 +1,9 @@
 task_id: R-567
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: R-567
 started_at: "2026-10-01"
-completed_at: null
+completed_at: "2026-10-01"
 branch: platform-completion
 objective: >-
   Money in generated apps: a `money` capability (currency, what is charged for - an entity's amount,
@@ -32,5 +32,8 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - real Stripe and Razorpay test-mode accounts (PC-070/PC-071)
+  - the web and admin screens that use the money API (PC-113)
+found_and_fixed:
+  - R-512's checkout took the amount from the client, recorded nothing and had no replay window; replaced by the server-priced, recorded, verified flow in every backend

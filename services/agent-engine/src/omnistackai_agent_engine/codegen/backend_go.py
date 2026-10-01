@@ -472,7 +472,8 @@ def _forced_auth(ir: ApplicationIR) -> frozenset:
 
 
 def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = (), has_auth: bool = False,
-               uploads: bool = False, forced_auth: frozenset = frozenset(), owned_transitions: frozenset = frozenset()) -> str:
+               uploads: bool = False, forced_auth: frozenset = frozenset(), owned_transitions: frozenset = frozenset(),
+               money: bool = False) -> str:
     lines = ["package main", "", "import ("]
     lines.append('\t"log"')
     lines.append('\t"net/http"')
@@ -543,6 +544,12 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
         from .uploads_go_node import go_routes
 
         lines += go_routes(has_auth)
+    if money:  # R-567: payments and the books; webhooks are signed by the provider, not a user.
+        from .money_go import GO_MONEY_ROUTES
+
+        for method, path, handler, guarded in GO_MONEY_ROUTES:
+            target = f"handlers.RequireAuth(h.{handler})" if guarded else f"h.{handler}"
+            lines.append(f'\tmux.HandleFunc("{method} {path}", {target})')
     lines.append('\tport := os.Getenv("PORT")')
     lines.append('\tif port == "" {')
     lines.append('\t\tport = "8080"')
@@ -635,13 +642,21 @@ class GoBackendAdapter:
         # PC-102/PC-105: the same storage settings as the Python backend.
         env_example += ("# File storage: leave empty for the local disk.\nSTORAGE_DRIVER=auto\nS3_ENDPOINT=\n"
                         "S3_REGION=\nS3_BUCKET=\nS3_ACCESS_KEY_ID=\nS3_SECRET_ACCESS_KEY=\nSTORAGE_PREFIX=\nLOCAL_STORAGE_DIR=./uploads\n")
+        from ..application_ir.money import money_of
+        from .money_go import go_money_file
+        from .money_python import MONEY_ENV_EXAMPLE
+
+        money = has_db and has_auth and money_of(ir) is not None
+        if money:
+            env_example += MONEY_ENV_EXAMPLE
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
-            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads,
+            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads, money=money,
                                                 forced_auth=_forced_auth(ir) if has_db else frozenset(),
                                                 owned_transitions=frozenset(r.path for r in transition_routes(ir)
                                                                             if _owned_transition(_rules(ir), r) is not None) if has_db else frozenset())),
             GeneratedFile("internal/models/models.go", _models_file(ir)),
+            *([GeneratedFile("internal/handlers/money.go", go_money_file(ir))] if money else []),
             GeneratedFile(".gitignore", "/bin/\n*.exe\n.env\n"),
             GeneratedFile(".env.example", env_example),
             GeneratedFile(

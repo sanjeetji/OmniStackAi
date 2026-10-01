@@ -125,6 +125,13 @@ def _system_instruction(example_name: str) -> str:
             '{"entity": "Order", "read": "own", "write": "own", "see_all": ["dispatcher"], '
             '"assignee": "driver_id"} with a uuid field driver_id on Order. The assignee sees and '
             "works on what is assigned to them; see_all roles assign.\n"
+            "- When people pay for something (an order, a booking, a ticket), add ONE 'money' "
+            "capability: {\"kind\": \"money\", \"name\": \"app_money\", \"config\": {\"currency\": "
+            "\"INR\", \"charges\": [{\"entity\": \"Order\", \"amount\": \"total_amount\", \"payee\": "
+            "\"vendor_id\"}], \"commission_bps\": 1000, \"refund_roles\": [\"manager\"]}}. amount is the "
+            "entity's float price field; payee (optional) a uuid field naming the user who earns the sale "
+            "(a vendor, a driver) - then commission_bps is the platform's share (1000 = 10%). The app "
+            "gets checkout, a ledger, refunds and payouts; do not model Payment or Transaction entities.\n"
             "- Do NOT declare a User or Account entity: every app with sign-in already has accounts "
             "(email, password, role) and records who created each record. A profile with real data "
             "(bio, avatar) may be an entity named Profile, never holding a password.\n"
@@ -640,11 +647,13 @@ def parse_ir_response_with_repairs(text: str) -> tuple[ApplicationIR, tuple[str,
 
 
 def _with_prompt_ownership(ir: ApplicationIR, prompt: str) -> tuple[ApplicationIR, tuple[str, ...]]:
-    """R-570: rules for what the prompt itself calls private, when the plan left them out."""
+    """R-570: rules for what the prompt itself calls private, when the plan left them out; R-567:
+    the same for money the prompt says is paid."""
+    from .money_intent import money_from_prompt
     from .ownership_intent import ownership_from_prompt
 
     data = ir.to_dict()
-    notes = ownership_from_prompt(prompt, data)
+    notes = ownership_from_prompt(prompt, data) + money_from_prompt(prompt, data)
     if not notes:
         return ir, ()
     return ApplicationIR.from_dict(data), tuple(notes)

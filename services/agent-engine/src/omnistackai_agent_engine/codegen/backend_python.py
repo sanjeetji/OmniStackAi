@@ -11,6 +11,8 @@ from __future__ import annotations
 import re
 
 from .ownership_wiring import owned_transition, owner_scoped_op, rules_by_entity
+from ..application_ir.money import money_of
+from .money_python import MONEY_ENV_EXAMPLE, python_money_file
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType, RelationKind
 from .adapter import GenerationTarget
 from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file, python_auth_router_file
@@ -358,9 +360,13 @@ def _router_file(
     return "\n".join(lines) + "\n"
 
 
-def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False, has_db: bool = False) -> str:
+def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False, has_db: bool = False,
+               money: bool = False) -> str:
     imports = "".join(f"from app.routers import {seg}\n" for seg in segments)
     includes = "".join(f"app.include_router({seg}.router)\n" for seg in segments)
+    if money:  # R-567
+        imports += "from app import money\n"
+        includes += "app.include_router(money.router)\n"
     auth_import = "from app.routers import auth\n" if has_auth else ""
     auth_include = 'app.include_router(auth.router, prefix="/auth", tags=["auth"])\n' if has_auth else ""
     return (
@@ -450,13 +456,17 @@ class PythonBackendAdapter:
         env_example += ("# File storage: leave empty for the local disk.\nSTORAGE_DRIVER=auto\nS3_ENDPOINT=\n"
                         "S3_REGION=\nS3_BUCKET=\nS3_ACCESS_KEY_ID=\nS3_SECRET_ACCESS_KEY=\nLOCAL_STORAGE_DIR=./uploads\n")
 
+        # R-567: money needs the database and sign-in; it runs on the mock provider until keys exist.
+        has_money = has_db and has_auth and money_of(ir) is not None
+        if has_money:
+            env_example += MONEY_ENV_EXAMPLE
         files: list[GeneratedFile] = [
             GeneratedFile("requirements.txt", requirements),
             GeneratedFile("app/__init__.py", ""),
             GeneratedFile("app/config.py", _CONFIG % (_escape(ir.name),)),
             GeneratedFile("app/models.py", _models_file(ir)),
             GeneratedFile("app/main.py", _main_file(ir, [*segments, *(["uploads"] if uploads else [])],
-                                                    has_auth=has_auth, has_db=has_db)),
+                                                    has_auth=has_auth, has_db=has_db, money=has_money)),
             GeneratedFile("app/routers/__init__.py", ""),
             GeneratedFile(".gitignore", "__pycache__/\n.venv\n*.pyc\n.env\nuploads/\n"),
             GeneratedFile(".env.example", env_example),
@@ -466,6 +476,8 @@ class PythonBackendAdapter:
             files.extend(GeneratedFile(path, content) for path, content in python_upload_files(ir, has_auth))
         if has_rich_text(ir):
             files.append(GeneratedFile("app/rich_text.py", python_module()))
+        if has_money:
+            files.append(GeneratedFile("app/money.py", python_money_file(ir)))
         if has_auth:
             files.append(GeneratedFile("app/auth.py", python_auth_file(ir)))
             files.append(GeneratedFile("app/routers/auth.py", python_auth_router_file(ir)))

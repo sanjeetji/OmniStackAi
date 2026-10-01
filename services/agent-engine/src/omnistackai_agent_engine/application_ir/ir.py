@@ -783,6 +783,29 @@ class ApplicationIR:
                         raise InvalidIRError(
                             f"transition {transition.name!r} allows unknown role {role!r}"
                         )
+        # R-567: money is charged for declared entities, by number fields, earned by user fields.
+        from .money import money_of
+
+        money_caps = [c for c in self.capabilities if c.kind == "money"]
+        if len(money_caps) > 1:
+            raise InvalidIRError("an app has one money capability")
+        money = money_of(self)
+        if money is not None:
+            for charge in money.charges:
+                entity = entities_by_name.get(charge.entity)
+                if entity is None:
+                    raise InvalidIRError(f"money charges for unknown entity {charge.entity!r}")
+                fields = {f.name: f for f in entity.fields}
+                amount = fields.get(charge.amount)
+                if amount is None or amount.type.value not in ("float", "int"):
+                    raise InvalidIRError(f"money charge {charge.entity}.{charge.amount} must be a number field")
+                if charge.payee is not None:
+                    payee = fields.get(charge.payee)
+                    if payee is None or payee.type.value not in ("uuid", "string"):
+                        raise InvalidIRError(f"money payee {charge.entity}.{charge.payee} must be a uuid field")
+            for role in money.refund_roles:
+                if role not in role_ids and role != "admin":
+                    raise InvalidIRError(f"money lets unknown role {role!r} refund")
         # R-570: an ownership rule names an entity and roles this application has, once per entity.
         from .ownership import ownership_rules
 
