@@ -1,16 +1,15 @@
-task_id: PC-119
-status: completed
+task_id: PC-117
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-119
+tracker_row: PC-117
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  "Couriers see only the orders assigned to them" makes an assignment rule (PC-111). Found in R-569's
-  console proof: the plan's role was "driver" and the prompt reader knew only "their own / assigned
-  orders", so QuickShip got no ownership rule and every signed-in user could read every order. The
-  reader learns the "<things> assigned to them" word order and common role synonyms (courier, rider,
-  driver, delivery partner; agent; technician).
+  Scheduled jobs at a time of day: "every night at 2am", "daily at 09:30", "every Monday at 9am", in
+  the app's time zone. A schedule may carry `at` (HH:MM) and, weekly, `on` (a weekday); the jobs
+  capability carries a `timezone` (IANA, default UTC). The next run is computed in Postgres
+  (`scheduler_next_at`), so Python, Go, Express and Hono run the same statements unchanged; daylight
+  saving is the database's to get right. Read from the prompt too.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -21,11 +20,7 @@ allowed_paths:
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - task verify stays offline with 0 model calls
+  - schedules without `at` keep running every N from their last run
 required_gates:
-  - QuickShip's prompt over its own plan gives Order an assignee rule for driver
+  - Live - on Python, Go, Express and Hono, an anchored schedule's next run is the right local time, it runs then, and the following run is a day (or week) later at the same local time
   - scripts/verify.sh passes
-found_and_fixed:
-  - Colima's 40 GB Docker disk filled with old published-app images and Postgres crash-looped on "No space left on device"; unused images were pruned (volumes untouched), 26 GB free, data intact.
-deferred:
-  - PC-120 - a merchant seeing the orders of their own restaurant (ownership through a relation).
