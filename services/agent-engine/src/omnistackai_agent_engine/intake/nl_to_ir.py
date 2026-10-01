@@ -125,6 +125,9 @@ def _system_instruction(example_name: str) -> str:
             '{"entity": "Order", "read": "own", "write": "own", "see_all": ["dispatcher"], '
             '"assignee": "driver_id"} with a uuid field driver_id on Order. The assignee sees and '
             "works on what is assigned to them; see_all roles assign.\n"
+            "- Do NOT declare a User or Account entity: every app with sign-in already has accounts "
+            "(email, password, role) and records who created each record. A profile with real data "
+            "(bio, avatar) may be an entity named Profile, never holding a password.\n"
         )
     field_types = ", ".join(t.value for t in FieldType)
     # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming

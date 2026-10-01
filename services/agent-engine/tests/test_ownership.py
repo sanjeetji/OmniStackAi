@@ -315,3 +315,46 @@ class AssignedRecordsArePartOfOwnership(TestCase):
         self.assertEqual(data["capabilities"][0]["config"], {
             "entity": "Order", "read": "own", "write": "own", "see_all": ["dispatcher"], "assignee": "driver_id"})
         self.assertIn("driver_id", [f["name"] for f in data["entities"][0]["fields"]])
+
+
+class NoUserEntityBesideTheAccounts(TestCase):
+    """PC-112, seen in R-570's notes build: the plan declared User(email, password_hash) beside the accounts."""
+
+    def _plan(self, user_fields: list[dict]) -> dict:
+        data = _plan({"entity": "Order", "read": "own"}, workflow=False)
+        data["entities"].append({"name": "User", "fields": [{"name": "id", "type": "uuid", "required": True}] + user_fields})
+        order = next(e for e in data["entities"] if e["name"] == "Order")
+        order.setdefault("relations", []).append({"name": "placed_by", "target_entity": "User", "kind": "many_to_one"})
+        order["fields"].append({"name": "placed_by_id", "type": "uuid", "required": False})
+        data["apis"] += [{"method": "GET", "path": "/users", "auth": True, "response_schema": "User"},
+                         {"method": "POST", "path": "/users", "auth": True, "request_schema": "User"}]
+        return data
+
+    def test_a_copy_of_the_accounts_goes_with_everything_that_points_at_it(self) -> None:
+        data, notes = repair_ir_dict(self._plan([
+            {"name": "email", "type": "string", "required": True},
+            {"name": "password_hash", "type": "string", "required": True},
+            {"name": "role", "type": "string", "required": False}]))
+        self.assertNotIn("User", [e["name"] for e in data["entities"]])
+        order = next(e for e in data["entities"] if e["name"] == "Order")
+        self.assertNotIn("placed_by", [r["name"] for r in order.get("relations", [])])
+        self.assertNotIn("placed_by_id", [f["name"] for f in order["fields"]])
+        self.assertFalse([a for a in data["apis"] if a["path"] == "/users"])
+        self.assertTrue(any("repeated the app's accounts" in n for n in notes))
+        ApplicationIR.from_dict(data)
+
+    def test_a_profile_keeps_its_data_but_not_a_password(self) -> None:
+        data, _ = repair_ir_dict(self._plan([
+            {"name": "email", "type": "string", "required": True},
+            {"name": "password", "type": "string", "required": True},
+            {"name": "bio", "type": "text", "required": False}]))
+        user = next(e for e in data["entities"] if e["name"] == "User")
+        self.assertEqual([f["name"] for f in user["fields"]], ["id", "email", "bio"])
+
+    def test_without_sign_in_it_is_left_alone(self) -> None:
+        data = self._plan([{"name": "email", "type": "string", "required": True}])
+        data["capabilities"] = []
+        for api in data["apis"]:
+            api["auth"] = False
+        data, _ = repair_ir_dict(data)
+        self.assertIn("User", [e["name"] for e in data["entities"]])

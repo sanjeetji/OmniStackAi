@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-112 (2026-10-01): one place for users.** Plans no longer add a User entity with password hashes beside the accounts table; repair removes one that slips through.
 > **PC-111 (2026-10-01): assigned-to visibility.** An ownership rule's assignee (Order.driver_id): drivers see and work on what is assigned to them, dispatchers assign, customers keep their own. Proven on all four backends.
 > **PC-110 (2026-10-01): Node previews.** A generated Express or Hono API now starts in the preview like Python and Go; proven with R-570's 19 checks on both.
 > **R-570 (2026-10-01): ownership.** Every created record names its creator; an `ownership` rule keeps users to their own records in the Python, Go and Node APIs (404 otherwise), planned from prompts like "private notes". Proven live on all three backends and through a console build.

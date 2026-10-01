@@ -279,10 +279,76 @@ def _drop_owner_reference(entity: dict[str, Any], name: str, notes: list[str]) -
         notes.append(f"ownership of {name}: the owner relation is the platform's created_by; removed")
 
 
+#: PC-112: names a plan gives "the people who sign in" - the accounts table every app with sign-in has.
+_ACCOUNT_ENTITIES = frozenset({"user", "users", "account", "accounts", "appuser", "useraccount"})
+_PASSWORD_FIELDS = frozenset({"password", "password_hash", "passwordhash", "hashed_password", "pass_hash", "password_digest"})
+_IDENTITY_FIELDS = _PASSWORD_FIELDS | {"id", "email", "username", "name", "full_name", "first_name", "last_name",
+                                       "role", "roles", "created_at", "updated_at", "is_active", "last_login"}
+
+
+def _has_sign_in(data: dict[str, Any]) -> bool:
+    apis = [a for a in data.get("apis") or () if isinstance(a, dict)]
+    owned = any(isinstance(c, dict) and c.get("kind") == "ownership" for c in data.get("capabilities") or ())
+    return owned or any(a.get("auth", True) for a in apis)
+
+
+def _drop_account_duplicates(data: dict[str, Any], notes: list[str]) -> None:
+    """PC-112, seen in R-570's private-notes build: the plan declared User(email, password_hash) next
+    to the accounts table every app with sign-in already has. A second, unprotected place for users
+    and their password hashes is a security bug and a source of confusion ("which users?").
+
+    A User/Account entity that only repeats the account (email, password, name, role) is removed
+    with everything that points at it; one that also holds profile data (a bio, an avatar) is kept
+    as that profile, without its password fields.
+    """
+    if not _has_sign_in(data):
+        return
+    entities = [e for e in data.get("entities") or () if isinstance(e, dict)]
+    for entity in list(entities):
+        name = str(entity.get("name") or "")
+        if _norm(name) not in _ACCOUNT_ENTITIES:
+            continue
+        fields = [f for f in entity.get("fields") or () if isinstance(f, dict)]
+        extra = [f for f in fields if _norm(str(f.get("name", ""))).replace("_", "") not in
+                 {n.replace("_", "") for n in _IDENTITY_FIELDS}]
+        if extra:
+            kept = [f for f in fields if _norm(str(f.get("name", ""))).replace("_", "") not in
+                    {n.replace("_", "") for n in _PASSWORD_FIELDS}]
+            if len(kept) != len(fields):
+                entity["fields"] = kept
+                notes.append(f"{name}: passwords live only in the app's accounts; password field(s) removed")
+            continue
+        data["entities"] = [e for e in data["entities"] if e is not entity]
+        notes.append(f"{name} repeated the app's accounts (sign-in, roles and who-created-what already exist); removed")
+        for other in data["entities"]:
+            if not isinstance(other, dict):
+                continue
+            relations = [r for r in other.get("relations") or () if isinstance(r, dict)]
+            gone = [r for r in relations if r.get("target_entity") == name]
+            if gone:
+                other["relations"] = [r for r in relations if r.get("target_entity") != name]
+                dropped = {f"{r.get('name')}_id" for r in gone}
+                other["fields"] = [f for f in other.get("fields") or () if not (isinstance(f, dict) and f.get("name") in dropped)]
+                notes.append(f"{other.get('name')}: relation(s) to {name} removed (the creator is recorded from sign-in)")
+        before = len(data.get("apis") or ())
+        data["apis"] = [a for a in data.get("apis") or () if not (isinstance(a, dict) and (
+            name in (a.get("request_schema"), a.get("response_schema"))
+            or _norm(str(a.get("path", "")).strip("/").split("/")[0]) in _ACCOUNT_ENTITIES))]
+        if len(data["apis"]) != before:
+            notes.append(f"{before - len(data['apis'])} endpoint(s) for {name} removed (accounts have /auth/*)")
+        for key in ("fixtures",):
+            if key in data:
+                data[key] = [x for x in data.get(key) or () if not (isinstance(x, dict) and x.get("entity") == name)]
+        if "capabilities" in data:
+            data["capabilities"] = [c for c in data.get("capabilities") or () if not (
+                isinstance(c, dict) and (c.get("config") or {}).get("entity") == name)]
+
+
 def repair_ir_dict(data: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...]]:
     """Repair `data` in place where it can; return it and a human-readable note per repair."""
     notes: list[str] = []
     _repair_structure(data, notes)
+    _drop_account_duplicates(data, notes)
     apis = data.get("apis")
     entities = data.get("entities")
     if not isinstance(apis, list) or not isinstance(entities, list):

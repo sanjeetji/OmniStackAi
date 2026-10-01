@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 444 |
+| Completed | 445 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 95 |
-| Not Started | 507 |
+| Not Started | 506 |
 | Superseded | 13 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1133** |
 
-Open work queue: **92** tasks (P0: 4, P1: 41, P2: 33, P3: 14).
+Open work queue: **91** tasks (P0: 4, P1: 41, P2: 32, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -94,7 +94,7 @@ Open work queue: **92** tasks (P0: 4, P1: 41, P2: 33, P3: 14).
 | 45 | R-570 | Permissions beyond role: ownership and row-level rules | Completed | P1 | Both |  | ARCH-DOMAIN-IR | 'A driver sees only their own orders'. Seen live 2026-09-27 (PC-008): a published notes app saved notes with created_by null, so private notes were not private. Done 2026-10-01: every create records its creator from the token; an `ownership` rule (read/write own\|all, see_all roles) is enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. Assigned-to visibility (a driver's deliveries) is PC-111. |
 | 46 | PC-110 | The preview runner runs Node backends (Express, Hono) as it runs Python and Go | Completed | P1 | Both |  |  | Found in R-570: localrun recognises only requirements.txt and go.mod, so a Node API is never started in a preview; R-570's Node proof ran the API by hand. Done 2026-10-01: schema applied as the app's role, dependencies installed once, tsx started on the shared contract; Express and Hono proven. |
 | 47 | PC-111 | Assigned-to visibility: a record visible to the user it is assigned to (a driver's deliveries), beside R-570's creator ownership | Completed | P1 | Both | R-570 |  | A creator rule cannot express 'the orders assigned to me'; the planner is told not to use one. Done 2026-10-01: an ownership rule's `assignee` field; drivers see and move only what is assigned to them, only see_all roles assign; proven on Python, Go, Express and Hono. |
-| 48 | PC-112 | Plans do not declare a User entity beside the app's accounts | Not Started | P2 | Both |  |  | Seen in R-570's private-notes build: the plan declared User(email, password_hash) next to the generated accounts table. |
+| 48 | PC-112 | Plans do not declare a User entity beside the app's accounts | Completed | P2 | Both |  |  | Seen in R-570's private-notes build: the plan declared User(email, password_hash) next to the generated accounts table. Done 2026-10-01: the model is told not to; repair removes a copy of the accounts (and what points at it), a profile keeps its data, no password. |
 | 49 | R-567 | Money: ledgers, payments, payouts, refunds, commission | Not Started | P1 | Both |  | ARCH-PAYMENTS, R-512 | R-512 gives Stripe/Razorpay checkout; this is the ledger. |
 | 50 | R-568 | Background jobs and scheduling | Not Started | P1 | Both |  |  |  |
 | 51 | R-569 | Realtime channels: tracking, notifications, live status | Not Started | P1 | Both |  | ARCH-REALTIME |  |
@@ -918,6 +918,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-108 | Consumer-grade UI for generated apps: detail, landing, list and empty states that read as a finished product, not an operator's tool | Completed | 2026-09-30 | Seen in the PC-101 benchmark screenshots: a record's detail page offers an ID box, 'Copy ID', 'Export JSON' and prev/next buttons to visitors; the landing hero shows an empty image placeholder; public lists are admin-style tables with density toggles and CSV export; empty states are bare. The templates every build uses (model page design is optional) must look finished: cards and readable detail pages for visitors, the operator tools kept in the admin console. Proven with the UI check and screenshots on the benchmark prompts. Done 2026-09-30: card lists and reading views in the web app, operator pages kept in the admin app, no empty hero box; proven on the hiring portal and content hub with real records. |
 | PC-110 | The preview runner runs Node backends (Express, Hono) as it runs Python and Go | Completed | 2026-10-01 | Found in R-570: localrun recognises only requirements.txt and go.mod, so a Node API is never started in a preview; R-570's Node proof ran the API by hand. Done 2026-10-01: schema applied as the app's role, dependencies installed once, tsx started on the shared contract; Express and Hono proven. |
 | PC-111 | Assigned-to visibility: a record visible to the user it is assigned to (a driver's deliveries), beside R-570's creator ownership | Completed | 2026-10-01 | A creator rule cannot express 'the orders assigned to me'; the planner is told not to use one. Done 2026-10-01: an ownership rule's `assignee` field; drivers see and move only what is assigned to them, only see_all roles assign; proven on Python, Go, Express and Hono. |
+| PC-112 | Plans do not declare a User entity beside the app's accounts | Completed | 2026-10-01 | Seen in R-570's private-notes build: the plan declared User(email, password_hash) next to the generated accounts table. Done 2026-10-01: the model is told not to; repair removes a copy of the accounts (and what points at it), a profile keeps its data, no password. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
 | R-003 | Local Ollama Stage 0 bootstrap | Completed | 2026-09-06 |  |

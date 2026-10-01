@@ -370,8 +370,9 @@ QUEUE = [
      "Done 2026-10-01: an ownership rule's `assignee` field; drivers see and move only what is assigned "
      "to them, only see_all roles assign; proven on Python, Go, Express and Hono."),
     ("PC-112", "Plans do not declare a User entity beside the app's accounts", "2 Maximum features", "Both",
-     "Not Started", "P2", "", "Seen in R-570's private-notes build: the plan declared User(email, "
-     "password_hash) next to the generated accounts table."),
+     "Completed", "P2", "", "Seen in R-570's private-notes build: the plan declared User(email, "
+     "password_hash) next to the generated accounts table. Done 2026-10-01: the model is told not to; "
+     "repair removes a copy of the accounts (and what points at it), a profile keeps its data, no password."),
     ("R-567", "Money: ledgers, payments, payouts, refunds, commission", "2 Maximum features",
      "Both", "Not Started", "P1", "", "R-512 gives Stripe/Razorpay checkout; this is the ledger."),
     ("R-568", "Background jobs and scheduling", "2 Maximum features", "Both", "Not Started", "P1",
