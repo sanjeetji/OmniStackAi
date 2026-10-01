@@ -1,8 +1,9 @@
 task_id: PC-118
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: PC-118
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   The job build API (POST /jobs/build and /jobs/build/stream) gives up after a fixed five minutes,
@@ -23,3 +24,7 @@ forbidden_changes:
 required_gates:
   - go test for the control plane's jobs package passes
   - scripts/verify.sh passes
+found_and_fixed:
+  - The first reading (that console builds over five minutes are lost) was wrong - project builds stream and read the setting (30m here); only the job API ignored it.
+deferred:
+  - The console's non-streaming buildApp waits at most Node fetch's 300s for headers (undici headersTimeout); its UI builds stream, so nothing reaches it today.

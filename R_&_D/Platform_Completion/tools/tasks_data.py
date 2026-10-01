@@ -413,11 +413,12 @@ QUEUE = [
      "signed-in people its ownership rule lets see the row (one-minute signed tickets open a stream), and the "
      "pages' data hooks and the admin tables refresh quietly. Planned from the prompt. 19/19 live on Python, "
      "Go, Express and Hono; 4/4 in a browser. In-app notifications ride on it in PC-053."),
-    ("PC-118", "A build longer than five minutes is lost: the control plane stops waiting for the Studio",
-     "2 Maximum features", "Platform", "Not Started", "P1", "",
-     "Found in R-569's console proof (2026-10-02): a multi-app build with remote models ran past the control "
-     "plane's fixed 5-minute client timeout (also applied to the streaming build); the console got 502 and the "
-     "Studio's finished work was never registered as a project."),
+    ("PC-118", "The job build API honours the build budget setting (it gave up after a fixed five minutes)",
+     "2 Maximum features", "Platform", "Completed", "P2", "",
+     "Found in R-569's console proof (2026-10-02): POST /jobs/build gave a multi-app build five minutes and the "
+     "console a 502, while the project build already read OMNISTACKAI_AGENT_CALL_TIMEOUT (R-530; 30m in this "
+     "machine's .env). Done 2026-10-02: both read the setting. The console's own non-streaming call to the job "
+     "API still waits at most Node fetch's 300s for headers; the console's UI builds stream."),
     ("R-571", "Escape hatch: behaviour the IR declares and the model implements, verified",
      "2 Maximum features", "Both", "Not Started", "P1", "R-560", "No hard ceiling, only a typed boundary."),
     ("PC-016", "Edit a workflow by chat (add/rename states and transitions safely)",

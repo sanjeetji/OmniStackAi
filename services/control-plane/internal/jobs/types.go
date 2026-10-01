@@ -10,6 +10,8 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/credits"
 	"log/slog"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/ai"
@@ -57,7 +59,19 @@ func (d Deps) logger() *slog.Logger {
 	return d.Logger
 }
 
-const defaultBuildTimeout = 5 * time.Minute
+// defaultBuildTimeout is the job build's budget. PC-118: it was a fixed five minutes while the
+// project build (R-530) read OMNISTACKAI_AGENT_CALL_TIMEOUT, so a multi-app build that the project
+// path would have finished failed here with a 502. Both read the same setting now.
+var defaultBuildTimeout = durationFromEnv("OMNISTACKAI_AGENT_CALL_TIMEOUT", 5*time.Minute)
+
+func durationFromEnv(name string, fallback time.Duration) time.Duration {
+	if raw := strings.TrimSpace(os.Getenv(name)); raw != "" {
+		if parsed, err := time.ParseDuration(raw); err == nil && parsed > 0 {
+			return parsed
+		}
+	}
+	return fallback
+}
 
 // defaultPreviewTimeout extends the write deadline for the one preview route that can trigger a
 // real cold start (POST /jobs/build/{id}/preview, via StudioPreviewManager.replace()) - sized just

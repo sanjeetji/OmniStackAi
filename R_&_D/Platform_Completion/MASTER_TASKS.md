@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 451 |
+| Completed | 452 |
 | Completed - needs live proof | 7 |
 | In Progress | 0 |
 | Pending | 95 |
-| Not Started | 506 |
+| Not Started | 505 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1139** |
 
-Open work queue: **91** tasks (P0: 4, P1: 39, P2: 33, P3: 15).
+Open work queue: **90** tasks (P0: 4, P1: 38, P2: 33, P3: 15).
 
 ## Work queue (do these in order)
 
@@ -103,7 +103,7 @@ Open work queue: **91** tasks (P0: 4, P1: 39, P2: 33, P3: 15).
 | 54 | R-568 | Background jobs and scheduling | Completed | P1 | Both |  |  | Done 2026-10-01: a `jobs` capability - schedules over an entity (which rows by state and age, how often, a workflow transition / set fields / delete), compiled to one bounded SQL statement each and run by every backend on a Postgres scheduler (SKIP LOCKED, retries with backoff, dead runs an admin retries); a Scheduled jobs page in the admin console; planned from the prompt. 28/28 live on Python, Go, Express and Hono; 8/8 in a browser. A time of day is PC-117; reminders are PC-053. |
 | 55 | PC-117 | Scheduled jobs at a time of day ('every night at 2am', in the app's time zone) | Not Started | P3 | Both | R-568 |  | R-568 runs a schedule every N minutes/hours/days from its first run; a nightly job at a set hour needs an anchor and a time zone. |
 | 56 | R-569 | Realtime channels: tracking, notifications, live status | Completed | P1 | Both |  | ARCH-REALTIME | Done 2026-10-02: a `realtime` capability - a trigger publishes each change to a live entity through Postgres LISTEN/NOTIFY, every backend streams it over Server-Sent Events to the signed-in people its ownership rule lets see the row (one-minute signed tickets open a stream), and the pages' data hooks and the admin tables refresh quietly. Planned from the prompt. 19/19 live on Python, Go, Express and Hono; 4/4 in a browser. In-app notifications ride on it in PC-053. |
-| 57 | PC-118 | A build longer than five minutes is lost: the control plane stops waiting for the Studio | Not Started | P1 | Platform |  |  | Found in R-569's console proof (2026-10-02): a multi-app build with remote models ran past the control plane's fixed 5-minute client timeout (also applied to the streaming build); the console got 502 and the Studio's finished work was never registered as a project. |
+| 57 | PC-118 | The job build API honours the build budget setting (it gave up after a fixed five minutes) | Completed | P2 | Platform |  |  | Found in R-569's console proof (2026-10-02): POST /jobs/build gave a multi-app build five minutes and the console a 502, while the project build already read OMNISTACKAI_AGENT_CALL_TIMEOUT (R-530; 30m in this machine's .env). Done 2026-10-02: both read the setting. The console's own non-streaming call to the job API still waits at most Node fetch's 300s for headers; the console's UI builds stream. |
 | 58 | R-571 | Escape hatch: behaviour the IR declares and the model implements, verified | Not Started | P1 | Both | R-560 |  | No hard ceiling, only a typed boundary. |
 | 59 | PC-016 | Edit a workflow by chat (add/rename states and transitions safely) | Not Started | P1 | Both | R-584, R-590 |  |  |
 | 60 | R-572 | Shared contract package: one generated packages/ for types, client, validation | Not Started | P1 | Both |  | R-116, R-127, R-137, R-143, R-152, SPEC-PACK-06D | Also puts the /auth routes (R-591) into the generated OpenAPI contract. |
@@ -929,6 +929,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-113 | Money in the generated web and admin apps: pay, wallet, payouts, refunds, the books | Completed | 2026-10-01 | R-567 built the API on every backend; the generated pages do not call it yet. Done 2026-10-01: a Pay panel on chargeable records, a Wallet page, an admin Money page; proven in a browser. |
 | PC-114 | A prompt's privacy and money rules reach every app of an ecosystem; customers sign up with the plan's customer role | Completed | 2026-10-01 | Found creating the payments test project (2026-10-01): a marketplace planned as three apps got none of its money; fixed for every planner, the shared backend and sign-up. |
 | PC-115 | Remove R-512's Manage -> Payments toggle (replaced by R-567) | Completed | 2026-10-01 | Founder decision 2026-10-01: it took the amount from the client, recorded nothing and only reached the web app. Payments come from the plan; keys are project secrets. |
+| PC-118 | The job build API honours the build budget setting (it gave up after a fixed five minutes) | Completed | 2026-10-02 | Found in R-569's console proof (2026-10-02): POST /jobs/build gave a multi-app build five minutes and the console a 502, while the project build already read OMNISTACKAI_AGENT_CALL_TIMEOUT (R-530; 30m in this machine's .env). Done 2026-10-02: both read the setting. The console's own non-streaming call to the job API still waits at most Node fetch's 300s for headers; the console's UI builds stream. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
 | R-003 | Local Ollama Stage 0 bootstrap | Completed | 2026-09-06 |  |

@@ -123,6 +123,8 @@ What to expect from a local model: on an M-series laptop, `qwen2.5-coder:7b` tak
 per chat edit, where a cloud model takes about half a minute. It is free, private and never rate
 limited, but you must raise `OMNISTACKAI_AGENT_CALL_TIMEOUT`, or the control-plane gives up after
 five minutes and reports "could not reach the control-plane" while the edit is still running.
+The same setting covers every build path, the project build and the job API (`/jobs/build`, PC-118).
+A multi-app build with page design can take longer than five minutes even on a cloud model.
 Bigger models are better at editing but need much more memory: the 7b needs about 5.5 GB while
 loaded, the 14b about 10 GB, so on a 16 GB Mac the 14b competes with Docker and the preview apps.
 
