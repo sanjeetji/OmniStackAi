@@ -137,6 +137,9 @@ def union_ir(plan) -> ApplicationIR:
         entities=_merge_entities(irs),
         roles=_merge_roles(irs),
         apis=_merge_apis(irs),
+        # R-570 / R-567: the rules (ownership, money, lifecycles) of every surface reach the shared
+        # backend - it used to take the first surface's alone.
+        capabilities=tuple({c.name: c for ir in irs for c in ir.capabilities}.values()),
         screens=(),
         project_strategy=replace(
             base.project_strategy,

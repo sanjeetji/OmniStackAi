@@ -20,6 +20,8 @@ _PAYS = re.compile(r"\b(pay|pays|paying|paid|payment|payments|checkout|check out
 _COMMISSION = re.compile(r"(\d{1,2}(?:\.\d+)?)\s*%\s*(?:commission|fee|cut|platform fee|service fee)|"
                          r"(?:commission|fee|cut|takes?|keeps?)\s+(?:of\s+)?(\d{1,2}(?:\.\d+)?)\s*%", re.I)
 _PRICE_FIELDS = ("total_amount", "total", "amount", "price", "total_price", "fee", "cost", "subtotal")
+_TRANSACTIONS = ("order", "purchase", "booking", "ticket", "invoice", "reservation", "appointment", "subscription",
+                 "enrollment", "enrolment", "donation", "rental", "trip", "ride", "delivery", "sale", "checkout")
 _SELLERS = ("vendor", "seller", "merchant", "driver", "host", "provider", "instructor", "freelancer", "courier",
             "restaurant", "owner", "tutor", "trainer", "artist", "creator")
 _CURRENCIES = (("INR", ("₹", "rupee", " inr", "india")), ("EUR", ("€", " eur", "euro")), ("GBP", ("£", " gbp", "pound")),
@@ -46,11 +48,15 @@ def money_from_prompt(prompt: str, data: dict[str, Any]) -> list[str]:
         fields = {str(f.get("name")): f for f in entity.get("fields") or () if isinstance(f, dict)}
         field = next((n for n in _PRICE_FIELDS if n in fields and fields[n].get("type") in ("float", "int")), None)
         if field:
-            mentioned = str(entity.get("name", "")).lower().rstrip("s") in prompt.lower()
-            priced.append((not mentioned, str(entity.get("name")), field, entity))
+            name = str(entity.get("name", ""))
+            mentioned = name.lower().rstrip("s") in prompt.lower()
+            # What people pay is an order's total, not a catalogue's price: prefer order-like records,
+            # then the prompt's own word, then a total over a price.
+            transactional = any(word in name.lower() for word in _TRANSACTIONS)
+            priced.append(((not transactional, not mentioned, _PRICE_FIELDS.index(field)), name, field, entity))
     if not priced:
         return []
-    _, name, amount, entity = sorted(priced, key=lambda p: p[0])[0]  # one the prompt names, first
+    _, name, amount, entity = sorted(priced, key=lambda p: p[0])[0]
     charge: dict[str, Any] = {"entity": name, "amount": amount}
     config: dict[str, Any] = {"currency": _currency(prompt), "charges": [charge], "commission_bps": 0, "refund_roles": []}
     notes = [f"payments for {name} ({name}.{amount}, {config['currency']}); refunds by admin"]

@@ -13,7 +13,7 @@ import re
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, FieldType
 from .adapter import GenerationTarget
 from .auth_guard import GOLANG_JWT_REQUIRE, go_auth_file, needs_auth
-from .auth_templates import AUTH_CONTRACT, EMAIL_ENV_EXAMPLE, GO_AUTH_HANDLERS, is_account_route
+from .auth_templates import AUTH_CONTRACT, EMAIL_ENV_EXAMPLE, GO_AUTH_HANDLERS, is_account_route, signup_role
 from .field_validation import VALIDATOR_REQUIRE, filter_fields, go_validate_file, go_validate_tag, parse_field_rules
 from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
@@ -677,7 +677,8 @@ class GoBackendAdapter:
         if has_auth:
             files.append(GeneratedFile("internal/handlers/auth.go", go_auth_file(ir)))
             if has_db:
-                files.append(GeneratedFile("internal/handlers/auth_routes.go", GO_AUTH_HANDLERS))
+                files.append(GeneratedFile("internal/handlers/auth_routes.go", GO_AUTH_HANDLERS.replace(
+                    'defaultRole       = "user"', f'defaultRole       = "{signup_role(ir)}"', 1)))
                 from .role_manager import GO_ROLE_MANAGER
 
                 files.append(GeneratedFile("internal/handlers/auth_roles.go", GO_ROLE_MANAGER))

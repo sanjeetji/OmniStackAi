@@ -286,4 +286,7 @@ def python_auth_router_file(ir: ApplicationIR) -> str:
     from .role_manager import python_role_manager
 
     # PC-011: plus the admin's role manager (GET /auth/users, PUT /auth/users/{id}/role).
-    return PYTHON_AUTH_ROUTER + python_role_manager(ir)
+    from .auth_templates import signup_role
+
+    router = PYTHON_AUTH_ROUTER.replace('DEFAULT_ROLE = "user"', f'DEFAULT_ROLE = "{signup_role(ir)}"', 1)
+    return router + python_role_manager(ir)

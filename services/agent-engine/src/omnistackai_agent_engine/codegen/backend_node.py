@@ -1254,7 +1254,10 @@ class NodeBackendAdapter:
         from .role_manager import NODE_ROLE_ROUTES_EXPRESS, NODE_ROLE_ROUTES_HONO, node_role_manager_core
 
         # PC-011: the core and the account routes carry the admin's role manager.
-        files.append(GeneratedFile("src/auth/core.ts", NODE_AUTH_CORE + node_role_manager_core(ir)))
+        from .auth_templates import signup_role
+
+        core = NODE_AUTH_CORE.replace("const DEFAULT_ROLE = 'user';", f"const DEFAULT_ROLE = '{signup_role(ir)}';", 1)
+        files.append(GeneratedFile("src/auth/core.ts", core + node_role_manager_core(ir)))
         files.append(GeneratedFile("src/middleware/auth.ts", _auth_file(ir, framework)))
         if has_auth:
             files.append(GeneratedFile(

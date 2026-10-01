@@ -926,6 +926,21 @@ router.post('/reset-password', async (c) => handle(c, async () => auth.resetPass
 '''
 
 
+#: Roles a person gives themselves by signing up: the app's customers. Staff roles (admin, a seller,
+#: a manager) are granted by an admin, never self-chosen.
+SIGNUP_ROLES = ("customer", "buyer", "member", "client", "shopper", "student", "learner", "patient", "guest",
+                "passenger", "rider", "traveler", "traveller", "attendee", "subscriber", "reader", "tenant",
+                "renter", "diner", "applicant", "candidate", "user")
+
+
+def signup_role(ir) -> str:
+    """The role a self-registered account starts with (found with PC-113: an ecosystem's checkout
+    required `buyer`, every new account was `user`, so no customer could buy until an admin
+    stepped in). The plan's customer role if it has one, else `user`."""
+    roles = {role.id for role in ir.roles}
+    return next((role for role in SIGNUP_ROLES if role in roles), "user")
+
+
 def is_account_route(path: str) -> bool:
     """True for a path the generated account flow owns.
 

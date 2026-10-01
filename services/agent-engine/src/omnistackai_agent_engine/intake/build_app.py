@@ -102,6 +102,11 @@ def build_app_from_ir(
         from ..codegen.rich_text import with_rich_text
 
         ir = with_rich_text(with_design_direction(ir, prompt), prompt)
+        # R-570 / R-567: whose records are whose and what is paid, from the prompt's own words -
+        # here, so every planner (one app, an ecosystem, an edit) gets the same floor.
+        from .nl_to_ir import _with_prompt_ownership
+
+        ir, _ = _with_prompt_ownership(ir, prompt)
     # PC-101: every record a form must point at can be listed (and so picked).
     from ..codegen.reachable_references import with_detail_screens, with_reachable_references
 
@@ -247,6 +252,49 @@ def app_build_result_to_dict(
     return payload
 
 
+def _with_prompt_rules_for_plan(plan, prompt: str):
+    """R-570 / R-567 for an ecosystem: what the prompt says about privacy and money, applied to the
+    whole product once (over the union of its apps), then given to every app that has the entities.
+
+    Found live: "a marketplace where customers pay ... 10% commission" planned as a buyer storefront,
+    a seller app and an admin, and the money the prompt asked for was nowhere - the prompt passes
+    ran only on the single-app planner's path.
+    """
+    from dataclasses import replace as _replace
+
+    from ..application_ir import ApplicationIR
+    from ..codegen.ecosystem_assembler import union_ir
+    from .nl_to_ir import _with_prompt_ownership
+
+    shared = union_ir(plan)
+    ruled, notes = _with_prompt_ownership(shared, prompt)
+    if not notes:
+        return plan
+    known = {c.name for c in shared.capabilities}
+    added = [c for c in ruled.capabilities if c.name not in known]
+    fields_by_entity = {e.name: e.fields for e in ruled.entities}
+
+    def referenced(capability) -> set[str]:
+        config = capability.config
+        if capability.kind == "money":
+            return {c.get("entity") for c in config.get("charges") or ()}
+        return {config.get("entity")}
+
+    apps = []
+    for app in plan.apps:
+        data = app.ir.to_dict()
+        names = {e["name"] for e in data["entities"]}
+        for entity in data["entities"]:
+            have = {f["name"] for f in entity["fields"]}
+            for field in fields_by_entity.get(entity["name"], ()):
+                if field.name not in have:
+                    entity["fields"].append(field.to_dict())
+        data["capabilities"] = data.get("capabilities", []) + [
+            c.to_dict() for c in added if referenced(c) <= names]
+        apps.append(_replace(app, ir=ApplicationIR.from_dict(data)))
+    return _replace(plan, apps=tuple(apps))
+
+
 def build_ecosystem_from_plan(
     plan,
     target_dir: str | os.PathLike[str],
@@ -276,6 +324,15 @@ def build_ecosystem_from_plan(
         from ..codegen.rich_text import with_rich_text
 
         plan = _replace(plan, apps=tuple(_replace(app, ir=with_rich_text(app.ir, prompt)) for app in plan.apps))
+        plan = _with_prompt_rules_for_plan(plan, prompt)
+    # PC-101 for ecosystems too: every record a surface lists has a page of its own (found with
+    # PC-113: a buyer's purchase had no page, so there was nowhere to pay for it).
+    from dataclasses import replace as _replace_app
+
+    from ..codegen.reachable_references import with_detail_screens, with_reachable_references
+
+    plan = _replace_app(plan, apps=tuple(
+        _replace_app(app, ir=with_detail_screens(with_reachable_references(app.ir))) for app in plan.apps))
     project = assemble_ecosystem(plan, provider=provider, prompt=prompt)
     # PC-099: the plan the workspace keeps carries the ecosystem's design direction (the same one
     # the assembler applied), so the console can say what it looks like.

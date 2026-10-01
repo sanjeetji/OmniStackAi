@@ -359,6 +359,10 @@ QUEUE = [
      "create records its creator from the token; an `ownership` rule (read/write own|all, see_all roles) is "
      "enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. "
      "Assigned-to visibility (a driver's deliveries) is PC-111."),
+    ("PC-114", "A prompt's privacy and money rules reach every app of an ecosystem; customers sign up "
+     "with the plan's customer role", "2 Maximum features", "Both", "Completed", "P1", "R-567",
+     "Found creating the payments test project (2026-10-01): a marketplace planned as three apps got none "
+     "of its money; fixed for every planner, the shared backend and sign-up."),
     ("PC-110", "The preview runner runs Node backends (Express, Hono) as it runs Python and Go",
      "2 Maximum features", "Both", "Completed", "P1", "",
      "Found in R-570: localrun recognises only requirements.txt and go.mod, so a Node API is never started "
