@@ -1,15 +1,16 @@
-task_id: PC-112
-status: completed
+task_id: R-567
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-112
+tracker_row: R-567
 started_at: "2026-10-01"
-completed_at: "2026-10-01"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Plans do not declare a User entity beside the app's accounts. When the app has sign-in, a planned
-  User/Account entity that only repeats the accounts table (email, password, name, role) is removed
-  with everything pointing at it - relations, endpoints, sample data, rules - and one that also holds
-  profile data keeps that data but loses its password fields; the planning model is told so.
+  Money in generated apps: a `money` capability (currency, what is charged for - an entity's amount,
+  optionally a payee who earns it - a platform commission, who may refund). Every backend gets
+  payments in integer minor units with the amount computed server-side, a double-entry ledger
+  (balances are ledger sums), refunds, commission splits and payouts, and providers mock (works
+  offline, no keys), Stripe and Razorpay (verified, idempotent webhooks; keys added last at PC-070).
 founder_gate: none
 companions: []
 allowed_paths:
@@ -18,10 +19,13 @@ allowed_paths:
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
+  - no real payment credentials; the real providers are proven at PC-071
+  - the amount is never taken from the client
 required_gates:
-  - Live - a console build of an app whose plan declares a User entity is built without it and its accounts work
+  - Live - a marketplace app per backend on PostgreSQL with the mock provider - pay, commission split, refund, payout - ledger balanced throughout
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
