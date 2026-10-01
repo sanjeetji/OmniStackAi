@@ -1836,52 +1836,32 @@ if ! rg -qF 'ProjectConnectorsManage' "$console_root/app/studio/[projectId]/mana
   exit 1
 fi
 
-# R-512 (G-04 Payments in Generated Apps — Stripe & Razorpay): migration, control-plane package, agent-engine codegen, and console-web UI
-for required_payment_file in \
-  "$control_plane_root/migrations/000013_project_payments.up.sql" \
-  "$control_plane_root/migrations/000013_project_payments.down.sql" \
-  "$control_plane_root/internal/payments/store.go" \
-  "$control_plane_root/internal/payments/handler.go" \
-  "$control_plane_root/internal/payments/payments_test.go" \
-  "$agent_engine_root/src/omnistackai_agent_engine/studio/payments.py" \
-  "$agent_engine_root/tests/test_payments.py" \
-  "$console_root/components/project-payments-manage.tsx" \
-  "$console_root/app/api/projects/[id]/payments/route.ts"; do
-  if [[ ! -f "$required_payment_file" ]]; then
-    printf 'Missing R-512 contract file: %s\n' "$required_payment_file"
+# PC-115: R-512's injected checkout and its Manage -> Payments toggle were removed; R-567's money
+# capability (every backend, keys as project secrets) replaces them. The replacement must exist and the
+# old toggle must not come back.
+for required_money_file in \
+  "$control_plane_root/migrations/000021_drop_project_payment_gateway.up.sql" \
+  "$agent_engine_root/src/omnistackai_agent_engine/application_ir/money.py" \
+  "$agent_engine_root/src/omnistackai_agent_engine/codegen/money_python.py" \
+  "$agent_engine_root/src/omnistackai_agent_engine/codegen/money_go.py" \
+  "$agent_engine_root/src/omnistackai_agent_engine/codegen/money_node.py" \
+  "$agent_engine_root/tests/test_money.py" \
+  "$repo_root/docs/runbooks/payments.md"; do
+  if [[ ! -f "$required_money_file" ]]; then
+    printf 'Missing R-567 money file: %s\n' "$required_money_file"
     exit 1
   fi
 done
 
-if ! rg -qF 'payment_gateway' "$control_plane_root/migrations/000013_project_payments.up.sql"; then
-  printf 'R-512 000013_project_payments.up.sql must add payment_gateway column.\n'
-  exit 1
-fi
-
-if ! rg -qF 'payments.Register' "$control_plane_root/cmd/control-plane/main.go"; then
-  printf 'R-512 control-plane main must register payments routes.\n'
-  exit 1
-fi
-
-if ! rg -qF 'apply_payments' "$agent_engine_root/src/omnistackai_agent_engine/studio/payments.py"; then
-  printf 'R-512 payments.py must define apply_payments.\n'
-  exit 1
-fi
-
-if ! rg -qF 'remove_payments' "$agent_engine_root/src/omnistackai_agent_engine/studio/payments.py"; then
-  printf 'R-512 payments.py must define remove_payments.\n'
-  exit 1
-fi
-
-if ! rg -qF '_handle_workspace_payments_apply' "$agent_engine_root/src/omnistackai_agent_engine/studio/server.py"; then
-  printf 'R-512 server.py must route workspace payments apply.\n'
-  exit 1
-fi
-
-if ! rg -qF 'ProjectPaymentsManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
-  printf 'R-512 manage page must render ProjectPaymentsManage.\n'
-  exit 1
-fi
+for removed_payment_file in \
+  "$control_plane_root/internal/payments" \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/payments.py" \
+  "$console_root/components/project-payments-manage.tsx"; do
+  if [[ -e "$removed_payment_file" ]]; then
+    printf 'PC-115 removed R-512 payments toggle is back: %s\n' "$removed_payment_file"
+    exit 1
+  fi
+done
 
 # R-515 (Team / Org model — multi-member workspaces, shared projects): migration, workspaces package, member RBAC, invitations, console-web switcher & management
 for required_workspace_file in \

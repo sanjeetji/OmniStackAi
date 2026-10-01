@@ -35,7 +35,6 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/integrations"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/jobs"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
-	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/payments"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/projects"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/secrets"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/seo"
@@ -308,15 +307,6 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 		Logger:         logger,
 		Secrets:        secretsStore,
 		Health:         integrationHealth,
-	})
-	paymentsStore := payments.NewPgStore(pool)
-	payments.Register(mux, payments.Deps{
-		AuthStore:      userStore,
-		ProjectStore:   projectStore,
-		PaymentsStore:  paymentsStore,
-		SecretsStore:   secretsStore,
-		AgentEngineURL: runtimeConfig.AgentEngineURL,
-		Logger:         logger,
 	})
 	analyticsStore := analytics.NewPgStore(pool)
 	ga4Client := analytics.NewGA4Client(nil)

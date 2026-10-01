@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-115 (2026-10-01): one way to take payments.** R-512's injected checkout and its Manage -> Payments toggle are gone; payments come from the plan, keys from Secrets.
 > **PC-114 (2026-10-01): ecosystems get it too.** Privacy and money from the prompt reach every app of a multi-app build; customers sign up with the plan's customer role and can buy.
 > **PC-113 (2026-10-01): money on screen.** Pay panel on chargeable records, a Wallet page, an admin Money page with refunds and payouts; proven in a browser.
 > **R-567 (2026-10-01): money.** Server-priced checkout, a double-entry ledger, commission, refunds and payouts on every backend; mock offline, Stripe/Razorpay webhooks verified. 33/33 live on all four backends; screens are PC-113.

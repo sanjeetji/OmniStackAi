@@ -359,6 +359,9 @@ QUEUE = [
      "create records its creator from the token; an `ownership` rule (read/write own|all, see_all roles) is "
      "enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. "
      "Assigned-to visibility (a driver's deliveries) is PC-111."),
+    ("PC-115", "Remove R-512's Manage -> Payments toggle (replaced by R-567)", "2 Maximum features", "Both",
+     "Completed", "P2", "R-567", "Founder decision 2026-10-01: it took the amount from the client, recorded "
+     "nothing and only reached the web app. Payments come from the plan; keys are project secrets."),
     ("PC-114", "A prompt's privacy and money rules reach every app of an ecosystem; customers sign up "
      "with the plan's customer role", "2 Maximum features", "Both", "Completed", "P1", "R-567",
      "Found creating the payments test project (2026-10-01): a marketplace planned as three apps got none "

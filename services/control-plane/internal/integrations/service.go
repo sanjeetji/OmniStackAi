@@ -158,7 +158,10 @@ func (s Service) Sweep(ctx context.Context) int {
 		}
 	}
 	collect("project", `SELECT project_id::text, provider FROM project_connectors WHERE enabled`)
-	collect("project", `SELECT id::text, payment_gateway FROM projects WHERE payment_gateway <> '' AND status = 'active'`)
+	// PC-115: a project's payment keys are its secrets (R-567), so a project with them is checked.
+	collect("project", `SELECT DISTINCT s.project_id::text, CASE s.key WHEN 'STRIPE_SECRET_KEY' THEN 'stripe' ELSE 'razorpay' END
+		FROM project_secrets s JOIN projects p ON p.id = s.project_id
+		WHERE s.key IN ('STRIPE_SECRET_KEY', 'RAZORPAY_KEY_ID') AND p.status = 'active'`)
 	collect("user", `SELECT user_id::text, provider_id FROM user_provider_keys`)
 	checked := 0
 	for _, it := range items {

@@ -57,7 +57,7 @@ var envFields = map[string]map[string]string{
 	"resend":   {"api_key": "RESEND_API_KEY", "from_email": "RESEND_FROM_EMAIL"},
 	"smtp":     {"host": "SMTP_HOST", "port": "SMTP_PORT", "username": "SMTP_USER", "password": "SMTP_PASS", "from_email": "SMTP_FROM"},
 	"stripe":   {"secret_key": "STRIPE_SECRET_KEY", "publishable_key": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "webhook_secret": "STRIPE_WEBHOOK_SECRET"},
-	"razorpay": {"key_id": "RAZORPAY_KEY_ID", "key_secret": "RAZORPAY_KEY_SECRET"},
+	"razorpay": {"key_id": "RAZORPAY_KEY_ID", "key_secret": "RAZORPAY_KEY_SECRET", "webhook_secret": "RAZORPAY_WEBHOOK_SECRET"},
 }
 
 // EnvFields returns the setting → environment variable map for an integration (nil if its

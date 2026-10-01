@@ -35,7 +35,6 @@ import {
   Trash2,
   Unlink,
   Plug,
-  CreditCard,
   X,
 } from "lucide-react";
 
@@ -75,7 +74,6 @@ import { ProjectTestsManage } from "@/components/project-tests-manage";
 import { ProjectPublishManage } from "@/components/project-publish-manage";
 import { ProjectDomainManage } from "@/components/project-domain-manage";
 import { ProjectConnectorsManage } from "@/components/project-connectors-manage";
-import { ProjectPaymentsManage } from "@/components/project-payments-manage";
 import { ProjectAnalyticsManage } from "@/components/project-analytics-manage";
 import { SkillEditorDialog } from "@/components/skills-library";
 import { Badge } from "@/components/ui/badge";
@@ -112,9 +110,9 @@ export default function ProjectManagePage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "payments" | "analytics"
+  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "analytics"
   const [activeSection, setActiveSection] = useState<
-    "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "payments" | "analytics"
+    "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "analytics"
   >("general");
   // R-574: a link can open a section directly (the store panel sends people to Secrets).
   useEffect(() => {
@@ -1018,21 +1016,6 @@ export default function ProjectManagePage({
           </button>
           <button
             type="button"
-            onClick={() => setActiveSection("payments")}
-            className={cn(
-              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
-              activeSection === "payments"
-                ? "bg-secondary text-secondary-foreground"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-            )}
-          >
-            <span className="flex items-center gap-2">
-              <CreditCard className="size-4" />
-              Payments
-            </span>
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveSection("analytics")}
             className={cn(
               "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
@@ -1846,8 +1829,6 @@ export default function ProjectManagePage({
             <ProjectDomainManage projectId={projectId} projectName={project?.name || "Project"} />
           ) : activeSection === "connectors" ? (
             <ProjectConnectorsManage projectId={projectId} projectName={project?.name || "Project"} />
-          ) : activeSection === "payments" ? (
-            <ProjectPaymentsManage projectId={projectId} projectName={project?.name || "Project"} />
           ) : activeSection === "analytics" ? (
             <ProjectAnalyticsManage projectId={projectId} projectName={project?.name || "Project"} />
           ) : (
