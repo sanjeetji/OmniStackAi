@@ -1,14 +1,16 @@
-task_id: PC-110
-status: completed
+task_id: PC-111
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-110
+tracker_row: PC-111
 started_at: "2026-10-01"
-completed_at: "2026-10-01"
+completed_at: null
 branch: platform-completion
 objective: >-
-  The preview runner runs Node backends (Express, Hono) as it runs Python and Go: recognises the API,
-  applies its schema and seed to the app's own database as the app's role, installs its dependencies
-  and starts it with the same database, secret and port contract, so a Node app's preview has a live API.
+  Assigned-to visibility beside R-570's creator ownership. An ownership rule may name an assignee
+  field (the user a record is assigned to, e.g. Order.driver_id): reads include records assigned to
+  the caller, the assignee may change the record and move it through role-granted transitions (and
+  only the assignee, unless the role sees all), deleting stays the creator's, and only see_all roles
+  set or change the assignment. "A driver sees only their own orders" is planned as this rule.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -19,8 +21,9 @@ allowed_paths:
   - CHANGELOG.md
 forbidden_changes:
   - task verify stays offline with 0 model calls
+  - no rule is enforced only in the UI; the API is the boundary
 required_gates:
-  - Live - a generated Node (Express and Hono) app previewed through the platform's runner answers its API
+  - Live - a delivery app per backend where a dispatcher assigns orders, each driver sees and moves only their own, a customer sees only theirs and cannot reassign
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
@@ -28,5 +31,4 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed:
-  - pnpm 11 refused esbuild's build script during the API install; installed with --ignore-scripts like the web apps
+found_and_fixed: []
