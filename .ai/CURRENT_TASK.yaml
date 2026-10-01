@@ -1,37 +1,25 @@
-task_id: R-569
-status: completed
+task_id: PC-118
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: R-569
+tracker_row: PC-118
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Live updates in generated apps. A `realtime` capability names the entities whose changes reach
-  people as they happen (an order's status, a delivery's position, a ticket's replies). A trigger
-  publishes each change through Postgres LISTEN/NOTIFY; every backend (Python, Go, Express, Hono)
-  streams it to signed-in users over Server-Sent Events, filtered by the entity's ownership rule so
-  nobody hears of a record they cannot see; the generated pages' data hooks refetch quietly on a
-  change. Planned from the prompt ("live status", "real-time", "track") as well as by the model.
+  The job build API (POST /jobs/build and /jobs/build/stream) gives up after a fixed five minutes,
+  ignoring OMNISTACKAI_AGENT_CALL_TIMEOUT, which the project build already honours (R-530). Found in
+  R-569's console proof: a multi-app build took longer, the console got 502. Both build paths now
+  take their budget from the same setting.
 founder_gate: none
 companions: []
 allowed_paths:
-  - services/agent-engine/
-  - apps/console-web/
+  - services/control-plane/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - task verify stays offline with 0 model calls
-  - no new infrastructure (no Supabase, Ably or Redis); changes travel through the app's own Postgres
+  - the project build's own budget and its default are unchanged
 required_gates:
-  - Live - on Python, Go, Express and Hono through the platform's runner, a change made by one user reaches another's stream, an owner-scoped change reaches only those who may see it, a stream needs a valid ticket; a browser page updates without a reload
+  - go test for the control plane's jobs package passes
   - scripts/verify.sh passes
-found_and_fixed:
-  - A preview runs with the development JWT secret, where a request without a token is a dev admin; the live proof runs with a real secret, as production does.
-  - "Customers see live order status" made Customer live too; the watcher (the word before see/track/can ...) is no longer taken for what changes.
-deferred:
-  - PC-118 - a build longer than five minutes is lost (the control plane's fixed timeout); found in this task's console proof.
-  - The React Native app does not listen yet; it refreshes when opened.
-  - A stream is authorised when it opens; it is not cut when the user's token later expires.
