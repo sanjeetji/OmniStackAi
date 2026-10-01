@@ -1,16 +1,16 @@
-task_id: PC-113
-status: completed
+task_id: PC-114
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-113
+tracker_row: PC-114
 started_at: "2026-10-01"
-completed_at: "2026-10-01"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Money in the generated web and admin apps (R-567 built the API on every backend). The web app's
-  page for a chargeable record offers to pay it (mock confirms in place; Stripe goes to its hosted
-  checkout), shows when it is paid, and a Wallet page shows the user's balance, ledger and payouts
-  and requests one. The admin console gets a Money page: the books (balanced), payments with refunds,
-  and payout requests to pay or reject.
+  Found creating the payments test project: a marketplace prompt planned as an ecosystem (buyer
+  storefront, seller portal, admin) got none of the money the prompt asked for. The prompt's privacy and
+  money rules reach every planner and every app of an ecosystem; the shared backend takes every app's
+  rules; ecosystem apps get a page per record (somewhere to pay); a customer who signs up gets the plan's
+  customer role so they can buy.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -19,11 +19,10 @@ allowed_paths:
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
-  - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - a generated marketplace previewed in a browser: a customer pays an order from its page, the vendor sees the earning and requests a payout in the wallet, the admin refunds and pays out from the Money page
+  - Live - the console-built marketplace takes a payment from a buyer who just signed up
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
