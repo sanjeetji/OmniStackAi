@@ -1,16 +1,16 @@
-task_id: R-567
-status: completed
+task_id: PC-113
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: R-567
+tracker_row: PC-113
 started_at: "2026-10-01"
-completed_at: "2026-10-01"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Money in generated apps: a `money` capability (currency, what is charged for - an entity's amount,
-  optionally a payee who earns it - a platform commission, who may refund). Every backend gets
-  payments in integer minor units with the amount computed server-side, a double-entry ledger
-  (balances are ledger sums), refunds, commission splits and payouts, and providers mock (works
-  offline, no keys), Stripe and Razorpay (verified, idempotent webhooks; keys added last at PC-070).
+  Money in the generated web and admin apps (R-567 built the API on every backend). The web app's
+  page for a chargeable record offers to pay it (mock confirms in place; Stripe goes to its hosted
+  checkout), shows when it is paid, and a Wallet page shows the user's balance, ledger and payouts
+  and requests one. The admin console gets a Money page: the books (balanced), payments with refunds,
+  and payout requests to pay or reject.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -22,18 +22,13 @@ allowed_paths:
   - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - no real payment credentials; the real providers are proven at PC-071
-  - the amount is never taken from the client
 required_gates:
-  - Live - a marketplace app per backend on PostgreSQL with the mock provider - pay, commission split, refund, payout - ledger balanced throughout
+  - Live - a generated marketplace previewed in a browser: a customer pays an order from its page, the vendor sees the earning and requests a payout in the wallet, the admin refunds and pays out from the Money page
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - real Stripe and Razorpay test-mode accounts (PC-070/PC-071)
-  - the web and admin screens that use the money API (PC-113)
-found_and_fixed:
-  - R-512's checkout took the amount from the client, recorded nothing and had no replay window; replaced by the server-priced, recorded, verified flow in every backend
+deferred: []
+found_and_fixed: []
