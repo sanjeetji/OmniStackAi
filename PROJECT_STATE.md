@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-569 (2026-10-02): live updates.** Changes to live entities reach the people who may see them as they happen (Postgres LISTEN/NOTIFY, Server-Sent Events, ownership-filtered); pages refresh themselves. 19/19 live on all four backends.
 > **R-568 (2026-10-01): background jobs.** Schedules (expire, mark overdue, clean up) run by every backend on a Postgres scheduler with retries, a dead letter and an admin page; planned from the prompt. 28/28 live on all four backends.
 > **R-567 live (2026-10-01): real payments in test mode.** Bazaar Lite took ₹799 through real Stripe and Razorpay test accounts: signed webhook, seller credited, refund made through the provider. Live-mode keys deferred to PC-070/PC-071.
 > **PC-115 (2026-10-01): one way to take payments.** R-512's injected checkout and its Manage -> Payments toggle are gone; payments come from the plan, keys from Secrets.

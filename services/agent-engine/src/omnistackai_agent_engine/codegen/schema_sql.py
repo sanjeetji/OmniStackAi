@@ -353,6 +353,14 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         blocks.append(JOBS_SCHEMA)
         blocks.append("")
 
+    # R-569: the triggers that publish changes to live tables.
+    from .realtime_sql import realtime_schema
+
+    live = realtime_schema(ir)
+    if live:
+        blocks.append(live)
+        blocks.append("")
+
     # R-461: dev admin seed row.
     if auth:
         blocks.append(_ADMIN_SEED_ROW)

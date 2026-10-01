@@ -15,6 +15,8 @@ from ..application_ir.money import money_of
 from .money_python import MONEY_ENV_EXAMPLE, python_money_file
 from ..application_ir.jobs import jobs_of
 from .jobs_python import JOBS_ENV_EXAMPLE, python_jobs_file
+from ..application_ir.realtime import realtime_of
+from .realtime_python import python_realtime_file
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType, RelationKind
 from .adapter import GenerationTarget
 from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file, python_auth_router_file
@@ -363,29 +365,33 @@ def _router_file(
 
 
 def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False, has_db: bool = False,
-               money: bool = False, jobs: bool = False) -> str:
+               money: bool = False, jobs: bool = False, realtime: bool = False) -> str:
     imports = "".join(f"from app.routers import {seg}\n" for seg in segments)
     includes = "".join(f"app.include_router({seg}.router)\n" for seg in segments)
     if money:  # R-567
         imports += "from app import money\n"
         includes += "app.include_router(money.router)\n"
     lifespan, lifespan_arg = "", ""
-    if jobs:  # R-568: the scheduler starts and stops with the app
-        imports += "from app import jobs\n"
-        includes += "app.include_router(jobs.router)\n"
+    # R-568: the scheduler, R-569: the live listener - each starts and stops with the app.
+    background = [name for name, wanted in (("jobs", jobs), ("realtime", realtime)) if wanted]
+    for name in background:
+        imports += f"from app import {name}\n"
+        includes += f"app.include_router({name}.router)\n"
+    if background:
         lifespan = (
             "\n@asynccontextmanager\n"
             "async def lifespan(_app: FastAPI):\n"
-            "    await jobs.start()\n"
-            "    yield\n"
-            "    await jobs.stop()\n\n"
+            + "".join(f"    await {name}.start()\n" for name in background)
+            + "    yield\n"
+            + "".join(f"    await {name}.stop()\n" for name in background)
+            + "\n"
         )
         lifespan_arg = ", lifespan=lifespan"
     auth_import = "from app.routers import auth\n" if has_auth else ""
     auth_include = 'app.include_router(auth.router, prefix="/auth", tags=["auth"])\n' if has_auth else ""
     return (
         "import os\n"
-        + ("from contextlib import asynccontextmanager\n" if jobs else "")
+        + ("from contextlib import asynccontextmanager\n" if background else "")
         + "from fastapi import FastAPI\n"
         "from fastapi.middleware.cors import CORSMiddleware\n\n"
         + auth_import
@@ -480,6 +486,7 @@ class PythonBackendAdapter:
         has_jobs = has_db and has_auth and jobs_of(ir) is not None
         if has_jobs:
             env_example += JOBS_ENV_EXAMPLE
+        has_realtime = has_db and has_auth and realtime_of(ir) is not None  # R-569
         files: list[GeneratedFile] = [
             GeneratedFile("requirements.txt", requirements),
             GeneratedFile("app/__init__.py", ""),
@@ -487,7 +494,7 @@ class PythonBackendAdapter:
             GeneratedFile("app/models.py", _models_file(ir)),
             GeneratedFile("app/main.py", _main_file(ir, [*segments, *(["uploads"] if uploads else [])],
                                                     has_auth=has_auth, has_db=has_db, money=has_money,
-                                                    jobs=has_jobs)),
+                                                    jobs=has_jobs, realtime=has_realtime)),
             GeneratedFile("app/routers/__init__.py", ""),
             GeneratedFile(".gitignore", "__pycache__/\n.venv\n*.pyc\n.env\nuploads/\n"),
             GeneratedFile(".env.example", env_example),
@@ -501,6 +508,8 @@ class PythonBackendAdapter:
             files.append(GeneratedFile("app/money.py", python_money_file(ir)))
         if has_jobs:
             files.append(GeneratedFile("app/jobs.py", python_jobs_file(ir)))
+        if has_realtime:
+            files.append(GeneratedFile("app/realtime.py", python_realtime_file(ir)))
         if has_auth:
             files.append(GeneratedFile("app/auth.py", python_auth_file(ir)))
             files.append(GeneratedFile("app/routers/auth.py", python_auth_router_file(ir)))

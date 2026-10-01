@@ -784,6 +784,14 @@ def _api_client_file(ir: ApplicationIR) -> str:
     return "\n".join(lines)
 
 
+def _realtime_client_files(ir: ApplicationIR) -> list[GeneratedFile]:
+    """R-569: the live stream's client, beside the hooks that listen through it."""
+    from ..application_ir.realtime import live_entities
+    from .realtime_ui import REALTIME_CLIENT
+
+    return [GeneratedFile("lib/realtime.ts", REALTIME_CLIENT)] if needs_auth(ir) and live_entities(ir) else []
+
+
 def _hooks_file(ir: ApplicationIR) -> str:
     """Generate strongly-typed React data-fetching & mutation hooks (lib/hooks.ts)."""
     has_auth = needs_auth(ir)
@@ -801,6 +809,13 @@ def _hooks_file(ir: ApplicationIR) -> str:
     lines.append('import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";')
     lines.append(f'import type {{ {", ".join(entity_names)} }} from "./types";')
     lines.append('import { api, type ApiOptions } from "./api";')
+    # R-569: the hooks of live entities refetch when one changes elsewhere.
+    from ..application_ir.realtime import live_entities
+    from .realtime_ui import make_hook_live
+
+    live = live_entities(ir) if has_auth else frozenset()
+    if live:
+        lines.append('import { useLive } from "./realtime";')
     lines.append("")
     lines.extend([
         "export interface UseListParams {",
@@ -886,6 +901,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
         if Op.LIST in ops:
             hook_name = f"useList{plural}"
             hook_names.append(hook_name)
+            list_start = len(lines)
             params_type = "UseCollectionListParams" if filterable_fields else "UseListParams"
             state_type = "UseCollectionListState" if filterable_fields else "UseListState"
             filter_options_name = f"{name[:1].lower() + name[1:]}FilterOptions"
@@ -1097,11 +1113,14 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "}",
                 "",
             ])
+            if name in live:
+                lines[list_start:] = make_hook_live(lines[list_start:], name, detail=False)
 
         # 2. use<Entity>
         if Op.GET in ops:
             hook_name = f"use{name}"
             hook_names.append(hook_name)
+            detail_start = len(lines)
             lines.extend([
                 f"export function {hook_name}(",
                 "  id: string | null | undefined,",
@@ -1146,6 +1165,8 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "}",
                 "",
             ])
+            if name in live:
+                lines[detail_start:] = make_hook_live(lines[detail_start:], name, detail=True)
 
         # 3. useCreate<Entity>
         if Op.CREATE in ops:
@@ -74173,6 +74194,7 @@ class NextjsWebAdapter:
             GeneratedFile("lib/types.ts", _types_file(ir)),
             GeneratedFile("lib/api.ts", _api_client_file(ir)),
             GeneratedFile("lib/hooks.ts", _hooks_file(ir)),
+            *_realtime_client_files(ir),
             GeneratedFile("app/sitemap.ts", _sitemap_file(ir)),
             GeneratedFile("app/robots.ts", _robots_file(ir)),
             GeneratedFile("public/llms.txt", _llms_txt_file(ir)),

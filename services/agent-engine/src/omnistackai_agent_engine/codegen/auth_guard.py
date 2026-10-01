@@ -29,11 +29,13 @@ def needs_auth(ir: ApplicationIR) -> bool:
     from ..application_ir.ownership import ownership_rules
 
     from ..application_ir.jobs import jobs_of
+    from ..application_ir.realtime import realtime_of
 
     # R-567: money has a payer, a payee and refunders - it needs to know who is asking too.
-    # R-568: scheduled jobs are watched and retried by the app's admin.
+    # R-568: scheduled jobs are watched and retried by the app's admin. R-569: a live stream is
+    # for signed-in people, filtered by what each may see.
     return (any(api.auth for api in ir.apis) or bool(ownership_rules(ir)) or money_of(ir) is not None
-            or jobs_of(ir) is not None)
+            or jobs_of(ir) is not None or realtime_of(ir) is not None)
 
 
 def _role_names(ir: ApplicationIR) -> list[str]:

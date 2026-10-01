@@ -289,6 +289,7 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
     if "capabilities" in data:
         data["capabilities"] = kept
     _repair_jobs(data, entities, notes)
+    _repair_realtime(data, entities, notes)
 
 
 #: Names a model gives "the user this belongs to". Not "author": an Author is often a real entity.
@@ -519,3 +520,31 @@ def _repair_jobs(data: dict[str, Any], entities: dict[str, Any], notes: list[str
         data["capabilities"].append(first)
     else:
         notes.append("jobs: no schedule left; removed")
+
+
+def _repair_realtime(data: dict[str, Any], entities: dict[str, Any], notes: list[str]) -> None:
+    """R-569: one realtime capability, naming the plan's entities (merged, resolved, deduplicated)."""
+    capabilities = data.get("capabilities")
+    if not isinstance(capabilities, list):
+        return
+    live = [c for c in capabilities if isinstance(c, dict) and c.get("kind") == "realtime"]
+    if not live:
+        return
+    names: list[str] = []
+    for capability in live:
+        config = capability.get("config")
+        for named in (config.get("entities") or []) if isinstance(config, dict) else []:
+            entity = resolve_entity_reference(str(named), list(entities))
+            if entity is None:
+                notes.append(f"live updates: {named!r} is not in the plan; left out")
+            elif entity not in names:
+                names.append(entity)
+    if len(live) > 1:
+        notes.append("live updates: several realtime capabilities merged into one")
+    data["capabilities"] = [c for c in capabilities if not (isinstance(c, dict) and c.get("kind") == "realtime")]
+    if names:
+        first = live[0]
+        first["config"] = {"entities": names[:32]}
+        data["capabilities"].append(first)
+    else:
+        notes.append("live updates: no entity left; removed")

@@ -292,7 +292,12 @@ def _with_prompt_rules_for_plan(plan, prompt: str):
                 if field.name not in have:
                     entity["fields"].append(field.to_dict())
         data["capabilities"] = data.get("capabilities", []) + [
-            c.to_dict() for c in added if referenced(c) <= names]
+            c.to_dict() for c in added if c.kind != "realtime" and referenced(c) <= names]
+        for c in added:  # R-569: each app takes the live entities it has
+            if c.kind == "realtime":
+                mine = [e for e in c.config.get("entities") or () if e in names]
+                if mine:
+                    data["capabilities"].append({"kind": "realtime", "name": c.name, "config": {"entities": mine}})
         apps.append(_replace(app, ir=ApplicationIR.from_dict(data)))
     return _replace(plan, apps=tuple(apps))
 

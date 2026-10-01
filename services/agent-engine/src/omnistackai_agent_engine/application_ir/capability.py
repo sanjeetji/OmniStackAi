@@ -200,3 +200,14 @@ CAPABILITY_KINDS.register(
         validator=validate_jobs_config,
     )
 )
+
+from .realtime import validate_realtime_config  # noqa: E402
+
+CAPABILITY_KINDS.register(
+    CapabilityKind(
+        name="realtime",
+        summary="live updates: changes to these entities reach the people who may see them (R-569)",
+        implemented=True,
+        validator=validate_realtime_config,
+    )
+)

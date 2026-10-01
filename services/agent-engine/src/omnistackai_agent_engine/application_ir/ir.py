@@ -853,6 +853,19 @@ class ApplicationIR:
         # R-568: a schedule names a declared entity, its fields (of the right kind) and its workflow's
         # transitions; the scheduler's own tables and routes are not the app's to take.
         self._validate_jobs(entities_by_name)
+        # R-569: live entities are the plan's; the stream's routes are not the app's to take.
+        from .realtime import API_PREFIX as LIVE_PREFIX, realtime_of
+
+        if len([c for c in self.capabilities if c.kind == "realtime"]) > 1:
+            raise InvalidIRError("an app has one realtime capability")
+        live = realtime_of(self)
+        if live is not None:
+            for name in live.entities:
+                if name not in entities_by_name:
+                    raise InvalidIRError(f"realtime names unknown entity {name!r}")
+            for api in self.apis:
+                if api.path == LIVE_PREFIX or api.path.startswith(LIVE_PREFIX + "/"):
+                    raise InvalidIRError(f"{api.path} is the live stream's; an app's own routes cannot use {LIVE_PREFIX}")
         # R-570: an ownership rule names an entity and roles this application has, once per entity.
         from .ownership import ownership_rules
 

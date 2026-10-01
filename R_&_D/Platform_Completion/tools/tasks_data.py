@@ -408,7 +408,16 @@ QUEUE = [
      "R-568 runs a schedule every N minutes/hours/days from its first run; a nightly job at a set hour "
      "needs an anchor and a time zone."),
     ("R-569", "Realtime channels: tracking, notifications, live status", "2 Maximum features",
-     "Both", "Not Started", "P1", "", ""),
+     "Both", "Completed", "P1", "", "Done 2026-10-02: a `realtime` capability - a trigger publishes each change to "
+     "a live entity through Postgres LISTEN/NOTIFY, every backend streams it over Server-Sent Events to the "
+     "signed-in people its ownership rule lets see the row (one-minute signed tickets open a stream), and the "
+     "pages' data hooks and the admin tables refresh quietly. Planned from the prompt. 19/19 live on Python, "
+     "Go, Express and Hono; 4/4 in a browser. In-app notifications ride on it in PC-053."),
+    ("PC-118", "A build longer than five minutes is lost: the control plane stops waiting for the Studio",
+     "2 Maximum features", "Platform", "Not Started", "P1", "",
+     "Found in R-569's console proof (2026-10-02): a multi-app build with remote models ran past the control "
+     "plane's fixed 5-minute client timeout (also applied to the streaming build); the console got 502 and the "
+     "Studio's finished work was never registered as a project."),
     ("R-571", "Escape hatch: behaviour the IR declares and the model implements, verified",
      "2 Maximum features", "Both", "Not Started", "P1", "R-560", "No hard ceiling, only a typed boundary."),
     ("PC-016", "Edit a workflow by chat (add/rename states and transitions safely)",

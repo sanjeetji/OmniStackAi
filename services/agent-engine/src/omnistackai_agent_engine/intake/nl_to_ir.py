@@ -152,6 +152,16 @@ def _system_instruction(example_name: str) -> str:
             "true}} (never the workflow's own field) or {\"delete\": true}.\n"
             "- Reminders and emails are not scheduled jobs yet; do not invent them.\n"
         )
+    if "realtime" in CAPABILITY_KINDS.implemented():
+        # R-569: what people watch change.
+        capability_rules += (
+            "\nLive updates (optional, when the prompt wants things seen as they happen - live order "
+            "status, tracking a delivery, new messages without refreshing):\n"
+            "- Add ONE 'realtime' capability naming those entities: {\"kind\": \"realtime\", \"name\": "
+            "\"live_updates\", \"config\": {\"entities\": [\"Order\", \"Delivery\"]}}. Each change to them "
+            "reaches the signed-in people who may see the record, and their pages refresh by themselves. "
+            "For tracking, give the entity float fields latitude and longitude.\n"
+        )
     field_types = ", ".join(t.value for t in FieldType)
     # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming
     # `flutter` here told the model to choose a profile the assembler then discarded, which is how
@@ -664,13 +674,16 @@ def parse_ir_response_with_repairs(text: str) -> tuple[ApplicationIR, tuple[str,
 
 def _with_prompt_ownership(ir: ApplicationIR, prompt: str) -> tuple[ApplicationIR, tuple[str, ...]]:
     """R-570: rules for what the prompt itself calls private, when the plan left them out; R-567:
-    the same for money the prompt says is paid; R-568: for what it says happens on its own."""
+    the same for money the prompt says is paid; R-568: for what it says happens on its own; R-569:
+    for what it says people watch change."""
     from .jobs_intent import jobs_from_prompt
     from .money_intent import money_from_prompt
     from .ownership_intent import ownership_from_prompt
+    from .realtime_intent import realtime_from_prompt
 
     data = ir.to_dict()
-    notes = ownership_from_prompt(prompt, data) + money_from_prompt(prompt, data) + jobs_from_prompt(prompt, data)
+    notes = (ownership_from_prompt(prompt, data) + money_from_prompt(prompt, data) + jobs_from_prompt(prompt, data)
+             + realtime_from_prompt(prompt, data))
     if not notes:
         return ir, ()
     return ApplicationIR.from_dict(data), tuple(notes)
