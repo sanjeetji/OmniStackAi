@@ -384,7 +384,10 @@ QUEUE = [
      "Both", "Completed", "P1", "", "R-512 gives Stripe/Razorpay checkout; this is the ledger. Done "
      "2026-10-01: a `money` capability; every backend gets server-priced checkout, a double-entry ledger, "
      "commission splits, refunds and payouts, mock offline and verified Stripe/Razorpay webhooks. Real "
-     "provider accounts are PC-070/PC-071; the screens are PC-113."),
+     "provider accounts are PC-070/PC-071; the screens are PC-113. Proved with real test-mode "
+     "accounts 2026-10-01 on the console-built Bazaar Lite: Stripe (card, webhook via the Stripe CLI) "
+     "and Razorpay (netbanking, webhook via a tunnel) each took ₹799, credited the seller ₹719.10 and "
+     "refunded ₹100 through the provider."),
     ("PC-113", "Money in the generated web and admin apps: pay, wallet, payouts, refunds, the books",
      "2 Maximum features", "Both", "Completed", "P1", "R-567",
      "R-567 built the API on every backend; the generated pages do not call it yet. Done 2026-10-01: "
@@ -612,7 +615,8 @@ QUEUE = [
      "the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7."),
     ("PC-071", "Live proof of every 'Completed - needs live proof' item with the real accounts",
      "6 Go-live (credentials last)", "Platform", "Not Started", "P0", "PC-070",
-     "Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores."),
+     "Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. "
+     "Payments in test mode done 2026-10-01 (Stripe and Razorpay, see R-567); live-mode keys remain."),
     ("PC-015", "Private beta with real users: product KPIs, minimal support tooling, feedback",
      "6 Go-live (credentials last)", "Platform", "Not Started", "P0", "PC-071",
      "Covers R-051, R-107. The platform is not 'live' until strangers use it."),
