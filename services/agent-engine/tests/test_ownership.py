@@ -316,6 +316,22 @@ class AssignedRecordsArePartOfOwnership(TestCase):
             "entity": "Order", "read": "own", "write": "own", "see_all": ["dispatcher"], "assignee": "driver_id"})
         self.assertIn("driver_id", [f["name"] for f in data["entities"][0]["fields"]])
 
+    def test_assigned_to_them_and_another_name_for_the_role(self) -> None:
+        """PC-119, found in the QuickShip console build: the prompt's couriers are the plan's drivers."""
+        for prompt, role in (("Couriers see only the orders assigned to them.", "driver"),
+                             ("A rider can view the orders that are assigned to him", "driver"),
+                             ("Technicians see the jobs assigned to them", "technician")):
+            with self.subTest(prompt=prompt):
+                data = {"entities": [{"name": "Order", "fields": [{"name": "id", "type": "uuid"}]},
+                                     {"name": "Job", "fields": [{"name": "id", "type": "uuid"}]}],
+                        "roles": [{"id": "customer"}, {"id": role}], "capabilities": []}
+                ownership_from_prompt(prompt, data)
+                self.assertEqual(data["capabilities"][0]["config"]["assignee"], f"{role}_id")
+        data = {"entities": [{"name": "Order", "fields": [{"name": "id", "type": "uuid"}]}],
+                "roles": [{"id": "customer"}, {"id": "merchant"}], "capabilities": []}
+        self.assertEqual(ownership_from_prompt("Couriers see only the orders assigned to them.", data), [],
+                         "no role does the job: no rule invented")
+
 
 class NoUserEntityBesideTheAccounts(TestCase):
     """PC-112, seen in R-570's notes build: the plan declared User(email, password_hash) beside the accounts."""

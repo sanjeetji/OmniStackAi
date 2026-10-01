@@ -360,10 +360,15 @@ QUEUE = [
      "enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. "
      "Assigned-to visibility (a driver's deliveries) is PC-111."),
     ("PC-119", "'Couriers see only the orders assigned to them' makes an assignment rule (word order, role synonyms)",
-     "2 Maximum features", "Both", "Not Started", "P1", "PC-111",
+     "2 Maximum features", "Both", "Completed", "P1", "PC-111",
      "Found in R-569's console proof (2026-10-02): QuickShip's prompt said couriers see only the orders assigned "
      "to them; the plan's role was 'driver' and the reader knew only 'their own/assigned orders', so no rule was "
-     "made and every signed-in user could read every order."),
+     "made and every signed-in user could read every order. Done 2026-10-02: the '<things> assigned to them' "
+     "order and role synonyms (courier/rider -> driver, ...); every QuickShip app now gets Order.driver_id."),
+    ("PC-120", "Ownership through a relation: a merchant sees the orders of their own restaurant",
+     "2 Maximum features", "Both", "Not Started", "P2", "PC-119",
+     "Seen with QuickShip (2026-10-02): once orders are private to their creator and courier, the template's "
+     "merchant sees none; 'Order.restaurant -> Restaurant.owner' is a third kind of owner R-570/PC-111 cannot say."),
     ("PC-116", "A generated page links only to screens that exist in its app", "2 Maximum features",
      "Both", "Not Started", "P2", "PC-114", "Seen 2026-10-01 in Bazaar Lite: the buyer storefront's home "
      "page has 'List with us' -> /listings/new, but only the seller portal has a listing editor, and the "

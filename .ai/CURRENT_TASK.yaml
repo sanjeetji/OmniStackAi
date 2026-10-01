@@ -1,8 +1,9 @@
 task_id: PC-119
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: PC-119
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   "Couriers see only the orders assigned to them" makes an assignment rule (PC-111). Found in R-569's
@@ -24,3 +25,7 @@ forbidden_changes:
 required_gates:
   - QuickShip's prompt over its own plan gives Order an assignee rule for driver
   - scripts/verify.sh passes
+found_and_fixed:
+  - Colima's 40 GB Docker disk filled with old published-app images and Postgres crash-looped on "No space left on device"; unused images were pruned (volumes untouched), 26 GB free, data intact.
+deferred:
+  - PC-120 - a merchant seeing the orders of their own restaurant (ownership through a relation).

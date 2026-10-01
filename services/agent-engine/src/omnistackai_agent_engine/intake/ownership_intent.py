@@ -27,6 +27,21 @@ _ASSIGNED = re.compile(
     r"(?:only\s+)?(?:their|his|her|the)\s+(?:own\s+|assigned\s+)(?P<thing>[a-z]+)",
     re.IGNORECASE,
 )
+# PC-119: "couriers see only the orders assigned to them" - the thing first, then who it is assigned to.
+_ASSIGNED_TO_THEM = re.compile(
+    r"\b(?P<role>[a-z]+?)s?\s+(?:can\s+|should\s+|will\s+)?(?:only\s+)?(?:sees?|views?|gets?|handles?|works?\s+on)\s+"
+    r"(?:only\s+)?(?:the\s+)?(?P<thing>[a-z]+)\s+(?:that\s+(?:are|were)\s+|which\s+(?:are|were)\s+)?assigned\s+to\s+(?:them|him|her|it)\b",
+    re.IGNORECASE,
+)
+#: PC-119: the word a prompt uses for a role and the id a plan gives it differ ("couriers", role
+#: "driver"). Each group is one job under different names.
+_ROLE_SYNONYMS = (
+    ("driver", "courier", "rider", "delivery_partner", "delivery_agent", "deliverer"),
+    ("agent", "support_agent", "support", "rep", "representative"),
+    ("technician", "tech", "engineer", "fixer", "handyman", "provider"),
+    ("tutor", "teacher", "instructor", "coach", "trainer"),
+    ("doctor", "physician", "clinician", "practitioner"),
+)
 #: Roles that coordinate others' work: they assign, so they see everything.
 _COORDINATORS = ("dispatcher", "manager", "operator", "coordinator", "staff", "supervisor")
 
@@ -82,9 +97,10 @@ def _assigned_from_prompt(prompt: str, data: dict[str, Any], entities: list[str]
     """PC-111: "a driver sees only their own orders" -> Order assigned to a driver (driver_id)."""
     roles = [str(r.get("id")) for r in data.get("roles") or () if isinstance(r, dict) and r.get("id")]
     notes: list[str] = []
-    for match in _ASSIGNED.finditer(prompt):
-        role = match.group("role").lower()
-        if role not in roles:
+    matches = [*_ASSIGNED.finditer(prompt), *_ASSIGNED_TO_THEM.finditer(prompt)]
+    for match in matches:
+        role = _plan_role(match.group("role").lower(), roles)
+        if role is None:
             continue
         entity = _entity_for(match.group("thing"), entities)
         if entity is None or entity in ruled:
@@ -106,3 +122,13 @@ def _assigned_from_prompt(prompt: str, data: dict[str, Any], entities: list[str]
         notes.append(f"'{match.group(0)}': each {role} sees the {entity} records assigned to them "
                      f"({entity}.{field}); {who} assign them; each creator sees their own")
     return notes
+
+
+def _plan_role(word: str, roles: list[str]) -> str | None:
+    """The plan's role the prompt's word names: itself, or the same job under another name (PC-119)."""
+    if word in roles:
+        return word
+    for group in _ROLE_SYNONYMS:
+        if word in group:
+            return next((r for r in roles if r in group), None)
+    return None

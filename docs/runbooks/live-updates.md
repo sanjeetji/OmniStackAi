@@ -76,6 +76,9 @@ runner, and each passed 19 checks:
 - a public product reaches everyone signed in;
 - a stream asked for products alone hears only products.
 
+In the console: QuickShip, built from a prompt, planned Order live across its apps; a change reached a
+stream opened through the Studio's preview proxy in 0.05 s.
+
 In a browser: the customer's open order page showed "shipped" when staff shipped it; a new order
 appeared in the admin's open table, and left it when deleted. No reload, 4 of 4.
 

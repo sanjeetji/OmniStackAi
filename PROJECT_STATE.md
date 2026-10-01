@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-119 (2026-10-02): couriers' orders stay theirs.** "Couriers see only the orders assigned to them" makes an assignment rule, whatever the plan calls couriers.
 > **PC-118 (2026-10-02): one build budget.** The job build API reads OMNISTACKAI_AGENT_CALL_TIMEOUT like the project build, instead of a fixed five minutes.
 > **R-569 (2026-10-02): live updates.** Changes to live entities reach the people who may see them as they happen (Postgres LISTEN/NOTIFY, Server-Sent Events, ownership-filtered); pages refresh themselves. 19/19 live on all four backends.
 > **R-568 (2026-10-01): background jobs.** Schedules (expire, mark overdue, clean up) run by every backend on a Postgres scheduler with retries, a dead letter and an admin page; planned from the prompt. 28/28 live on all four backends.
