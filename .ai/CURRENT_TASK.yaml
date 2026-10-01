@@ -1,16 +1,15 @@
-task_id: PC-111
-status: completed
+task_id: PC-112
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-111
+tracker_row: PC-112
 started_at: "2026-10-01"
-completed_at: "2026-10-01"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Assigned-to visibility beside R-570's creator ownership. An ownership rule may name an assignee
-  field (the user a record is assigned to, e.g. Order.driver_id): reads include records assigned to
-  the caller, the assignee may change the record and move it through role-granted transitions (and
-  only the assignee, unless the role sees all), deleting stays the creator's, and only see_all roles
-  set or change the assignment. "A driver sees only their own orders" is planned as this rule.
+  Plans do not declare a User entity beside the app's accounts. When the app has sign-in, a planned
+  User/Account entity that only repeats the accounts table (email, password, name, role) is removed
+  with everything pointing at it - relations, endpoints, sample data, rules - and one that also holds
+  profile data keeps that data but loses its password fields; the planning model is told so.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -21,9 +20,8 @@ allowed_paths:
   - CHANGELOG.md
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - no rule is enforced only in the UI; the API is the boundary
 required_gates:
-  - Live - a delivery app per backend where a dispatcher assigns orders, each driver sees and moves only their own, a customer sees only theirs and cannot reassign
+  - Live - a console build of an app whose plan declares a User entity is built without it and its accounts work
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
@@ -31,5 +29,4 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred: []
-found_and_fixed:
-  - an empty list from a generated Go backend was JSON null, not []
+found_and_fixed: []
