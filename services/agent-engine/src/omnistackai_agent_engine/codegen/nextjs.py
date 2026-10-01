@@ -74233,10 +74233,26 @@ class NextjsWebAdapter:
         # app/login/route.ts beside the sign-in page, and `next build` refuses a page and a route at
         # one path. A page wins; the API stays reachable under /api.
         # PC-011: an admin console with accounts gets the page where roles are given.
+        # PC-113: an app that takes payments gets them in its pages (R-567's API on every backend).
+        from ..application_ir.money import money_of
+
+        has_money = needs_auth(ir) and money_of(ir) is not None
+        if has_money:
+            from .money_ui import ADMIN_MONEY_PAGE, PAY_PANEL, PAY_PANEL_PATH, WALLET_PAGE, money_client
+
+            files.append(GeneratedFile("lib/money.ts", money_client(ir)))
+            if self._flavour == "admin":
+                files.append(GeneratedFile("app/money/page.tsx", ADMIN_MONEY_PAGE))
+            else:
+                files.append(GeneratedFile(PAY_PANEL_PATH, PAY_PANEL))
+                files.append(GeneratedFile("app/wallet/page.tsx", WALLET_PAGE))
+                files = [GeneratedFile(f.path, _navbar_component(ir, (("/wallet", "Wallet"),)))
+                         if f.path == "components/navbar.tsx" else f for f in files]
         if self._flavour == "admin" and needs_auth(ir):
             from .role_manager import ADMIN_USERS_PAGE
 
-            files = [GeneratedFile(f.path, _navbar_component(ir, (("/users", "Users and roles"),)))
+            links = (("/money", "Money"),) if has_money else ()
+            files = [GeneratedFile(f.path, _navbar_component(ir, (*links, ("/users", "Users and roles"))))
                      if f.path == "components/navbar.tsx" else f for f in files]
             files.append(GeneratedFile("app/users/page.tsx", ADMIN_USERS_PAGE))
         if self._flavour == "admin":

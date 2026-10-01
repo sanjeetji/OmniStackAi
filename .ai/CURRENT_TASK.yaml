@@ -1,9 +1,9 @@
 task_id: PC-113
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: PC-113
 started_at: "2026-10-01"
-completed_at: null
+completed_at: "2026-10-01"
 branch: platform-completion
 objective: >-
   Money in the generated web and admin apps (R-567 built the API on every backend). The web app's

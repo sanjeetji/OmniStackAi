@@ -402,6 +402,16 @@ def visitor_detail_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         imports.append(f'import {{ {", ".join(uploader)} }} from "@/components/file-uploader";')
     if workflow is not None:
         imports.append(f'import {{ {lifecycle_component_name(workflow)} }} from "@/{lifecycle_component_path(workflow).removesuffix(".tsx")}";')
+    # PC-113: a record people pay for shows its payment on its page.
+    from ..application_ir.money import money_of
+    from .auth_guard import needs_auth
+
+    money = money_of(ir)
+    charged = by_get and needs_auth(ir) and money is not None and money.charge_for(name) is not None
+    if charged:
+        imports.append('import { PayPanel } from "@/components/pay-panel";')
+        payee = money.charge_for(name).payee
+        others = [f for f in others if f.name != payee]  # who earns it is the platform's business, not a field
 
     lines = ['"use client";', "", *imports, "",
              "// PC-108: a record's page for the people who use the app (the admin app keeps the tools).",
@@ -503,6 +513,8 @@ def visitor_detail_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         lines.append('        {image ? (<img src={image} alt="" className="mt-8 w-full rounded-xl border border-border object-cover" />) : null}')
     if workflow is not None:
         lines.append(f'        <div className="mt-8"><{lifecycle_component_name(workflow)} record={{item}} onChanged={{() => refetch()}} /></div>')
+    if charged:
+        lines.append(f'        <div className="mt-6"><PayPanel entity="{name}" recordId={{String(item.id)}} onPaid={{() => refetch()}} /></div>')
     if body is not None:
         if body.type is FieldType.RICH_TEXT:
             lines.append(f'        <div className="mt-8 text-base leading-relaxed text-foreground"><RichText html={{item.{body.name}}} /></div>')

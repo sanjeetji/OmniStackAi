@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 446 |
+| Completed | 447 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 95 |
-| Not Started | 506 |
+| Not Started | 505 |
 | Superseded | 13 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1134** |
 
-Open work queue: **91** tasks (P0: 4, P1: 41, P2: 32, P3: 14).
+Open work queue: **90** tasks (P0: 4, P1: 40, P2: 32, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -96,7 +96,7 @@ Open work queue: **91** tasks (P0: 4, P1: 41, P2: 32, P3: 14).
 | 47 | PC-111 | Assigned-to visibility: a record visible to the user it is assigned to (a driver's deliveries), beside R-570's creator ownership | Completed | P1 | Both | R-570 |  | A creator rule cannot express 'the orders assigned to me'; the planner is told not to use one. Done 2026-10-01: an ownership rule's `assignee` field; drivers see and move only what is assigned to them, only see_all roles assign; proven on Python, Go, Express and Hono. |
 | 48 | PC-112 | Plans do not declare a User entity beside the app's accounts | Completed | P2 | Both |  |  | Seen in R-570's private-notes build: the plan declared User(email, password_hash) next to the generated accounts table. Done 2026-10-01: the model is told not to; repair removes a copy of the accounts (and what points at it), a profile keeps its data, no password. |
 | 49 | R-567 | Money: ledgers, payments, payouts, refunds, commission | Completed | P1 | Both |  | ARCH-PAYMENTS, R-512 | R-512 gives Stripe/Razorpay checkout; this is the ledger. Done 2026-10-01: a `money` capability; every backend gets server-priced checkout, a double-entry ledger, commission splits, refunds and payouts, mock offline and verified Stripe/Razorpay webhooks. Real provider accounts are PC-070/PC-071; the screens are PC-113. |
-| 50 | PC-113 | Money in the generated web and admin apps: pay, wallet, payouts, refunds, the books | Not Started | P1 | Both | R-567 |  | R-567 built the API on every backend; the generated pages do not call it yet. |
+| 50 | PC-113 | Money in the generated web and admin apps: pay, wallet, payouts, refunds, the books | Completed | P1 | Both | R-567 |  | R-567 built the API on every backend; the generated pages do not call it yet. Done 2026-10-01: a Pay panel on chargeable records, a Wallet page, an admin Money page; proven in a browser. |
 | 51 | R-568 | Background jobs and scheduling | Not Started | P1 | Both |  |  |  |
 | 52 | R-569 | Realtime channels: tracking, notifications, live status | Not Started | P1 | Both |  | ARCH-REALTIME |  |
 | 53 | R-571 | Escape hatch: behaviour the IR declares and the model implements, verified | Not Started | P1 | Both | R-560 |  | No hard ceiling, only a typed boundary. |
@@ -920,6 +920,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-110 | The preview runner runs Node backends (Express, Hono) as it runs Python and Go | Completed | 2026-10-01 | Found in R-570: localrun recognises only requirements.txt and go.mod, so a Node API is never started in a preview; R-570's Node proof ran the API by hand. Done 2026-10-01: schema applied as the app's role, dependencies installed once, tsx started on the shared contract; Express and Hono proven. |
 | PC-111 | Assigned-to visibility: a record visible to the user it is assigned to (a driver's deliveries), beside R-570's creator ownership | Completed | 2026-10-01 | A creator rule cannot express 'the orders assigned to me'; the planner is told not to use one. Done 2026-10-01: an ownership rule's `assignee` field; drivers see and move only what is assigned to them, only see_all roles assign; proven on Python, Go, Express and Hono. |
 | PC-112 | Plans do not declare a User entity beside the app's accounts | Completed | 2026-10-01 | Seen in R-570's private-notes build: the plan declared User(email, password_hash) next to the generated accounts table. Done 2026-10-01: the model is told not to; repair removes a copy of the accounts (and what points at it), a profile keeps its data, no password. |
+| PC-113 | Money in the generated web and admin apps: pay, wallet, payouts, refunds, the books | Completed | 2026-10-01 | R-567 built the API on every backend; the generated pages do not call it yet. Done 2026-10-01: a Pay panel on chargeable records, a Wallet page, an admin Money page; proven in a browser. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
 | R-003 | Local Ollama Stage 0 bootstrap | Completed | 2026-09-06 |  |

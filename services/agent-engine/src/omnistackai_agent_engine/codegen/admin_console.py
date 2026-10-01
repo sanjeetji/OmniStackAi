@@ -236,6 +236,10 @@ def nav_file(ir: ApplicationIR, has_auth: bool) -> str:
         if screen.id in skip or _screen_intent(screen) == "detail" or "detail" in screen.id:
             continue
         items.append({"href": f"/{screen.id}", "label": _nav_label(screen.id), "icon": "page", "group": "Pages"})
+    from ..application_ir.money import money_of
+
+    if has_auth and money_of(ir) is not None:  # PC-113: the books, refunds and payouts
+        items.append({"href": "/money", "label": "Money", "icon": "dashboard", "group": "Overview"})
     if has_auth:
         items.append({"href": "/users", "label": "Users and roles", "icon": "users", "group": "Access"})
     return (

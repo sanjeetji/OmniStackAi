@@ -175,3 +175,40 @@ class ThePlannerPlansIt(TestCase):
         self.assertEqual(config["charges"], [{"entity": "Order", "amount": "total_amount"}])
         self.assertEqual(config["refund_roles"], ["manager"])
         ApplicationIR.from_dict(data)
+
+
+class ThePagesUseIt(TestCase):
+    """PC-113: the web app pays and keeps a wallet; the admin console keeps the books."""
+
+    def _apps(self, money: bool = True) -> tuple[dict[str, str], dict[str, str]]:
+        from omnistackai_agent_engine.codegen.nextjs import NextjsAdminAdapter, NextjsWebAdapter
+
+        data = _plan()
+        if not money:
+            data["capabilities"] = []
+        data["screens"].append({"id": "order_view", "role": "admin", "components": ["detail"], "actions": ["view"], "navigation": []})
+        ir = ApplicationIR.from_dict(data)
+        web = {f.path: f.content for f in NextjsWebAdapter().generate(ir).files()}
+        admin = {f.path: f.content for f in NextjsAdminAdapter().generate(ir).files()}
+        return web, admin
+
+    def test_web(self) -> None:
+        web, _ = self._apps()
+        self.assertIn('export const CURRENCY = "INR";', web["lib/money.ts"])
+        self.assertIn("export function PayPanel(", web["components/pay-panel.tsx"])
+        self.assertIn("Request payout", web["app/wallet/page.tsx"])
+        self.assertIn('href="/wallet"', web["components/navbar.tsx"])
+        page = web["app/order_view/page.tsx"]
+        self.assertIn('<PayPanel entity="Order" recordId={String(item.id)}', page)
+        self.assertNotIn("vendor_id", page, "the payee is not a field for the customer")
+
+    def test_admin(self) -> None:
+        _, admin = self._apps()
+        self.assertIn("Books balanced", admin["app/money/page.tsx"])
+        self.assertIn('"href": "/money"', next(c for p, c in admin.items() if "export const NAV" in c))
+
+    def test_without_money_nothing_appears(self) -> None:
+        web, admin = self._apps(money=False)
+        self.assertNotIn("lib/money.ts", web)
+        self.assertNotIn("app/money/page.tsx", admin)
+        self.assertNotIn("PayPanel", web["app/order_view/page.tsx"])
