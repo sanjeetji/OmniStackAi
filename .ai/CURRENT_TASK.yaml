@@ -1,30 +1,26 @@
-task_id: PC-118
-status: completed
+task_id: PC-119
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-118
+tracker_row: PC-119
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  The job build API (POST /jobs/build and /jobs/build/stream) gives up after a fixed five minutes,
-  ignoring OMNISTACKAI_AGENT_CALL_TIMEOUT, which the project build already honours (R-530). Found in
-  R-569's console proof: a multi-app build took longer, the console got 502. Both build paths now
-  take their budget from the same setting.
+  "Couriers see only the orders assigned to them" makes an assignment rule (PC-111). Found in R-569's
+  console proof: the plan's role was "driver" and the prompt reader knew only "their own / assigned
+  orders", so QuickShip got no ownership rule and every signed-in user could read every order. The
+  reader learns the "<things> assigned to them" word order and common role synonyms (courier, rider,
+  driver, delivery partner; agent; technician).
 founder_gate: none
 companions: []
 allowed_paths:
-  - services/control-plane/
+  - services/agent-engine/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - the project build's own budget and its default are unchanged
+  - task verify stays offline with 0 model calls
 required_gates:
-  - go test for the control plane's jobs package passes
+  - QuickShip's prompt over its own plan gives Order an assignee rule for driver
   - scripts/verify.sh passes
-found_and_fixed:
-  - The first reading (that console builds over five minutes are lost) was wrong - project builds stream and read the setting (30m here); only the job API ignored it.
-deferred:
-  - The console's non-streaming buildApp waits at most Node fetch's 300s for headers (undici headersTimeout); its UI builds stream, so nothing reaches it today.
