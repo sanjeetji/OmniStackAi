@@ -32,6 +32,7 @@ import {
   ShieldAlert,
   Sparkles,
   Terminal,
+  Pencil,
   Trash2,
   Unlink,
   Plug,
@@ -1662,9 +1663,10 @@ export default function ProjectManagePage({
                                 <td className="py-3 text-right whitespace-nowrap">
                                   <div className="flex items-center justify-end gap-1">
                                     <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 px-2 text-xs"
+                                      variant="outline"
+                                      size="icon-sm"
+                                      title={`Edit ${s.key}`}
+                                      aria-label={`Change the value of ${s.key}`}
                                       onClick={() => {
                                         setSecretKey(s.key);
                                         setSecretValue("");
@@ -1674,15 +1676,17 @@ export default function ProjectManagePage({
                                         setAddSecretOpen(true);
                                       }}
                                     >
-                                      Edit
+                                      <Pencil className="size-3.5" aria-hidden="true" />
                                     </Button>
                                     <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                      variant="outline"
+                                      size="icon-sm"
+                                      className="text-destructive hover:text-destructive"
+                                      title={`Delete ${s.key}`}
+                                      aria-label={`Delete ${s.key}`}
                                       onClick={() => setDeleteSecretKey(s.key)}
                                     >
-                                      Delete
+                                      <Trash2 className="size-3.5" aria-hidden="true" />
                                     </Button>
                                   </div>
                                 </td>
