@@ -1,36 +1,29 @@
-task_id: PC-115
-status: completed
+task_id: R-568
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-115
+tracker_row: R-568
 started_at: "2026-10-01"
-completed_at: "2026-10-01"
 branch: platform-completion
 objective: >-
-  Remove R-512's Manage -> Payments toggle (founder decision 2026-10-01). It injected a Stripe/Razorpay
-  checkout into the web app only, took the amount from the client and recorded nothing; R-567's money
-  capability replaces it in every backend, with keys as project secrets. The Studio injector, its
-  routes and tests, the control plane's payments handler and column, and the console's Payments
-  section go; an app's payments are set up from its plan, its keys in Secrets.
+  Background jobs and scheduling in generated apps. A `jobs` capability declares scheduled rules over
+  an entity ("cancel unpaid orders after 30 minutes", "mark invoices overdue once the due date passes",
+  "delete drafts older than 30 days"): which rows (state, age), how often, and what happens (a workflow
+  transition, set fields, delete). Every backend (Python, Go, Express, Hono) runs them on a
+  Postgres-backed scheduler - one bounded statement per run, recorded runs, retries with backoff, a
+  dead letter an admin can retry, safe with several API replicas - and the admin console shows the
+  schedules and runs. Planned from the prompt as well as by the model.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
-  - services/control-plane/
-  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - project secrets and the Stripe/Razorpay key checks under Connectors stay
+  - task verify stays offline with 0 model calls
+  - no new infrastructure (no Redis or queue service); jobs live in the app's own Postgres
 required_gates:
-  - Live - the console's Manage page has no Payments section and the rest of Manage works; the money proof still passes
+  - Live - on Python, Go, Express and Hono through the platform's runner, a schedule cancels only the rows it should, runs are recorded, a failing run retries and ends dead, an admin retries it
   - scripts/verify.sh passes
-model_tool_trace:
-  routing: deterministic_only
-  local_calls: 0
-  cloud_calls: 0
-blockers: []
-deferred: []
-found_and_fixed: []
