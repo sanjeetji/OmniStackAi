@@ -1,22 +1,21 @@
-task_id: R-568
-status: completed
+task_id: R-569
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: R-568
-started_at: "2026-10-01"
-completed_at: "2026-10-01"
+tracker_row: R-569
+started_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Background jobs and scheduling in generated apps. A `jobs` capability declares scheduled rules over
-  an entity ("cancel unpaid orders after 30 minutes", "mark invoices overdue once the due date passes",
-  "delete drafts older than 30 days"): which rows (state, age), how often, and what happens (a workflow
-  transition, set fields, delete). Every backend (Python, Go, Express, Hono) runs them on a
-  Postgres-backed scheduler - one bounded statement per run, recorded runs, retries with backoff, a
-  dead letter an admin can retry, safe with several API replicas - and the admin console shows the
-  schedules and runs. Planned from the prompt as well as by the model.
+  Live updates in generated apps. A `realtime` capability names the entities whose changes reach
+  people as they happen (an order's status, a delivery's position, a ticket's replies). A trigger
+  publishes each change through Postgres LISTEN/NOTIFY; every backend (Python, Go, Express, Hono)
+  streams it to signed-in users over Server-Sent Events, filtered by the entity's ownership rule so
+  nobody hears of a record they cannot see; the generated pages' data hooks refetch quietly on a
+  change. Planned from the prompt ("live status", "real-time", "track") as well as by the model.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
+  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -24,14 +23,7 @@ allowed_paths:
   - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - no new infrastructure (no Redis or queue service); jobs live in the app's own Postgres
+  - no new infrastructure (no Supabase, Ably or Redis); changes travel through the app's own Postgres
 required_gates:
-  - Live - on Python, Go, Express and Hono through the platform's runner, a schedule cancels only the rows it should, runs are recorded, a failing run retries and ends dead, an admin retries it
+  - Live - on Python, Go, Express and Hono through the platform's runner, a change made by one user reaches another's stream, an owner-scoped change reaches only those who may see it, a stream needs a valid ticket; a browser page updates without a reload
   - scripts/verify.sh passes
-found_and_fixed:
-  - Placeholder order differs between drivers ($n for Go/Node, positional %s for Python); every scheduler statement numbers its placeholders in order and the converter refuses one that does not.
-  - A schedule over every row of a table every minute is refused (a where or older_than is required).
-deferred:
-  - PC-117 - a time of day ("every night at 2am") with a time zone; schedules run every N from their first run.
-  - PC-053 - reminders and emails on a schedule build on this scheduler.
-  - PC-116 - (from the payments proof) the storefront's dead "List with us" link.
