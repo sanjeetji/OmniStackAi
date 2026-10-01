@@ -12,6 +12,7 @@ and shuts both servers down cleanly on Ctrl+C. Local only; no cloud, no secrets 
 from __future__ import annotations
 
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -63,7 +64,7 @@ class LocalAppSession:
         self._stopped = True
         for process in self.processes:
             try:
-                process.terminate()
+                _signal(process, signal.SIGTERM)
             except OSError:
                 pass
         for process in self.processes:
@@ -71,12 +72,18 @@ class LocalAppSession:
                 process.wait(timeout=8)
             except subprocess.TimeoutExpired:
                 try:
-                    process.kill()
+                    _signal(process, signal.SIGKILL)
                     process.wait(timeout=3)
                 except (OSError, subprocess.TimeoutExpired):
                     pass
             except OSError:
                 pass
+            # The step's own process has exited; anything it started is still in its group.
+            if getattr(process, "omnistack_group", False):
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except (OSError, ProcessLookupError):
+                    pass
 
 
 def _plan_from_env(
@@ -193,12 +200,21 @@ def _should_skip(step: RunStep) -> bool:
     return False
 
 
+def _program(step: RunStep) -> str:
+    """The step's program; a generated API's `python3` is whichever interpreter really works."""
+    if step.program == "python3":
+        from .api_env import backend_python
+
+        return backend_python() or step.program
+    return step.program
+
+
 def _run_sync(step: RunStep) -> None:
     env = {**os.environ, **dict(step.env)}
     stdin = open(step.stdin_file, "rb") if step.stdin_file else None
     try:
         result = subprocess.run(
-            [step.program, *step.args], cwd=step.cwd, env=env, stdin=stdin, check=False
+            [_program(step), *step.args], cwd=step.cwd, env=env, stdin=stdin, check=False
         )
     finally:
         if stdin is not None:
@@ -212,14 +228,16 @@ def _launch(step: RunStep, log_callback: Callable[[str], None] | None = None) ->
     if log_callback is not None:
         import threading
         proc = subprocess.Popen(
-            [step.program, *step.args],
+            [_program(step), *step.args],
             cwd=step.cwd,
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            start_new_session=True,
         )
+        proc.omnistack_group = True  # type: ignore[attr-defined]
 
         def _tee() -> None:
             try:
@@ -233,7 +251,28 @@ def _launch(step: RunStep, log_callback: Callable[[str], None] | None = None) ->
 
         threading.Thread(target=_tee, daemon=True).start()
         return proc
-    return subprocess.Popen([step.program, *step.args], cwd=step.cwd, env=env)
+    proc = subprocess.Popen([_program(step), *step.args], cwd=step.cwd, env=env, start_new_session=True)
+    proc.omnistack_group = True  # type: ignore[attr-defined]
+    return proc
+
+
+def _signal(process: subprocess.Popen, sig: int) -> None:
+    """Signal a step's whole process group when this runner created it, else just the process.
+
+    Found live in R-570: `go run .` starts the compiled app as its child, so terminating `go` left the
+    app serving on its port after the preview stopped - as `pnpm`, `next dev` and `expo` wrappers can
+    leave theirs. Each step runs as its own group (see `_launch`), and the group is what stops.
+    """
+    if getattr(process, "omnistack_group", False):
+        try:
+            os.killpg(process.pid, sig)
+            return
+        except (OSError, ProcessLookupError):
+            pass
+    if sig == signal.SIGKILL:
+        process.kill()
+    else:
+        process.terminate()
 
 
 #: PC-006: a server that comes up between two checks waits for the next one; at 1 s that was up

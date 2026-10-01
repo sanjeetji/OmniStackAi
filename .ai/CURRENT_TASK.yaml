@@ -1,9 +1,9 @@
 task_id: R-570
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: R-570
 started_at: "2026-10-01"
-completed_at: null
+completed_at: "2026-10-01"
 branch: platform-completion
 objective: >-
   Permissions beyond role: ownership and row-level rules in generated apps. A record created by a
@@ -32,5 +32,15 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred: []
-found_and_fixed: []
+deferred:
+  - assigned-to visibility (PC-111)
+  - the preview runner does not start Node APIs (PC-110)
+  - plans that declare a User entity beside the accounts table (PC-112)
+found_and_fixed:
+  - created_by was empty on every create in all three backends (the PC-008 private-notes leak)
+  - Node CRUD ignored required_roles; Go RequireAuth discarded the token's claims
+  - "expenses"-style plurals resolved to the wrong entity name
+  - a schema-less DELETE endpoint stayed a 501 stub
+  - a planned client-filled user_id on an owned entity made every create a 422
+  - Homebrew python@3.13/3.14 on macOS 26.1 cannot build a virtualenv; the runner picks a working interpreter
+  - stopping a preview left go run's app serving; steps run as process groups

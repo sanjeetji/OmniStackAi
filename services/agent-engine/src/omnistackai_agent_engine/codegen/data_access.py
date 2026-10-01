@@ -96,7 +96,46 @@ def _python_db(slug: str) -> str:
     )
 
 
-def _python_repository(entity: Entity, workflow=None) -> str:
+_EXECUTE = re.compile(r"^(\s*await cur\.execute\()(sql|f'[^']*')(?:, (.*))?\)$")
+
+
+def _owner_scoped(body: str) -> str:
+    """R-570: read an owner-scoped entity's rows through `_scoped(owner)`.
+
+    The list and count queries come in three shapes (filters, search, plain), each with its own
+    parameter tuple. Rather than a fourth copy of each, every one reads from `{src}` - the table,
+    or the table narrowed to one owner's rows - and passes that subquery's parameter first, which
+    is where it appears in the SQL.
+    """
+    out = []
+    for line in body.split("\n"):
+        line = line.replace("FROM {TABLE}", "FROM {src}")
+        match = _EXECUTE.match(line)
+        if match:
+            head, sql, args = match.groups()
+            if args is None:
+                args = "src_params"
+            elif args.startswith("tuple(") and args.endswith(")"):
+                args = f"(*src_params, *{args[len('tuple('):-1]})"
+            elif args.startswith("("):
+                args = "(*src_params, " + args[1:]
+            else:
+                raise ValueError(f"unexpected query parameters: {args}")
+            line = f"{head}{sql}, {args})"
+        out.append(line)
+    return "\n".join(out)
+
+
+_SCOPED_HELPER = (
+    "def _scoped(owner: str | None) -> tuple[str, tuple]:\n"
+    '    """R-570: the table, or only `owner`\'s rows of it (None: every row)."""\n'
+    "    if owner is None:\n"
+    "        return TABLE, ()\n"
+    "    return f'(SELECT * FROM {TABLE} WHERE \"created_by\" = %s) AS scoped', (owner,)\n\n\n"
+)
+
+
+def _python_repository(entity: Entity, workflow=None, owner_scoped: bool = False) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
     insert_cols = _python_writable_columns(entity, workflow)
@@ -192,6 +231,14 @@ def _python_repository(entity: Entity, workflow=None) -> str:
             "        await cur.execute(f'SELECT COUNT(*) AS count FROM {TABLE}')\n"
         )
 
+    owner_kw = ""
+    scope_line = ""
+    scoped_helper = ""
+    if owner_scoped:
+        list_body, count_body = _owner_scoped(list_body), _owner_scoped(count_body)
+        owner_kw = ", owner: str | None = None"
+        scope_line = "    src, src_params = _scoped(owner)\n"
+        scoped_helper = _SCOPED_HELPER
     return (
         f'"""Data access for {entity.name} (table "{table}"). '
         'Values are parameterized; identifiers are fixed."""\n'
@@ -206,10 +253,12 @@ def _python_repository(entity: Entity, workflow=None) -> str:
         "def _quoted(column: str) -> str:\n"
         "    # Columns come from the fixed lists above, never from a request.\n"
         "    return SQL_COLUMNS.get(column) or '\"' + column + '\"'\n\n\n"
+        f"{scoped_helper}"
         f"{filters_helper}"
-        f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}) -> list[dict[str, Any]]:\n'
+        f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}{owner_kw}) -> list[dict[str, Any]]:\n'
         '    sort_col = SQL_COLUMNS.get(sort, SQL_COLUMNS["id"])\n'
         '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
+        f"{scope_line}"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         f"{list_body}"
         "        return await cur.fetchall()\n\n\n"
@@ -226,14 +275,15 @@ def _python_repository(entity: Entity, workflow=None) -> str:
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         f"        await cur.execute(f'DELETE FROM {{TABLE}} WHERE {sql_identifier('id')} = %s', (id,))\n"
         "        return cur.rowcount > 0\n\n\n"
-        f"async def count_{table}(q: str | None = None{filter_kwargs}) -> int:\n"
+        f"async def count_{table}(q: str | None = None{filter_kwargs}{owner_kw}) -> int:\n"
+        f"{scope_line}"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         f"{count_body}"
         "        row = await cur.fetchone()\n"
         "        return int(row[\"count\"]) if row else 0\n"
         + _python_update(entity, table, workflow)
         + _python_state_setter(table, workflow)
-        + _python_filtered_lists(entity, table, cols)
+        + _python_filtered_lists(entity, table, cols, owner_scoped)
     )
 
 
@@ -282,7 +332,7 @@ def _python_update(entity: Entity, table: str, workflow=None) -> str:
     )
 
 
-def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = None) -> str:
+def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = None, owner_scoped: bool = False) -> str:
     searchable = _searchable_fields(entity)
     filters = filter_fields(entity)
     filter_names = [field.name for field, _ in filters]
@@ -351,22 +401,42 @@ def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = 
             count_exec = (
                 f"        await cur.execute(f'SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {sql_identifier(f'{relation}_id')} = %s', ({relation}_id,))\n"
             )
+        owner_kw = scope_line = ""
+        if owner_scoped:
+            list_exec, count_exec = _owner_scoped(list_exec), _owner_scoped(count_exec)
+            owner_kw = ", owner: str | None = None"
+            scope_line = "    src, src_params = _scoped(owner)\n"
         parts.append(
             "\n\n"
             f"{filters_helper}"
-            f'async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}) -> list[dict[str, Any]]:\n'
+            f'async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}{owner_kw}) -> list[dict[str, Any]]:\n'
             '    sort_col = SQL_COLUMNS.get(sort, SQL_COLUMNS["id"])\n'
             '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
+            f"{scope_line}"
             "    async with await connect() as conn, conn.cursor() as cur:\n"
             f"{list_exec}"
             "        return await cur.fetchall()\n\n\n"
-            f"async def count_{table}_by_{relation}({relation}_id: str, q: str | None = None{filter_kwargs}) -> int:\n"
+            f"async def count_{table}_by_{relation}({relation}_id: str, q: str | None = None{filter_kwargs}{owner_kw}) -> int:\n"
+            f"{scope_line}"
             "    async with await connect() as conn, conn.cursor() as cur:\n"
             f"{count_exec}"
             "        row = await cur.fetchone()\n"
             '        return int(row["count"]) if row else 0\n'
         )
     return "".join(parts)
+
+
+def _reads_own(ir: ApplicationIR, entity_name: str) -> bool:
+    from ..application_ir.ownership import ownership_for_entity
+
+    rule = ownership_for_entity(ir, entity_name)
+    return rule is not None and rule.reads_own
+
+
+def _has_auth(ir: ApplicationIR) -> bool:
+    from .auth_guard import needs_auth
+
+    return needs_auth(ir)
 
 
 def python_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, str]]:
@@ -378,7 +448,8 @@ def python_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, st
         files.append(
             (
                 f"app/repositories/{table_name(entity.name)}.py",
-                _python_repository(entity, _workflows_by_entity(ir).get(entity.name)),
+                _python_repository(entity, _workflows_by_entity(ir).get(entity.name),
+                                   owner_scoped=_reads_own(ir, entity.name)),
             )
         )
     return files
@@ -391,9 +462,24 @@ def _go_store(slug: str) -> str:
         "package store\n\n"
         "import (\n"
         '\t"database/sql"\n'
-        '\t"os"\n\n'
+        '\t"os"\n'
+        '\t"regexp"\n\n'
         '\t_ "github.com/jackc/pgx/v5/stdlib"\n'
         ")\n\n"
+        "// ownerID is the shape of a user id; anything else is nobody's (R-570).\n"
+        "var ownerID = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)\n\n"
+        "// ownedSource is the table, or only owner's rows of it (\"\" means every row). The owner is a\n"
+        "// verified token's user id, checked against ownerID again here, so it can be written into the\n"
+        "// SQL without renumbering every query's $N placeholders; anything else matches no row.\n"
+        "func ownedSource(table, owner string) string {\n"
+        "\tif owner == \"\" {\n"
+        "\t\treturn table\n"
+        "\t}\n"
+        "\tif !ownerID.MatchString(owner) {\n"
+        "\t\towner = \"00000000-0000-0000-0000-000000000000\"\n"
+        "\t}\n"
+        "\treturn \"(SELECT * FROM \" + table + \" WHERE \\\"created_by\\\" = '\" + owner + \"') AS scoped\"\n"
+        "}\n\n"
         "// Open connects to PostgreSQL using DATABASE_URL via the pgx database/sql driver.\n"
         "func Open() (*sql.DB, error) {\n"
         '\tdsn := os.Getenv("DATABASE_URL")\n'
@@ -422,7 +508,14 @@ def _go_sort_whitelist_block(cols: list[str]) -> str:
     )
 
 
-def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
+def _go_owner_scoped(body: str, sql_table: str, go_sql_table: str) -> str:
+    """R-570: an owner-scoped Go query reads from `src` (see `ownedSource` in store.go)."""
+    body = body.replace(f"FROM {go_sql_table}", 'FROM " + src + "')
+    return body.replace(f"FROM {sql_table}", "FROM ` + src + `")
+
+
+def _go_entity_store(entity: Entity, slug: str, workflow=None, owner_scoped: bool = False,
+                     has_auth: bool = False) -> str:
     table = table_name(entity.name)
     sql_table = sql_identifier(table)
     pascal = entity.name
@@ -434,11 +527,15 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
     scan_targets = ", ".join(f"&m.{_pascal(c)}" for c in cols)
     insert_cols = _python_writable_columns(entity, workflow)
 
-    if insert_cols:
-        insert_col_list = _sql_columns(insert_cols)
-        placeholders = ", ".join(f"${i + 1}" for i in range(len(insert_cols)))
-        insert_args = ", ".join(f"m.{_pascal(c)}" for c in insert_cols)
-        create_sql = f"`INSERT INTO {sql_table} ({insert_col_list}) VALUES ({placeholders}) RETURNING {sql_identifier('id')}`, {insert_args}"
+    # R-570: with sign-in, every created row records its creator (empty: nobody, e.g. the dev session).
+    records_creator = has_auth and "created_by" not in {f.name for f in entity.fields}
+    if insert_cols or records_creator:
+        insert_col_list = _sql_columns(insert_cols + (["created_by"] if records_creator else []))
+        values = [f"${i + 1}" for i in range(len(insert_cols))]
+        if records_creator:
+            values.append(f"NULLIF(${len(insert_cols) + 1}, '')::uuid")
+        insert_args = ", ".join([f"m.{_pascal(c)}" for c in insert_cols] + (["createdBy"] if records_creator else []))
+        create_sql = f"`INSERT INTO {sql_table} ({insert_col_list}) VALUES ({', '.join(values)}) RETURNING {sql_identifier('id')}`, {insert_args}"
     else:
         create_sql = f"`INSERT INTO {sql_table} DEFAULT VALUES RETURNING {sql_identifier('id')}`"
 
@@ -528,6 +625,25 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
             f'\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {sql_table}`).Scan(&count)\n'
         )
 
+    owner_param = scope_line = ""
+    if owner_scoped:
+        go_list_query = _go_owner_scoped(go_list_query, sql_table, go_sql_table)
+        go_count_query = _go_owner_scoped(go_count_query, sql_table, go_sql_table)
+        owner_param = ", owner string"
+        scope_line = f"\tsrc := ownedSource(`{sql_table}`, owner)\n"
+    creator_param = ", createdBy string" if records_creator else ""
+    owner_lookup = ""
+    if has_auth:
+        owner_lookup = (
+            f"// Owner{pascal} is who created a row (\"\" if nobody); found is false when there is no such row.\n"
+            f"func Owner{pascal}(ctx context.Context, db *sql.DB, id string) (owner string, found bool, err error) {{\n"
+            "\tvar o sql.NullString\n"
+            f"\terr = db.QueryRowContext(ctx, `SELECT {sql_identifier('created_by')}::text FROM {sql_table} WHERE {sql_identifier('id')} = $1`, id).Scan(&o)\n"
+            "\tif err == sql.ErrNoRows {\n\t\treturn \"\", false, nil\n\t}\n"
+            "\tif err != nil {\n\t\treturn \"\", false, err\n\t}\n"
+            "\treturn o.String, true, nil\n"
+            "}\n\n"
+        )
     return (
         "package store\n\n"
         "import (\n"
@@ -538,8 +654,9 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
         f'\t"{slug}/internal/models"\n'
         ")\n\n"
         f"{go_filters_helper}"
-        f"func List{pascal}(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string{filters_param}) ([]models.{pascal}, error) {{\n"
+        f"func List{pascal}(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string{filters_param}{owner_param}) ([]models.{pascal}, error) {{\n"
         f"{sort_block}"
+        f"{scope_line}"
         f"{go_list_query}"
         "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
         "\tdefer rows.Close()\n"
@@ -558,7 +675,8 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
         "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
         "\treturn &m, nil\n"
         "}\n\n"
-        f"func Create{pascal}(ctx context.Context, db *sql.DB, m models.{pascal}) (string, error) {{\n"
+        f"{owner_lookup}"
+        f"func Create{pascal}(ctx context.Context, db *sql.DB, m models.{pascal}{creator_param}) (string, error) {{\n"
         "\tvar id string\n"
         f"\terr := db.QueryRowContext(ctx, {create_sql}).Scan(&id)\n"
         "\treturn id, err\n"
@@ -571,11 +689,12 @@ def _go_entity_store(entity: Entity, slug: str, workflow=None) -> str:
         "\tn, _ := res.RowsAffected()\n"
         "\treturn n > 0, nil\n"
         "}\n\n"
-        f"func Count{pascal}(ctx context.Context, db *sql.DB, q string{filters_param}) (int, error) {{\n"
+        f"func Count{pascal}(ctx context.Context, db *sql.DB, q string{filters_param}{owner_param}) (int, error) {{\n"
+        f"{scope_line}"
         f"{go_count_query}"
         "\treturn count, err\n"
         "}\n\n"
-        + _go_filtered_lists(entity, table, col_list, scan_targets, cols)
+        + _go_filtered_lists(entity, table, col_list, scan_targets, cols, owner_scoped)
     )
 
 
@@ -638,7 +757,8 @@ def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targ
     )
 
 
-def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: str, cols: list[str] | None = None) -> str:
+def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: str, cols: list[str] | None = None,
+                       owner_scoped: bool = False) -> str:
     pascal = entity.name
     sql_table = sql_identifier(table)
     go_sql_table = _go_string_fragment(sql_table)
@@ -730,11 +850,18 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
                 f'\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {sql_table} WHERE {relation_column} = $1`, {relation}ID).Scan(&count)\n'
             )
 
+        owner_param = scope_line = ""
+        if owner_scoped:
+            sub_list_query = _go_owner_scoped(sub_list_query, sql_table, go_sql_table)
+            sub_count_query = _go_owner_scoped(sub_count_query, sql_table, go_sql_table)
+            owner_param = ", owner string"
+            scope_line = f"\tsrc := ownedSource(`{sql_table}`, owner)\n"
         parts.append(
             "\n"
             f"{filters_helper}"
-            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit, offset int, sort, order, q string{filters_param}) ([]models.{pascal}, error) {{\n"
+            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit, offset int, sort, order, q string{filters_param}{owner_param}) ([]models.{pascal}, error) {{\n"
             f"{sort_block}"
+            f"{scope_line}"
             f"{sub_list_query}"
             "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
             "\tdefer rows.Close()\n"
@@ -746,7 +873,8 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
             "\t}\n"
             "\treturn out, rows.Err()\n"
             "}\n\n"
-            f"func Count{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, q string{filters_param}) (int, error) {{\n"
+            f"func Count{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, q string{filters_param}{owner_param}) (int, error) {{\n"
+            f"{scope_line}"
             f"{sub_count_query}"
             "\treturn count, err\n"
             "}\n"
@@ -760,7 +888,8 @@ def go_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, str]]:
         files.append(
             (
                 f"internal/store/{table_name(entity.name)}.go",
-                _go_entity_store(entity, slug, _workflows_by_entity(ir).get(entity.name)),
+                _go_entity_store(entity, slug, _workflows_by_entity(ir).get(entity.name),
+                                 owner_scoped=_reads_own(ir, entity.name), has_auth=_has_auth(ir)),
             )
         )
     return files

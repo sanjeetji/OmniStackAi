@@ -23,9 +23,11 @@ GOLANG_JWT_REQUIRE = "github.com/golang-jwt/jwt/v5 v5.2.1"
 
 
 def needs_auth(ir: ApplicationIR) -> bool:
-    """True when at least one endpoint requires authentication."""
+    """True when at least one endpoint requires authentication, or an ownership rule makes it so
+    (R-570: an owner-scoped read needs to know who is asking, whatever the plan said)."""
+    from ..application_ir.ownership import ownership_rules
 
-    return any(api.auth for api in ir.apis)
+    return any(api.auth for api in ir.apis) or bool(ownership_rules(ir))
 
 
 def _role_names(ir: ApplicationIR) -> list[str]:
@@ -43,6 +45,7 @@ def python_auth_file(ir: ApplicationIR) -> str:
         '"""\n'
         "from __future__ import annotations\n\n"
         "import os\n"
+        "import re\n"
         "from typing import Any\n\n"
         "import jwt\n"
         "from fastapi import Header, HTTPException\n\n"
@@ -75,6 +78,26 @@ def python_auth_file(ir: ApplicationIR) -> str:
         '            raise HTTPException(status_code=403, detail="forbidden")\n'
         "        return claims\n\n"
         "    return _guard\n\n\n"
+        "_UUID = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')\n"
+        "#: A user id no row has, so a user without one sees nothing rather than everything.\n"
+        "NOBODY = '00000000-0000-0000-0000-000000000000'\n\n\n"
+        "def owner_of(claims: dict[str, Any]) -> str | None:\n"
+        '    """R-570: the signed-in user\'s id as `created_by` stores it (the dev session has none)."""\n'
+        '    sub = claims.get("sub")\n'
+        "    return sub if isinstance(sub, str) and _UUID.match(sub) else None\n\n\n"
+        "def sees_all(claims: dict[str, Any], roles: tuple[str, ...]) -> bool:\n"
+        '    """R-570: whether this user sees every record of an owner-scoped entity (admin always)."""\n'
+        '    held = claims.get("roles") or []\n'
+        '    return isinstance(held, list) and bool(set(held) & (set(roles) | {"admin"}))\n\n\n'
+        "def owner_scope(claims: dict[str, Any], roles: tuple[str, ...]) -> str | None:\n"
+        '    """R-570: None when this user sees every record, else the id whose records they see."""\n'
+        "    if sees_all(claims, roles):\n"
+        "        return None\n"
+        "    return owner_of(claims) or NOBODY\n\n\n"
+        "def can_touch(row: dict[str, Any], claims: dict[str, Any], roles: tuple[str, ...]) -> bool:\n"
+        '    """R-570: whether this user may see or change `row` of an owner-scoped entity."""\n'
+        "    scope = owner_scope(claims, roles)\n"
+        '    return scope is None or str(row.get("created_by") or "") == scope\n\n\n'
         "def require_owner(owner_id: str | None = None):\n"
         '    """Dependency: ensure authenticated user matches owner_id or possesses the admin role."""\n\n'
         "    async def _guard(authorization: str | None = Header(default=None)) -> dict[str, Any]:\n"
@@ -95,8 +118,10 @@ def go_auth_file(ir: ApplicationIR) -> str:
     return (
         "package handlers\n\n"
         "import (\n"
+        '\t"context"\n'
         '\t"net/http"\n'
         '\t"os"\n'
+        '\t"regexp"\n'
         '\t"strings"\n\n'
         '\t"github.com/golang-jwt/jwt/v5"\n'
         ")\n\n"
@@ -130,14 +155,49 @@ def go_auth_file(ir: ApplicationIR) -> str:
         "\t}\n"
         '\treturn claims, http.StatusOK, ""\n'
         "}\n\n"
+        "type claimsKey struct{}\n\n"
+        "// ClaimsFrom is the verified token of a request that passed RequireAuth or RequireRoles (R-570).\n"
+        "func ClaimsFrom(r *http.Request) jwt.MapClaims {\n"
+        "\tclaims, _ := r.Context().Value(claimsKey{}).(jwt.MapClaims)\n"
+        "\treturn claims\n"
+        "}\n\n"
+        "func withClaims(r *http.Request, claims jwt.MapClaims) *http.Request {\n"
+        "\treturn r.WithContext(context.WithValue(r.Context(), claimsKey{}, claims))\n"
+        "}\n\n"
+        "var userID = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)\n\n"
+        "// OwnerOf is the signed-in user's id as created_by stores it (\"\" for the dev session).\n"
+        "func OwnerOf(claims jwt.MapClaims) string {\n"
+        "\tsub, _ := claims[\"sub\"].(string)\n"
+        "\tif userID.MatchString(sub) {\n"
+        "\t\treturn sub\n"
+        "\t}\n"
+        "\treturn \"\"\n"
+        "}\n\n"
+        "// OwnerScope is \"\" when this user sees every record of an owner-scoped entity (admin always,\n"
+        "// and the given roles), else the id whose records they see - never \"\" for anyone else.\n"
+        "func OwnerScope(claims jwt.MapClaims, seeAll ...string) string {\n"
+        "\tif hasAnyRole(claims, seeAll) {\n"
+        "\t\treturn \"\"\n"
+        "\t}\n"
+        "\tif owner := OwnerOf(claims); owner != \"\" {\n"
+        "\t\treturn owner\n"
+        "\t}\n"
+        "\treturn \"00000000-0000-0000-0000-000000000000\"\n"
+        "}\n\n"
+        "// CanTouch: may this user see or change a row created by owner (R-570).\n"
+        "func CanTouch(claims jwt.MapClaims, owner string, seeAll ...string) bool {\n"
+        "\tscope := OwnerScope(claims, seeAll...)\n"
+        "\treturn scope == \"\" || scope == owner\n"
+        "}\n\n"
         "// RequireAuth rejects a request whose JWT is missing or invalid.\n"
         "func RequireAuth(next http.HandlerFunc) http.HandlerFunc {\n"
         "\treturn func(w http.ResponseWriter, r *http.Request) {\n"
-        "\t\tif _, status, msg := verifyToken(r); msg != \"\" {\n"
+        "\t\tclaims, status, msg := verifyToken(r)\n"
+        "\t\tif msg != \"\" {\n"
         "\t\t\thttp.Error(w, msg, status)\n"
         "\t\t\treturn\n"
         "\t\t}\n"
-        "\t\tnext(w, r)\n"
+        "\t\tnext(w, withClaims(r, claims))\n"
         "\t}\n"
         "}\n\n"
         "// RequireRoles verifies the JWT and requires any one of the given roles in its \"roles\" claim.\n"
@@ -152,7 +212,7 @@ def go_auth_file(ir: ApplicationIR) -> str:
         '\t\t\thttp.Error(w, "forbidden", http.StatusForbidden)\n'
         "\t\t\treturn\n"
         "\t\t}\n"
-        "\t\tnext(w, r)\n"
+        "\t\tnext(w, withClaims(r, claims))\n"
         "\t}\n"
         "}\n\n"
         "func hasAnyRole(claims jwt.MapClaims, required []string) bool {\n"

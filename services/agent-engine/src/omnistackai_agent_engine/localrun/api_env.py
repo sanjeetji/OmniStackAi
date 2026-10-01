@@ -34,9 +34,64 @@ def cache_root() -> Path | None:
     return Path(configured).expanduser() if configured else Path.home() / ".omnistackai" / "api-venvs"
 
 
+PYTHON_ENV = "OMNISTACKAI_APP_PYTHON"
+_CHOSEN: list[str | None] = []
+
+
+def _works(python: str) -> bool:
+    """Can this interpreter build a generated API's environment (3.10+, venv and pip's needs)?
+
+    Found live on 2026-10-01: Homebrew's python@3.13 and python@3.14 were built against a newer
+    libexpat than macOS 26.1 ships, so `import pyexpat` fails, `python3 -m venv` fails in ensurepip,
+    and every new preview with a Python API stopped at "create backend virtualenv".
+    """
+    probe = "import sys, venv, ensurepip, pyexpat; sys.exit(0 if sys.version_info >= (3, 10) else 1)"
+    try:
+        return subprocess.run([python, "-c", probe], check=False, capture_output=True, timeout=20).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def _uv_pythons() -> list[str]:
+    uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv")
+    found = []
+    for version in ("3.13", "3.12", "3.11"):
+        try:
+            out = subprocess.run([uv, "python", "find", "--managed-python", version], check=False,
+                                 capture_output=True, text=True, timeout=20)
+        except (OSError, subprocess.SubprocessError):
+            break
+        if out.returncode == 0 and out.stdout.strip():
+            found.append(out.stdout.strip())
+    return found
+
+
+def backend_python() -> str | None:
+    """The interpreter generated Python APIs run on: the first that works, chosen once per process.
+
+    `OMNISTACKAI_APP_PYTHON` when set, else `python3`, the versioned ones beside it, then Pythons uv
+    manages - so one broken interpreter update does not stop every preview.
+    """
+    if _CHOSEN:
+        return _CHOSEN[0]
+    candidates = [os.environ.get(PYTHON_ENV, "").strip()]
+    candidates += [shutil.which(name) or "" for name in ("python3", "python3.13", "python3.12", "python3.11")]
+    chosen = None
+    seen: set[str] = set()
+    for candidate in [c for c in candidates if c] + _uv_pythons():
+        real = os.path.realpath(candidate)
+        if real in seen:
+            continue
+        seen.add(real)
+        if _works(real):
+            chosen = real
+            break
+    _CHOSEN.append(chosen)
+    return chosen
+
+
 def _python() -> str | None:
-    found = shutil.which("python3")
-    return os.path.realpath(found) if found else None
+    return backend_python()
 
 
 def environment_key(requirements: bytes, python: str) -> str:

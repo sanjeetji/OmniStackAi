@@ -783,6 +783,19 @@ class ApplicationIR:
                         raise InvalidIRError(
                             f"transition {transition.name!r} allows unknown role {role!r}"
                         )
+        # R-570: an ownership rule names an entity and roles this application has, once per entity.
+        from .ownership import ownership_rules
+
+        seen: set[str] = set()
+        for rule in ownership_rules(self):
+            if rule.entity not in entities_by_name:
+                raise InvalidIRError(f"ownership names unknown entity {rule.entity!r}")
+            if rule.entity in seen:
+                raise InvalidIRError(f"two ownership rules for {rule.entity}")
+            seen.add(rule.entity)
+            for role in rule.see_all:
+                if role not in role_ids and role != "admin":
+                    raise InvalidIRError(f"ownership of {rule.entity} lets unknown role {role!r} see all")
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {

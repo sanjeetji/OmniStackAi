@@ -46,8 +46,9 @@ class PythonAuthTests(TestCase):
     def test_auth_route_declares_dependency_public_does_not(self) -> None:
         posts = self.project.get("app/routers/posts.py").content
         self.assertIn("from app.auth import require_auth", posts)
-        # POST /posts is auth=true -> guarded; GET /posts is auth=false -> not guarded
-        self.assertIn('@router.post("/posts", dependencies=[Depends(require_auth)])', posts)
+        # POST /posts is auth=true -> guarded; GET /posts is auth=false -> not guarded. R-570: a
+        # create takes the guard as a parameter, so it can record who created the row.
+        self.assertIn('@router.post("/posts")\nasync def post_posts(payload: Post, claims: dict = Depends(require_auth))', posts)
         self.assertIn('@router.get("/posts")', posts)
 
     def test_no_auth_module_when_all_public(self) -> None:

@@ -53,12 +53,23 @@ def fk_relations(ir: ApplicationIR) -> dict[str, tuple[str, ...]]:
     }
 
 
+def _entity_for_collection(path: str, repo_entities: frozenset[str]) -> str | None:
+    from ..intake.ir_repair import resolve_entity_reference
+
+    segments = [seg for seg in path.strip("/").split("/") if seg and not seg.startswith("{")]
+    return resolve_entity_reference(segments[-1], sorted(repo_entities)) if segments else None
+
+
 def wire_endpoint(
     api: ApiEndpoint,
     repo_entities: frozenset[str],
     fk_by_entity: dict[str, tuple[str, ...]] | None = None,
 ) -> Wiring | None:
     entity = api.response_schema or api.request_schema
+    if not entity and api.method.value == "DELETE":
+        # R-570, seen live: a plan's `DELETE /notes/{noteId}` had no schema - a delete has no body -
+        # so it was left a 501 stub while every other /notes route worked. Its collection names it.
+        entity = _entity_for_collection(api.path, repo_entities)
     if not entity or entity not in repo_entities:
         return None
 

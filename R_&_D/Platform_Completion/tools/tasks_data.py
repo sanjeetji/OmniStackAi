@@ -354,8 +354,21 @@ QUEUE = [
     ("R-580", "Domain knowledge in ecosystem detection ('logistics' implies drivers)",
      "2 Maximum features", "Both", "Not Started", "P1", "", ""),
     ("R-570", "Permissions beyond role: ownership and row-level rules", "2 Maximum features",
-     "Both", "Not Started", "P1", "", "'A driver sees only their own orders'. Seen live 2026-09-27 (PC-008): a published "
-     "notes app saved notes with created_by null, so private notes were not private."),
+     "Both", "Completed", "P1", "", "'A driver sees only their own orders'. Seen live 2026-09-27 (PC-008): a published "
+     "notes app saved notes with created_by null, so private notes were not private. Done 2026-10-01: every "
+     "create records its creator from the token; an `ownership` rule (read/write own|all, see_all roles) is "
+     "enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. "
+     "Assigned-to visibility (a driver's deliveries) is PC-111."),
+    ("PC-110", "The preview runner runs Node backends (Express, Hono) as it runs Python and Go",
+     "2 Maximum features", "Both", "Not Started", "P1", "",
+     "Found in R-570: localrun recognises only requirements.txt and go.mod, so a Node API is never started "
+     "in a preview; R-570's Node proof ran the API by hand."),
+    ("PC-111", "Assigned-to visibility: a record visible to the user it is assigned to (a driver's "
+     "deliveries), beside R-570's creator ownership", "2 Maximum features", "Both", "Not Started", "P1",
+     "R-570", "A creator rule cannot express 'the orders assigned to me'; the planner is told not to use one."),
+    ("PC-112", "Plans do not declare a User entity beside the app's accounts", "2 Maximum features", "Both",
+     "Not Started", "P2", "", "Seen in R-570's private-notes build: the plan declared User(email, "
+     "password_hash) next to the generated accounts table."),
     ("R-567", "Money: ledgers, payments, payouts, refunds, commission", "2 Maximum features",
      "Both", "Not Started", "P1", "", "R-512 gives Stripe/Razorpay checkout; this is the ledger."),
     ("R-568", "Background jobs and scheduling", "2 Maximum features", "Both", "Not Started", "P1",

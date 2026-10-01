@@ -40,7 +40,8 @@ class GoWritesRelations(TestCase):
 
     def test_the_store_writes_and_reads_it(self) -> None:
         store = self._file("store/order.go")
-        self.assertIn('INSERT INTO "order" ("order_date", "status", "total_amount", "customer_id")', store)
+        # R-570: and who created it, from the verified token.
+        self.assertIn('INSERT INTO "order" ("order_date", "status", "total_amount", "customer_id", "created_by")', store)
         self.assertIn('"customer_id" = $4 WHERE', store)
         self.assertIn("&m.CustomerId", store)
 

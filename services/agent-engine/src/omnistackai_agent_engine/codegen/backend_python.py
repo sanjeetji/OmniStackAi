@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 
+from .ownership_wiring import owned_transition, owner_scoped_op, rules_by_entity
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType, RelationKind
 from .adapter import GenerationTarget
 from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file, python_auth_router_file
@@ -154,15 +155,41 @@ def _router_file(
     fk_by_entity: dict[str, tuple[str, ...]] | None = None,
     entities_by_name: dict[str, Entity] | None = None,
     transitions: tuple = (),
+    rules: dict | None = None,
 ) -> str:
+    rules = rules or {}
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     tables = sorted({w.table for _, w in wirings if w is not None} | {r.table for r in transitions})
     models_used = sorted({w.entity for _, w in wirings if w is not None and w.op in (Op.CREATE, Op.UPDATE)})
 
-    seg_needs_auth = any(api.auth for api in apis)
+    # R-570: per endpoint - its ownership rule, whether it really needs sign-in (an owner-scoped
+    # read does, whatever the plan said: the rule wins), and whether the handler needs the
+    # caller's claims (to record a creator, or to check whose row it is).
+    plans = []
+    for api, wiring in wirings:
+        rule = rules.get(wiring.entity) if wiring is not None else None
+        scoped = owner_scoped_op(rule, wiring)
+        auth = api.auth or scoped
+        claims = wiring is not None and auth and (wiring.op is Op.CREATE or scoped)
+        plans.append((api, wiring, rule, scoped, auth, claims))
+    owned_transitions = [(route, owned_transition(rules, route)) for route in transitions]
+
+    seg_needs_auth = any(auth for *_, auth, _ in plans) or any(r.roles for r in transitions) \
+        or any(rule for _, rule in owned_transitions)
     uses_roles = any(api.required_roles for api in apis) or any(r.roles for r in transitions)
-    uses_auth_only = any(api.auth and not api.required_roles for api in apis)
+    uses_auth_only = any(auth and not api.required_roles for api, _, _, _, auth, _ in plans) \
+        or any(rule for _, rule in owned_transitions)
     uses_list = any(w is not None and w.op in (Op.LIST, Op.LIST_BY) for _, w in wirings)
+    owner_helpers = [
+        name
+        for name, use in (
+            ("can_touch", any(scoped and w.op is not Op.LIST and w.op is not Op.LIST_BY for _, w, _, scoped, _, _ in plans)
+             or any(rule for _, rule in owned_transitions)),
+            ("owner_of", any(claims and w.op is Op.CREATE for _, w, _, _, _, claims in plans)),
+            ("owner_scope", any(scoped and w.op in (Op.LIST, Op.LIST_BY) for _, w, _, scoped, _, _ in plans)),
+        )
+        if use
+    ]
 
     fastapi_imports = ["APIRouter"]
     if seg_needs_auth:
@@ -175,7 +202,7 @@ def _router_file(
     if seg_needs_auth:
         auth_names = [n for n, use in (("require_auth", uses_auth_only), ("require_roles", uses_roles)) if use]
         header.append("")
-        header.append(f"from app.auth import {', '.join(auth_names)}")
+        header.append(f"from app.auth import {', '.join(auth_names + owner_helpers)}")
     if models_used:
         header.append("")
         header += [f"from app.models import {name}" for name in models_used]
@@ -187,17 +214,20 @@ def _router_file(
         header += [f"from app.repositories import {table} as {table}_repo" for table in tables]
     lines = [*header, "", f'router = APIRouter(tags=["{segment}"])', ""]
 
-    for api, wiring in wirings:
+    for api, wiring, rule, scoped, auth_required, wants_claims in plans:
         params = _path_params(api.path)
-        auth = "required" if api.auth else "public"
+        auth = "required" if auth_required else "public"
         fn = _fn_name(api.method.value, api.path)
         if api.required_roles:
             role_args = ", ".join(f'"{role}"' for role in api.required_roles)
-            guard = f", dependencies=[Depends(require_roles({role_args}))]"
-        elif api.auth:
-            guard = ", dependencies=[Depends(require_auth)]"
+            dependency = f"require_roles({role_args})"
+        elif auth_required:
+            dependency = "require_auth"
         else:
-            guard = ""
+            dependency = ""
+        guard = f", dependencies=[Depends({dependency})]" if dependency and not wants_claims else ""
+        claims_param = f"claims: dict = Depends({dependency})" if wants_claims else ""
+        bypass = repr(rule.bypass_roles) if rule is not None else "()"
         lines.append("")
         lines.append(f'@router.{api.method.value.lower()}("{api.path}"{guard})')
         if wiring is None:
@@ -205,57 +235,81 @@ def _router_file(
             lines.append(f"async def {fn}({args}) -> dict:")
             lines.append(f"    # {api.method.value} {api.path} (auth: {auth}) — scaffold; no unambiguous entity mapping.")
             lines.append('    raise HTTPException(status_code=501, detail="not_implemented")')
-        elif wiring.op is Op.LIST:
+        elif wiring.op in (Op.LIST, Op.LIST_BY):
             entity_obj = entities_by_name.get(wiring.entity) if entities_by_name else None
             ffields = filter_fields(entity_obj) if entity_obj else []
             fsig = "".join(f", {f.name}: {'bool' if kind == 'bool' else 'str'} | None = None" for f, kind in ffields)
             fcall = "".join(f", {f.name}={f.name}" for f, _ in ffields)
-            lines.append(f'async def {fn}(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{fsig}) -> list[dict]:')
-            lines.append(f"    total = await {wiring.table}_repo.count_{wiring.table}(q=q{fcall})")
+            if scoped:
+                fsig += f", {claims_param}"
+                fcall += ", owner=owner"
+            if wiring.op is Op.LIST:
+                lines.append(f'async def {fn}(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{fsig}) -> list[dict]:')
+                count_call = f"{wiring.table}_repo.count_{wiring.table}(q=q{fcall})"
+                list_call = f"{wiring.table}_repo.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})"
+            else:
+                lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{fsig}) -> list[dict]:')
+                count_call = f"{wiring.table}_repo.count_{wiring.table}_by_{wiring.relation}({wiring.id_param}, q=q{fcall})"
+                list_call = f"{wiring.table}_repo.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})"
+            if scoped:
+                lines.append(f"    owner = owner_scope(claims, {bypass})  # R-570: only the user's own, unless they see all")
+            lines.append(f"    total = await {count_call}")
             lines.append('    response.headers["X-Total-Count"] = str(total)')
-            lines.append(f"    return await {wiring.table}_repo.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
-        elif wiring.op is Op.LIST_BY:
-            entity_obj = entities_by_name.get(wiring.entity) if entities_by_name else None
-            ffields = filter_fields(entity_obj) if entity_obj else []
-            fsig = "".join(f", {f.name}: {'bool' if kind == 'bool' else 'str'} | None = None" for f, kind in ffields)
-            fcall = "".join(f", {f.name}={f.name}" for f, _ in ffields)
-            lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{fsig}) -> list[dict]:')
-            lines.append(f"    total = await {wiring.table}_repo.count_{wiring.table}_by_{wiring.relation}({wiring.id_param}, q=q{fcall})")
-            lines.append('    response.headers["X-Total-Count"] = str(total)')
-            lines.append(f"    return await {wiring.table}_repo.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
+            lines.append(f"    return await {list_call}")
         elif wiring.op is Op.GET:
-            lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
+            extra = f", {claims_param}" if scoped else ""
+            lines.append(f"async def {fn}({wiring.id_param}: str{extra}) -> dict:")
             lines.append(f"    row = await {wiring.table}_repo.get_{wiring.table}({wiring.id_param})")
-            lines.append("    if row is None:")
+            if scoped:
+                lines.append(f"    if row is None or not can_touch(row, claims, {bypass}):  # R-570: not theirs is not found")
+            else:
+                lines.append("    if row is None:")
             lines.append('        raise HTTPException(status_code=404, detail="not_found")')
             lines.append("    return row")
         elif wiring.op is Op.CREATE:
-            lines.append(f"async def {fn}(payload: {wiring.entity}) -> dict:")
-            lines.append(f"    return await {wiring.table}_repo.create_{wiring.table}(payload.model_dump())")
-        elif wiring.op is Op.UPDATE:
-            lines.append(f"async def {fn}({wiring.id_param}: str, payload: {wiring.entity}) -> dict:")
-            lines.append(f"    row = await {wiring.table}_repo.update_{wiring.table}({wiring.id_param}, payload.model_dump())")
-            lines.append("    if row is None:")
-            lines.append('        raise HTTPException(status_code=404, detail="not_found")')
-            lines.append("    return row")
-        else:  # Op.DELETE
-            lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
-            lines.append(f"    deleted = await {wiring.table}_repo.delete_{wiring.table}({wiring.id_param})")
-            lines.append("    if not deleted:")
-            lines.append('        raise HTTPException(status_code=404, detail="not_found")')
-            lines.append('    return {"deleted": True}')
+            extra = f", {claims_param}" if wants_claims else ""
+            creator = ", created_by=owner_of(claims)" if wants_claims else ""
+            lines.append(f"async def {fn}(payload: {wiring.entity}{extra}) -> dict:")
+            if wants_claims:
+                lines.append("    # R-570: who created it comes from the verified token, never from the request.")
+            lines.append(f"    return await {wiring.table}_repo.create_{wiring.table}(payload.model_dump(){creator})")
+        else:  # UPDATE or DELETE
+            extra = f", {claims_param}" if scoped else ""
+            payload = f", payload: {wiring.entity}" if wiring.op is Op.UPDATE else ""
+            lines.append(f"async def {fn}({wiring.id_param}: str{payload}{extra}) -> dict:")
+            if scoped:
+                lines.append(f"    current = await {wiring.table}_repo.get_{wiring.table}({wiring.id_param})")
+                lines.append(f"    if current is None or not can_touch(current, claims, {bypass}):  # R-570: only the owner")
+                lines.append('        raise HTTPException(status_code=404, detail="not_found")')
+            if wiring.op is Op.UPDATE:
+                lines.append(f"    row = await {wiring.table}_repo.update_{wiring.table}({wiring.id_param}, payload.model_dump())")
+                lines.append("    if row is None:")
+                lines.append('        raise HTTPException(status_code=404, detail="not_found")')
+                lines.append("    return row")
+            else:
+                lines.append(f"    deleted = await {wiring.table}_repo.delete_{wiring.table}({wiring.id_param})")
+                lines.append("    if not deleted:")
+                lines.append('        raise HTTPException(status_code=404, detail="not_found")')
+                lines.append('    return {"deleted": True}')
 
     # R-566: the lifecycle transitions. Refused here rather than merely hidden in the interface —
     # not showing a courier the "accept" button is presentation; refusing the request is the rule.
-    for route in transitions:
+    for route, owned in owned_transitions:
         role_args = ", ".join(f'"{role}"' for role in route.roles)
         guard = f", dependencies=[Depends(require_roles({role_args}))]" if role_args else ""
         allowed = route.transition.sources or route.workflow.states
         lines.append("")
         lines.append(f'@router.post("{route.path}"{guard})')
-        lines.append(f"async def {route.function}({route.id_param}: str) -> dict:")
+        if owned is not None:
+            # R-570: a transition open to any role on an owner-scoped entity is the owner's to make.
+            lines.append(f"async def {route.function}({route.id_param}: str, claims: dict = Depends(require_auth)) -> dict:")
+        else:
+            lines.append(f"async def {route.function}({route.id_param}: str) -> dict:")
         lines.append(f"    row = await {route.table}_repo.get_{route.table}({route.id_param})")
-        lines.append("    if row is None:")
+        if owned is not None:
+            lines.append(f"    if row is None or not can_touch(row, claims, {owned.bypass_roles!r}):")
+        else:
+            lines.append("    if row is None:")
         lines.append('        raise HTTPException(status_code=404, detail="not_found")')
         lines.append(f"    allowed = {tuple(allowed)!r}")
         lines.append(f'    if row.get("{route.workflow.field}") not in allowed:')
@@ -406,6 +460,7 @@ class PythonBackendAdapter:
                             for r in transition_routes(ir)
                             if r.path.strip("/").split("/")[0] == segment
                         ),
+                        rules_by_entity(ir),
                     ),
                 )
             )

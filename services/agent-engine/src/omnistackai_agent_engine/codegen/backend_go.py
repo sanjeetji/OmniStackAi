@@ -21,6 +21,7 @@ from .files import GeneratedFile, GeneratedProject
 from .openapi import render_openapi_json
 from .workflow_routes import transition_routes
 from .route_wiring import Op, fk_relations, wire_endpoint
+from .ownership_wiring import owned_transition as _owned_transition, owner_scoped_op as _owner_scoped_op, rules_by_entity
 from .schema_sql import render_postgres_schema
 from .seed_sql import render_postgres_seed
 
@@ -277,8 +278,11 @@ def _handlers_file_wired(
     filtered_entities: frozenset[str] = frozenset(),
     transitions: tuple = (),
     rich_entities: frozenset[str] = frozenset(),
+    rules: dict | None = None,
+    creator_entities: frozenset[str] = frozenset(),
 ) -> str:
     """Handlers as methods on *Handlers; unambiguous CRUD calls the store, the rest stay 501."""
+    rules = rules or {}
 
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     uses_store = any(w is not None for _, w in wirings) or bool(transitions)
@@ -307,8 +311,20 @@ def _handlers_file_wired(
     for api, wiring in wirings:
         name = _handler_name(api.method.value, api.path)
         auth = "required" if api.auth else "public"
+        rule = rules.get(wiring.entity) if wiring is not None else None
+        scoped = _owner_scoped_op(rule, wiring)
+        see_all = ", ".join(f'"{role}"' for role in rule.bypass_roles) if rule is not None else ""
         sig = f"func (h *Handlers) {name}(w http.ResponseWriter, r *http.Request) {{"
         lines.append(sig)
+        if scoped and wiring.op in (Op.GET, Op.UPDATE, Op.DELETE):
+            # R-570: someone else's record is not found - saying "not yours" would leak that it exists.
+            lines.append(f'\towner, found, ownerErr := store.Owner{wiring.entity}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
+            lines.append("\tif ownerErr != nil {\n\t\tdbError(w, ownerErr)\n\t\treturn\n\t}")
+            lines.append(f"\tif !found || !CanTouch(ClaimsFrom(r), owner, {see_all}) {{\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}}")
+        owner_arg = ""
+        if scoped and wiring.op in (Op.LIST, Op.LIST_BY):
+            lines.append(f"\towner := OwnerScope(ClaimsFrom(r), {see_all}) // R-570: only their own, unless they see all")
+            owner_arg = ", owner"
         if wiring is None:
             lines.append(f"\t// {api.method.value} {api.path} (auth: {auth}) — scaffold; no unambiguous entity mapping.")
             lines.append('\thttp.Error(w, "not implemented", http.StatusNotImplemented)')
@@ -318,11 +334,11 @@ def _handlers_file_wired(
             lines.append("\tq := parseSearch(r)")
             if wiring.entity in filtered_entities:
                 lines.append("\tfilters := parseFilters(r)")
-                count_call = f"store.Count{wiring.entity}(r.Context(), h.DB, q, filters)"
-                list_call = f"store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q, filters)"
+                count_call = f"store.Count{wiring.entity}(r.Context(), h.DB, q, filters{owner_arg})"
+                list_call = f"store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q, filters{owner_arg})"
             else:
-                count_call = f"store.Count{wiring.entity}(r.Context(), h.DB, q)"
-                list_call = f"store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q)"
+                count_call = f"store.Count{wiring.entity}(r.Context(), h.DB, q{owner_arg})"
+                list_call = f"store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q{owner_arg})"
             lines.append(f"\ttotal, err := {count_call}")
             lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append(f"\titems, err := {list_call}")
@@ -336,11 +352,11 @@ def _handlers_file_wired(
             lines.append("\tq := parseSearch(r)")
             if wiring.entity in filtered_entities:
                 lines.append("\tfilters := parseFilters(r)")
-                count_call = f'store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q, filters)'
-                list_call = f'store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q, filters)'
+                count_call = f'store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q, filters{owner_arg})'
+                list_call = f'store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q, filters{owner_arg})'
             else:
-                count_call = f'store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q)'
-                list_call = f'store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q)'
+                count_call = f'store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q{owner_arg})'
+                list_call = f'store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q{owner_arg})'
             lines.append(f"\ttotal, err := {count_call}")
             lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append(f"\titems, err := {list_call}")
@@ -360,7 +376,8 @@ def _handlers_file_wired(
                 lines.append("\tif !validateStruct(w, m) {\n\t\treturn\n\t}")
             if wiring.entity in rich_entities:
                 lines.append("\tm.SanitizeRichText() // PC-104")
-            lines.append(f"\tid, err := store.Create{wiring.entity}(r.Context(), h.DB, m)")
+            creator = ", OwnerOf(ClaimsFrom(r))" if wiring.entity in creator_entities else ""
+            lines.append(f"\tid, err := store.Create{wiring.entity}(r.Context(), h.DB, m{creator})")
             lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
             lines.append('\twriteJSON(w, http.StatusCreated, map[string]string{"id": id})')
         elif wiring.op is Op.UPDATE:
@@ -392,6 +409,12 @@ def _handlers_file_wired(
         field_pascal = _pascal(route.workflow.field)
         allowed_go = ", ".join(f'"{state}"' for state in allowed)
         lines.append(f"func (h *Handlers) {_transition_handler_name(route)}(w http.ResponseWriter, r *http.Request) {{")
+        owned = _owned_transition(rules, route)
+        if owned is not None:
+            see = ", ".join(f'"{role}"' for role in owned.bypass_roles)
+            lines.append(f'\towner, found, ownerErr := store.Owner{route.workflow.entity}(r.Context(), h.DB, r.PathValue("{route.id_param}"))')
+            lines.append("\tif ownerErr != nil {\n\t\tdbError(w, ownerErr)\n\t\treturn\n\t}")
+            lines.append(f"\tif !found || !CanTouch(ClaimsFrom(r), owner, {see}) {{\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}}")
         lines.append(f'\titem, err := store.Get{route.workflow.entity}(r.Context(), h.DB, r.PathValue("{route.id_param}"))')
         lines.append("\tif err != nil {\n\t\tdbError(w, err)\n\t\treturn\n\t}")
         lines.append("\tif item == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
@@ -407,8 +430,23 @@ def _handlers_file_wired(
     return "\n".join(lines) + "\n"
 
 
+_rules = rules_by_entity
+
+
+def _forced_auth(ir: ApplicationIR) -> frozenset:
+    """R-570: (method, path) of public endpoints an ownership rule puts behind sign-in."""
+    repo_entities = frozenset(entity.name for entity in ir.entities)
+    rules, fks = _rules(ir), fk_relations(ir)
+    out = set()
+    for api in ir.apis:
+        wiring = wire_endpoint(api, repo_entities, fks)
+        if not api.auth and wiring is not None and _owner_scoped_op(rules.get(wiring.entity), wiring):
+            out.add((api.method.value, api.path))
+    return frozenset(out)
+
+
 def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = (), has_auth: bool = False,
-               uploads: bool = False) -> str:
+               uploads: bool = False, forced_auth: frozenset = frozenset(), owned_transitions: frozenset = frozenset()) -> str:
     lines = ["package main", "", "import ("]
     lines.append('\t"log"')
     lines.append('\t"net/http"')
@@ -458,7 +496,8 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
         if api.required_roles:
             role_args = ", ".join(f'"{role}"' for role in api.required_roles)
             target = f"handlers.RequireRoles({target}, {role_args})"
-        elif api.auth:
+        elif api.auth or (api.method.value, api.path) in forced_auth:
+            # R-570: an owner-scoped endpoint needs to know who is asking, whatever the plan said.
             target = f"handlers.RequireAuth({target})"
         lines.append(f'\tmux.HandleFunc("{api.method.value} {api.path}", {target})')
     # R-589: transition routes, role-guarded at the route like every other handler.
@@ -467,6 +506,8 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
         if route.roles:
             role_args = ", ".join(f'"{role}"' for role in route.roles)
             target = f"handlers.RequireRoles({target}, {role_args})"
+        elif route.path in owned_transitions:
+            target = f"handlers.RequireAuth({target})"
         lines.append(f'\tmux.HandleFunc("POST {route.path}", {target})')
     # R-591: the account flow. It needs the users table, so it exists only with a database.
     if has_auth and has_db:
@@ -570,7 +611,10 @@ class GoBackendAdapter:
                         "S3_REGION=\nS3_BUCKET=\nS3_ACCESS_KEY_ID=\nS3_SECRET_ACCESS_KEY=\nSTORAGE_PREFIX=\nLOCAL_STORAGE_DIR=./uploads\n")
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
-            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads)),
+            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads,
+                                                forced_auth=_forced_auth(ir) if has_db else frozenset(),
+                                                owned_transitions=frozenset(r.path for r in transition_routes(ir)
+                                                                            if _owned_transition(_rules(ir), r) is not None) if has_db else frozenset())),
             GeneratedFile("internal/models/models.go", _models_file(ir)),
             GeneratedFile(".gitignore", "/bin/\n*.exe\n.env\n"),
             GeneratedFile(".env.example", env_example),
@@ -613,6 +657,8 @@ class GoBackendAdapter:
                     by_segment[segment], repo_entities, slug, fk_by_entity, validated_entities, filtered_entities,
                     tuple(r for r in transition_routes(ir) if r.path.strip('/').split('/')[0] == segment),
                     frozenset(e.name for e in ir.entities if rich_fields(e)),
+                    _rules(ir),
+                    frozenset(e.name for e in ir.entities if needs_auth(ir) and "created_by" not in {f.name for f in e.fields}),
                 )
                 if has_db
                 else _handlers_file(by_segment[segment])

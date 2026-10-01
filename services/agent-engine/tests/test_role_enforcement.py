@@ -44,7 +44,8 @@ class PythonRoleWiringTests(TestCase):
         posts = project.get("app/routers/posts.py").content
         ast.parse(posts)
         self.assertIn("from app.auth import require_roles", posts)
-        self.assertIn('dependencies=[Depends(require_roles("author"))]', posts)
+        # R-570: a create takes the guard as a parameter, so it can record who created the row.
+        self.assertIn('claims: dict = Depends(require_roles("author"))', posts)
         auth = project.get("app/auth.py").content
         ast.parse(auth)
         self.assertIn("def require_roles(*required: str):", auth)

@@ -87,7 +87,8 @@ def resolve_entity_reference(reference: str, entity_names: list[str]) -> str | N
     ref = _norm(reference)
     if not ref:
         return None
-    for candidate in (ref, _singular(ref)):
+    # R-570: "-ses" plurals are "-se" words as often as "-s" ones ("expenses", "courses", "cases").
+    for candidate in (ref, _singular(ref), ref[:-1] if ref.endswith("s") else ref):
         if candidate in by_norm:
             return by_norm[candidate]
     # Longest entity name that the reference starts with, followed only by a known suffix.
@@ -200,6 +201,28 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
     kept: list[Any] = []
     for capability in data.get("capabilities") or ():
         config = capability.get("config") if isinstance(capability, dict) else None
+        if isinstance(config, dict) and capability.get("kind") == "ownership":
+            # R-570: an ownership rule names a declared entity, once, and declared roles - or goes.
+            label = capability.get("name", "ownership")
+            named = str(config.get("entity") or "")
+            entity = resolve_entity_reference(named, list(entities)) if named else None
+            if entity is None:
+                notes.append(f"ownership {label!r}: entity {named!r} is not in the plan; removed")
+                continue
+            if any(isinstance(c, dict) and c.get("kind") == "ownership" and (c.get("config") or {}).get("entity") == entity
+                   for c in kept):
+                notes.append(f"ownership {label!r}: {entity} already has a rule; removed")
+                continue
+            config["entity"] = entity
+            _drop_owner_reference(entities[entity], entity, notes)
+            see_all = config.get("see_all")
+            if isinstance(see_all, list) and role_ids:
+                unknown = [r for r in see_all if str(r) not in role_ids and r != "admin"]
+                if unknown:
+                    config["see_all"] = [r for r in see_all if r not in unknown]
+                    notes.append(f"ownership {label!r}: undeclared role(s) {', '.join(map(str, unknown))} dropped")
+            kept.append(capability)
+            continue
         if not (isinstance(config, dict) and capability.get("kind") == "workflow"):
             kept.append(capability)
             continue
@@ -230,6 +253,30 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
         kept.append(capability)
     if "capabilities" in data:
         data["capabilities"] = kept
+
+
+#: Names a model gives "the user this belongs to". Not "author": an Author is often a real entity.
+_OWNER_REFERENCES = frozenset({"user", "owner", "creator", "created_by", "account"})
+
+
+def _drop_owner_reference(entity: dict[str, Any], name: str, notes: list[str]) -> None:
+    """R-570, seen live: a private-notes plan gave Note a required `user_id` and a relation to `User`.
+
+    With an ownership rule the platform records the creator from the verified token, so a field the
+    client fills in would be both redundant and a way to claim to be someone else (and every create
+    failed with 422 until the client sent it). The owner reference goes; `created_by` is the owner.
+    """
+    fields = entity.get("fields") or []
+    kept = [f for f in fields if not (isinstance(f, dict) and str(f.get("name", "")).removesuffix("_id") in _OWNER_REFERENCES
+                                      and str(f.get("name", "")) != "id")]
+    if len(kept) != len(fields):
+        entity["fields"] = kept
+        notes.append(f"ownership of {name}: the owner is recorded from sign-in; owner field(s) removed")
+    relations = entity.get("relations") or []
+    rel_kept = [r for r in relations if not (isinstance(r, dict) and str(r.get("name", "")) in _OWNER_REFERENCES)]
+    if len(rel_kept) != len(relations):
+        entity["relations"] = rel_kept
+        notes.append(f"ownership of {name}: the owner relation is the platform's created_by; removed")
 
 
 def repair_ir_dict(data: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...]]:

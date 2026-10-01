@@ -167,3 +167,14 @@ CAPABILITY_KINDS.register(
         validator=validate_workflow_config,
     )
 )
+
+from .ownership import validate_ownership_config  # noqa: E402
+
+CAPABILITY_KINDS.register(
+    CapabilityKind(
+        name="ownership",
+        summary="whose records are whose: who sees and changes an entity's rows (R-570)",
+        implemented=True,
+        validator=validate_ownership_config,
+    )
+)

@@ -52,7 +52,7 @@ class PythonWiringTests(TestCase):
         self.assertIn("from app.repositories import post as post_repo", posts)
         self.assertIn("return await post_repo.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", posts)
         self.assertIn("from app.models import Post", posts)
-        self.assertIn("await post_repo.create_post(payload.model_dump())", posts)
+        self.assertIn("await post_repo.create_post(payload.model_dump(), created_by=owner_of(claims))", posts)  # R-570
 
     def test_subcollection_wired_to_filtered_list(self) -> None:
         # R-244: GET /posts/{postId}/comments -> parent-scoped list via the FK relation

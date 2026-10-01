@@ -107,6 +107,22 @@ def _system_instruction(example_name: str) -> str:
             "of the declared states, and every role must be one of the app's roles.\n"
             "- Leave 'capabilities' as [] when the product has no lifecycle.\n"
         )
+    if "ownership" in CAPABILITY_KINDS.implemented():
+        # R-570: whose records are whose.
+        capability_rules += (
+            "\nOwnership (optional, use when users must not see or change each other's records):\n"
+            "- Every record a signed-in user creates remembers who created them. A 'capabilities' "
+            "entry of kind 'ownership' narrows an entity to its creator: private notes, a "
+            "customer's own orders, a user's own expenses.\n"
+            '- Shape: {"kind": "ownership", "name": "note_ownership", "config": {"entity": "Note", '
+            '"read": "own", "write": "own", "see_all": ["manager"]}}\n'
+            "- read 'own': each user lists and opens only the records they created; read 'all': "
+            "everyone can read them. write 'own': only the creator may edit or delete. see_all: "
+            "roles that see and change every record (admin always does).\n"
+            "- A public catalogue (products, posts) is read 'all', write 'own'. Do NOT use ownership "
+            "for records assigned to someone who did not create them (a courier's deliveries); "
+            "give that role see_all instead.\n"
+        )
     field_types = ", ".join(t.value for t in FieldType)
     # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming
     # `flutter` here told the model to choose a profile the assembler then discarded, which is how
@@ -617,6 +633,17 @@ def parse_ir_response_with_repairs(text: str) -> tuple[ApplicationIR, tuple[str,
     return normalize_ir(ir), repairs
 
 
+def _with_prompt_ownership(ir: ApplicationIR, prompt: str) -> tuple[ApplicationIR, tuple[str, ...]]:
+    """R-570: rules for what the prompt itself calls private, when the plan left them out."""
+    from .ownership_intent import ownership_from_prompt
+
+    data = ir.to_dict()
+    notes = ownership_from_prompt(prompt, data)
+    if not notes:
+        return ir, ()
+    return ApplicationIR.from_dict(data), tuple(notes)
+
+
 async def generate_ir(
     prompt: str,
     provider: ModelProvider,
@@ -651,6 +678,8 @@ async def generate_ir(
     )
     response = await provider.generate(request)
     ir, repairs = parse_ir_response_with_repairs(response.text)
+    ir, owned = _with_prompt_ownership(ir, prompt)
+    repairs = repairs + owned
     issues = validate_ir(ir)
     if has_errors(issues):
         detail = "; ".join(
@@ -728,6 +757,8 @@ async def generate_ir_stream(
         provider.last_provider_id = active.last_provider_id
     text = "".join(chunks)
     ir, repairs = parse_ir_response_with_repairs(text)
+    ir, owned = _with_prompt_ownership(ir, prompt)
+    repairs = repairs + owned
     issues = validate_ir(ir)
     if has_errors(issues):
         detail = "; ".join(

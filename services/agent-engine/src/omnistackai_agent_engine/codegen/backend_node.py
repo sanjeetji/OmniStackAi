@@ -41,6 +41,7 @@ from .field_validation import filter_fields, parse_field_rules
 from .files import GeneratedFile, GeneratedProject
 from .openapi import render_openapi_json
 from .workflow_routes import transition_routes
+from .ownership_wiring import owned_transition, owner_scoped_op, rules_by_entity
 from .route_wiring import Op, fk_relations, wire_endpoint
 from .schema_sql import render_postgres_schema, sql_identifier, table_name
 from .seed_sql import render_postgres_seed
@@ -278,6 +279,34 @@ function authorize(header: string | undefined): {{ claims?: AuthClaims; status?:
   if (!claims) return {{ status: 401, detail: 'invalid_token' }};
   return {{ claims }};
 }}
+
+function holdsAny(claims: AuthClaims | undefined, roles: string[]): boolean {{
+  const held: string[] = ((claims as any)?.roles as string[] | undefined) ?? [];
+  // The app's admin passes every role check, as in the Python and Go backends.
+  return [...roles, 'admin'].some((r) => held.includes(r));
+}}
+
+// R-570: whose records are whose.
+const USER_ID = /^[0-9a-fA-F]{{8}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{12}}$/;
+const NOBODY = '00000000-0000-0000-0000-000000000000';
+
+/** The signed-in user's id as created_by stores it (null for the dev session). */
+export function ownerOf(claims: AuthClaims | undefined): string | null {{
+  const sub = (claims as any)?.sub;
+  return typeof sub === 'string' && USER_ID.test(sub) ? sub : null;
+}}
+
+/** null when this user sees every record of an owner-scoped entity, else the id whose records they see. */
+export function ownerScope(claims: AuthClaims | undefined, seeAll: string[]): string | null {{
+  if (holdsAny(claims, seeAll)) return null;
+  return ownerOf(claims) ?? NOBODY;
+}}
+
+/** May this user see or change a row created by `owner`. */
+export function canTouch(claims: AuthClaims | undefined, owner: string | null | undefined, seeAll: string[]): boolean {{
+  const scope = ownerScope(claims, seeAll);
+  return scope === null || scope === (owner ?? '');
+}}
 """
     if framework == "hono":
         return (
@@ -290,6 +319,17 @@ export async function requireAuth(c: Context, next: Next) {
   if (!result.claims) return c.json({ error: result.detail, detail: result.detail }, result.status as any);
   c.set('user', result.claims);
   await next();
+}
+
+/** R-570: the endpoint's roles (Node CRUD used to check sign-in only, ignoring them). */
+export function requireRoles(...roles: string[]) {
+  return async (c: Context, next: Next) => {
+    const result = authorize(c.req.header('Authorization'));
+    if (!result.claims) return c.json({ error: result.detail, detail: result.detail }, result.status as any);
+    if (!holdsAny(result.claims, roles)) return c.json({ error: 'forbidden', detail: 'forbidden' }, 403);
+    c.set('user', result.claims);
+    await next();
+  };
 }
 """
         )
@@ -307,6 +347,17 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   if (!result.claims) return res.status(result.status!).json({ error: result.detail, detail: result.detail });
   req.user = result.claims;
   next();
+}
+
+/** R-570: the endpoint's roles (Node CRUD used to check sign-in only, ignoring them). */
+export function requireRoles(...roles: string[]) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const result = authorize(req.headers.authorization);
+    if (!result.claims) return res.status(result.status!).json({ error: result.detail, detail: result.detail });
+    if (!holdsAny(result.claims, roles)) return res.status(403).json({ error: 'forbidden', detail: 'forbidden' });
+    req.user = result.claims;
+    next();
+  };
 }
 """
     )
@@ -337,7 +388,7 @@ export async function checkDbHealth(): Promise<boolean> {
 """
 
 
-def _db_repository_file(entity: Entity, workflow=None) -> str:
+def _db_repository_file(entity: Entity, workflow=None, records_creator: bool = False) -> str:
     tbl = table_name(entity.name)
     # R-590: the lifecycle field is never written here; a new row takes the initial state from the
     # column DEFAULT and only a transition moves it after that.
@@ -353,6 +404,38 @@ def _db_repository_file(entity: Entity, workflow=None) -> str:
         f"INSERT INTO {sql_identifier(tbl)} ({ins_col_list}) VALUES ({placeholders}) RETURNING {col_list}"
         if ins_cols else f"INSERT INTO {sql_identifier(tbl)} DEFAULT VALUES RETURNING {col_list}"
     )
+    create_values = ", ".join(f"(input as any).{c}" for c in ins_cols)
+    creator_param = owner_methods = ""
+    list_owner = listby_owner = ""
+    if records_creator:
+        # R-570: every created row records its creator; the client cannot set it.
+        creator_col = sql_identifier("created_by")
+        insert_sql = (
+            f"INSERT INTO {sql_identifier(tbl)} ({ins_col_list + ', ' if ins_cols else ''}{creator_col}) "
+            f"VALUES ({placeholders + ', ' if ins_cols else ''}NULLIF(${len(ins_cols) + 1}, '')::uuid) RETURNING {col_list}"
+        )
+        create_values = (create_values + ", " if create_values else "") + "createdBy ?? ''"
+        creator_param = ", createdBy?: string | null"
+        owner_methods = f"""
+  /** Who created a row: undefined when there is no such row, null when nobody (R-570). */
+  static async ownerOf(id: string): Promise<string | null | undefined> {{
+    const result = await pool.query('SELECT {creator_col}::text AS owner FROM {sql_identifier(tbl)} WHERE id = $1', [id]);
+    if (result.rows.length === 0) return undefined;
+    return (result.rows[0].owner as string | null) ?? null;
+  }}
+"""
+        list_owner = (
+            "    if (options.owner) {\n"
+            f"      const scoped = await pool.query('SELECT {col_list} FROM {sql_identifier(tbl)} WHERE {creator_col} = $3 LIMIT $1 OFFSET $2', [limit, offset, options.owner]);\n"
+            f"      return scoped.rows as {entity.name}[];\n"
+            "    }\n"
+        )
+        listby_owner = (
+            "    if (owner) {\n"
+            f"      const scoped = await pool.query(`SELECT {col_list} FROM {sql_identifier(tbl)} WHERE \"${{relationCol}}\" = $1 AND {creator_col} = $2`, [parentId, owner]);\n"
+            f"      return scoped.rows as {entity.name}[];\n"
+            "    }\n"
+        )
 
     return f"""// Generated by OmniStackAI: {entity.name} Repository
 //
@@ -365,10 +448,10 @@ import type {{ {entity.name}, Create{entity.name}Input, Update{entity.name}Input
 const WRITABLE: string[] = {json.dumps(ins_cols)};
 
 export class {entity.name}Repository {{
-  static async list(options: {{ limit?: number; offset?: number; search?: string }} = {{}}): Promise<{entity.name}[]> {{
+  static async list(options: {{ limit?: number; offset?: number; search?: string; owner?: string | null }} = {{}}): Promise<{entity.name}[]> {{
     const limit = options.limit || 50;
     const offset = options.offset || 0;
-    const query = 'SELECT {col_list} FROM {sql_identifier(tbl)} LIMIT $1 OFFSET $2';
+{list_owner}    const query = 'SELECT {col_list} FROM {sql_identifier(tbl)} LIMIT $1 OFFSET $2';
     const result = await pool.query(query, [limit, offset]);
     return result.rows as {entity.name}[];
   }}
@@ -379,8 +462,9 @@ export class {entity.name}Repository {{
     return (result.rows[0] as {entity.name}) ?? null;
   }}
 
-  static async create(input: Create{entity.name}Input): Promise<{entity.name}> {{
-    const cols = [{", ".join(f"(input as any).{c}" for c in ins_cols)}];
+{owner_methods}
+  static async create(input: Create{entity.name}Input{creator_param}): Promise<{entity.name}> {{
+    const cols = [{create_values}];
     const query = `{insert_sql}`;
     const result = await pool.query(query, cols);
     return result.rows[0] as {entity.name};
@@ -403,13 +487,45 @@ export class {entity.name}Repository {{
     return (result.rowCount ?? 0) > 0;
   }}
 
-  static async listBy(relationCol: string, parentId: string): Promise<{entity.name}[]> {{
-    const query = `SELECT {col_list} FROM {sql_identifier(tbl)} WHERE "${{relationCol}}" = $1`;
+  static async listBy(relationCol: string, parentId: string, owner?: string | null): Promise<{entity.name}[]> {{
+{listby_owner}    const query = `SELECT {col_list} FROM {sql_identifier(tbl)} WHERE "${{relationCol}}" = $1`;
     const result = await pool.query(query, [parentId]);
     return result.rows as {entity.name}[];
   }}
 }}
 """
+
+
+def _node_guard(api: ApiEndpoint, scoped: bool) -> str:
+    """The route's middleware: its roles (R-570: Node CRUD used to ignore them), or sign-in - which an
+    owner-scoped operation needs whatever the plan said."""
+    if api.required_roles:
+        return "requireRoles(" + ", ".join(f"'{r}'" for r in api.required_roles) + "), "
+    return "requireAuth, " if api.auth or scoped else ""
+
+
+def _node_auth_names(apis, repo_entities, fk_by_entity, transitions, rules, creator_entities) -> list[str]:
+    """What a router imports from the auth middleware - only what it uses, for strict builds."""
+    used: set[str] = set()
+    for api in apis:
+        wiring = wire_endpoint(api, repo_entities, fk_by_entity)
+        scoped = owner_scoped_op(rules.get(wiring.entity) if wiring else None, wiring)
+        guard = _node_guard(api, scoped)
+        if guard.startswith("requireRoles"):
+            used.add("requireRoles")
+        elif guard:
+            used.add("requireAuth")
+        if scoped and wiring.op in (Op.LIST, Op.LIST_BY):
+            used.add("ownerScope")
+        elif scoped:
+            used.add("canTouch")
+        if wiring is not None and wiring.op is Op.CREATE and wiring.entity in creator_entities:
+            used.add("ownerOf")
+    if transitions:
+        used.add("requireAuth")
+    if any(owned_transition(rules, route) is not None for route in transitions):
+        used.add("canTouch")
+    return [n for n in ("requireAuth", "requireRoles", "ownerOf", "ownerScope", "canTouch") if n in used] or ["requireAuth"]
 
 
 def _express_router_file(
@@ -419,13 +535,16 @@ def _express_router_file(
     fk_by_entity: dict[str, tuple[str, ...]],
     has_auth: bool,
     transitions: tuple = (),
+    rules: dict | None = None,
+    creator_entities: frozenset[str] = frozenset(),
 ) -> str:
+    rules = rules or {}
     lines = [
         f"// Generated by OmniStackAI: Express Router for {segment}",
         "import { Router, Request, Response } from 'express';",
     ]
     if has_auth:
-        lines.append("import { requireAuth } from '../middleware/auth.js';")
+        lines.append(f"import {{ {', '.join(_node_auth_names(apis, repo_entities, fk_by_entity, transitions, rules, creator_entities))} }} from '../middleware/auth.js';")
 
     # Determine required models, repositories, and schemas
     used_entities: set[str] = set()
@@ -452,7 +571,10 @@ def _express_router_file(
         if not rel_express:
             rel_express = "/"
 
-        middleware_str = "requireAuth, " if api.auth else ""
+        rule = rules.get(wiring.entity) if wiring else None
+        scoped = owner_scoped_op(rule, wiring)
+        see_all = "[" + ", ".join(f"'{r}'" for r in rule.bypass_roles) + "]" if rule is not None else "[]"
+        middleware_str = _node_guard(api, scoped)
 
         if not wiring:
             lines.append(f"router.{method}('{rel_express}', {middleware_str}async (req: Request, res: Response) => {{")
@@ -468,12 +590,17 @@ def _express_router_file(
             lines.append(f"router.{method}('{rel_express}', {middleware_str}async (req: Request, res: Response) => {{")
             lines.append("  const limit = req.query.limit ? Number(req.query.limit) : 50;")
             lines.append("  const offset = req.query.offset ? Number(req.query.offset) : 0;")
-            lines.append(f"  const items = await {ent}Repository.list({{ limit, offset }});")
+            if scoped:
+                lines.append(f"  const owner = ownerScope((req as any).user, {see_all}); // R-570: only their own, unless they see all")
+            lines.append(f"  const items = await {ent}Repository.list({{ limit, offset{', owner' if scoped else ''} }});")
             lines.append("  res.json(items);")
             lines.append("});")
         elif wiring.op is Op.GET:
             param = wiring.id_param or "id"
             lines.append(f"router.{method}('{rel_express}', {middleware_str}async (req: Request, res: Response) => {{")
+            if scoped:
+                lines.append(f"  const owner = await {ent}Repository.ownerOf(String(req.params.{param}));")
+                lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
             lines.append(f"  const item = await {ent}Repository.getById(String(req.params.{param}));")
             lines.append("  if (!item) return res.status(404).json({ error: 'not_found', message: 'Item not found' });")
             lines.append("  res.json(item);")
@@ -484,12 +611,16 @@ def _express_router_file(
             lines.append("  if (!parsed.success) {")
             lines.append("    return res.status(400).json({ error: 'validation_error', details: parsed.error.format() });")
             lines.append("  }")
-            lines.append(f"  const created = await {ent}Repository.create(parsed.data);")
+            creator_arg = ", ownerOf((req as any).user)" if ent in creator_entities else ""
+            lines.append(f"  const created = await {ent}Repository.create(parsed.data{creator_arg});")
             lines.append("  res.status(201).json(created);")
             lines.append("});")
         elif wiring.op is Op.UPDATE:
             param = wiring.id_param or "id"
             lines.append(f"router.{method}('{rel_express}', {middleware_str}async (req: Request, res: Response) => {{")
+            if scoped:
+                lines.append(f"  const owner = await {ent}Repository.ownerOf(String(req.params.{param}));")
+                lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
             lines.append(f"  const parsed = update{ent}Schema.safeParse(req.body);")
             lines.append("  if (!parsed.success) {")
             lines.append("    return res.status(400).json({ error: 'validation_error', details: parsed.error.format() });")
@@ -501,6 +632,9 @@ def _express_router_file(
         elif wiring.op is Op.DELETE:
             param = wiring.id_param or "id"
             lines.append(f"router.{method}('{rel_express}', {middleware_str}async (req: Request, res: Response) => {{")
+            if scoped:
+                lines.append(f"  const owner = await {ent}Repository.ownerOf(String(req.params.{param}));")
+                lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see_all})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
             lines.append(f"  const ok = await {ent}Repository.delete(String(req.params.{param}));")
             lines.append("  if (!ok) return res.status(404).json({ error: 'not_found', message: 'Item not found' });")
             lines.append("  res.status(204).send();")
@@ -509,7 +643,9 @@ def _express_router_file(
             param = wiring.id_param or "id"
             fk_col = f"{wiring.relation}_id" if wiring.relation else "parent_id"
             lines.append(f"router.{method}('{rel_express}', {middleware_str}async (req: Request, res: Response) => {{")
-            lines.append(f"  const items = await {ent}Repository.listBy('{fk_col}', String(req.params.{param}));")
+            if scoped:
+                lines.append(f"  const owner = ownerScope((req as any).user, {see_all});")
+            lines.append(f"  const items = await {ent}Repository.listBy('{fk_col}', String(req.params.{param}){', owner' if scoped else ''});")
             lines.append("  res.json(items);")
             lines.append("});")
 
@@ -529,6 +665,11 @@ def _express_router_file(
             roles_js = ", ".join(f"'{r}'" for r in dict.fromkeys((*route.roles, "admin")))
             lines.append(f"  const held: string[] = ((req as any).user?.roles as string[] | undefined) ?? [];")
             lines.append(f"  if (![{roles_js}].some((r) => held.includes(r))) return res.status(403).json({{ error: 'forbidden' }});")
+        owned = owned_transition(rules, route)
+        if owned is not None:
+            see = "[" + ", ".join(f"'{r}'" for r in owned.bypass_roles) + "]"
+            lines.append(f"  const owner = await {route.workflow.entity}Repository.ownerOf(String(req.params.{route.id_param}));")
+            lines.append(f"  if (owner === undefined || !canTouch((req as any).user, owner, {see})) return res.status(404).json({{ error: 'not_found', message: 'Item not found' }});")
         lines.append(f"  const item = await {route.workflow.entity}Repository.getById(String(req.params.{route.id_param}));")
         lines.append("  if (!item) return res.status(404).json({ error: 'not_found', message: 'Item not found' });")
         lines.append(f"  const allowed = [{allowed_js}];")
@@ -547,13 +688,16 @@ def _hono_router_file(
     fk_by_entity: dict[str, tuple[str, ...]],
     has_auth: bool,
     transitions: tuple = (),
+    rules: dict | None = None,
+    creator_entities: frozenset[str] = frozenset(),
 ) -> str:
+    rules = rules or {}
     lines = [
         f"// Generated by OmniStackAI: Hono Router for {segment}",
         "import { Hono } from 'hono';",
     ]
     if has_auth:
-        lines.append("import { requireAuth } from '../middleware/auth.js';")
+        lines.append(f"import {{ {', '.join(_node_auth_names(apis, repo_entities, fk_by_entity, transitions, rules, creator_entities))} }} from '../middleware/auth.js';")
 
     used_entities: set[str] = set()
     for api in apis:
@@ -577,7 +721,10 @@ def _hono_router_file(
         if not rel_hono:
             rel_hono = "/"
 
-        middleware_str = "requireAuth, " if api.auth else ""
+        rule = rules.get(wiring.entity) if wiring else None
+        scoped = owner_scoped_op(rule, wiring)
+        see_all = "[" + ", ".join(f"'{r}'" for r in rule.bypass_roles) + "]" if rule is not None else "[]"
+        middleware_str = _node_guard(api, scoped)
 
         if not wiring:
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
@@ -591,12 +738,17 @@ def _hono_router_file(
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
             lines.append("  const limit = c.req.query('limit') ? Number(c.req.query('limit')) : 50;")
             lines.append("  const offset = c.req.query('offset') ? Number(c.req.query('offset')) : 0;")
-            lines.append(f"  const items = await {ent}Repository.list({{ limit, offset }});")
+            if scoped:
+                lines.append(f"  const owner = ownerScope((c as any).get('user'), {see_all}); // R-570: only their own, unless they see all")
+            lines.append(f"  const items = await {ent}Repository.list({{ limit, offset{', owner' if scoped else ''} }});")
             lines.append("  return c.json(items);")
             lines.append("});")
         elif wiring.op is Op.GET:
             param = wiring.id_param or "id"
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
+            if scoped:
+                lines.append(f"  const owner = await {ent}Repository.ownerOf(c.req.param('{param}') ?? '');")
+                lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
             lines.append(f"  const item = await {ent}Repository.getById(c.req.param('{param}') ?? '');")
             lines.append("  if (!item) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
             lines.append("  return c.json(item);")
@@ -608,12 +760,16 @@ def _hono_router_file(
             lines.append("  if (!parsed.success) {")
             lines.append("    return c.json({ error: 'validation_error', details: parsed.error.format() }, 400);")
             lines.append("  }")
-            lines.append(f"  const created = await {ent}Repository.create(parsed.data);")
+            creator_arg = ", ownerOf((c as any).get('user'))" if ent in creator_entities else ""
+            lines.append(f"  const created = await {ent}Repository.create(parsed.data{creator_arg});")
             lines.append("  return c.json(created, 201);")
             lines.append("});")
         elif wiring.op is Op.UPDATE:
             param = wiring.id_param or "id"
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
+            if scoped:
+                lines.append(f"  const owner = await {ent}Repository.ownerOf(c.req.param('{param}') ?? '');")
+                lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
             lines.append("  const body = await c.req.json();")
             lines.append(f"  const parsed = update{ent}Schema.safeParse(body);")
             lines.append("  if (!parsed.success) {")
@@ -626,6 +782,9 @@ def _hono_router_file(
         elif wiring.op is Op.DELETE:
             param = wiring.id_param or "id"
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
+            if scoped:
+                lines.append(f"  const owner = await {ent}Repository.ownerOf(c.req.param('{param}') ?? '');")
+                lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see_all})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
             lines.append(f"  const ok = await {ent}Repository.delete(c.req.param('{param}') ?? '');")
             lines.append("  if (!ok) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
             lines.append("  return c.body(null, 204);")
@@ -634,7 +793,9 @@ def _hono_router_file(
             param = wiring.id_param or "id"
             fk_col = f"{wiring.relation}_id" if wiring.relation else "parent_id"
             lines.append(f"router.{method}('{rel_hono}', {middleware_str}async (c) => {{")
-            lines.append(f"  const items = await {ent}Repository.listBy('{fk_col}', c.req.param('{param}') ?? '');")
+            if scoped:
+                lines.append(f"  const owner = ownerScope((c as any).get('user'), {see_all});")
+            lines.append(f"  const items = await {ent}Repository.listBy('{fk_col}', c.req.param('{param}') ?? ''{', owner' if scoped else ''});")
             lines.append("  return c.json(items);")
             lines.append("});")
 
@@ -652,6 +813,11 @@ def _hono_router_file(
             roles_js = ", ".join(f"'{r}'" for r in dict.fromkeys((*route.roles, "admin")))
             lines.append("  const held: string[] = (((c as any).get('user') as any)?.roles as string[] | undefined) ?? [];")
             lines.append(f"  if (![{roles_js}].some((r) => held.includes(r))) return c.json({{ error: 'forbidden' }}, 403);")
+        owned = owned_transition(rules, route)
+        if owned is not None:
+            see = "[" + ", ".join(f"'{r}'" for r in owned.bypass_roles) + "]"
+            lines.append(f"  const owner = await {route.workflow.entity}Repository.ownerOf(c.req.param('{route.id_param}') ?? '');")
+            lines.append(f"  if (owner === undefined || !canTouch((c as any).get('user'), owner, {see})) return c.json({{ error: 'not_found', message: 'Item not found' }}, 404);")
         lines.append(f"  const item = await {route.workflow.entity}Repository.getById(c.req.param('{route.id_param}') ?? '');")
         lines.append("  if (!item) return c.json({ error: 'not_found', message: 'Item not found' }, 404);")
         lines.append(f"  const allowed = [{allowed_js}];")
@@ -992,7 +1158,8 @@ class NodeBackendAdapter:
         for entity in ir.entities:
             files.append(GeneratedFile(
             f"src/db/{table_name(entity.name)}.ts",
-            _db_repository_file(entity, next((w for w in workflows_of(ir) if w.entity == entity.name), None)),
+            _db_repository_file(entity, next((w for w in workflows_of(ir) if w.entity == entity.name), None),
+                                records_creator=needs_auth(ir) and "created_by" not in {f.name for f in entity.fields}),
         ))
 
         # 5. Auth Middleware
@@ -1026,13 +1193,19 @@ class NodeBackendAdapter:
 
         segments = sorted(apis_by_segment.keys())
 
+        # R-570: entities whose rows record their creator (sign-in exists and the column is the platform's).
+        creator_entities = frozenset(
+            e.name for e in ir.entities if needs_auth(ir) and "created_by" not in {f.name for f in e.fields}
+        )
         for seg, apis in apis_by_segment.items():
             if framework == "hono":
                 seg_transitions = tuple(r for r in transition_routes(ir) if r.path.strip('/').split('/')[0] == seg)
-                router_code = _hono_router_file(seg, apis, repo_entities, fk_by_entity, has_auth, seg_transitions)
+                router_code = _hono_router_file(seg, apis, repo_entities, fk_by_entity, has_auth, seg_transitions,
+                                                rules_by_entity(ir), creator_entities)
             else:
                 seg_transitions = tuple(r for r in transition_routes(ir) if r.path.strip('/').split('/')[0] == seg)
-                router_code = _express_router_file(seg, apis, repo_entities, fk_by_entity, has_auth, seg_transitions)
+                router_code = _express_router_file(seg, apis, repo_entities, fk_by_entity, has_auth, seg_transitions,
+                                                rules_by_entity(ir), creator_entities)
             files.append(GeneratedFile(f"src/routes/{seg}.ts", router_code))
 
         # 7. Main Application Assembly
