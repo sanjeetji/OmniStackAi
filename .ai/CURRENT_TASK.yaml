@@ -1,28 +1,31 @@
-task_id: PC-114
-status: completed
+task_id: PC-115
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-114
+tracker_row: PC-115
 started_at: "2026-10-01"
-completed_at: "2026-10-01"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Found creating the payments test project: a marketplace prompt planned as an ecosystem (buyer
-  storefront, seller portal, admin) got none of the money the prompt asked for. The prompt's privacy and
-  money rules reach every planner and every app of an ecosystem; the shared backend takes every app's
-  rules; ecosystem apps get a page per record (somewhere to pay); a customer who signs up gets the plan's
-  customer role so they can buy.
+  Remove R-512's Manage -> Payments toggle (founder decision 2026-10-01). It injected a Stripe/Razorpay
+  checkout into the web app only, took the amount from the client and recorded nothing; R-567's money
+  capability replaces it in every backend, with keys as project secrets. The Studio injector, its
+  routes and tests, the control plane's payments handler and column, and the console's Payments
+  section go; an app's payments are set up from its plan, its keys in Secrets.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
+  - services/control-plane/
+  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - docs/
 forbidden_changes:
-  - task verify stays offline with 0 model calls
+  - project secrets and the Stripe/Razorpay key checks under Connectors stay
 required_gates:
-  - Live - the console-built marketplace takes a payment from a buyer who just signed up
+  - Live - the console's Manage page has no Payments section and the rest of Manage works; the money proof still passes
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
