@@ -192,11 +192,14 @@ def build() -> tuple[list[Task], list[Task]]:
             continue
         status = LIVE if tid in data.NEEDS_LIVE_PROOF else "Completed"
         tracked = data.NEEDS_LIVE_PROOF.get(tid, "")
+        note = "Built and tested offline; prove it with a real account." if status == LIVE else ""
+        if tid in data.SUPERSEDED_DELIVERED:
+            status = "Superseded"
+            tracked, note = data.SUPERSEDED_DELIVERED[tid]
         rows[tid] = Task(
             id=tid, title=short(text), source="CHANGELOG", area="", phase="Delivered",
             status=status, priority="P0" if status == LIVE else "", tracked_in=tracked,
-            done_on=date,
-            notes="Built and tested offline; prove it with a real account." if status == LIVE else "",
+            done_on=date, notes=note,
         )
 
     # R-532 was delivered but its CHANGELOG line was never written; PROJECT_STATE records it.

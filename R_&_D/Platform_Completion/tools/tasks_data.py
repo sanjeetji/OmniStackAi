@@ -359,6 +359,11 @@ QUEUE = [
      "create records its creator from the token; an `ownership` rule (read/write own|all, see_all roles) is "
      "enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. "
      "Assigned-to visibility (a driver's deliveries) is PC-111."),
+    ("PC-116", "A generated page links only to screens that exist in its app", "2 Maximum features",
+     "Both", "Not Started", "P2", "PC-114", "Seen 2026-10-01 in Bazaar Lite: the buyer storefront's home "
+     "page has 'List with us' -> /listings/new, but only the seller portal has a listing editor, and the "
+     "storefront's /listings/* are API proxy routes, so the link answers 422. The preview's UI check "
+     "reports it; nothing repairs it."),
     ("PC-115", "Remove R-512's Manage -> Payments toggle (replaced by R-567)", "2 Maximum features", "Both",
      "Completed", "P2", "R-567", "Founder decision 2026-10-01: it took the amount from the client, recorded "
      "nothing and only reached the web app. Payments come from the plan; keys are project secrets."),
@@ -616,7 +621,8 @@ QUEUE = [
     ("PC-071", "Live proof of every 'Completed - needs live proof' item with the real accounts",
      "6 Go-live (credentials last)", "Platform", "Not Started", "P0", "PC-070",
      "Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. "
-     "Payments in test mode done 2026-10-01 (Stripe and Razorpay, see R-567); live-mode keys remain."),
+     "Payments in test mode done 2026-10-01 (Stripe and Razorpay, see R-567); live-mode keys "
+     "deferred by the founder 2026-10-01 to this step."),
     ("PC-015", "Private beta with real users: product KPIs, minimal support tooling, feedback",
      "6 Go-live (credentials last)", "Platform", "Not Started", "P0", "PC-071",
      "Covers R-051, R-107. The platform is not 'live' until strangers use it."),
@@ -849,8 +855,14 @@ for _id in ("R-081", "R-082", "R-083", "R-084", "R-085", "R-086", "R-087", "R-08
 
 # Completed in CHANGELOG but only in code, never run against a real external account.
 NEEDS_LIVE_PROOF = {
-    "R-509": "PC-008", "R-510": "PC-008", "R-511": "PC-013", "R-512": "R-567",
+    "R-509": "PC-008", "R-510": "PC-008", "R-511": "PC-013",
     "R-513": "PC-015", "R-516": "PC-012", "R-546": "PC-071",
+}
+
+# Delivered in CHANGELOG, later replaced by other work: (replaced by, note).
+SUPERSEDED_DELIVERED = {
+    "R-512": ("R-567", "Removed 2026-10-01 (PC-115): R-567's money capability replaced it, "
+              "proven with real Stripe and Razorpay test accounts."),
 }
 
 # --- Other R_&_D sources (specs, plans, gap analysis) ------------------------------------------

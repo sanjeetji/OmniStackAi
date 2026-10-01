@@ -71,4 +71,34 @@ Refunds go through the provider's refund API.
 - **Live, without keys:** a marketplace (customers pay for orders, 10% commission, vendors paid
   out) ran on Python, Go, Express and Hono through the platform's runner and passed 33 checks on
   each. Those checks included Stripe and Razorpay webhooks signed locally with a test secret.
-- **Still to do:** a real Stripe and Razorpay test-mode account, at PC-070 and PC-071.
+- **Live, real test-mode accounts (2026-10-01):** the console-built Bazaar Lite (INR, 10%
+  commission), keys added only in **Manage -> Secrets**:
+  - **Stripe:** a buyer paid ₹799 by card (4242 4242 4242 4242) in Stripe Checkout; the signed
+    `checkout.session.completed` settled it; the seller got ₹719.10; an admin refunded ₹100; Stripe
+    shows the PaymentIntent and the refund succeeded.
+  - **Razorpay** (`PAYMENT_PROVIDER=razorpay`): the app created a Razorpay order; the buyer paid ₹799
+    by test Netbanking; `payment.captured` and `order.paid` both arrived (the second was ignored as a
+    duplicate); the seller got ₹719.10; an admin refunded ₹100; Razorpay shows the payment captured
+    and the refund processed.
+  - Both left balanced books: external -699.00, revenue 69.90, owed to users 629.10.
+- **Still to do:** live-mode keys (real money), at PC-070 and PC-071. The founder deferred them on
+  2026-10-01.
+
+## Testing payments against a local preview
+
+A preview's API listens on `127.0.0.1`, so a provider can't reach it on its own.
+
+- **Stripe:** `stripe listen --events checkout.session.completed --forward-to <api>/payments/webhooks/stripe`.
+  Without `--events`, nothing is forwarded. `stripe listen --print-secret` gives the
+  `STRIPE_WEBHOOK_SECRET`. Instead of running `stripe login`, you can pass the project's
+  `STRIPE_SECRET_KEY` in the `STRIPE_API_KEY` environment variable. Indian test cards ask for 3D
+  Secure; 4242 4242 4242 4242 doesn't.
+- **Razorpay:** open a public tunnel (`cloudflared tunnel --url <api>`). In the Razorpay Dashboard,
+  under Webhooks, add `https://<tunnel>/payments/webhooks/razorpay` with `payment.captured`, and
+  store the same secret as `RAZORPAY_WEBHOOK_SECRET`. On desktop, Razorpay Checkout's UPI tab shows
+  only a QR code, so pay with test **Netbanking**: pick a bank, then press **Success** on the mock
+  bank page. The checkout asks for a mobile number first and rejects placeholders such as
+  9876543210.
+- A preview nobody opens for 30 minutes stops (`OMNISTACKAI_PREVIEW_IDLE_MINUTES`); webhooks and
+  direct API calls don't count as opening it. After a restart the API can be on a new port, so
+  point the tunnel or `stripe listen` at the new port. Delete the test webhook when you're done.
