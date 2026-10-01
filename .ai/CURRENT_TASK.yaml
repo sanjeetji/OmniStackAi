@@ -1,45 +1,36 @@
-task_id: PC-063
-status: completed
-phase: Platform Completion — 1 Vibe Mode live
-tracker_row: PC-063
-started_at: "2026-09-30"
-completed_at: "2026-09-30"
+task_id: R-570
+status: in_progress
+phase: Platform Completion — 2 Maximum features
+tracker_row: R-570
+started_at: "2026-10-01"
+completed_at: null
 branch: platform-completion
 objective: >-
-  Android emulator preview without Android Studio. The Studio sets up the SDK command-line tools
-  (checksum-verified), a system image and one virtual device on the owner's request; boots it
-  headless; installs Expo Go for the app's Expo SDK and opens the project's mobile preview on it;
-  and shows its screen in the console with taps, swipes, text and back/home. The console also shows
-  the mobile preview itself (the exp:// link a phone opens), which it did not render before.
+  Permissions beyond role: ownership and row-level rules in generated apps. A record created by a
+  signed-in user records who created it (seen live in PC-008: a published notes app saved notes
+  with created_by null, so private notes were not private); an entity can be owner-scoped ("a driver
+  sees only their own orders", "private notes"), so its list, read, update and delete answer only
+  the owner's rows unless the user's role is allowed to see all; the planner derives these rules
+  from the prompt; every backend the platform generates enforces the same rules.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
-  - services/control-plane/
-  - apps/console-web/
-  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - nothing is downloaded without the owner pressing Set up; verify never downloads the SDK or boots a device
-  - Android Studio is not installed or required
   - task verify stays offline with 0 model calls
+  - no rule is enforced only in the UI; the API is the boundary
 required_gates:
-  - Live - on this Mac, set up from the console, boot headless, open a generated app in Expo Go and drive it from the Studio
+  - Live - a generated app run through the platform's runner where two users cannot read, change or delete each other's owner-scoped records, and an admin can
   - scripts/verify.sh passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - a video stream (scrcpy or the emulator's gRPC) instead of screenshots
-  - generated mobile list cards titled by the record's ID (PC-109)
-found_and_fixed:
-  - the console never rendered a preview's mobile app (no view or icon for kind "mobile")
-  - a link that cold-starts Expo Go 2.31 crashes it; its home screen is started first
-  - Expo Go's first-run developer-menu introduction is invisible on a headless emulator and swallowed every touch; marked as seen
-  - the preview API listened on loopback while the mobile app called the LAN address; it listens on all interfaces when there is a mobile app
+deferred: []
+found_and_fixed: []
