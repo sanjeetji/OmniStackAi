@@ -201,3 +201,29 @@ class TheBundleIsBuiltBeforeTheScan(TestCase):
         self.assertEqual(phone_tunnel.warm_bundles([8081], fetch=lambda u, h: (_ for _ in ()).throw(OSError("refused")),
                                                    log=notes.append), [])
         self.assertEqual(len(notes), 2)
+
+
+class EveryPhoneAppHasItsOwnPort(TestCase):
+    """Found by the benchmark (PC-122): a second Expo app took a port already given to a web app."""
+
+    def test_allocated_ports_are_used(self) -> None:
+        plan = build_run_plan(str(_repo("mobile", "courier")), api_port=8000, mobile_port=8081, mobile_ports=(8081, 9123))
+        self.assertEqual(sorted(s["port"] for s in plan.mobile_surfaces), [8081, 9123])
+
+    def test_the_preview_allocates_one_per_app(self) -> None:
+        from omnistackai_agent_engine.localrun import run
+
+        root = _repo("mobile", "courier")
+        for web in ("web", "admin", "merchant"):
+            (root / "apps" / web).mkdir(parents=True, exist_ok=True)
+            (root / "apps" / web / "package.json").write_text('{"name": "x", "dependencies": {"next": "15"}}')
+        seen = {}
+        ports = iter(range(41000, 41100))
+        with mock.patch.object(run, "allocate_free_ports", lambda n, host: [next(ports) for _ in range(n)]), \
+                mock.patch.object(run, "start_app", lambda repo, plan, **k: seen.setdefault("plan", plan) and mock.Mock(processes=[])):
+            run.start_preview_app(str(root))
+        plan = seen["plan"]
+        taken = [p for _, url in plan.web_surfaces for p in [int(url.rsplit(":", 1)[1])]]
+        mobile = [s["port"] for s in plan.mobile_surfaces]
+        self.assertEqual(len(set(mobile)), 2)
+        self.assertFalse(set(mobile) & set(taken), "no phone app shares a port with a web app")

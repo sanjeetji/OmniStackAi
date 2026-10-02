@@ -154,7 +154,7 @@ class TestLocalAppSession(unittest.TestCase):
                 patch("omnistackai_agent_engine.localrun.run._launch", side_effect=processes),
                 patch("omnistackai_agent_engine.localrun.run._wait_healthy", return_value=True),
             ):
-                with self.assertRaisesRegex(LocalAppRunError, "background process exited"):
+                with self.assertRaisesRegex(LocalAppRunError, "exited during startup"):
                     start_app(tmp, plan=_plan(tmp), log=None)
             self.assertTrue(all(process.terminate_calls == 1 for process in processes))
 

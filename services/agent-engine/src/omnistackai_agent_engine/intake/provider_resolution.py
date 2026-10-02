@@ -389,8 +389,10 @@ def resolve_page_providers_from_env(
     if local and ready:
         # PC-014: local preferred means every model call stays on this machine, pages included.
         spec_order = [("ollama", None)]
+    # Ollama is only probed here when local is preferred; otherwise it is the chain's last resort and
+    # is probed when reached. Logging "False" read as "Ollama is down" (found in PC-122's benchmark).
     logger.warning("page providers: %s (local preferred: %s, Ollama answering: %s)",
-                ", ".join(p for p, _ in spec_order), local, ready)
+                ", ".join(p for p, _ in spec_order), local, ready if local else "checked when reached")
     for provider, model in spec_order:
         try:
             if provider in ("ollama", "local"):

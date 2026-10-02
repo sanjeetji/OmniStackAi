@@ -11,6 +11,7 @@ queues.
 | File | Use it for |
 |---|---|
 | `OmniStackAI_Master_Tasks.xlsx` | The main document. Sheets: **Start Here**, **Work Queue** (ordered), **All Tasks** (every item, filterable), **Summary**, **Pack Catalog**, **Tracker Phases** (how each v6 tracker phase is covered), **Targets**, **Decisions**, **Legend**. |
+| `GOAL_CHECK_PROMPT.md` | A prompt to paste into any AI assistant at any time: it checks the platform against the goal and reports what is done, what remains and what is next. |
 | `M1_M6_PLAN.md` | **Read first.** The founder direction (2026-10-02): milestones M1–M6 come before everything else in the queue; native Swift/Kotlin is M7. |
 | `NATIVE_MOBILE_PREVIEW_PLAN.md` | How users preview Android and iOS apps: open source first, local then hosted, and how the sandbox isolates them. |
 | `PACK_CATALOG.md` | Every horizontal and vertical pack (108 + 213 in 30 industries), with the roles and surfaces (app, web, admin panel, API) each industry gets. |

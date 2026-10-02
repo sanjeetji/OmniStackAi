@@ -99,6 +99,7 @@ def _plan_from_env(
     public_base: str = "",
     extra_env: Mapping[str, str] | None = None,
     db: Mapping[str, str] | None = None,
+    mobile_ports: tuple[int, ...] = (),
     phone_tunnels: Mapping[str, str] | None = None,
     jwt_secret: str | None = None,
 ) -> RunPlan:
@@ -117,6 +118,7 @@ def _plan_from_env(
         admin_port=admin_port if admin_port is not None else int(os.environ.get("OMNISTACKAI_APP_ADMIN_PORT", "3100")),
         mobile_port=mobile_port if mobile_port is not None else int(os.environ.get("OMNISTACKAI_APP_MOBILE_PORT", "8081")),
         extra_app_ports=extra_app_ports,
+        mobile_ports=mobile_ports,
         public_base=public_base,
         jwt_secret=jwt_secret or os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret"),
         extra_env=extra_env,
@@ -246,6 +248,7 @@ def _launch(step: RunStep, log_callback: Callable[[str], None] | None = None) ->
             start_new_session=True,
         )
         proc.omnistack_group = True  # type: ignore[attr-defined]
+        proc.omnistack_label = step.label  # type: ignore[attr-defined]
 
         def _tee() -> None:
             try:
@@ -261,6 +264,7 @@ def _launch(step: RunStep, log_callback: Callable[[str], None] | None = None) ->
         return proc
     proc = subprocess.Popen([_program(step), *step.args], cwd=step.cwd, env=env, start_new_session=True)
     proc.omnistack_group = True  # type: ignore[attr-defined]
+    proc.omnistack_label = step.label  # type: ignore[attr-defined]
     return proc
 
 
@@ -317,8 +321,11 @@ def _port_available(url: str) -> bool:
 
 
 def _ensure_background_processes_running(session: LocalAppSession) -> None:
-    if any(process.poll() is not None for process in session.processes):
-        raise LocalAppRunError("a generated-app background process exited during startup")
+    exited = [process for process in session.processes if process.poll() is not None]
+    if exited:
+        # PC-122: say which one - "a process exited" sent every investigation to the logs first.
+        names = ", ".join(getattr(p, "omnistack_label", "") or "a generated-app process" for p in exited)
+        raise LocalAppRunError(f"{names} exited during startup (exit code {exited[0].returncode})")
 
 
 @dataclass(frozen=True)
@@ -602,10 +609,14 @@ def start_preview_app(
     # allocating rather than assuming two.
     from .plan import discover_web_apps
 
+    from .plan import discover_mobile_apps
+
     extra_count = max(0, len(discover_web_apps(root)) - 2)  # web and admin already have ports
-    ports = allocate_free_ports(4 + extra_count, host)
+    extra_mobile = max(0, len(discover_mobile_apps(root)) - 1)  # PC-122: every phone app its own port
+    ports = allocate_free_ports(4 + extra_count + extra_mobile, host)
     api_port, web_port, admin_port, mobile_port = ports[:4]
-    tunnels, jwt_secret = _phone_tunnels(root, api_port, mobile_port, extra_env, log)
+    mobile_ports = (mobile_port, *ports[4 + extra_count:])
+    tunnels, jwt_secret = _phone_tunnels(root, api_port, mobile_ports, extra_env, log)
     if jwt_secret:  # the caller's environment is applied last, so it must not bring the dev secret back
         # OMNISTACKAI_DEV_MODE=1 also lets a request with no token in as an admin.
         extra_env = {**(extra_env or {}), "JWT_SECRET": jwt_secret, "OMNISTACKAI_DEV_MODE": "0"}
@@ -616,7 +627,8 @@ def start_preview_app(
             web_port=web_port,
             admin_port=admin_port,
             mobile_port=mobile_port,
-            extra_app_ports=ports[4:],
+            extra_app_ports=ports[4:4 + extra_count],
+            mobile_ports=mobile_ports,
             public_base=public_base,
             extra_env=extra_env,
             phone_tunnels={key: t.url for key, t in tunnels.items()},
@@ -640,7 +652,7 @@ def start_preview_app(
     return session
 
 
-def _phone_tunnels(root: Path, api_port: int, mobile_port: int, extra_env: Mapping[str, str] | None,
+def _phone_tunnels(root: Path, api_port: int, mobile_ports: int | tuple[int, ...], extra_env: Mapping[str, str] | None,
                    log: Callable[[str], None] | None) -> tuple[dict, str | None]:
     """PC-124: with OMNISTACKAI_PHONE_ACCESS=anywhere, a public tunnel to the API and to each Expo app.
 
@@ -656,8 +668,9 @@ def _phone_tunnels(root: Path, api_port: int, mobile_port: int, extra_env: Mappi
     tunnels: dict = {}
     try:
         tunnels["api"] = open_tunnel(api_port)
+        ports = (mobile_ports,) if isinstance(mobile_ports, int) else tuple(mobile_ports)
         for offset, app_id in enumerate(mobile_ids):
-            tunnels[app_id] = open_tunnel(mobile_port + offset)
+            tunnels[app_id] = open_tunnel(ports[offset] if offset < len(ports) else ports[0] + offset)
     except Exception as error:  # noqa: BLE001 - no tunnel: the QR stays on the LAN and says so
         for tunnel in tunnels.values():
             close(tunnel.process)

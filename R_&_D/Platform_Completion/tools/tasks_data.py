@@ -395,7 +395,9 @@ QUEUE = [
      "Seen with QuickShip (2026-10-02): once orders are private to their creator and courier, the template's "
      "merchant sees none; 'Order.restaurant -> Restaurant.owner' is a third kind of owner R-570/PC-111 cannot say."),
     ("PC-122", "A quality benchmark: real prompts built end to end in the console, screenshots, scored for "
-     "look, completeness and working features", "2 Maximum features", "Both", "Not Started", "P1", "",
+     "look, completeness and working features", "2 Maximum features", "Both", "Completed", "P1", "",
+     "Done 2026-10-02: scripts/benchmark.sh - 40 prompts (quick 8), console-identical build + design, preview, "
+     "endpoints, UI check with screenshots, 0-100 score, comparison and regressions; runs 60.4 -> 76.8. "
      "Founder question 2026-10-02: will finished apps look modern and 'wow'? Finishing tasks does not prove it; "
      "a fixed set of prompts (marketplace, clinic, delivery, SaaS, blog) built and reviewed after each wave does."),
     ("PC-123", "Hosted databases for published apps (Neon, Supabase) and scheduled backups",
@@ -742,7 +744,10 @@ _MILESTONE_TASKS = [
     ("PC-125", "Check and repair: every generated page, link and API call verified (types, build, a "
      "browser walk); failures go back to the model with the exact error; a working fallback; the build "
      "report says what is verified", _M1, "Both", "Not Started", "P0", "",
-     "The answer to hallucination: never trust model output, verify it and repair it. Folds PC-116."),
+     "The answer to hallucination: never trust model output, verify it and repair it. Folds PC-116. "
+     "Benchmark run 20261002-191643 (PC-122) found, after the type check passed: a link to a page that "
+     "does not exist (/appointment_list 404), text the same colour as its background (contrast 1.00:1), a "
+     "hydration mismatch; without a type-check cache, pages using components they never imported."),
     ("PC-126", "Model routing: local Ollama, free cloud tiers and paid keys, per job (plan, design, repair), "
      "with budgets and fallbacks", _M1, "Platform", "Not Started", "P0", "",
      "Works with no paid key (free cloud first, local as the fallback); a paid key raises quality "

@@ -291,6 +291,7 @@ def build_run_plan(
     admin_port: int = 3100,
     mobile_port: int = 8081,
     extra_app_ports: tuple[int, ...] = (),
+    mobile_ports: tuple[int, ...] = (),
     public_base: str = "",
     jwt_secret: str = "local-dev-secret",
     extra_env: Mapping[str, str] | None = None,
@@ -335,10 +336,16 @@ def build_run_plan(
     # PC-124: with phone access from anywhere, each app and the API have a public https tunnel
     # ("api" and the app's id -> https://<name>.trycloudflare.com); Expo Go opens https as exps://.
     tunnels = dict(phone_tunnels or {})
+    # PC-122, found by the benchmark: the second app's port was `mobile_port + 1`, which the
+    # allocator had already given to a web app - Expo then asked "use another port?" and, being
+    # non-interactive, exited. Callers that allocate pass every app's port in `mobile_ports`.
+    def _port(offset: int) -> int:
+        return mobile_ports[offset] if offset < len(mobile_ports) else mobile_port + offset
+
     mobile_surfaces = tuple(
         {
             "id": app_id,
-            "port": mobile_port + offset,
+            "port": _port(offset),
             "url": tunnels[app_id],
             "scan": "exps://" + tunnels[app_id].removeprefix("https://"),
             "access": "anywhere",
@@ -346,9 +353,9 @@ def build_run_plan(
         if app_id in tunnels
         else {
             "id": app_id,
-            "port": mobile_port + offset,
-            "url": f"http://{lan}:{mobile_port + offset}",
-            "scan": f"exp://{lan}:{mobile_port + offset}",
+            "port": _port(offset),
+            "url": f"http://{lan}:{_port(offset)}",
+            "scan": f"exp://{lan}:{_port(offset)}",
             "access": "lan",
         }
         for offset, app_id in enumerate(mobile_ids)
