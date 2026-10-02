@@ -332,7 +332,9 @@ QUEUE = [
      "to Expo's account check with a made-up token. The real-account run is PC-070/PC-071."),
     ("PC-049", "Managed database for published apps: provision PostgreSQL (Neon, Supabase or "
      "self-hosted) and run migrations and seeds on publish", "1 Vibe Mode live", "Vibe",
-     "Not Started", "P0", "", "A live URL needs a live database. Provider interface with a "
+     "Completed", "P0", "", "Done 2026-10-02: a republish brings the live database up to date (scratch-schema "
+     "comparison, added columns, the schema re-applied; nothing dropped), with a backup first; unpublished apps' "
+     "images are removed. Hosted providers are PC-123. A live URL needs a live database. Provider interface with a "
      "local Docker implementation; MongoDB Atlas once PC-048 exists. From the architecture plan. "
      "PC-008 (2026-09-27) delivered the per-app PostgreSQL in Docker with a migration ledger; left: "
      "hosted providers (Neon/Supabase), backups, and follow-on migrations for schema changes after "
@@ -373,6 +375,10 @@ QUEUE = [
      "look, completeness and working features", "2 Maximum features", "Both", "Not Started", "P1", "",
      "Founder question 2026-10-02: will finished apps look modern and 'wow'? Finishing tasks does not prove it; "
      "a fixed set of prompts (marketplace, clinic, delivery, SaaS, blog) built and reviewed after each wave does."),
+    ("PC-123", "Hosted databases for published apps (Neon, Supabase) and scheduled backups",
+     "6 Go-live (credentials last)", "Platform", "Not Started", "P1", "PC-049",
+     "PC-049 keeps the self-hosted database up to date and backs it up before schema changes; a provider "
+     "driver (create a database per app, its URL as DATABASE_URL) needs the founder's Neon or Supabase account."),
     ("PC-116", "A generated page links only to screens that exist in its app", "2 Maximum features",
      "Both", "Not Started", "P2", "PC-114", "Seen 2026-10-01 in Bazaar Lite: the buyer storefront's home "
      "page has 'List with us' -> /listings/new, but only the seller portal has a listing editor, and the "

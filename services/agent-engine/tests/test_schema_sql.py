@@ -61,7 +61,7 @@ class TypeMapTests(TestCase):
             ),
         )
         sql = render_postgres_schema(_ir((entity,)))
-        self.assertIn('CREATE TABLE "widget" (', sql)
+        self.assertIn('CREATE TABLE IF NOT EXISTS "widget" (', sql)
         self.assertIn('"id" UUID PRIMARY KEY DEFAULT gen_random_uuid()', sql)
         self.assertIn('"label" TEXT NOT NULL', sql)
         self.assertIn('"notes" TEXT', sql)
@@ -103,7 +103,7 @@ class ForeignKeyTests(TestCase):
         b = Entity("Tag", (Field("id", FieldType.UUID, True),), (Relation("books", "Book", RelationKind.MANY_TO_MANY),))
         sql = render_postgres_schema(_ir((a, b)))
         # deterministic sorted pair -> one join table named book_tag
-        self.assertEqual(sql.count('CREATE TABLE "book_tag" ('), 1)
+        self.assertEqual(sql.count('CREATE TABLE IF NOT EXISTS "book_tag" ('), 1)
         self.assertIn('PRIMARY KEY ("book_id", "tag_id")', sql)
 
 
@@ -120,7 +120,7 @@ class AdapterEmissionTests(TestCase):
     def test_python_backend_emits_migration_for_postgres(self) -> None:
         project = PythonBackendAdapter().generate(example_ir("minimal-blog"))
         self.assertIn("migrations/0001_init.sql", project.paths())
-        self.assertIn('CREATE TABLE "post" (', project.get("migrations/0001_init.sql").content)
+        self.assertIn('CREATE TABLE IF NOT EXISTS "post" (', project.get("migrations/0001_init.sql").content)
 
     def test_go_backend_emits_migration_for_postgres(self) -> None:
         project = GoBackendAdapter().generate(example_ir("rideshare-favourites"))

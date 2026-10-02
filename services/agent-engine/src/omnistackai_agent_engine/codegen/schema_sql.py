@@ -227,7 +227,7 @@ def _join_tables(ir: ApplicationIR) -> list[str]:
                 a, b = key
                 join = f"{a}_{b}"
                 seen[key] = (
-                    f"CREATE TABLE {sql_identifier(join)} (\n"
+                    f"CREATE TABLE IF NOT EXISTS {sql_identifier(join)} (\n"
                     f"    {sql_identifier(f'{a}_id')} UUID NOT NULL REFERENCES {sql_identifier(a)}({sql_identifier('id')}),\n"
                     f"    {sql_identifier(f'{b}_id')} UUID NOT NULL REFERENCES {sql_identifier(b)}({sql_identifier('id')}),\n"
                     f"    PRIMARY KEY ({sql_identifier(f'{a}_id')}, {sql_identifier(f'{b}_id')})\n"
@@ -304,19 +304,25 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         table = _table(entity.name)
         columns = ",\n".join(_column_lines(entity, has_auth=auth))
         workflow = workflows_by_entity.get(entity.name)
+        # PC-049: every statement is safe to run again, so a published database can be brought up to
+        # date by re-applying the schema (new tables, a lifecycle's new states, new triggers).
+        blocks.append(f"CREATE TABLE IF NOT EXISTS {sql_identifier(table)} (\n{columns}\n);")
         if workflow is not None:
             allowed = ", ".join(f"'{state}'" for state in workflow.states)
-            columns += (
-                f",\n  CONSTRAINT {sql_identifier(f'chk_{table}_{workflow.field}')}"
-                f" CHECK ({sql_identifier(workflow.field)} IN ({allowed}))"
+            check = sql_identifier(f"chk_{table}_{workflow.field}")
+            # Re-made each time, so a new state is allowed at once; NOT VALID leaves a row in a state
+            # the plan has since dropped where it is, rather than failing the publish.
+            blocks.append(f"ALTER TABLE {sql_identifier(table)} DROP CONSTRAINT IF EXISTS {check};")
+            blocks.append(
+                f"ALTER TABLE {sql_identifier(table)} ADD CONSTRAINT {check}"
+                f" CHECK ({sql_identifier(workflow.field)} IN ({allowed})) NOT VALID;"
             )
-        blocks.append(f"CREATE TABLE {sql_identifier(table)} (\n{columns}\n);")
-        if workflow is not None:
             blocks.append(
                 f"ALTER TABLE {sql_identifier(table)} ALTER COLUMN {sql_identifier(workflow.field)}"
                 f" SET DEFAULT '{workflow.initial}';"
             )
         # R-502: BEFORE UPDATE trigger keeps updated_at current.
+        blocks.append(f"DROP TRIGGER IF EXISTS {sql_identifier(f'trg_{table}_updated_at')} ON {sql_identifier(table)};")
         blocks.append(
             f"CREATE TRIGGER {sql_identifier(f'trg_{table}_updated_at')}\n"
             f"  BEFORE UPDATE ON {sql_identifier(table)}\n"

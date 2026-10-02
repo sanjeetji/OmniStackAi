@@ -150,10 +150,14 @@ class ThePublisher(TestCase):
     def test_each_migration_runs_once_in_one_transaction(self) -> None:
         docker = _FakeDocker()
         self._publish(self._publisher(docker))
-        applied = [s for s in docker.stdins if s and "INSERT INTO _omnistack_migrations" in s]
+        applied = [s for s in docker.stdins if s and "INSERT INTO _omnistack_migrations" in s
+                   and not s.startswith("INSERT INTO _omnistack_migrations")]
         self.assertEqual(len(applied), len(bundle.migrations(self.repo)))
+        # PC-049: the schema's version is remembered too, so a changed schema is noticed next time.
+        self.assertEqual(len([s for s in docker.stdins if s and s.startswith("INSERT INTO _omnistack_migrations (name) VALUES ('0001_init.sql@")]), 1)
         migration_calls = [c for c, s in zip(docker.calls, docker.stdins)
-                           if s and "INSERT INTO _omnistack_migrations" in s]
+                           if s and "INSERT INTO _omnistack_migrations" in s
+                           and not s.startswith("INSERT INTO _omnistack_migrations")]
         self.assertTrue(migration_calls and all("-1" in c for c in migration_calls))
 
     def test_secrets_stay_private_and_stable(self) -> None:
@@ -272,7 +276,7 @@ class TheFirstRecordSaves(TestCase):
             Field(name="created_at", type=FieldType.DATETIME), Field(name="updated_at", type=FieldType.DATETIME),
             Field(name="due_at", type=FieldType.DATETIME)))
         sql = render_postgres_schema(dataclasses.replace(ir, entities=ir.entities + (note,)))
-        table = sql.split('CREATE TABLE "note"')[1].split(");")[0]
+        table = sql.split('CREATE TABLE IF NOT EXISTS "note"')[1].split(");")[0]
         self.assertIn('"created_at" TIMESTAMPTZ NOT NULL DEFAULT now()', table)
         self.assertIn('"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now()', table)
         self.assertNotIn('"due_at" TIMESTAMPTZ NOT NULL DEFAULT', table, "only the managed timestamps")

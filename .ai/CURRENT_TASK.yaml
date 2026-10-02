@@ -1,8 +1,9 @@
 task_id: PC-049
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: PC-049
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   A published app's database keeps up with its project. PC-008 applies 0001_init.sql once; a
@@ -26,3 +27,8 @@ forbidden_changes:
 required_gates:
   - Live - an app published, its plan changed (a new field, a new entity, notifications), published again - the live database has the new column and tables, the old rows are intact, a backup exists, a dropped field is reported and kept
   - scripts/verify.sh passes
+found_and_fixed:
+  - Unpublishing left the app's images behind (the cause of the Docker disk filling); they are removed, and pruning includes the companion's images.
+  - Entity tables, updated_at triggers and lifecycle checks were not safe to re-apply; they are.
+deferred:
+  - PC-123 - hosted databases (Neon, Supabase) and scheduled backups; needs the founder's account.

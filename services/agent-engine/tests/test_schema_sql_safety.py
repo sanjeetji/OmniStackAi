@@ -72,9 +72,9 @@ class QuotedIdentifierTests(TestCase):
 
     def test_schema_quotes_every_owned_identifier(self) -> None:
         sql = render_postgres_schema(_ir((self.order, self.user)))
-        self.assertIn('CREATE TABLE "user" (', sql)
+        self.assertIn('CREATE TABLE IF NOT EXISTS "user" (', sql)
         self.assertIn('"group" TEXT NOT NULL', sql)
-        self.assertIn('CREATE TABLE "order" (', sql)
+        self.assertIn('CREATE TABLE IF NOT EXISTS "order" (', sql)
         self.assertIn('"select" TEXT NOT NULL', sql)
         self.assertIn('"user_id" UUID REFERENCES "user"("id")', sql)
         self.assertIn('CREATE INDEX "where" ON "order" ("select");', sql)
@@ -121,14 +121,14 @@ class DependencyOrderingTests(TestCase):
             (Relation("order", "Order", RelationKind.MANY_TO_ONE),),
         )
         sql = render_postgres_schema(_ir((line_item, order, user)))
-        self.assertLess(_position(sql, 'CREATE TABLE "user"'), _position(sql, 'CREATE TABLE "order"'))
-        self.assertLess(_position(sql, 'CREATE TABLE "order"'), _position(sql, 'CREATE TABLE "line_item"'))
+        self.assertLess(_position(sql, 'CREATE TABLE IF NOT EXISTS "user"'), _position(sql, 'CREATE TABLE IF NOT EXISTS "order"'))
+        self.assertLess(_position(sql, 'CREATE TABLE IF NOT EXISTS "order"'), _position(sql, 'CREATE TABLE IF NOT EXISTS "line_item"'))
 
     def test_independent_entities_keep_input_order(self) -> None:
         zebra = Entity("Zebra", (Field("id", FieldType.UUID, True),))
         apple = Entity("Apple", (Field("id", FieldType.UUID, True),))
         sql = render_postgres_schema(_ir((zebra, apple)))
-        self.assertLess(_position(sql, 'CREATE TABLE "zebra"'), _position(sql, 'CREATE TABLE "apple"'))
+        self.assertLess(_position(sql, 'CREATE TABLE IF NOT EXISTS "zebra"'), _position(sql, 'CREATE TABLE IF NOT EXISTS "apple"'))
 
     def test_self_reference_is_valid(self) -> None:
         node = Entity(

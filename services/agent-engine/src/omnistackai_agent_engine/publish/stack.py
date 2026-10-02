@@ -234,6 +234,7 @@ class StackPublisher:
         try:
             step("bundle", "Writing the production files into the project")
             layout = read_layout(repo, f"{name}-{project[5:]}")
+            state["slug"] = layout.slug  # PC-049: its images are found by this name when it is removed
             if not layout.web_apps:
                 raise PublishError("bundle", "this project has no web app to publish")
             written = write_bundle(repo, layout)
@@ -284,7 +285,7 @@ class StackPublisher:
                 raise PublishError("database", "the database did not become healthy")
 
             step("migrate", "Applying the database schema")
-            applied = self._migrate(repo, compose, log)
+            applied = self._migrate(repo, compose, log, app_id=app_id, release=release)
             log(f"migrations applied this release: {', '.join(applied) or 'none (up to date)'}")
             if self._secure_seeded_admin(compose, stored):
                 _write_private(secrets_file, _env_lines(stored))
@@ -335,7 +336,7 @@ class StackPublisher:
         args = [*compose, "exec", "-T", "db", "psql", "-U", "app", "-d", "app", "-v", "ON_ERROR_STOP=1", "-q"]
         return self._docker(args + (["-1"] if single else []) + ["-f", "-"], stdin=sql, timeout=300.0)
 
-    def _migrate(self, repo: Path, compose: list[str], log) -> list[str]:
+    def _migrate(self, repo: Path, compose: list[str], log, *, app_id: str = "", release: int = 0) -> list[str]:
         ledger = ("CREATE TABLE IF NOT EXISTS _omnistack_migrations "
                   "(name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now());")
         if self._psql(compose, ledger).returncode != 0:
@@ -344,7 +345,20 @@ class StackPublisher:
                              "SELECT name FROM _omnistack_migrations"], timeout=60.0)
         done = {line.strip() for line in (seen.stdout or "").splitlines() if line.strip()}
         applied = []
-        for path in migrations(repo):
+        files = migrations(repo)
+        # PC-049: the first file is the schema the plan generates; when it changed since the live
+        # database got it, the database is brought up to date (after a backup) instead of skipped.
+        schema = files[0] if files else None
+        if schema is not None and schema.name in done:
+            text = schema.read_text(encoding="utf-8")
+            key = f"{schema.name}@{hashlib.sha256(text.encode()).hexdigest()[:16]}"
+            if key not in done:
+                if app_id:
+                    self._backup(app_id, compose, release, log)
+                summary = self._evolve(compose, text, log)
+                self._psql(compose, f"INSERT INTO _omnistack_migrations (name) VALUES ('{key}') ON CONFLICT DO NOTHING;")
+                applied.append(f"{schema.name} (brought up to date: {summary})")
+        for path in files:
             if path.name in done:
                 continue
             safe_name = path.name.replace("'", "")
@@ -354,7 +368,54 @@ class StackPublisher:
             if result.returncode != 0:
                 raise PublishError("migrate", f"{path.name} did not apply: {_last_error(result)}")
             applied.append(path.name)
+            if path == schema:  # remember which version of the schema the database has
+                digest = hashlib.sha256(path.read_text(encoding="utf-8").encode()).hexdigest()[:16]
+                self._psql(compose, f"INSERT INTO _omnistack_migrations (name) VALUES ('{path.name}@{digest}') ON CONFLICT DO NOTHING;")
         return applied
+
+    def _columns(self, compose: list[str], schema: str) -> list:
+        from .evolve import COLUMNS_SQL, parse_columns
+
+        found = self._docker([*compose, "exec", "-T", "db", "psql", "-U", "app", "-d", "app", "-tA", "-F", "\t",
+                              "-c", COLUMNS_SQL.format(schema=schema)], timeout=120.0)
+        if found.returncode != 0:
+            raise PublishError("migrate", f"could not read the {schema} tables: {_last_error(found)}")
+        return parse_columns(found.stdout or "")
+
+    def _evolve(self, compose: list[str], schema_sql: str, log) -> str:
+        """PC-049: add what the plan gained to the live tables, then re-apply the schema."""
+        from .evolve import SHADOW, drop_shadow_sql, evolve_sql, plan_evolution, shadow_sql
+
+        try:
+            result = self._psql(compose, shadow_sql(schema_sql))
+            if result.returncode != 0:
+                raise PublishError("migrate", f"the new schema does not apply: {_last_error(result)}")
+            plan = plan_evolution(self._columns(compose, "public"), self._columns(compose, SHADOW))
+        finally:
+            self._psql(compose, drop_shadow_sql())
+        result = self._psql(compose, evolve_sql(plan, schema_sql))
+        if result.returncode != 0:
+            raise PublishError("migrate", f"the database could not be brought up to date (nothing changed): {_last_error(result)}")
+        log(f"database brought up to date: {plan.summary}")
+        return plan.summary
+
+    def _backup(self, app_id: str, compose: list[str], release: int, log, keep: int = 5) -> Path:
+        """PC-049: the live database as SQL, before its schema changes; the last `keep` are kept."""
+        import gzip
+
+        dump = self._docker([*compose, "exec", "-T", "db", "pg_dump", "-U", "app", "-d", "app", "--no-owner"], timeout=900.0)
+        if dump.returncode != 0:
+            raise PublishError("migrate", f"the backup before changing the database failed: {_last_error(dump)}")
+        folder = self._dir(app_id) / "backups"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"release-{release:04d}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.sql.gz"
+        with gzip.open(path, "wt", encoding="utf-8") as handle:
+            handle.write(dump.stdout or "")
+        os.chmod(path, 0o600)
+        for old in sorted(folder.glob("release-*.sql.gz"))[:-keep]:
+            old.unlink()
+        log(f"backup before the schema change: {path.name}")
+        return path
 
     def _secure_seeded_admin(self, compose: list[str], stored: dict[str, str]) -> bool:
         """The schema seeds admin@example.local / changeme for local development. A published app
@@ -454,12 +515,22 @@ class StackPublisher:
 
     def _prune_images(self, layout: Layout, state: dict) -> None:
         keep = {r["release"] for r in state["releases"][-KEEP_RELEASES:]}
-        services = (["api"] if layout.api_kind else []) + list(layout.web_apps) + ["proxy"]
+        services = ((["api"] if layout.api_kind else []) + list(layout.web_apps) + ["proxy"]
+                    + (["companion"] if layout.has_companion else []))  # PC-049: the companion's too
         for r in state["releases"]:
             if r["release"] not in keep and not r.get("pruned"):
                 for service in services:
                     self._docker(["image", "rm", f"omnistackai/{layout.slug}-{service}:{r['release']}"], timeout=120.0)
                 r["pruned"] = True
+
+    def _remove_images(self, slug: str | None) -> int:
+        if not slug:
+            return 0
+        listed = self._docker(["images", "--format", "{{.Repository}}:{{.Tag}}"], timeout=120.0)
+        mine = [ref for ref in (listed.stdout or "").split() if ref.startswith(f"omnistackai/{slug}-")]
+        for ref in mine:
+            self._docker(["image", "rm", "-f", ref], timeout=120.0)
+        return len(mine)
 
     # ── rollback and remove ────────────────────────────────────────────────────────────────────
     def rollback(self, app_id: str, repo_dir: str) -> dict:
@@ -488,6 +559,9 @@ class StackPublisher:
         if compose_env.is_file() and (Path(repo_dir) / "deploy" / "compose.yaml").is_file():
             args = [*self._compose(Path(repo_dir), project, compose_env), "down", "--remove-orphans"]
             self._docker(args + (["-v"] if delete_data else []), timeout=300.0)
+        # PC-049, found live: an unpublished app's images stayed behind (1-2 GB per web app, per release)
+        # until Docker's disk filled and the platform's database stopped. A republish rebuilds them.
+        self._remove_images(state.get("slug"))
         if delete_data:
             # PC-012: nothing of a deleted app stays behind - not its release history, and not the
             # secrets its compose.env and secrets.env hold.
