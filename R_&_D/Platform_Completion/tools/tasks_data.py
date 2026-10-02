@@ -752,7 +752,10 @@ _MILESTONE_TASKS = [
      "does not exist (/appointment_list 404), text the same colour as its background (contrast 1.00:1), a "
      "hydration mismatch; without a type-check cache, pages using components they never imported."),
     ("PC-126", "Model routing: local Ollama, free cloud tiers and paid keys, per job (plan, design, repair), "
-     "with budgets and fallbacks", _M1, "Platform", "Not Started", "P0", "",
+     "with budgets and fallbacks", _M1, "Platform", "Completed", "P0", "",
+     "Done 2026-10-03: shared provider health (rate limit, daily quota, outage, refused key) skipped by every "
+     "chain; no retry waits while another provider can answer; paid keys lead page design when set; "
+     "scripts/models.sh. Live: 55 retry waits (~7 min) per benchmark run -> 0. "
      "Works with no paid key (free cloud first, local as the fallback); a paid key raises quality "
      "without code changes."),
     ("PC-127", "Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a "

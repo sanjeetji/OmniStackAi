@@ -49,6 +49,10 @@ def main(argv: list[str] | None = None) -> int:
         os.environ["OMNISTACKAI_WEB_NODE_MODULES"] = str(cache)
     if not os.environ.get("OMNISTACKAI_WEB_NODE_MODULES"):
         print("note: no type-check cache - run ./scripts/omnistack.sh up once; web apps will count as not type-checked")
+    # PC-126: remember which providers are out (a spent quota) across cases, as the Studio does.
+    from ..model_gateway.health import DEFAULT_FILE, PATH_ENV
+
+    os.environ.setdefault(PATH_ENV, str(DEFAULT_FILE))
     out = Path(args.out).expanduser()
     out.mkdir(parents=True, exist_ok=True)
     report = main_async(cases, out, design=args.design, preview=not args.no_preview,

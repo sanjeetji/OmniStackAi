@@ -101,7 +101,14 @@ class PatientProvider:
     async def generate(self, request: Any) -> Any:
         from ..model_gateway.errors import ProviderRateLimitedError, ProviderUnavailableError
 
+        from ..model_gateway import health
+
         for wait in (*self._waits, None):
+            # PC-126: no waiting out a limit that lasts longer than this page's waits (a spent daily
+            # quota): the chain's next provider answers now.
+            back = health.out_until(self.provider_id)
+            if back and back - time.time() > sum(self._waits):
+                raise ProviderRateLimitedError(f"{self.provider_id} is out until its limit resets", status_code=429)
             try:
                 return await self._inner.generate(request)
             except ProviderUnavailableError:
@@ -157,26 +164,33 @@ class ChainProvider:
         from ..model_gateway.contracts import ModelRef
         from ..model_gateway.errors import BudgetExceededError, ModelProviderError
 
+        from ..model_gateway import health
+
         last: Exception | None = None
-        for index, (patient, model, timeout, max_out) in enumerate(self._entries):
-            if index in self._spent:
-                continue
+        # PC-126: a provider another job found out (a spent quota, a limit) is tried last, not first;
+        # and a limit is waited out only on the last provider left - while another can answer, it does.
+        candidates = [i for i in health.order([p.provider_id for p, _m, _t, _o in self._entries]) if i not in self._spent]
+        for position, index in enumerate(candidates):
+            patient, model, timeout, max_out = self._entries[index]
+            final = position == len(candidates) - 1
             addressed = _replace(request, model=ModelRef(patient.provider_id, model))
             if timeout:
                 addressed = _replace(addressed, timeout_seconds=float(timeout))
             if max_out and addressed.max_output_tokens > max_out:
                 addressed = _replace(addressed, max_output_tokens=int(max_out))  # each model's own limit
             try:
-                answer = await patient.generate(addressed)
+                answer = await (patient.generate(addressed) if final else patient._inner.generate(addressed))
             except BudgetExceededError:
                 raise  # the task's credit budget is spent: no provider may continue
             except (ModelProviderError, TimeoutError) as error:
                 # Spent, down, too slow, or a model no longer offered: the next provider may serve.
                 logger.info("page design: %s failed (%s); trying the next provider", patient.provider_id,
                             type(error).__name__)
+                health.note_failure(patient.provider_id, error)
                 self._spent.add(index)
                 last = error
                 continue
+            health.note_success(patient.provider_id)
             if patient.provider_id not in self.served_by:
                 self.served_by.append(patient.provider_id)
             return answer

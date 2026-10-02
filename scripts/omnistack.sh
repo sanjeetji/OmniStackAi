@@ -549,6 +549,9 @@ cmd_up() {
   elif [[ -n "$(port_listener "$STUDIO_PORT")" ]]; then
     warn "port $STUDIO_PORT is already in use by $(port_listener "$STUDIO_PORT") - not started by this script"
   else
+    # PC-126: the Studio remembers which model providers are out (a spent free quota, a limit, an
+    # outage), so the next build or page goes straight to one that can answer.
+    export OMNISTACKAI_MODEL_HEALTH_FILE="${OMNISTACKAI_MODEL_HEALTH_FILE:-$HOME/.omnistackai/model-health.json}"
     if (( preview )); then
       start_bg studio bash "$repo_root/scripts/agent-engine.sh" studio-preview
       log "  mode  preview (generated apps are installed and run locally)"

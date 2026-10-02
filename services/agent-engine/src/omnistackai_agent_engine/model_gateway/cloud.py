@@ -155,7 +155,7 @@ class CloudProviderSpec:
 PROVIDER_SPECS: dict[str, CloudProviderSpec] = {
     "anthropic": CloudProviderSpec(
         "anthropic", "anthropic", "https://api.anthropic.com",
-        "ANTHROPIC_API_KEY", "OMNISTACKAI_ANTHROPIC_MODEL", "claude-sonnet-5",
+        "ANTHROPIC_API_KEY", "OMNISTACKAI_ANTHROPIC_MODEL", "claude-sonnet-5-5",
     ),
     "openai": CloudProviderSpec(
         "openai", "openai", "https://api.openai.com/v1",

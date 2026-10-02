@@ -105,6 +105,8 @@ DEFAULT_PRICE_BOOK = PriceBook(
     {
         ("ollama-local", None): ModelPrice("0", "0"),
         ("anthropic", "claude-sonnet-5"): ModelPrice("3", "15"),
+        # PC-126: the Anthropic default since 2026-10-02. Illustrative like the rest; verify before launch.
+        ("anthropic", "claude-sonnet-5-5"): ModelPrice("3", "15"),
         ("openai", "gpt-4o"): ModelPrice("2.5", "10"),
         ("google-gemini", "gemini-1.5-pro"): ModelPrice("1.25", "5"),
         # PC-098: the page-writing model. Google's published preview price; verify before launch.

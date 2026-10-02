@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 463 |
+| Completed | 464 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 95 |
-| Not Started | 509 |
+| Not Started | 508 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1155** |
 
-Open work queue: **94** tasks (P0: 9, P1: 38, P2: 33, P3: 14).
+Open work queue: **93** tasks (P0: 8, P1: 38, P2: 33, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -49,7 +49,7 @@ Open work queue: **94** tasks (P0: 9, P1: 38, P2: 33, P3: 14).
 | 2 | PC-122 | A quality benchmark: real prompts built end to end in the console, screenshots, scored for look, completeness and working features | Completed | P1 | Both |  |  | Done 2026-10-02: scripts/benchmark.sh - 40 prompts (quick 8), console-identical build + design, preview, endpoints, UI check with screenshots, 0-100 score, comparison and regressions; runs 60.4 -> 76.8. Founder question 2026-10-02: will finished apps look modern and 'wow'? Finishing tasks does not prove it; a fixed set of prompts (marketplace, clinic, delivery, SaaS, blog) built and reviewed after each wave does. |
 | 3 | PC-125 | Check and repair: every generated page, link and API call verified (types, build, a browser walk); failures go back to the model with the exact error; a working fallback; the build report says what is verified | Completed | P0 | Both |  |  | Done 2026-10-03: links checked against each app's pages (compiler-style errors to the model, then deterministic repair); background colours used as text fixed; build report lists the checks. On 8 benchmark apps: 8 dead links and 15 invisible-text classes -> 0. The answer to hallucination: never trust model output, verify it and repair it. Folds PC-116. Benchmark run 20261002-191643 (PC-122) found, after the type check passed: a link to a page that does not exist (/appointment_list 404), text the same colour as its background (contrast 1.00:1), a hydration mismatch; without a type-check cache, pages using components they never imported. |
 | 4 | PC-116 | A generated page links only to screens that exist in its app | Completed | P2 | Both | PC-114 |  | Seen 2026-10-01 in Bazaar Lite: the buyer storefront's home page has 'List with us' -> /listings/new, but only the seller portal has a listing editor, and the storefront's /listings/* are API proxy routes, so the link answers 422. The preview's UI check reports it; nothing repairs it. |
-| 5 | PC-126 | Model routing: local Ollama, free cloud tiers and paid keys, per job (plan, design, repair), with budgets and fallbacks | Not Started | P0 | Platform |  |  | Works with no paid key (free cloud first, local as the fallback); a paid key raises quality without code changes. |
+| 5 | PC-126 | Model routing: local Ollama, free cloud tiers and paid keys, per job (plan, design, repair), with budgets and fallbacks | Completed | P0 | Platform |  |  | Done 2026-10-03: shared provider health (rate limit, daily quota, outage, refused key) skipped by every chain; no retry waits while another provider can answer; paid keys lead page design when set; scripts/models.sh. Live: 55 retry waits (~7 min) per benchmark run -> 0. Works with no paid key (free cloud first, local as the fallback); a paid key raises quality without code changes. |
 | | | **Phase M2 Scope and brief**: The platform proposes one app, an app and admin, a few apps or a whole ecosystem; a short project brief (apps, features, brand, language) with smart defaults. | | | | | | |
 | 6 | PC-127 | Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a marketing website and the phone app when the product needs them; an editable proposal | Not Started | P0 | Vibe |  |  |  |
 | 7 | PC-128 | The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand (name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults' | Not Started | P0 | Vibe | PC-127 |  | Simple for a non-technical user, complete for a developer. |
@@ -964,6 +964,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-122 | A quality benchmark: real prompts built end to end in the console, screenshots, scored for look, completeness and working features | Completed | 2026-10-02 | Done 2026-10-02: scripts/benchmark.sh - 40 prompts (quick 8), console-identical build + design, preview, endpoints, UI check with screenshots, 0-100 score, comparison and regressions; runs 60.4 -> 76.8. Founder question 2026-10-02: will finished apps look modern and 'wow'? Finishing tasks does not prove it; a fixed set of prompts (marketplace, clinic, delivery, SaaS, blog) built and reviewed after each wave does. |
 | PC-124 | The phone QR opens the generated app: a current Expo SDK (the store's Expo Go), and a tunnel when the phone is on another network | Completed | 2026-10-02 | Done 2026-10-02: apps on Expo SDK 57 (the store Expo Go's; one file to bump); OMNISTACKAI_PHONE_ACCESS=anywhere tunnels app + API through cloudflared, behind sign-in; bundles built before the scan; emulator installs the matching Expo Go. Live: LAN 7/7, anywhere 9/9 in Expo Go 57. |
 | PC-125 | Check and repair: every generated page, link and API call verified (types, build, a browser walk); failures go back to the model with the exact error; a working fallback; the build report says what is verified | Completed | 2026-10-03 | Done 2026-10-03: links checked against each app's pages (compiler-style errors to the model, then deterministic repair); background colours used as text fixed; build report lists the checks. On 8 benchmark apps: 8 dead links and 15 invisible-text classes -> 0. The answer to hallucination: never trust model output, verify it and repair it. Folds PC-116. Benchmark run 20261002-191643 (PC-122) found, after the type check passed: a link to a page that does not exist (/appointment_list 404), text the same colour as its background (contrast 1.00:1), a hydration mismatch; without a type-check cache, pages using components they never imported. |
+| PC-126 | Model routing: local Ollama, free cloud tiers and paid keys, per job (plan, design, repair), with budgets and fallbacks | Completed | 2026-10-03 | Done 2026-10-03: shared provider health (rate limit, daily quota, outage, refused key) skipped by every chain; no retry waits while another provider can answer; paid keys lead page design when set; scripts/models.sh. Live: 55 retry waits (~7 min) per benchmark run -> 0. Works with no paid key (free cloud first, local as the fallback); a paid key raises quality without code changes. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
 | R-003 | Local Ollama Stage 0 bootstrap | Completed | 2026-09-06 |  |

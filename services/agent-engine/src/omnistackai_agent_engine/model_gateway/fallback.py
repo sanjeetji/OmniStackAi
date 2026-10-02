@@ -81,32 +81,53 @@ class FallbackChainProvider:
             timeout_seconds=max(request.timeout_seconds, entry.timeout_seconds or 0),
         )
 
+    def _ordered(self) -> list[tuple[int, ChainEntry]]:
+        """PC-126: providers known to be out (a spent quota, a limit, an outage) are tried last."""
+        from . import health
+
+        order = health.order([e.provider.provider_id for e in self._entries])
+        skipped = [self._entries[i].provider.provider_id for i in order if not health.is_available(self._entries[i].provider.provider_id)]
+        if skipped:
+            log.info("skipping for now (out): %s", ", ".join(skipped))
+        return [(i, self._entries[i]) for i in order]
+
     async def generate(self, request: GenerateRequest):
+        from . import health
+
         last: Exception | None = None
-        for index, entry in enumerate(self._entries):
+        ordered = self._ordered()
+        for position, (_index, entry) in enumerate(ordered):
+            is_last = position == len(ordered) - 1
             try:
                 response = await entry.provider.generate(self._request_for(entry, request))
                 # PC-101: a provider that answers with nothing is no better than one that failed
                 # (seen live: a build ended "model returned an empty response" with providers left).
-                if not (getattr(response, "text", "") or "").strip() and index < len(self._entries) - 1:
+                if not (getattr(response, "text", "") or "").strip() and not is_last:
                     log.warning("%s answered with nothing; trying %s", entry.provider.provider_id,
-                                self._entries[index + 1].provider.provider_id)
+                                ordered[position + 1][1].provider.provider_id)
                     continue
                 self.last_provider_id = entry.provider.provider_id
+                health.note_success(entry.provider.provider_id)
                 return response
             except Exception as error:  # noqa: BLE001 - classified below
-                if not _worth_another_provider(error) or index == len(self._entries) - 1:
+                health.note_failure(entry.provider.provider_id, error)
+                if not _worth_another_provider(error) or is_last:
                     raise
-                log.warning("%s could not answer (%s); trying %s", entry.provider.provider_id,
-                            type(error).__name__, self._entries[index + 1].provider.provider_id)
+                status = getattr(error, "status_code", None)
+                log.warning("%s could not answer (%s%s); trying %s", entry.provider.provider_id,
+                            type(error).__name__, f" {status}" if status else "",
+                            ordered[position + 1][1].provider.provider_id)
                 last = error
         raise last  # pragma: no cover - the loop always returns or raises
 
     async def stream(self, request: GenerateRequest) -> AsyncIterator[Any]:
-        for index, entry in enumerate(self._entries):
+        from . import health
+
+        ordered = self._ordered()
+        for position, (_index, entry) in enumerate(ordered):
             started = False
             held: list[Any] = []  # events before the first text, dropped if this provider says nothing
-            last_entry = index == len(self._entries) - 1
+            last_entry = position == len(ordered) - 1
             try:
                 async for event in entry.provider.stream(self._request_for(entry, request)):
                     if not started and not getattr(event, "delta", "") and not last_entry:
@@ -121,14 +142,16 @@ class FallbackChainProvider:
                     yield event
                 if not started and not last_entry:
                     log.warning("%s streamed nothing; trying %s", entry.provider.provider_id,
-                                self._entries[index + 1].provider.provider_id)
+                                ordered[position + 1][1].provider.provider_id)
                     continue
+                health.note_success(entry.provider.provider_id)
                 return
             except Exception as error:  # noqa: BLE001 - classified below
-                if started or not _worth_another_provider(error) or index == len(self._entries) - 1:
+                health.note_failure(entry.provider.provider_id, error)
+                if started or not _worth_another_provider(error) or last_entry:
                     raise
                 log.warning("%s could not stream (%s); trying %s", entry.provider.provider_id,
-                            type(error).__name__, self._entries[index + 1].provider.provider_id)
+                            type(error).__name__, ordered[position + 1][1].provider.provider_id)
 
     def after(self, provider_id: str | None, error: Exception) -> "FallbackChainProvider | None":
         """The rest of the chain after ``provider_id``, when ``error`` is one another provider can fix.

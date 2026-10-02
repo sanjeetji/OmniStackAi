@@ -86,6 +86,7 @@ def resolve_generation_provider_from_env(
     api_key: str | None = None,
     task: str = "plan",
     max_output_tokens: int | None = None,
+    rate_limit_retries: int | None = None,
 ) -> tuple[ModelProvider, str, int, float]:
     """Resolve (provider, model_id, max_output_tokens, request_timeout_seconds).
 
@@ -130,7 +131,10 @@ def resolve_generation_provider_from_env(
                         max_output_tokens=int(max_output_tokens),
                         safe_input_tokens=max(1, min(desc.safe_input_tokens, desc.context_window_tokens - int(max_output_tokens))),
                     )
-                rate_limit_retries = int(os.environ.get("OMNISTACKAI_RATE_LIMIT_RETRIES", "2"))
+                # PC-126: a provider in a chain does not retry its own limits - the chain's next
+                # provider answers now (``rate_limit_retries=0``); a lone provider waits a little.
+                if rate_limit_retries is None:
+                    rate_limit_retries = int(os.environ.get("OMNISTACKAI_RATE_LIMIT_RETRIES", "2"))
                 max_retry_after = float(os.environ.get("OMNISTACKAI_MAX_RETRY_AFTER_SECONDS", "60.0"))
                 provider = create_cloud_provider(
                     spec,
@@ -326,6 +330,10 @@ def resolve_page_provider_from_env(
 #: Gemini models come first; OpenRouter only with a ":free" model (founder rule); NVIDIA is slow but
 #: capable; the local model is unlimited and last. Groq's free tier cannot take a page request.
 DEFAULT_PAGE_CHAIN = (
+    # PC-126: a paid key, once its owner adds it, designs the pages - no code change. Without the key
+    # the entry is skipped, so free tiers and the local model stay the default and nothing is billed.
+    "anthropic",
+    "openai",
     "google:gemini-3.8-flash",
     "google:gemini-3.5-flash-lite",
     "openrouter:qwen/qwen3.8-27b:free",
@@ -413,7 +421,7 @@ def resolve_page_providers_from_env(
                 continue
             resolved = resolve_generation_provider_from_env(
                 usage_ledger=usage_ledger, load_dotenv=False, provider_id=provider, model_id=model,
-                max_output_tokens=page_output_budget(),
+                max_output_tokens=page_output_budget(), rate_limit_retries=0,
             )
             chain.append((resolved[0], resolved[1], resolved[2], cloud_timeout))
         except Exception as err:  # noqa: BLE001 - one unusable provider must not stop the others
