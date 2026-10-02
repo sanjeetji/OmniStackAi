@@ -37,7 +37,10 @@ _ACTOR_GROUPS: dict[str, tuple[str, ...]] = {
     "provider": ("staff", "employee", "employees", "provider", "providers", "author",
                  "authors", "writer", "writers", "doctor", "doctors", "teacher",
                  "teachers", "agent", "agents", "stylist", "stylists", "therapist",
-                 "therapists", "instructor", "instructors", "host", "hosts"),
+                 "therapists", "instructor", "instructors", "host", "hosts",
+                 # R-580: the people a home-services business sends out.
+                 "technician", "technicians", "plumber", "plumbers", "electrician", "electricians",
+                 "cleaner", "cleaners", "handyman", "handymen"),
     "admin": ("admin", "admins", "administrator", "administrators", "moderator",
               "moderators", "operator", "operators", "superadmin", "super admin"),
 }
@@ -100,6 +103,34 @@ def named_actors(prompt: str) -> tuple[str, ...]:
     return tuple(sorted(found))
 
 
+#: R-580: domains with a second party built in, and the words that say the prompt is about one. A
+#: ride-hailing app has drivers whether or not the prompt names them; "plan a trip" is not ride-hailing.
+_IMPLIED: dict[str, tuple[tuple[str, ...], str, tuple[str, ...]]] = {
+    "food-delivery": (("merchant", "courier"), "restaurants and couriers", ("food delivery", "deliver food", "food ordering")),
+    "rideshare": (("courier",), "drivers", ("rideshare", "ride sharing", "ride-sharing", "ride hailing", "ride-hailing", "taxi")),
+    "marketplace": (("merchant",), "sellers", ("marketplace", "multi-vendor", "multi vendor")),
+    "logistics": (("courier",), "drivers", ("logistics", "shipment", "shipments", "parcel", "parcels", "package delivery",
+                                            "courier service", "freight", "last mile", "last-mile")),
+    "home-services": (("provider",), "technicians", ("home services", "home service", "plumber", "plumbing", "electrician",
+                                                      "handyman", "cleaning service", "house cleaning", "appliance repair",
+                                                      "pest control")),
+}
+
+
+def implied_parties(prompt: str) -> tuple[str, tuple[str, ...], str] | None:
+    """(domain, actor groups, who) when the prompt is about a two-sided domain, else None."""
+    from .scope_compiler import classify_domain
+
+    match = classify_domain(prompt)
+    if match is None or match.domain not in _IMPLIED:
+        return None
+    groups, who, core = _IMPLIED[match.domain]
+    text = " ".join((prompt or "").lower().split())
+    if not any(re.search(rf"(?<![a-z]){re.escape(word)}(?![a-z])", text) for word in core):
+        return None
+    return match.domain, groups, who
+
+
 def detect_ecosystem_intent(prompt: str) -> EcosystemIntent:
     """Decide from the prompt alone whether the user asked for more than one app.
 
@@ -123,6 +154,15 @@ def detect_ecosystem_intent(prompt: str) -> EcosystemIntent:
             actors,
             f"the request names {listed} alongside the people they serve, so each side gets its "
             f"own app over one shared API and database",
+        )
+    implied = implied_parties(prompt)
+    if implied is not None:
+        domain, groups, who = implied
+        return EcosystemIntent(
+            True,
+            tuple(sorted(set(actors) | set(groups))),
+            f"a {domain.replace('-', ' ')} business has {who} as well as the customers they serve, so each side "
+            f"gets its own app over one shared API and database",
         )
     if actors:
         return EcosystemIntent(

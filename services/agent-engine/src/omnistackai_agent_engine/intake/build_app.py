@@ -268,6 +268,13 @@ def _with_prompt_rules_for_plan(plan, prompt: str):
 
     shared = union_ir(plan)
     ruled, notes = _with_prompt_ownership(shared, prompt)
+    # R-580: the privacy the domain implies, where the prompt set none.
+    from .domain_rules import domain_defaults
+
+    data = ruled.to_dict()
+    implied = domain_defaults(getattr(plan, "domain", ""), data)
+    if implied:
+        ruled, notes = ApplicationIR.from_dict(data), (*notes, *implied)
     if not notes:
         return plan
     known = {c.name for c in shared.capabilities}

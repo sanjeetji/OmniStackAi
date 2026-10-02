@@ -391,6 +391,76 @@ DOMAIN_LIBRARY: tuple[DomainSpec, ...] = (
         ),
         example_prompt="A blog CMS where authors publish articles and readers subscribe",
     ),
+    # R-580: two-sided domains the library did not know. A logistics business has drivers whether or
+    # not the prompt names them; a home-services business has technicians.
+    DomainSpec(
+        domain="logistics",
+        business_model="Shipping and last-mile delivery: shippers book shipments, drivers carry them, dispatch assigns",
+        keywords=(
+            "logistics",
+            "shipment",
+            "shipments",
+            "parcel",
+            "parcels",
+            "package delivery",
+            "courier service",
+            "freight",
+            "fleet",
+            "last mile",
+            "last-mile",
+            "dispatch",
+            "consignment",
+            "tracking number",
+            "proof of delivery",
+        ),
+        surfaces=(
+            _s("customer_web", "Shipper Portal", _CUSTOMER, "Customer", "Book shipments, follow them on their way, and see proof of delivery."),
+            _s("driver_portal", "Driver App", _OPERATOR, "Driver", "See assigned shipments, pick up, deliver, and record proof of delivery."),
+            _s("admin_dashboard", "Dispatch Console", _OPERATOR, "Admin", "Assign shipments to drivers, manage vehicles, and handle exceptions."),
+        ),
+        questions=(
+            "Do drivers use their own vehicles, or does the business run a fleet?",
+            "Should customers get live tracking, or status updates only?",
+        ),
+        example_prompt="A logistics app where customers book parcel shipments and track them",
+    ),
+    DomainSpec(
+        domain="home-services",
+        business_model="Two-sided marketplace matching customers with technicians for jobs at home",
+        keywords=(
+            "home services",
+            "home service",
+            "plumber",
+            "plumbers",
+            "plumbing",
+            "electrician",
+            "electricians",
+            "handyman",
+            "cleaning service",
+            "house cleaning",
+            "appliance repair",
+            "pest control",
+            "technician",
+            "technicians",
+            "service request",
+            # "book a plumber" is home services, not a generic booking app
+            "book a plumber",
+            "book an electrician",
+            "book a technician",
+            "book a cleaner",
+            "book a handyman",
+        ),
+        surfaces=(
+            _s("customer_web", "Customer App", _CUSTOMER, "Customer", "Book a service, follow the job, pay and review the technician."),
+            _s("provider_portal", "Technician App", _OPERATOR, "Technician", "See assigned jobs and where they are, and update their progress."),
+            _s("admin_dashboard", "Operations Dashboard", _OPERATOR, "Admin", "Services, prices, assignments, and revenue."),
+        ),
+        questions=(
+            "Are technicians your employees, or independent professionals?",
+            "Is the price fixed per service, or quoted per job?",
+        ),
+        example_prompt="A home services app where customers book plumbers and electricians",
+    ),
 )
 
 _MIN_SCORE = 1

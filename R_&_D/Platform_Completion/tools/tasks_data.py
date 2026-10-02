@@ -360,7 +360,10 @@ QUEUE = [
      "model; two planner crashes the live run found are repaired. Live (groq gpt-oss-120b): 4/4 prompts planned, "
      "every gap closed."),
     ("R-580", "Domain knowledge in ecosystem detection ('logistics' implies drivers)",
-     "2 Maximum features", "Both", "Not Started", "P1", "", ""),
+     "2 Maximum features", "Both", "Completed", "P1", "", "Done 2026-10-02: two-sided domains (food delivery, "
+     "ride-hailing, marketplace, logistics, home services) build every side's app when the prompt names only the "
+     "customer; logistics and home-services domains added; their privacy (creator + assigned driver/technician) "
+     "applied when the prompt sets none. Live: a customer-only logistics prompt previewed 2 web + 2 phone apps."),
     ("R-570", "Permissions beyond role: ownership and row-level rules", "2 Maximum features",
      "Both", "Completed", "P1", "", "'A driver sees only their own orders'. Seen live 2026-09-27 (PC-008): a published "
      "notes app saved notes with created_by null, so private notes were not private. Done 2026-10-01: every "

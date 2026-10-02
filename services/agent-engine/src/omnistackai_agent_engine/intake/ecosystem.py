@@ -157,6 +157,24 @@ DOMAIN_ENTITIES: dict[str, tuple[Entity, ...]] = {
         Entity("Article", (_ID, Field("title", FieldType.STRING), Field("body", FieldType.RICH_TEXT), Field("published", FieldType.BOOL))),
         Entity("Comment", (_ID, Field("body", FieldType.TEXT)), relations=(_rel("article", "Article"),)),
     ),
+    # R-580
+    "logistics": (
+        Entity("Vehicle", (_ID, Field("plate", FieldType.STRING), Field("capacity_kg", FieldType.FLOAT, required=False), Field("active", FieldType.BOOL))),
+        Entity("Shipment", (_ID, Field("tracking_number", FieldType.STRING), Field("status", FieldType.STRING),
+                            Field("pickup_address", FieldType.STRING), Field("dropoff_address", FieldType.STRING),
+                            Field("weight_kg", FieldType.FLOAT, required=False), Field("latitude", FieldType.FLOAT, required=False),
+                            Field("longitude", FieldType.FLOAT, required=False), Field("scheduled_at", FieldType.DATETIME, required=False)),
+               relations=(_rel("vehicle", "Vehicle"),)),
+        Entity("ProofOfDelivery", (_ID, Field("received_by", FieldType.STRING), Field("photo", FieldType.ATTACHMENT, required=False),
+                                   Field("delivered_at", FieldType.DATETIME)), relations=(_rel("shipment", "Shipment"),)),
+    ),
+    "home-services": (
+        Entity("Service", (_ID, Field("name", FieldType.STRING), Field("price", FieldType.FLOAT), Field("duration_minutes", FieldType.INT, required=False))),
+        Entity("Job", (_ID, Field("status", FieldType.STRING), Field("scheduled_at", FieldType.DATETIME), Field("address", FieldType.STRING),
+                       Field("latitude", FieldType.FLOAT, required=False), Field("longitude", FieldType.FLOAT, required=False),
+                       Field("total", FieldType.FLOAT, required=False)), relations=(_rel("service", "Service"),)),
+        Entity("Review", (_ID, Field("rating", FieldType.INT), Field("comment", FieldType.TEXT, required=False)), relations=(_rel("job", "Job"),)),
+    ),
     # Fallback for the `custom-application` scope (no known domain).
     "custom-application": (
         Entity("Item", (_ID, Field("name", FieldType.STRING), Field("description", FieldType.TEXT, required=False), Field("active", FieldType.BOOL))),
@@ -215,6 +233,16 @@ CURATED_SURFACE_ENTITIES: dict[str, dict[str, tuple[str, ...]]] = {
         "provider_portal": ("Article", "Comment"),
         "admin_dashboard": ("Article",),
     },
+    "logistics": {
+        "customer_web": ("Shipment", "ProofOfDelivery"),
+        "driver_portal": ("Shipment", "ProofOfDelivery"),
+        "admin_dashboard": ("Vehicle", "Shipment", "ProofOfDelivery"),
+    },
+    "home-services": {
+        "customer_web": ("Service", "Job", "Review"),
+        "provider_portal": ("Service", "Job"),
+        "admin_dashboard": ("Service", "Job", "Review"),
+    },
 }
 
 # Mutation authority is deliberately narrower than visibility. For example, customers can browse a menu but
@@ -268,6 +296,16 @@ CURATED_SURFACE_WRITABLE_ENTITIES: dict[str, dict[str, tuple[str, ...]]] = {
         "public_web": (),
         "provider_portal": ("Article", "Comment"),
         "admin_dashboard": ("Article",),
+    },
+    "logistics": {
+        "customer_web": ("Shipment",),
+        "driver_portal": ("Shipment", "ProofOfDelivery"),
+        "admin_dashboard": ("Vehicle", "Shipment", "ProofOfDelivery"),
+    },
+    "home-services": {
+        "customer_web": ("Job", "Review"),
+        "provider_portal": ("Job",),
+        "admin_dashboard": ("Service", "Job", "Review"),
     },
 }
 

@@ -1,8 +1,9 @@
 task_id: R-580
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: R-580
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   Domain knowledge in ecosystem detection. "A logistics app", "a ride-hailing app" or "a home
@@ -25,3 +26,8 @@ forbidden_changes:
 required_gates:
   - Live - prompts naming only the customer of a two-sided domain build every side's app through the platform's planner, and the generated ecosystem previews; a one-sided prompt stays one app
   - scripts/verify.sh passes
+found_and_fixed:
+  - With no privacy sentence, every customer listed every shipment; the domain's creator + assignee rule applies unless the prompt sets one.
+  - "Book an electrician or a plumber" classified as a generic booking app; trade phrases score as home services.
+deferred:
+  - Food delivery and marketplace orders need ownership through a relation (PC-120) before a default can apply.
