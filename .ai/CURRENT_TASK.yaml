@@ -1,23 +1,20 @@
-task_id: PC-125
-status: completed
+task_id: PC-126
+status: in_progress
 phase: Platform Completion — M1 Quality foundation
-tracker_row: PC-125
-started_at: "2026-10-02"
-completed_at: "2026-10-03"
+tracker_row: PC-126
+started_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  Check and repair before the user sees it. Every generated page, link and API call is verified;
-  what fails is repaired - deterministically where the fix is certain, by the model with the exact
-  error otherwise - or replaced with a working fallback; and the build report says what was verified.
-  Includes PC-116 (dead links) and what the PC-122 benchmark found after the type check passed: a
-  link to a page that does not exist (404), text the colour of its background (contrast 1:1), a
-  hydration mismatch.
+  Model routing per job (plans, page design and repair) across local Ollama, free cloud tiers and
+  paid keys, with fallbacks that do not waste time: a provider that is out (a spent quota, a
+  limit, an outage) is skipped by every job until it is back, limits are waited out only on the
+  last provider left, a paid key raises page quality the moment it is added, and the routing is
+  visible.
 founder_gate: none
-companions: [PC-116]
+companions: []
 allowed_paths:
   - services/agent-engine/
   - scripts/
-  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -25,13 +22,7 @@ allowed_paths:
   - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
+  - no paid provider is called unless its owner has set its key
 required_gates:
-  - Live - the benchmark cases that showed a dead link and invisible text build again with neither, and the build report lists what was verified
+  - Live - a benchmark run on spent free tiers moves past spent providers without retry waits
   - scripts/verify.sh passes
-found_and_fixed:
-  - Model-written pages linked to pages that do not exist (/privacy, /terms, /appointment_list) and to data routes that answer JSON (/posts/${id}); the type check cannot see an address. Checked and repaired now.
-  - "text-muted" (a surface colour) used as a text colour made text invisible (contrast 1.00:1); 64 uses across three benchmark projects, all in model-written pages. Fixed before every type check.
-  - The build report said "type-checked" without saying what that covered; it lists the checks now, in the console too.
-deferred:
-  - A hydration mismatch (server and client render differently) has no certain static fix; the design review's browser walk (PC-130) feeds it back to the model.
-  - The live benchmark re-run of blog and clinic runs in the background on spent free tiers; its result is recorded at the M1 gate.
