@@ -758,9 +758,21 @@ _MILESTONE_TASKS = [
      "scripts/models.sh. Live: 55 retry waits (~7 min) per benchmark run -> 0. "
      "Works with no paid key (free cloud first, local as the fallback); a paid key raises quality "
      "without code changes."),
+    ("PC-136", "M1 gate: the benchmark's M1 baseline - the quick set (8 prompts, --design) run when the free "
+     "quotas reset (early morning), in the background while M2 proceeds; result recorded; any regression "
+     "fixed before M1 is closed", _M1, "Both", "Not Started", "P0", "PC-122",
+     "Open from M1 (founder review 2026-10-03): PC-125's fixes are proven on already-generated apps; the live "
+     "re-run of blog and clinic was stopped by spent free tiers and the night's shutdown. Only 3 of the 40 "
+     "prompts have run."),
+    ("PC-137", "Founder action: scan the preview QR with a real phone (store Expo Go, same Wi-Fi; then "
+     "OMNISTACKAI_PHONE_ACCESS=anywhere on mobile data) and report what happens", _M1, "Both", "Not Started",
+     "P1", "PC-124", "Open from M1: PC-124 was proven on the Android emulator with the store's Expo Go 57; a "
+     "real phone on a real network is the remaining check. Nothing else waits on it."),
     ("PC-127", "Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a "
      "marketing website and the phone app when the product needs them; an editable proposal", _M2,
-     "Vibe", "Not Started", "P0", "", ""),
+     "Vibe", "Not Started", "P0", "",
+     "Also (open from M1, PC-126): any paid key the owner adds leads plans and chat edits as well as pages, "
+     "with no setting to change; DeepSeek, Mistral and xAI join the page chain when their keys are set."),
     ("PC-128", "The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand "
      "(name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults'",
      _M2, "Vibe", "Not Started", "P0", "PC-127", "Simple for a non-technical user, complete for a developer."),
@@ -768,12 +780,18 @@ _MILESTONE_TASKS = [
      "product's design system; templates only when repair fails", _M3, "Both", "Not Started", "P0",
      "PC-125", ""),
     ("PC-130", "Design review: each page screenshotted on phone and desktop, critiqued and scored, and "
-     "improved until it passes", _M3, "Both", "Not Started", "P0", "PC-129", ""),
+     "improved until it passes", _M3, "Both", "Not Started", "P0", "PC-129",
+     "Also (open from M1): a looks score from the screenshots in the benchmark (PC-122 shows them for a "
+     "person to judge); forms filled in and saved end to end in the browser walk, not only list endpoints "
+     "called; the hydration mismatch PC-125 found (server and client render differently) fed back to the "
+     "model."),
     ("PC-131", "Marketing website generator: a multi-section site with copy and SEO from the brief",
      _M3, "Vibe", "Not Started", "P1", "PC-128", ""),
     ("PC-133", "Model-planned products for any domain: apps, people, data and flows planned by the model, "
      "the domain library as hints; validated and reviewed (R-582)", _M4, "Both", "Not Started", "P0", "",
-     "Founder: there are lakhs of domains; a fixed library cannot be the limit."),
+     "Founder: there are lakhs of domains; a fixed library cannot be the limit. Open from M1 (PC-122): the "
+     "benchmark's clinic was planned from the booking library as Booking + Service, with no doctors, "
+     "appointments or reminders, and the model was never asked - the clinic case must pass."),
     ("PC-134", "Building blocks, next wave: reviews and ratings, chat and messages, maps and locations, "
      "analytics dashboards", _M5, "Both", "Not Started", "P1", "", "Each one tested like payments, jobs and "
      "notifications were; the planner picks them from the prompt."),
@@ -781,7 +799,7 @@ _MILESTONE_TASKS = [
      _M6, "Both", "Not Started", "P1", "", ""),
 ]
 _MILESTONE_ORDER = (
-    "PC-124", "PC-122", "PC-125", "PC-116", "PC-126",
+    "PC-124", "PC-122", "PC-125", "PC-116", "PC-126", "PC-136", "PC-137",
     "PC-127", "PC-128", "PC-020",
     "PC-129", "PC-130", "PC-050", "PC-131", "PC-077",
     "PC-133",

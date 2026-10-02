@@ -53,6 +53,19 @@ The domain library and templates stay as **hints and fast starts**, never as lim
 | **M6** | Speed and customisation | PC-096 instant previews, PC-135 chat edits in seconds, PC-019 click-to-edit |
 | **M7** | Native mobile (after M6) | Kotlin/Compose and Swift/SwiftUI, phase "5 Native mobile". Flutter is out. |
 
+## Open from M1
+
+M1's four tasks are built, tested and pushed (PC-124, PC-122, PC-125 with PC-116, PC-126). Founder review on
+2026-10-03 found these still open. Each is in the tracker, so none is lost:
+
+| Open item | Where it is done |
+|---|---|
+| The M1 baseline: the quick benchmark set (8 prompts) run live; only 3 of 40 prompts have run so far | **PC-136** (M1 gate), run when the free quotas reset, in the background while M2 proceeds |
+| The phone QR on a real phone (proven on the emulator only) | **PC-137**, a founder action |
+| Any paid key leads plans and chat edits automatically; DeepSeek, Mistral and xAI in the page chain | **PC-127** |
+| A "how it looks" score; forms filled in and saved end to end; the hydration mismatch | **PC-130** |
+| The clinic planned without doctors, appointments or reminders (the domain library, not the model) | **PC-133** |
+
 ## How hallucination is stopped
 
 1. **One source of truth.** The plan, the API contract and the generated client are facts. A page may
