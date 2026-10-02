@@ -1,21 +1,22 @@
-task_id: R-580
-status: completed
-phase: Platform Completion — 2 Maximum features
-tracker_row: R-580
+task_id: PC-124
+status: in_progress
+phase: Platform Completion — M1 Quality foundation
+tracker_row: PC-124
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Domain knowledge in ecosystem detection. "A logistics app", "a ride-hailing app" or "a home
-  services marketplace" is two-sided even when the prompt names only the customer: the domain implies
-  drivers, technicians or sellers, so each side gets its own app. The planner gains the logistics
-  domain (shipper portal, driver app, dispatch console; shipments, vehicles, proofs of delivery) and
-  home services (customer app, technician app, admin; services, jobs with a location, reviews). A
-  one-sided domain (an online store to sell my products) stays one app.
+  Scanning the QR opens the generated app on a real phone. The generated Expo app moves from SDK 51
+  (which the store's Expo Go no longer opens) to the current SDK, with every native module pinned to
+  the versions that SDK bundles; and the preview can run Expo through a tunnel for a phone that is not
+  on this machine's network, with the console saying which mode is in use and what to do when a scan
+  fails.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
+  - services/control-plane/
+  - apps/console-web/
+  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -24,10 +25,5 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - prompts naming only the customer of a two-sided domain build every side's app through the platform's planner, and the generated ecosystem previews; a one-sided prompt stays one app
+  - Live - a generated app installs, type-checks and opens in the current store Expo Go on the Android emulator, signs in and lists data from the real API
   - scripts/verify.sh passes
-found_and_fixed:
-  - With no privacy sentence, every customer listed every shipment; the domain's creator + assignee rule applies unless the prompt sets one.
-  - "Book an electrician or a plumber" classified as a generic booking app; trade phrases score as home services.
-deferred:
-  - Food delivery and marketplace orders need ownership through a relation (PC-120) before a default can apply.
