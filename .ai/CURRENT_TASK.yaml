@@ -1,17 +1,16 @@
-task_id: R-582
-status: completed
+task_id: R-580
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: R-582
+tracker_row: R-580
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Smarter IR synthesis: the plan is checked against the prompt before anything is generated. A
-  deterministic critique (no model call) lists what the prompt asks for and the plan lacks - things
-  it names (book appointments, write reviews), features (uploads, search, a map, approvals,
-  messages, a dashboard), roles, and entities with no pages or endpoints. When there are gaps, one
-  revision pass asks the model for the complete plan with them added; the revision is kept only if it
-  is valid and keeps everything the first plan had, else the first plan stands with a note.
+  Domain knowledge in ecosystem detection. "A logistics app", "a ride-hailing app" or "a home
+  services marketplace" is two-sided even when the prompt names only the customer: the domain implies
+  drivers, technicians or sellers, so each side gets its own app. The planner gains the logistics
+  domain (shipper portal, driver app, dispatch console; shipments, vehicles, proofs of delivery) and
+  home services (customer app, technician app, admin; services, jobs with a location, reviews). A
+  one-sided domain (an online store to sell my products) stays one app.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -22,13 +21,7 @@ allowed_paths:
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - task verify stays offline with 0 model calls (the revision pass is proven with a fake provider offline, a real one live)
+  - task verify stays offline with 0 model calls
 required_gates:
-  - Live - on real prompts with the configured model, the critique finds the gaps of the first plan and the revised plan closes most of them without losing anything
+  - Live - prompts naming only the customer of a two-sided domain build every side's app through the platform's planner, and the generated ecosystem previews; a one-sided prompt stays one app
   - scripts/verify.sh passes
-found_and_fixed:
-  - A relation to an entity the plan lacks (Enrollment.student -> User) failed the whole build; repaired (a user field, a resolved name, or dropped with a note).
-  - An ownership write of 'none' failed the build; it reads as 'own'.
-  - "favourites" against a Favorite entity was a false gap (British spelling); normalised.
-deferred:
-  - The critique's word lists are English; prompts in other languages get no review yet.
