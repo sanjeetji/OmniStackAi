@@ -256,8 +256,14 @@ import pathlib, sys
 from omnistackai_agent_engine.application_ir import example_ir
 from omnistackai_agent_engine.codegen.react_native import ReactNativeAdapter
 
+import json
+from omnistackai_agent_engine.codegen.push_mobile import PUSH_DEPENDENCIES
+
 files = {f.path: f for f in ReactNativeAdapter().generate(example_ir("minimal-blog")).files()}
-pathlib.Path(sys.argv[1], "package.json").write_text(files["package.json"].content, encoding="utf-8")
+# PC-121: the cache type-checks every generated app, so it carries the optional push packages too.
+manifest = json.loads(files["package.json"].content)
+manifest["dependencies"] = dict(sorted({**manifest["dependencies"], **PUSH_DEPENDENCIES}.items()))
+pathlib.Path(sys.argv[1], "package.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 PYEOF2
     ;;
 

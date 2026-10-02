@@ -12,7 +12,8 @@ courier when an order is assigned to them". Each is a *rule*:
     to        "creator" (who made the record), "assignee" (its ownership assignee), a uuid field of the
               entity that holds a user's id ("customer_id"), or "role:<role>" (everyone with that role)
     title     text with {field} placeholders from the record; body likewise, optional
-    channels  "in_app" (a bell, live through R-569) and/or "email" (an outbox, through Resend)
+    channels  "in_app" (a bell, live through R-569), "email" (an outbox, through Resend) and/or "push" (the
+              phone app, through Expo's push service - PC-121)
 
 Reminders ("a day before the appointment") are scheduled jobs (R-568) whose action is to notify.
 
@@ -34,7 +35,8 @@ from .errors import InvalidIRError
 
 _IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]{0,48}$")
 _PLACEHOLDER = re.compile(r"\{([a-z][a-z0-9_]{0,48})\}")
-CHANNELS = ("in_app", "email")
+#: PC-121: "push" reaches the phone app's registered devices through Expo's push service.
+CHANNELS = ("in_app", "email", "push")
 #: "assigned": the record's ownership assignee (PC-111) became someone new - notify them, not on every change.
 EVENTS = ("created", "changed", "deleted", "assigned")
 MAX_RULES = 32
@@ -71,7 +73,7 @@ class Message:
         if len(self.body) > 2000:
             raise InvalidIRError(f"{label}: a body is at most 2000 characters")
         if not self.channels or any(c not in CHANNELS for c in self.channels) or len(set(self.channels)) != len(self.channels):
-            raise InvalidIRError(f"{label}: channels are in_app and/or email")
+            raise InvalidIRError(f"{label}: channels are in_app, email and/or push")
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {"to": list(self.to), "title": self.title, "channels": list(self.channels)}
@@ -187,3 +189,14 @@ def has_notifications(ir: Any) -> bool:
     rules = notifications_of(ir)
     jobs = jobs_of(ir)
     return bool(rules and rules.rules) or bool(jobs and any(s.notify is not None for s in jobs.schedules))
+
+
+def uses_push(ir: Any) -> bool:
+    """PC-121: whether any rule or reminder pushes to the phone app."""
+    from .jobs import jobs_of
+
+    rules = notifications_of(ir)
+    jobs = jobs_of(ir)
+    messages = [r.message for r in rules.rules] if rules else []
+    messages += [s.notify for s in jobs.schedules if s.notify is not None] if jobs else []
+    return any("push" in m.channels for m in messages)

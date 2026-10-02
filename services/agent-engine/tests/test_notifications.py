@@ -220,3 +220,51 @@ class ThePlannerReadsThePrompt(TestCase):
         rules = notifications_of(ApplicationIR.from_dict(repaired))
         self.assertEqual([r.name for r in rules.rules], ["order_shipped", "new_order", "again"])
         self.assertTrue(any("merged" in n for n in notes))
+
+
+class PushToThePhone(TestCase):
+    """PC-121: the push channel, devices, the sender, and the phone app's registration."""
+
+    def _ir(self):
+        return _ir(rules=[{**SHIPPED, "channels": ["in_app", "push"]}, NEW])
+
+    def test_the_channel_and_the_database(self) -> None:
+        schema = render_postgres_schema(self._ir())
+        for fragment in ('CREATE TABLE IF NOT EXISTS "push_device"', 'ADD COLUMN IF NOT EXISTS "push_status"',
+                         "CHECK (\"channel\" IN ('in_app', 'email', 'push'))", '"want_push" boolean',
+                         'DROP FUNCTION IF EXISTS "notification_send"(uuid, varchar, varchar, uuid, text, text, boolean, boolean);'):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, schema)
+        self.assertIn("'', TRUE, FALSE, TRUE)", schema.replace("'Total: ' || COALESCE(NEW.\"total_amount\"::text, '')", "''"))
+        with self.assertRaises(InvalidIRError):
+            _ir(rules=[{**SHIPPED, "channels": ["pigeon"]}])
+
+    def test_every_backend_sends(self) -> None:
+        python = {f.path: f.content for f in PythonBackendAdapter().generate(self._ir()).files()}
+        ast.parse(python["app/notifications.py"])
+        self.assertIn("await send_due_pushes()", python["app/notifications.py"])
+        self.assertIn('"DeviceNotRegistered"', python["app/notifications.py"])
+        go = {f.path: f.content for f in GoBackendAdapter().generate(self._ir()).files()}
+        self.assertIn('mux.HandleFunc("POST /notifications/devices", handlers.RequireAuth(h.NotificationsRegisterDevice))', go["main.go"])
+        node = {f.path: f.content for f in ExpressBackendAdapter().generate(self._ir()).files()}
+        self.assertIn("router.delete('/notifications/devices/:token', requireAuth,", node["src/notifications/router.ts"])
+        self.assertIn("EXPO_PUSH_URL=", python[".env.example"])
+
+    def test_the_phone_registers_after_sign_in(self) -> None:
+        from omnistackai_agent_engine.codegen.react_native import ReactNativeAdapter
+
+        files = {f.path: f.content for f in ReactNativeAdapter().generate(self._ir()).files()}
+        self.assertIn('"expo-notifications": "~0.28.19"', files["package.json"])
+        self.assertIn("<PushRegistration />", files["src/app/App.tsx"])
+        module = files["src/shared/notifications/PushRegistration.tsx"]
+        self.assertIn("getExpoPushTokenAsync({ projectId })", module)
+        self.assertIn("apiClient.post('/notifications/devices'", module)
+        plain = {f.path for f in ReactNativeAdapter().generate(_ir()).files()}
+        self.assertNotIn("src/shared/notifications/PushRegistration.tsx", plain, "no push channel, no push code")
+
+    def test_the_prompt(self) -> None:
+        data = _plan(rules=[], reminder=False)
+        data["capabilities"] = [c for c in data["capabilities"] if c["kind"] != "notifications"]
+        notifications_from_prompt("Send a push notification to the customer's phone when their order is shipped.", data)
+        (rule,) = next(c for c in data["capabilities"] if c["kind"] == "notifications")["config"]["rules"]
+        self.assertEqual(rule["channels"], ["in_app", "push"])

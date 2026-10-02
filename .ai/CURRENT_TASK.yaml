@@ -1,8 +1,9 @@
 task_id: PC-121
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: PC-121
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   Push notifications for the generated mobile app (founder's go-ahead 2026-10-02). A notification
@@ -27,3 +28,9 @@ required_gates:
   - Live - on Python, Go, Express and Hono, a status change pushes to the registered devices of the right people, a mute holds, a failure is retried, an uninstalled device is forgotten
   - the generated mobile app type-checks with expo-notifications
   - scripts/verify.sh passes
+found_and_fixed:
+  - The mobile type-check cache is built from a sample app without push, so a push app would have failed its build-time type-check; the cache now includes the push packages.
+  - "Send a push notification to ..." was not read as a notification; it is.
+deferred:
+  - Live proof on a real phone needs the founder's EAS project id (eas init) and a development build.
+  - Tapping a push does not yet open the record it is about.

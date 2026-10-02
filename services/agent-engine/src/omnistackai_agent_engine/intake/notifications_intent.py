@@ -22,7 +22,8 @@ from typing import Any
 from .ir_repair import resolve_entity_reference
 from .ownership_intent import _COORDINATORS, _plan_role
 
-_RULE = re.compile(r"\b(?P<verb>notify|notifies|tell|alert|alerts|email|emails|e-mail|message|let)\b(?P<who>[^.;\n]{0,60}?)"
+_RULE = re.compile(r"\b(?P<verb>notify|notifies|tell|alert|alerts|email|emails|e-mail|message|let|"
+                   r"send (?:a |an )?(?:push |email |e-mail )?(?:notification|alert|message)s?)\b(?P<who>[^.;\n]{0,60}?)"
                    r"\b(?:when|whenever|once|as soon as|after)\b(?P<what>[^.;\n]{1,100})", re.I)
 _REMIND = re.compile(r"\b(?:remind|reminds|send (?:a |an )?reminders?(?: to)?)\b(?P<who>[^.;\n]{0,40}?)\b"
                      r"(?P<n>\d{1,3}|a|an|one)\s*(?P<unit>min(?:ute)?s?|hours?|days?|weeks?)\s+before\b(?P<what>[^.;\n]{1,60})", re.I)
@@ -162,6 +163,8 @@ def _rule_from(sentence: str, data: dict[str, Any], entities: list[str], notes: 
     if when == "assigned":
         to = ["assignee"]
     channels = ["in_app", "email"] if match.group("verb").lower().startswith(("email", "e-mail")) or "email" in sentence.lower() else ["in_app"]
+    if re.search(r"\b(?:push|phone|mobile)\b", sentence, re.I):  # PC-121: to the phone app too
+        channels.append("push")
     event = when if isinstance(when, str) else f"{when['field']}_{when['becomes']}"
     rule = {"name": f"{entity.lower()}_{event}", "entity": entity, "when": when, "to": to, "title": title, "channels": channels}
     _add_rule(data, rule, notes, f"a notification: {', '.join(to)} hear when {entity} is {event.replace('_', ' ')}"
@@ -188,6 +191,8 @@ def _reminder_from(sentence: str, data: dict[str, Any], entities: list[str], not
         f"{count}d" if unit.startswith("day") else f"{count * 7}d"
     every = "5m" if unit.startswith(("min", "hour")) else "15m"
     channels = ["in_app", "email"] if "email" in sentence.lower() else ["in_app"]
+    if re.search(r"\b(?:push|phone|mobile)\b", sentence, re.I):
+        channels.append("push")
     schedule = {"name": f"remind_{entity.lower()}", "entity": entity, "every": every,
                 "due_within": {"field": due, "age": age},
                 "do": {"notify": {"to": _who(match.group("who"), data, entity), "title": f"Reminder: {entity.lower()} at {{{due}}}",

@@ -67,7 +67,10 @@ class ReactNativeAdapter:
         slug = _slug(ir.name)
 
         # 1. Project Configuration Files
-        files.append(self._generate_package_json(slug))
+        from ..application_ir.notifications import uses_push
+
+        push = needs_auth(ir) and uses_push(ir)  # PC-121
+        files.append(self._generate_package_json(slug, push))
         # R-548: Expo's dynamic config, reading the repo's brand.json. A static app.json
         # would silently win-or-lose against it and leave a user with no way to tell why.
         files.append(app_config_js())
@@ -97,7 +100,11 @@ class ReactNativeAdapter:
         # 5. App Root & Navigation
         files.append(self._generate_overview_screen(ir))
         files.append(self._generate_root_navigator(ir))
-        files.append(self._generate_app_root(ir))
+        files.append(self._generate_app_root(ir, push))
+        if push:
+            from .push_mobile import PUSH_MODULE, PUSH_MODULE_PATH
+
+            files.append(GeneratedFile(PUSH_MODULE_PATH, PUSH_MODULE))
 
         # 6. Store release (R-546): eas.json, brand-coloured icons, the iOS privacy manifest,
         # listing metadata, a CI workflow and the publish guide. No credential is created, used or
@@ -108,7 +115,7 @@ class ReactNativeAdapter:
 
     # ── Configurations ─────────────────────────────────────────────────────────
 
-    def _generate_package_json(self, slug: str) -> GeneratedFile:
+    def _generate_package_json(self, slug: str, push: bool = False) -> GeneratedFile:
         manifest = {
             "name": f"{slug}-mobile",
             "version": "1.0.0",
@@ -151,6 +158,10 @@ class ReactNativeAdapter:
             },
             "private": True,
         }
+        if push:  # PC-121
+            from .push_mobile import PUSH_DEPENDENCIES
+
+            manifest["dependencies"] = dict(sorted({**manifest["dependencies"], **PUSH_DEPENDENCIES}.items()))
         return GeneratedFile("package.json", json.dumps(manifest, indent=2) + "\n")
 
     def _generate_tsconfig(self) -> GeneratedFile:
@@ -1232,19 +1243,22 @@ const styles = StyleSheet.create({
         )
         return GeneratedFile("src/app/navigation/RootNavigator.tsx", content)
 
-    def _generate_app_root(self, ir: ApplicationIR) -> GeneratedFile:
+    def _generate_app_root(self, ir: ApplicationIR, push: bool = False) -> GeneratedFile:
         content = (
             "import React from 'react';\n"
             "import { StatusBar } from 'expo-status-bar';\n"
             "import { SafeAreaProvider } from 'react-native-safe-area-context';\n"
             "import { NavigationContainer } from '@react-navigation/native';\n"
             "import { AuthProvider } from '../shared/auth/AuthContext';\n"
-            "import { RootNavigator } from './navigation/RootNavigator';\n\n"
+            "import { RootNavigator } from './navigation/RootNavigator';\n"
+            + ("import { PushRegistration } from '../shared/notifications/PushRegistration';\n" if push else "")
+            + "\n"
             "export default function App() {\n"
             "  return (\n"
             "    <SafeAreaProvider>\n"
             "      <AuthProvider>\n"
-            "        <NavigationContainer>\n"
+            + ("        <PushRegistration />\n" if push else "")
+            + "        <NavigationContainer>\n"
             '          <StatusBar style="light" />\n'
             "          <RootNavigator />\n"
             "        </NavigationContainer>\n"

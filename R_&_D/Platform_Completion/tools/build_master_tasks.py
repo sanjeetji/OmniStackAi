@@ -148,7 +148,8 @@ def build() -> tuple[list[Task], list[Task]]:
             status = "In Progress"
         queue.append(Task(
             id=tid, title=title, source="Platform_Completion queue", area=mode, phase=phase,
-            status="Completed" if done else status, priority=prio, done_on=done[0] if done else "",
+            # A task done in code but not yet proven with a real account keeps saying so.
+            status=(status if status == LIVE else "Completed") if done else status, priority=prio, done_on=done[0] if done else "",
             notes=re.sub(r"\s*Covers .*?\.(?=\s|$)", "", notes).strip(), mode=mode, depends=depends,
             order=order,
         ))

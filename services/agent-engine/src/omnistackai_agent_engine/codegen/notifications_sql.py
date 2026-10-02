@@ -44,17 +44,35 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uq_notification_reminder" ON "notification" (
 CREATE TABLE IF NOT EXISTS "notification_mute" (
     "user_id" UUID NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
     "rule"    VARCHAR NOT NULL,
-    "channel" VARCHAR NOT NULL CHECK ("channel" IN ('in_app', 'email')),
+    "channel" VARCHAR NOT NULL,
     PRIMARY KEY ("user_id", "rule", "channel")
 );
+-- PC-121: push to the phone app. A person's devices, and each notification's push outbox.
+ALTER TABLE "notification_mute" DROP CONSTRAINT IF EXISTS "notification_mute_channel_check";
+ALTER TABLE "notification_mute" ADD CONSTRAINT "notification_mute_channel_check" CHECK ("channel" IN ('in_app', 'email', 'push'));
+ALTER TABLE "notification" ADD COLUMN IF NOT EXISTS "push_status" VARCHAR;
+ALTER TABLE "notification" ADD COLUMN IF NOT EXISTS "push_attempts" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "notification" ADD COLUMN IF NOT EXISTS "push_next_at" TIMESTAMPTZ;
+ALTER TABLE "notification" ADD COLUMN IF NOT EXISTS "push_error" TEXT;
+CREATE INDEX IF NOT EXISTS "ix_notification_push" ON "notification" ("push_next_at") WHERE "push_status" IN ('pending', 'sending');
+CREATE TABLE IF NOT EXISTS "push_device" (
+    "token"        VARCHAR PRIMARY KEY,
+    "user_id"      UUID NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+    "platform"     VARCHAR NOT NULL DEFAULT 'unknown',
+    "created_at"   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "last_seen_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS "ix_push_device_user" ON "push_device" ("user_id");
+DROP FUNCTION IF EXISTS "notification_send"(uuid, varchar, varchar, uuid, text, text, boolean, boolean);
 -- One notification for one person, without the channels they muted. Returns 1 when one was written.
 CREATE OR REPLACE FUNCTION "notification_send"("recipient" uuid, "rule_name" varchar, "entity_name" varchar,
                                                "record" uuid, "title_text" text, "body_text" text,
-                                               "want_in_app" boolean, "want_email" boolean)
+                                               "want_in_app" boolean, "want_email" boolean, "want_push" boolean)
 RETURNS integer AS $$
 DECLARE
     "v_in_app" boolean;
     "v_email" boolean;
+    "v_push" boolean;
     "v_written" integer;
 BEGIN
     IF "recipient" IS NULL THEN
@@ -64,12 +82,16 @@ BEGIN
         WHERE "m"."user_id" = "recipient" AND "m"."channel" = 'in_app' AND "m"."rule" IN ('*', "rule_name"));
     "v_email" := "want_email" AND NOT EXISTS (SELECT 1 FROM "notification_mute" "m"
         WHERE "m"."user_id" = "recipient" AND "m"."channel" = 'email' AND "m"."rule" IN ('*', "rule_name"));
-    IF NOT ("v_in_app" OR "v_email") THEN
+    "v_push" := "want_push" AND NOT EXISTS (SELECT 1 FROM "notification_mute" "m"
+        WHERE "m"."user_id" = "recipient" AND "m"."channel" = 'push' AND "m"."rule" IN ('*', "rule_name"));
+    IF NOT ("v_in_app" OR "v_email" OR "v_push") THEN
         RETURN 0;
     END IF;
-    INSERT INTO "notification" ("user_id", "rule", "entity", "record_id", "title", "body", "in_app", "email_status", "email_next_at")
+    INSERT INTO "notification" ("user_id", "rule", "entity", "record_id", "title", "body", "in_app", "email_status", "email_next_at",
+                                "push_status", "push_next_at")
     VALUES ("recipient", "rule_name", "entity_name", "record", COALESCE("title_text", ''), COALESCE("body_text", ''), "v_in_app",
-            CASE WHEN "v_email" THEN 'pending' END, CASE WHEN "v_email" THEN NOW() END)
+            CASE WHEN "v_email" THEN 'pending' END, CASE WHEN "v_email" THEN NOW() END,
+            CASE WHEN "v_push" THEN 'pending' END, CASE WHEN "v_push" THEN NOW() END)
     ON CONFLICT DO NOTHING;
     GET DIAGNOSTICS "v_written" = ROW_COUNT;
     RETURN "v_written";
@@ -95,6 +117,33 @@ EMAIL_FAILED = (
     + ' THEN \'failed\' ELSE \'pending\' END, "email_error" = $1, '
     '"email_next_at" = NOW() + make_interval(secs => 30 * power(2, "email_attempts")) WHERE "id" = $2'
 )
+
+# --- the push outbox (PC-121) -------------------------------------------------------------------------
+
+CLAIM_PUSHES = (
+    'UPDATE "notification" SET "push_status" = \'sending\', "push_attempts" = "push_attempts" + 1, '
+    '"push_next_at" = NOW() + interval \'5 minutes\' '
+    'WHERE "id" IN (SELECT "id" FROM "notification" WHERE "push_status" IN (\'pending\', \'sending\') '
+    'AND "push_next_at" <= NOW() ORDER BY "push_next_at" LIMIT 20 FOR UPDATE SKIP LOCKED) '
+    'RETURNING "id", "user_id", "title", "body", "entity", "record_id"'
+)
+DEVICES_OF = 'SELECT "token" FROM "push_device" WHERE "user_id" = $1'
+PUSH_SENT = 'UPDATE "notification" SET "push_status" = \'sent\', "push_error" = NULL, "push_next_at" = NULL WHERE "id" = $1'
+PUSH_SKIPPED = ('UPDATE "notification" SET "push_status" = \'skipped\', "push_error" = $1, "push_next_at" = NULL '
+                'WHERE "id" = $2')
+PUSH_FAILED = (
+    'UPDATE "notification" SET "push_status" = CASE WHEN "push_attempts" >= ' + str(EMAIL_MAX_ATTEMPTS)
+    + ' THEN \'failed\' ELSE \'pending\' END, "push_error" = $1, '
+    '"push_next_at" = NOW() + make_interval(secs => 30 * power(2, "push_attempts")) WHERE "id" = $2'
+)
+#: A device whose app was uninstalled (Expo answers DeviceNotRegistered) is forgotten.
+FORGET_DEVICE = 'DELETE FROM "push_device" WHERE "token" = $1'
+#: A token belongs to whoever signed in on that phone last.
+REGISTER_DEVICE = (
+    'INSERT INTO "push_device" ("token", "user_id", "platform") VALUES ($1, $2, $3) '
+    'ON CONFLICT ("token") DO UPDATE SET "user_id" = EXCLUDED."user_id", "platform" = EXCLUDED."platform", "last_seen_at" = NOW()'
+)
+UNREGISTER_DEVICE = 'DELETE FROM "push_device" WHERE "token" = $1 AND "user_id" = $2'
 
 # --- the inbox (the API) ----------------------------------------------------------------------------
 
@@ -155,7 +204,8 @@ def recipients(ir: ApplicationIR, entity: str, message: Message, row: str) -> st
 def _send(ir: ApplicationIR, entity: str, rule_name: str, message: Message, row: str, uid: str) -> str:
     return (f'"notification_send"({uid}, {_literal(rule_name)}, {_literal(entity)}, {row}."id", '
             f"{text_expression(message.title, row)}, {text_expression(message.body, row)}, "
-            f"{_literal('in_app' in message.channels)}, {_literal('email' in message.channels)})")
+            f"{_literal('in_app' in message.channels)}, {_literal('email' in message.channels)}, "
+            f"{_literal('push' in message.channels)})")
 
 
 @dataclass(frozen=True, slots=True)

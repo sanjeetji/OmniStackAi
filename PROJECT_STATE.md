@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-121 (2026-10-02): push.** Notifications can reach the phone app through Expo; 14/14 live on all four backends; a real phone needs the founder's EAS project id.
 > **PC-053 (2026-10-02): notifications.** In-app (a live bell) and email (an outbox with retries), per-person preferences, reminders; written by the database so every backend agrees. 27/27 live on all four backends; push waits for mobile go-ahead (PC-121).
 > **PC-117 (2026-10-02): jobs at a time of day.** "Every night at 2am", "every Monday at 9am", in the app's time zone; computed in Postgres for every backend.
 > **PC-119 (2026-10-02): couriers' orders stay theirs.** "Couriers see only the orders assigned to them" makes an assignment rule, whatever the plan calls couriers.

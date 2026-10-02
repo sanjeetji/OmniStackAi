@@ -81,6 +81,40 @@ carry out. Repair resolves names and drops rules that name what the plan lacks.
   channel. A rule addressed only to roles (new orders, for staff) is offered only to people with
   one of those roles.
 
+## Push to the phone app (PC-121)
+
+A rule (or a reminder) can add the `push` channel; the prompt reader adds it for "push", "phone" or
+"mobile". Then:
+
+- **Registering a phone.** The generated React Native app asks for permission after sign-in, gets an
+  Expo push token for the phone, and registers it with `POST /notifications/devices`.
+  - A token belongs to whoever signed in on that phone last.
+  - `DELETE /notifications/devices/{token}` forgets your own device, never someone else's.
+- **Sending.** Each backend sends due pushes through Expo's push service (`EXPO_PUSH_URL`, default
+  `https://exp.host/--/api/v2/push/send`). `EXPO_ACCESS_TOKEN` is needed only if the Expo project
+  enforces push security.
+  - A refusal from the service is retried like email.
+  - A device Expo reports as `DeviceNotRegistered` (the app was uninstalled) is forgotten.
+  - A person with no registered device gets `skipped`, not retries.
+- **Muting.** Anyone can mute push per rule, or for everything, like the other channels. The
+  preferences page shows a "Phone" column.
+
+### Trying it on your own phone (your steps)
+
+1. Install the Expo CLI tools: `npm install -g eas-cli`. Then sign in with `eas login`; create a free
+   Expo account at expo.dev if you don't have one.
+2. In the generated project's `apps/mobile`, run `eas init`. It creates the Expo project and prints
+   its **project id**.
+3. Add `EAS_PROJECT_ID=<that id>` to `apps/mobile/.env`. The app config reads it.
+4. Push needs a development build, not Expo Go: `eas build --profile development --platform android`
+   (or `ios`). Install the build on your phone from the link Expo gives you.
+5. Start the preview, open the app on the phone, sign in, and allow notifications. Then make
+   something happen that a rule announces, for example ship an order in the admin console. The
+   phone shows it.
+
+Store builds (later) also need the Apple and Google developer accounts covered in
+`store-publishing.md`.
+
 ## Proven
 
 On 2026-10-02, the same plan ran on each of Python, Go, Express and Hono through the platform's
@@ -96,13 +130,25 @@ runner, with a stand-in email provider, and each passed 27 checks:
 - each person was offered only the rules that can reach them;
 - a reminder fired once, and a visit three days away was not reminded.
 
+Push (PC-121) passed 14 checks on each of the four backends, against a stand-in for Expo's push
+service:
+- registration needs sign-in;
+- a refused push was retried, then sent;
+- staff with a phone got the new order, and staff without one were skipped;
+- both of the customer's phones were pushed, and the uninstalled one was forgotten;
+- a push mute held, and the notification still appeared in the app;
+- a phone moved to whoever signed in on it;
+- nobody could forget another person's device.
+
+The generated mobile app type-checks with `expo-notifications`.
+
 In a browser, the customer's bell went from nothing to 1 when staff shipped the order elsewhere,
 with no reload. The notifications page listed it, marking it read cleared the bell live, and
 turning off its email was saved (6 of 6).
 
 ## Not yet
 
-- Push notifications (Expo and native) wait for the go-ahead on mobile work.
+- A push doesn't open the record it's about when tapped yet.
 - SMS isn't a channel.
 - A notification doesn't know who made the change, so a person who changes their own record is
   told too.

@@ -531,9 +531,11 @@ QUEUE = [
      "(R-569), a page with preferences, an email outbox with retries (Resend, keys last). 27/27 live on Python, "
      "Go, Express and Hono; 6/6 in a browser. Push is PC-121 (mobile work: founder's go-ahead)."),
     ("PC-121", "Push notifications for the generated mobile apps (Expo push, then native)",
-     "2 Maximum features", "Both", "Not Started", "P2", "PC-053",
+     "2 Maximum features", "Both", "Completed - needs live proof", "P2", "PC-053",
      "PC-053's notifications reach the app and email; a phone needs push tokens per device and Expo's push "
-     "service. Native mobile work waits for the founder's go-ahead."),
+     "service. Done 2026-10-02 (founder's go-ahead): a push channel, device registration after sign-in, "
+     "every backend sends through Expo with retries and forgets uninstalled devices; 14/14 live on four "
+     "backends against a stand-in. A real phone needs the founder's EAS project id (guided in the runbook)."),
     ("PC-054", "Tests generated with every app: API contract, end-to-end (Playwright), unit",
      "2 Maximum features", "Both", "Not Started", "P1", "",
      "Architecture-plan target: over 80% coverage of generated code."),

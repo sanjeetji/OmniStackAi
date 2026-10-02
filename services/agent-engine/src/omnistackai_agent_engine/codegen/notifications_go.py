@@ -17,6 +17,8 @@ GO_NOTIFICATION_ROUTES = (
     ("POST", "/notifications/{notificationId}/read", "NotificationsRead"),
     ("GET", "/notifications/preferences", "NotificationsPreferences"),
     ("PUT", "/notifications/preferences", "NotificationsSetPreference"),
+    ("POST", "/notifications/devices", "NotificationsRegisterDevice"),
+    ("DELETE", "/notifications/devices/{token}", "NotificationsUnregisterDevice"),
 )
 
 
@@ -50,6 +52,14 @@ def go_notifications_file(ir: ApplicationIR) -> str:
         f"\tsqlMutes = {_raw(q.MUTES)}\n"
         f"\tsqlMute = {_raw(q.MUTE)}\n"
         f"\tsqlUnmute = {_raw(q.UNMUTE)}\n"
+        f"\tsqlClaimPushes = {_raw(q.CLAIM_PUSHES)}\n"
+        f"\tsqlDevicesOf = {_raw(q.DEVICES_OF)}\n"
+        f"\tsqlPushSent = {_raw(q.PUSH_SENT)}\n"
+        f"\tsqlPushSkipped = {_raw(q.PUSH_SKIPPED)}\n"
+        f"\tsqlPushFailed = {_raw(q.PUSH_FAILED)}\n"
+        f"\tsqlForgetDevice = {_raw(q.FORGET_DEVICE)}\n"
+        f"\tsqlRegisterDevice = {_raw(q.REGISTER_DEVICE)}\n"
+        f"\tsqlUnregisterDevice = {_raw(q.UNREGISTER_DEVICE)}\n"
         ")\n"
     )
     return _GO.replace("__CONFIG__", config)
@@ -245,7 +255,7 @@ func (h *Handlers) NotificationsSetPreference(w http.ResponseWriter, r *http.Req
 	for _, rule := range notificationRules {
 		known = known || rule.Rule == body.Rule
 	}
-	if !known || (body.Channel != "in_app" && body.Channel != "email") {
+	if !known || (body.Channel != "in_app" && body.Channel != "email" && body.Channel != "push") {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"detail": "unknown rule or channel"})
 		return
 	}
@@ -258,6 +268,154 @@ func (h *Handlers) NotificationsSetPreference(w http.ResponseWriter, r *http.Req
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"rule": body.Rule, "channel": body.Channel, "muted": body.Muted})
+}
+
+// --- the phone app's devices (PC-121) -------------------------------------------------------------
+
+func (h *Handlers) NotificationsRegisterDevice(w http.ResponseWriter, r *http.Request) {
+	me, ok := notificationsMe(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Token    string `json:"token"`
+		Platform string `json:"platform"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Token == "" || len(body.Token) > 300 {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"detail": "a push token is required"})
+		return
+	}
+	if body.Platform == "" {
+		body.Platform = "unknown"
+	}
+	if len(body.Platform) > 20 {
+		body.Platform = body.Platform[:20]
+	}
+	if _, err := h.DB.ExecContext(r.Context(), sqlRegisterDevice, body.Token, me, body.Platform); err != nil {
+		dbError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"registered": true})
+}
+
+func (h *Handlers) NotificationsUnregisterDevice(w http.ResponseWriter, r *http.Request) {
+	me, ok := notificationsMe(w, r)
+	if !ok {
+		return
+	}
+	if _, err := h.DB.ExecContext(r.Context(), sqlUnregisterDevice, r.PathValue("token"), me); err != nil {
+		dbError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"registered": false})
+}
+
+type pushTicket struct {
+	Status  string `json:"status"`
+	Details struct {
+		Error string `json:"error"`
+	} `json:"details"`
+}
+
+func sendExpoPush(messages []map[string]any) ([]pushTicket, error) {
+	url := os.Getenv("EXPO_PUSH_URL")
+	if url == "" {
+		url = "https://exp.host/--/api/v2/push/send"
+	}
+	payload, _ := json.Marshal(messages)
+	request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+	if token := os.Getenv("EXPO_ACCESS_TOKEN"); token != "" {
+		request.Header.Set("Authorization", "Bearer "+token)
+	}
+	response, err := (&http.Client{Timeout: 15 * time.Second}).Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode >= 300 {
+		return nil, fmt.Errorf("push service answered %d", response.StatusCode)
+	}
+	var out struct {
+		Data []pushTicket `json:"data"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
+}
+
+// sendDuePushes pushes what is due to each person's devices and forgets uninstalled ones.
+func (h *Handlers) sendDuePushes(ctx context.Context) error {
+	rows, err := h.DB.QueryContext(ctx, sqlClaimPushes)
+	if err != nil {
+		return err
+	}
+	type due struct {
+		id, userID, title, body, entity string
+		recordID                         *string
+	}
+	batch := []due{}
+	for rows.Next() {
+		var d due
+		if err := rows.Scan(&d.id, &d.userID, &d.title, &d.body, &d.entity, &d.recordID); err != nil {
+			rows.Close()
+			return err
+		}
+		batch = append(batch, d)
+	}
+	rows.Close()
+	for _, d := range batch {
+		tokenRows, err := h.DB.QueryContext(ctx, sqlDevicesOf, d.userID)
+		if err != nil {
+			return err
+		}
+		tokens := []string{}
+		for tokenRows.Next() {
+			var token string
+			if tokenRows.Scan(&token) == nil {
+				tokens = append(tokens, token)
+			}
+		}
+		tokenRows.Close()
+		if len(tokens) == 0 {
+			_, _ = h.DB.ExecContext(ctx, sqlPushSkipped, "no device registered", d.id)
+			continue
+		}
+		body := d.body
+		if body == "" {
+			body = d.title
+		}
+		messages := []map[string]any{}
+		for _, token := range tokens {
+			messages = append(messages, map[string]any{"to": token, "title": d.title, "body": body, "sound": "default",
+				"data": map[string]any{"entity": d.entity, "record_id": d.recordID, "notification_id": d.id}})
+		}
+		tickets, err := sendExpoPush(messages)
+		if err != nil {
+			_, _ = h.DB.ExecContext(ctx, sqlPushFailed, err.Error(), d.id)
+			continue
+		}
+		delivered := false
+		for i, ticket := range tickets {
+			if ticket.Status == "ok" {
+				delivered = true
+			} else if ticket.Details.Error == "DeviceNotRegistered" && i < len(tokens) {
+				_, _ = h.DB.ExecContext(ctx, sqlForgetDevice, tokens[i])
+			}
+		}
+		if delivered {
+			_, _ = h.DB.ExecContext(ctx, sqlPushSent, d.id)
+		} else {
+			raw, _ := json.Marshal(tickets)
+			_, _ = h.DB.ExecContext(ctx, sqlPushFailed, string(raw), d.id)
+		}
+	}
+	return nil
 }
 
 // --- the email outbox ------------------------------------------------------------------------------
@@ -339,6 +497,9 @@ func (h *Handlers) RunNotifications() {
 	for {
 		if err := h.sendDueEmails(context.Background()); err != nil {
 			log.Printf("notifications: %v", err)
+		}
+		if err := h.sendDuePushes(context.Background()); err != nil {
+			log.Printf("notifications (push): %v", err)
 		}
 		time.Sleep(interval)
 	}

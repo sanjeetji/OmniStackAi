@@ -17,6 +17,8 @@ NODE_NOTIFICATION_ROUTES = (
     ("post", "/notifications/read-all", "readAll"),
     ("get", "/notifications/preferences", "preferences"),
     ("put", "/notifications/preferences", "setPreference"),
+    ("post", "/notifications/devices", "registerDevice"),
+    ("delete", "/notifications/devices/:token", "unregisterDevice"),
     ("post", "/notifications/:notificationId/read", "readOne"),
 )
 
@@ -28,6 +30,9 @@ def node_notifications_service(ir: ApplicationIR) -> str:
         "claimEmails": q.CLAIM_EMAILS, "emailSent": q.EMAIL_SENT, "emailSkipped": q.EMAIL_SKIPPED,
         "emailFailed": q.EMAIL_FAILED, "inbox": q.INBOX, "inboxUnread": q.INBOX_UNREAD, "unreadCount": q.UNREAD_COUNT,
         "markRead": q.MARK_READ, "markAllRead": q.MARK_ALL_READ, "mutes": q.MUTES, "mute": q.MUTE, "unmute": q.UNMUTE,
+        "claimPushes": q.CLAIM_PUSHES, "devicesOf": q.DEVICES_OF, "pushSent": q.PUSH_SENT, "pushSkipped": q.PUSH_SKIPPED,
+        "pushFailed": q.PUSH_FAILED, "forgetDevice": q.FORGET_DEVICE, "registerDevice": q.REGISTER_DEVICE,
+        "unregisterDevice": q.UNREGISTER_DEVICE,
     }
     config = (
         f"const RULES: {{ rule: string; label: string; channels: string[]; onlyRoles: string[] }}[] = {json.dumps(rules, indent=2)};\n\n"
@@ -127,11 +132,72 @@ export async function setPreference({ claims, body }: Call): Promise<Out> {
   if (!me) return noAccount;
   const rule = String(body?.rule ?? '');
   const channel = String(body?.channel ?? '');
-  if ((rule !== '*' && !RULES.some((r) => r.rule === rule)) || !['in_app', 'email'].includes(channel) || typeof body?.muted !== 'boolean') {
+  if ((rule !== '*' && !RULES.some((r) => r.rule === rule)) || !['in_app', 'email', 'push'].includes(channel) || typeof body?.muted !== 'boolean') {
     return { status: 422, body: { detail: 'unknown rule or channel' } };
   }
   await pool.query(body.muted ? SQL.mute : SQL.unmute, [me, rule, channel]);
   return { status: 200, body: { rule, channel, muted: body.muted } };
+}
+
+// --- the phone app's devices (PC-121) ----------------------------------------------------------
+
+export async function registerDevice({ claims, body }: Call): Promise<Out> {
+  const me = ownerOf(claims);
+  if (!me) return noAccount;
+  const token = typeof body?.token === 'string' ? body.token : '';
+  if (!token || token.length > 300) return { status: 422, body: { detail: 'a push token is required' } };
+  await pool.query(SQL.registerDevice, [token, me, String(body?.platform ?? 'unknown').slice(0, 20)]);
+  return { status: 200, body: { registered: true } };
+}
+
+export async function unregisterDevice({ claims, params }: Call): Promise<Out> {
+  const me = ownerOf(claims);
+  if (!me) return noAccount;
+  await pool.query(SQL.unregisterDevice, [params.token, me]);
+  return { status: 200, body: { registered: false } };
+}
+
+async function expoPush(messages: unknown[]): Promise<{ status?: string; details?: { error?: string } }[]> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json' };
+  if (process.env.EXPO_ACCESS_TOKEN) headers.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
+  const res = await fetch(process.env.EXPO_PUSH_URL || 'https://exp.host/--/api/v2/push/send', {
+    method: 'POST', headers, body: JSON.stringify(messages), signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`push service answered ${res.status}`);
+  return ((await res.json()) as any)?.data ?? [];
+}
+
+/** Push what is due to each person's devices; forget devices that were uninstalled. */
+export async function sendDuePushes(): Promise<number> {
+  const due = (await pool.query(SQL.claimPushes)).rows;
+  let sent = 0;
+  for (const row of due) {
+    const tokens: string[] = (await pool.query(SQL.devicesOf, [row.user_id])).rows.map((r: any) => r.token);
+    if (tokens.length === 0) {
+      await pool.query(SQL.pushSkipped, ['no device registered', row.id]);
+      continue;
+    }
+    const data = { entity: row.entity, record_id: row.record_id ?? null, notification_id: row.id };
+    let tickets: { status?: string; details?: { error?: string } }[];
+    try {
+      tickets = await expoPush(tokens.map((to) => ({ to, title: row.title, body: row.body || row.title, sound: 'default', data })));
+    } catch (error) {
+      await pool.query(SQL.pushFailed, [String((error as Error)?.message ?? error).slice(0, 500), row.id]);
+      continue;
+    }
+    let delivered = false;
+    for (let i = 0; i < tickets.length; i++) {
+      if (tickets[i]?.status === 'ok') delivered = true;
+      else if (tickets[i]?.details?.error === 'DeviceNotRegistered' && tokens[i]) await pool.query(SQL.forgetDevice, [tokens[i]]);
+    }
+    if (delivered) {
+      await pool.query(SQL.pushSent, [row.id]);
+      sent++;
+    } else {
+      await pool.query(SQL.pushFailed, [JSON.stringify(tickets).slice(0, 500), row.id]);
+    }
+  }
+  return sent;
 }
 
 // --- the email outbox ---------------------------------------------------------------------------
@@ -177,6 +243,7 @@ export function startNotifications(): void {
   const loop = async () => {
     try {
       await sendDueEmails();
+      await sendDuePushes();
     } catch (error) {
       console.warn('notifications:', (error as Error)?.message ?? error);
     }

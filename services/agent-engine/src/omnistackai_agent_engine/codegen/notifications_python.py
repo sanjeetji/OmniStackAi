@@ -15,6 +15,8 @@ NOTIFICATIONS_ENV_EXAMPLE = (
     "# Notifications (PC-053): emails go through Resend with RESEND_API_KEY and EMAIL_FROM (above).\n"
     "# EMAIL_API_URL points the sender elsewhere (a test double); NOTIFICATIONS_EMAIL_DISABLED=1 stops it here.\n"
     "EMAIL_API_URL=\nNOTIFICATIONS_EMAIL_DISABLED=\n"
+    "# Push to the phone app (PC-121) through Expo; EXPO_ACCESS_TOKEN only if the project enforces it.\n"
+    "EXPO_PUSH_URL=\nEXPO_ACCESS_TOKEN=\n"
 )
 
 
@@ -53,7 +55,15 @@ def python_notifications_file(ir: ApplicationIR) -> str:
         f"MARK_ALL_READ = {p(q.MARK_ALL_READ)!r}\n"
         f"MUTES = {p(q.MUTES)!r}\n"
         f"MUTE = {p(q.MUTE)!r}\n"
-        f"UNMUTE = {p(q.UNMUTE)!r}\n\n"
+        f"UNMUTE = {p(q.UNMUTE)!r}\n"
+        f"CLAIM_PUSHES = {q.CLAIM_PUSHES!r}\n"
+        f"DEVICES_OF = {p(q.DEVICES_OF)!r}\n"
+        f"PUSH_SENT = {p(q.PUSH_SENT)!r}\n"
+        f"PUSH_SKIPPED = {p(q.PUSH_SKIPPED)!r}\n"
+        f"PUSH_FAILED = {p(q.PUSH_FAILED)!r}\n"
+        f"FORGET_DEVICE = {p(q.FORGET_DEVICE)!r}\n"
+        f"REGISTER_DEVICE = {p(q.REGISTER_DEVICE)!r}\n"
+        f"UNREGISTER_DEVICE = {p(q.UNREGISTER_DEVICE)!r}\n\n"
         "router = APIRouter(tags=[\"notifications\"])\n\n\n"
         + _BODY
     )
@@ -122,18 +132,90 @@ async def preferences(claims: dict = Depends(require_auth)) -> dict:
 
 class PreferenceIn(BaseModel):
     rule: str  # a rule's name, or "*" for every rule
-    channel: str  # in_app | email
+    channel: str  # in_app | email | push
     muted: bool
 
 
 @router.put("/notifications/preferences")
 async def set_preference(body: PreferenceIn, claims: dict = Depends(require_auth)) -> dict:
     me = _me(claims)
-    if body.channel not in ("in_app", "email") or (body.rule != "*" and body.rule not in {r["rule"] for r in RULES}):
+    if body.channel not in ("in_app", "email", "push") or (body.rule != "*" and body.rule not in {r["rule"] for r in RULES}):
         raise HTTPException(status_code=422, detail="unknown rule or channel")
     async with await connect() as conn, conn.cursor() as cur:
         await cur.execute(MUTE if body.muted else UNMUTE, (me, body.rule, body.channel))
     return {"rule": body.rule, "channel": body.channel, "muted": body.muted}
+
+
+# --- the phone app's devices (PC-121) ----------------------------------------------------------
+
+class DeviceIn(BaseModel):
+    token: str
+    platform: str = "unknown"
+
+
+@router.post("/notifications/devices")
+async def register_device(body: DeviceIn, claims: dict = Depends(require_auth)) -> dict:
+    me = _me(claims)
+    if not body.token or len(body.token) > 300:
+        raise HTTPException(status_code=422, detail="a push token is required")
+    async with await connect() as conn, conn.cursor() as cur:
+        await cur.execute(REGISTER_DEVICE, (body.token, me, body.platform[:20]))
+    return {"registered": True}
+
+
+@router.delete("/notifications/devices/{token}")
+async def unregister_device(token: str, claims: dict = Depends(require_auth)) -> dict:
+    me = _me(claims)
+    async with await connect() as conn, conn.cursor() as cur:
+        await cur.execute(UNREGISTER_DEVICE, (token, me))
+    return {"registered": False}
+
+
+def _push(messages: list[dict]) -> list[dict]:
+    """Send to Expo's push service; its ticket per message, in order."""
+    url = os.environ.get("EXPO_PUSH_URL") or "https://exp.host/--/api/v2/push/send"
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    if os.environ.get("EXPO_ACCESS_TOKEN"):
+        headers["Authorization"] = f"Bearer {os.environ['EXPO_ACCESS_TOKEN']}"
+    request = urllib.request.Request(url, data=json.dumps(messages).encode(), method="POST", headers=headers)
+    with urllib.request.urlopen(request, timeout=15) as response:
+        return json.loads(response.read() or b"{}").get("data") or []
+
+
+async def send_due_pushes() -> int:
+    """Push what is due to each person's devices; forget devices that were uninstalled."""
+    async with await connect() as conn, conn.cursor() as cur:
+        await cur.execute(CLAIM_PUSHES)
+        due = await cur.fetchall()
+    sent = 0
+    for row in due:
+        async with await connect() as conn, conn.cursor() as cur:
+            await cur.execute(DEVICES_OF, (str(row["user_id"]),))
+            tokens = [r["token"] for r in await cur.fetchall()]
+            if not tokens:
+                await cur.execute(PUSH_SKIPPED, ("no device registered", row["id"]))
+                continue
+            data = {"entity": row["entity"], "record_id": str(row["record_id"]) if row.get("record_id") else None,
+                    "notification_id": str(row["id"])}
+            messages = [{"to": t, "title": row["title"], "body": row["body"] or row["title"], "sound": "default", "data": data}
+                        for t in tokens]
+            try:
+                tickets = await asyncio.to_thread(_push, messages)
+            except (OSError, ValueError, urllib.error.URLError) as error:
+                await cur.execute(PUSH_FAILED, (f"{type(error).__name__}: {error}"[:500], row["id"]))
+                continue
+            delivered = False
+            for token, ticket in zip(tokens, tickets):
+                if ticket.get("status") == "ok":
+                    delivered = True
+                elif (ticket.get("details") or {}).get("error") == "DeviceNotRegistered":
+                    await cur.execute(FORGET_DEVICE, (token,))
+            if delivered:
+                await cur.execute(PUSH_SENT, (row["id"],))
+                sent += 1
+            else:
+                await cur.execute(PUSH_FAILED, (json.dumps(tickets)[:500], row["id"]))
+    return sent
 
 
 # --- the email outbox ---------------------------------------------------------------------------
@@ -179,6 +261,7 @@ async def _loop() -> None:
     while True:
         try:
             await send_due_emails()
+            await send_due_pushes()
         except asyncio.CancelledError:
             raise
         except Exception as error:  # noqa: BLE001 - the database may not be up yet; try again

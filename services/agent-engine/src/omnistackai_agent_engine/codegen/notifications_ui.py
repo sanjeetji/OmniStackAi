@@ -78,7 +78,7 @@ import { useCallback, useEffect, useState } from "react";
 import { markAllRead, markRead, notifications, preferences, setPreference, type Notification, type Preferences } from "@/lib/notifications";
 import { useLive } from "@/lib/realtime";
 
-const CHANNEL: Record<string, string> = { in_app: "In the app", email: "Email" };
+const CHANNEL: Record<string, string> = { in_app: "In the app", email: "Email", push: "Phone" };
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<Notification[]>([]);
@@ -131,7 +131,7 @@ export default function NotificationsPage() {
         <section aria-labelledby="prefs" style={{ ...card, padding: "16px 18px" }}>
           <h2 id="prefs" style={{ fontSize: 18, fontWeight: 600, margin: "0 0 4px" }}>What you hear about</h2>
           <p style={{ margin: "0 0 12px", color: "#475569", fontSize: 14 }}>Turn a kind of notification off, or everything on a channel.</p>
-          {["in_app", "email"].map((channel) => (
+          {["in_app", "email", "push"].filter((c) => prefs.rules.some((r) => r.channels.includes(c))).map((channel) => (
             <label key={channel} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, fontWeight: 600 }}>
               <input type="checkbox" disabled={busy} checked={!prefs.all_muted.includes(channel)}
                 onChange={(e) => act(() => setPreference("*", channel, !e.target.checked))} />
