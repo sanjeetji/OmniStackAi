@@ -1,22 +1,19 @@
-task_id: PC-124
-status: completed
+task_id: PC-122
+status: in_progress
 phase: Platform Completion — M1 Quality foundation
-tracker_row: PC-124
+tracker_row: PC-122
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Scanning the QR opens the generated app on a real phone. The generated Expo app moves from SDK 51
-  (which the store's Expo Go no longer opens) to the current SDK, with every native module pinned to
-  the versions that SDK bundles; and the preview can run Expo through a tunnel for a phone that is not
-  on this machine's network, with the console saying which mode is in use and what to do when a scan
-  fails.
+  A quality benchmark: a fixed set of varied, real prompts built end to end through the platform's own
+  build pipeline and scored - does it build, does it run, does every page and API answer, how much of
+  what the prompt asked for was delivered, and how the pages look (screenshots). Results are saved
+  with a baseline, and a drop is reported as a regression. It calls real (free) models, so it is
+  opt-in and never part of task verify.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
-  - services/control-plane/
-  - apps/console-web/
   - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
@@ -26,18 +23,5 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - a generated app installs, type-checks and opens in the current store Expo Go on the Android emulator, signs in and lists data from the real API
+  - Live - the benchmark builds a set of prompts end to end with a free model, writes a scored report with screenshots, and a second run compares against the first
   - scripts/verify.sh passes
-found_and_fixed:
-  - Generated apps were on Expo SDK 51; the store's Expo Go opens only SDK 57 ("incompatible"). Now SDK 57, versions in codegen/expo_sdk.py.
-  - babel-preset-expo was not resolvable under pnpm's strict layout; declared as a devDependency.
-  - expo-notifications in Expo Go (no remote push since SDK 53) reports an error over the app; push is loaded only outside Expo Go, with the SDK 57 handler fields.
-  - The QR only worked on the same, non-isolating Wi-Fi; OMNISTACKAI_PHONE_ACCESS=anywhere tunnels the app and API.
-  - A public preview would let token-less requests in as admin (dev JWT secret / dev mode); tunnels force a random secret and dev mode off.
-  - A cold bundle streamed through a quick tunnel stopped at "Bundling 99%"; bundles are built locally before the scan.
-  - The emulator kept an older Expo Go; it is replaced with the SDK's (version compared, downgrade allowed).
-  - Expo Go 57 opened its developer menu and a floating Tools button over the app's header (its sign-in button); its dev-menu preferences are set.
-  - Expo Go reopened the previous project at start (a dead tunnel) and spun instead of opening the new link; tryToLaunchLastBundle is off on the emulator.
-deferred:
-  - Phone access is a machine setting (.env), not a console toggle; a per-preview switch needs the control-plane to pass options to the preview start.
-  - Quick tunnels have no uptime guarantee; hosted previews (cloud) remove the need for them.
