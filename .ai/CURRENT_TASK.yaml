@@ -1,18 +1,15 @@
-task_id: PC-049
-status: completed
+task_id: PC-109
+status: in_progress
 phase: Platform Completion — 1 Vibe Mode live
-tracker_row: PC-049
+tracker_row: PC-109
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  A published app's database keeps up with its project. PC-008 applies 0001_init.sql once; a
-  changed plan (a new field, a new entity, a new capability) never reached the live database. Now
-  every generated schema statement is safe to run again, and publishing evolves the live database:
-  the new schema is applied to a scratch schema, compared, missing columns are added to the live
-  tables (never dropped; leftovers and type changes are reported), and the schema is re-applied for
-  new tables, indexes, functions and triggers. A backup is taken before any schema change and the
-  last five kept. Hosted providers (Neon, Supabase) need the founder's account: their own task.
+  Generated React Native screens read as a finished product. A list card is titled by the record's
+  name (the field the web admin titles it by), shows its state and one or two useful details instead
+  of its UUID, and keeps its delete inside the card behind a confirmation; the made-up "Sync Status:
+  Active" card goes; titles are plural and human. The form gets human labels, the right keyboard
+  per field, switches for yes/no fields and required markers.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -23,12 +20,8 @@ allowed_paths:
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - a live database never loses a column, a table or a row through publishing
+  - task verify stays offline with 0 model calls
 required_gates:
-  - Live - an app published, its plan changed (a new field, a new entity, notifications), published again - the live database has the new column and tables, the old rows are intact, a backup exists, a dropped field is reported and kept
+  - the generated mobile app type-checks
+  - Live - the screens on the Android emulator (or, without it, rendered on the web through Expo) show names, states and details, not IDs
   - scripts/verify.sh passes
-found_and_fixed:
-  - Unpublishing left the app's images behind (the cause of the Docker disk filling); they are removed, and pruning includes the companion's images.
-  - Entity tables, updated_at triggers and lifecycle checks were not safe to re-apply; they are.
-deferred:
-  - PC-123 - hosted databases (Neon, Supabase) and scheduled backups; needs the founder's account.
