@@ -333,6 +333,9 @@ async def compile_and_repair(
 
     from ..edit.apply import apply_diff
     from ..verify.compile import compile_web_project
+    from ..verify.links import CODE as LINK_CODE
+    from ..verify.links import fix_links_in
+    from ..verify.tokens import fix_invisible_text_in
 
     web_dir = Path(repo_dir) / web_prefix.rstrip("/")
     specs = llm_file_specs(ir, user_prompt, synthesize_screens=synthesize_screens, flavour=flavour)
@@ -341,6 +344,15 @@ async def compile_and_repair(
     reverted: set[str] = set()
     untouched: set[str] = set()
 
+    def settle_tokens() -> None:
+        # PC-125: a surface colour used as a text colour is invisible text; the fix is certain, so it
+        # is made before every compile, in model-written files only (templates are written right).
+        written = [path for path in specs if is_model_written(web_dir / path)]
+        for path in fix_invisible_text_in(web_dir, written):
+            if path not in reverted:
+                repaired.add(path)
+
+    settle_tokens()
     report = compile_web_project(web_dir, runner=runner, timeout_seconds=compile_timeout_seconds)
     rounds = [report]
     final_round_ran = False
@@ -365,9 +377,17 @@ async def compile_and_repair(
                 outcomes=outcomes,
             )
         else:
-            changes = {path: specs[path].fallback for path in failing}
+            # PC-125: a page whose only problem is where its links go keeps everything else - its
+            # links are pointed at pages that exist. Anything else still goes back to the template.
+            link_only = sorted(path for path, errors in failing.items() if all(e.code == LINK_CODE for e in errors))
+            if link_only:
+                fix_links_in(web_dir, link_only)
+                repaired.update(link_only)
+            changes = {path: specs[path].fallback for path in failing if path not in link_only}
             if outcomes is not None:
                 for path, errors in failing.items():
+                    if path in link_only:
+                        continue
                     outcomes.append(
                         UiSynthesisOutcome(path, "deterministic", 0, model_id or "default", f"tsc: {len(errors)} error(s)")
                     )
@@ -378,6 +398,7 @@ async def compile_and_repair(
             else:
                 repaired.add(path)
         apply_diff(build_repair_diff(changes, web_prefix=web_prefix), repo_dir)
+        settle_tokens()
         report = compile_web_project(web_dir, runner=runner, timeout_seconds=compile_timeout_seconds)
         rounds.append(report)
         final_round_ran = round_index == rounds_allowed
@@ -404,6 +425,17 @@ async def compile_and_repair(
         apply_diff(build_repair_diff(changes, web_prefix=web_prefix), repo_dir)
         report = compile_web_project(web_dir, runner=runner, timeout_seconds=compile_timeout_seconds)
         rounds.append(report)
+
+    # PC-125: files the model did not write (a template, a shared component) are never rewritten by
+    # the model - but a link of theirs that goes nowhere is pointed at a page that exists.
+    if not report.ok:
+        link_only = sorted(path for path, errors in report.errors_by_file().items()
+                           if all(e.code == LINK_CODE for e in errors))
+        if link_only and fix_links_in(web_dir, link_only):
+            untouched.difference_update(link_only)
+            repaired.update(link_only)
+            report = compile_web_project(web_dir, runner=runner, timeout_seconds=compile_timeout_seconds)
+            rounds.append(report)
 
     return CompileRepairReport(
         tuple(rounds), tuple(sorted(repaired)), tuple(sorted(reverted)), tuple(sorted(untouched)), report.ok

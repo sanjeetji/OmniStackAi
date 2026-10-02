@@ -405,7 +405,7 @@ QUEUE = [
      "PC-049 keeps the self-hosted database up to date and backs it up before schema changes; a provider "
      "driver (create a database per app, its URL as DATABASE_URL) needs the founder's Neon or Supabase account."),
     ("PC-116", "A generated page links only to screens that exist in its app", "2 Maximum features",
-     "Both", "Not Started", "P2", "PC-114", "Seen 2026-10-01 in Bazaar Lite: the buyer storefront's home "
+     "Both", "Completed", "P2", "PC-114", "Seen 2026-10-01 in Bazaar Lite: the buyer storefront's home "
      "page has 'List with us' -> /listings/new, but only the seller portal has a listing editor, and the "
      "storefront's /listings/* are API proxy routes, so the link answers 422. The preview's UI check "
      "reports it; nothing repairs it."),
@@ -743,7 +743,10 @@ _MILESTONE_TASKS = [
      "before the scan; emulator installs the matching Expo Go. Live: LAN 7/7, anywhere 9/9 in Expo Go 57."),
     ("PC-125", "Check and repair: every generated page, link and API call verified (types, build, a "
      "browser walk); failures go back to the model with the exact error; a working fallback; the build "
-     "report says what is verified", _M1, "Both", "Not Started", "P0", "",
+     "report says what is verified", _M1, "Both", "Completed", "P0", "",
+     "Done 2026-10-03: links checked against each app's pages (compiler-style errors to the model, then "
+     "deterministic repair); background colours used as text fixed; build report lists the checks. "
+     "On 8 benchmark apps: 8 dead links and 15 invisible-text classes -> 0. "
      "The answer to hallucination: never trust model output, verify it and repair it. Folds PC-116. "
      "Benchmark run 20261002-191643 (PC-122) found, after the type check passed: a link to a page that "
      "does not exist (/appointment_list 404), text the same colour as its background (contrast 1.00:1), a "

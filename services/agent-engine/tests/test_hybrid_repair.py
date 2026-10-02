@@ -222,6 +222,15 @@ class RepairFilesTests(unittest.TestCase):
 
 
 class CompileAndRepairTests(unittest.TestCase):
+    def setUp(self) -> None:
+        # These count compiler rounds against a partial fake app, whose template pages link to screens
+        # the fake does not contain; the link check (PC-125) has its own tests in test_links.py.
+        from unittest import mock
+
+        patcher = mock.patch("omnistackai_agent_engine.verify.links.check_links", return_value=())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_model_repair_then_clean_compile(self) -> None:
         ir = _ir()
         with tempfile.TemporaryDirectory() as tmp:

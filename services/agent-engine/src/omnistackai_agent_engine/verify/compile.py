@@ -110,6 +110,7 @@ def compile_web_project(
     runner: Runner | None = None,
     timeout_seconds: float = 600.0,
     tail_chars: int = 4_000,
+    links: bool = True,
 ) -> CompileReport:
     """Type-check a generated web app with its own installed `tsc` and capture every diagnostic.
 
@@ -135,6 +136,12 @@ def compile_web_project(
     returncode = getattr(completed, "returncode", 1)
     returncode = returncode if isinstance(returncode, int) else 1
     errors = parse_tsc_output(output)
+    if links:
+        # PC-125: a link to a page that does not exist compiles - it is only a string - so it is
+        # checked here and reported like a compiler error, for the same repair loop.
+        from .links import check_links
+
+        errors = errors + check_links(web)
     return CompileReport(returncode == 0 and not errors, returncode, errors, output[-tail_chars:])
 
 

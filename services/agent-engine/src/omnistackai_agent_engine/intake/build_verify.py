@@ -48,6 +48,12 @@ MODE_ENV = "OMNISTACKAI_BUILD_VERIFY"
 _MAX_REASON_CHARS = 300
 
 
+
+#: PC-125: what a web app's "clean" means.
+CHECKS = ("types: every file type-checks with the app's own TypeScript",
+          "links: every link and navigation goes to a page of this app",
+          "text colours: no text is set in a background colour")
+
 def _mode() -> str:
     value = (os.environ.get(MODE_ENV) or "auto").strip().lower()
     return value if value in {"auto", "install", "off"} else "auto"
@@ -175,6 +181,8 @@ def verify_and_repair_build(
             continue
         records[relative] = {
             "status": "clean" if report.final_ok else "failing",
+            # PC-125: what "clean" covers - the build report says what was verified, not just a verdict.
+            "checks": list(CHECKS),
             "dependencies": how,
             "repaired": list(report.repaired),
             "reverted": list(report.reverted),
@@ -244,10 +252,11 @@ def _summary(record: dict[str, Any]) -> str:
             "not compile. This is a fault in the generator, not in your project — please report it."
         )
     if record["status"] == "clean" and not repaired and not reverted:
-        return "The generated code was type-checked and compiled cleanly."
+        return "The generated code was type-checked and compiled cleanly, and every link goes to a page that exists."
     parts = []
     if repaired:
-        parts.append(f"{repaired} page{'s' if repaired != 1 else ''} repaired from the compiler's errors")
+        parts.append(f"{repaired} page{'s' if repaired != 1 else ''} repaired (compiler errors, links to pages "
+                     "that do not exist, or text in a background colour)")
     if reverted:
         parts.append(
             f"{reverted} page{'s' if reverted != 1 else ''} replaced with the built-in template after repairs failed"

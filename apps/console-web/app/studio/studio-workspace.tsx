@@ -64,6 +64,8 @@ export interface BuildVerification {
   summary?: string;
   reason?: string;
   generator_failures?: string[];
+  /** PC-125: what was verified (types, links, text colours), in words. */
+  checks?: string[];
 }
 
 /** R-559: one substituted layer of the stack. Mirrors the agent-engine's `Substitution`. */
@@ -237,17 +239,24 @@ export function StudioWorkspace({
           <div className="mt-3 rounded-lg border border-border/60 bg-muted/40 p-3">
             <p className="text-xs font-medium text-foreground">
               {snapshot.verification.status === "clean"
-                ? "Type-checked"
+                ? "Checked"
                 : snapshot.verification.status === "repaired"
-                  ? "Type-checked and repaired"
+                  ? "Checked and repaired"
                   : snapshot.verification.status === "failing"
-                    ? "Type-check found problems"
-                    : "Not type-checked"}
+                    ? "Checks found problems"
+                    : "Not checked"}
             </p>
             {/* Text, never HTML: generated copy has no reason to inject markup into the console. */}
             <p className="mt-1 text-pretty text-xs text-muted-foreground">
               {snapshot.verification.summary || snapshot.verification.reason}
             </p>
+            {snapshot.verification.checks && snapshot.verification.checks.length > 0 ? (
+              <ul aria-label="What was checked" className="mt-1.5 list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+                {snapshot.verification.checks.map((check) => (
+                  <li key={check}>{check}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
         {snapshot.substitutions && snapshot.substitutions.length > 0 ? (

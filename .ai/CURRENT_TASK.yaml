@@ -1,8 +1,9 @@
 task_id: PC-125
-status: in_progress
+status: completed
 phase: Platform Completion — M1 Quality foundation
 tracker_row: PC-125
 started_at: "2026-10-02"
+completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
   Check and repair before the user sees it. Every generated page, link and API call is verified;
@@ -27,3 +28,10 @@ forbidden_changes:
 required_gates:
   - Live - the benchmark cases that showed a dead link and invisible text build again with neither, and the build report lists what was verified
   - scripts/verify.sh passes
+found_and_fixed:
+  - Model-written pages linked to pages that do not exist (/privacy, /terms, /appointment_list) and to data routes that answer JSON (/posts/${id}); the type check cannot see an address. Checked and repaired now.
+  - "text-muted" (a surface colour) used as a text colour made text invisible (contrast 1.00:1); 64 uses across three benchmark projects, all in model-written pages. Fixed before every type check.
+  - The build report said "type-checked" without saying what that covered; it lists the checks now, in the console too.
+deferred:
+  - A hydration mismatch (server and client render differently) has no certain static fix; the design review's browser walk (PC-130) feeds it back to the model.
+  - The live benchmark re-run of blog and clinic runs in the background on spent free tiers; its result is recorded at the M1 gate.
