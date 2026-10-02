@@ -1,16 +1,16 @@
-task_id: PC-109
-status: completed
-phase: Platform Completion — 1 Vibe Mode live
-tracker_row: PC-109
+task_id: R-582
+status: in_progress
+phase: Platform Completion — 2 Maximum features
+tracker_row: R-582
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Generated React Native screens read as a finished product. A list card is titled by the record's
-  name (the field the web admin titles it by), shows its state and one or two useful details instead
-  of its UUID, and keeps its delete inside the card behind a confirmation; the made-up "Sync Status:
-  Active" card goes; titles are plural and human. The form gets human labels, the right keyboard
-  per field, switches for yes/no fields and required markers.
+  Smarter IR synthesis: the plan is checked against the prompt before anything is generated. A
+  deterministic critique (no model call) lists what the prompt asks for and the plan lacks - things
+  it names (book appointments, write reviews), features (uploads, search, a map, approvals,
+  messages, a dashboard), roles, and entities with no pages or endpoints. When there are gaps, one
+  revision pass asks the model for the complete plan with them added; the revision is kept only if it
+  is valid and keeps everything the first plan had, else the first plan stands with a note.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -21,14 +21,7 @@ allowed_paths:
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - task verify stays offline with 0 model calls
+  - task verify stays offline with 0 model calls (the revision pass is proven with a fake provider offline, a real one live)
 required_gates:
-  - the generated mobile app type-checks
-  - Live - the screens on the Android emulator (or, without it, rendered on the web through Expo) show names, states and details, not IDs
+  - Live - on real prompts with the configured model, the critique finds the gaps of the first plan and the revised plan closes most of them without losing anything
   - scripts/verify.sh passes
-found_and_fixed:
-  - The home screen was the builder's view (System Metrics, "8 fields - Full CRUD", an OmniStackAI badge); it is the user's.
-  - Every screen had a band of empty space above it (top safe area padded twice under the header).
-  - Navigator titles were "OrderItems" / "Customer Details"; they are "Order Items" / "Customer".
-deferred:
-  - The mobile app does not listen for live updates (R-569) yet; it refreshes when opened or pulled.
