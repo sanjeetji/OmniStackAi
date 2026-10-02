@@ -23,7 +23,7 @@ def _go_str(value: str) -> str:
 def go_realtime_file(ir: ApplicationIR, slug: str) -> str:
     rows = "\n".join(
         f"\t{_go_str(t.table)}: {{Entity: {_go_str(t.entity)}, Owned: {'true' if t.owned else 'false'}, "
-        f"SeeAll: []string{{{', '.join(_go_str(r) for r in t.see_all)}}}}},"
+        f"SeeAll: []string{{{', '.join(_go_str(r) for r in t.see_all)}}}, Strict: {'true' if t.strict else 'false'}}},"
         for t in q.live_tables(ir)
     )
     config = (
@@ -66,6 +66,7 @@ type liveTable struct {
 	Entity string
 	Owned  bool
 	SeeAll []string
+	Strict bool // a notification is its recipient's alone (PC-053)
 }
 
 __CONFIG__
@@ -140,6 +141,9 @@ func liveMayHear(holder liveHolder, change liveChange) bool {
 	}
 	if !table.Owned {
 		return true
+	}
+	if table.Strict {
+		return holder.Sub != "" && holder.Sub == change.A
 	}
 	for _, role := range holder.Roles {
 		if role == "admin" {

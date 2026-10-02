@@ -15,7 +15,9 @@ from ..application_ir.money import money_of
 from .money_python import MONEY_ENV_EXAMPLE, python_money_file
 from ..application_ir.jobs import jobs_of
 from .jobs_python import JOBS_ENV_EXAMPLE, python_jobs_file
-from ..application_ir.realtime import realtime_of
+from .realtime_sql import has_stream
+from ..application_ir.notifications import has_notifications
+from .notifications_python import NOTIFICATIONS_ENV_EXAMPLE, python_notifications_file
 from .realtime_python import python_realtime_file
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType, RelationKind
 from .adapter import GenerationTarget
@@ -365,7 +367,7 @@ def _router_file(
 
 
 def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False, has_db: bool = False,
-               money: bool = False, jobs: bool = False, realtime: bool = False) -> str:
+               money: bool = False, jobs: bool = False, realtime: bool = False, notifications: bool = False) -> str:
     imports = "".join(f"from app.routers import {seg}\n" for seg in segments)
     includes = "".join(f"app.include_router({seg}.router)\n" for seg in segments)
     if money:  # R-567
@@ -373,7 +375,8 @@ def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False, h
         includes += "app.include_router(money.router)\n"
     lifespan, lifespan_arg = "", ""
     # R-568: the scheduler, R-569: the live listener - each starts and stops with the app.
-    background = [name for name, wanted in (("jobs", jobs), ("realtime", realtime)) if wanted]
+    # PC-053: the notification email sender too.
+    background = [name for name, wanted in (("jobs", jobs), ("realtime", realtime), ("notifications", notifications)) if wanted]
     for name in background:
         imports += f"from app import {name}\n"
         includes += f"app.include_router({name}.router)\n"
@@ -486,7 +489,10 @@ class PythonBackendAdapter:
         has_jobs = has_db and has_auth and jobs_of(ir) is not None
         if has_jobs:
             env_example += JOBS_ENV_EXAMPLE
-        has_realtime = has_db and has_auth and realtime_of(ir) is not None  # R-569
+        has_realtime = has_db and has_auth and has_stream(ir)  # R-569 / PC-053
+        has_notes = has_db and has_auth and has_notifications(ir)  # PC-053
+        if has_notes:
+            env_example += NOTIFICATIONS_ENV_EXAMPLE
         files: list[GeneratedFile] = [
             GeneratedFile("requirements.txt", requirements),
             GeneratedFile("app/__init__.py", ""),
@@ -494,7 +500,7 @@ class PythonBackendAdapter:
             GeneratedFile("app/models.py", _models_file(ir)),
             GeneratedFile("app/main.py", _main_file(ir, [*segments, *(["uploads"] if uploads else [])],
                                                     has_auth=has_auth, has_db=has_db, money=has_money,
-                                                    jobs=has_jobs, realtime=has_realtime)),
+                                                    jobs=has_jobs, realtime=has_realtime, notifications=has_notes)),
             GeneratedFile("app/routers/__init__.py", ""),
             GeneratedFile(".gitignore", "__pycache__/\n.venv\n*.pyc\n.env\nuploads/\n"),
             GeneratedFile(".env.example", env_example),
@@ -510,6 +516,8 @@ class PythonBackendAdapter:
             files.append(GeneratedFile("app/jobs.py", python_jobs_file(ir)))
         if has_realtime:
             files.append(GeneratedFile("app/realtime.py", python_realtime_file(ir)))
+        if has_notes:
+            files.append(GeneratedFile("app/notifications.py", python_notifications_file(ir)))
         if has_auth:
             files.append(GeneratedFile("app/auth.py", python_auth_file(ir)))
             files.append(GeneratedFile("app/routers/auth.py", python_auth_router_file(ir)))

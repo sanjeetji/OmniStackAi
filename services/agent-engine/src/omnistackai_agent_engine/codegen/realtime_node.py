@@ -13,12 +13,12 @@ from . import realtime_sql as q
 
 
 def node_realtime_service(ir: ApplicationIR) -> str:
-    tables = {t.table: {"entity": t.entity, "owned": t.owned, "seeAll": list(t.see_all)} for t in q.live_tables(ir)}
+    tables = {t.table: {"entity": t.entity, "owned": t.owned, "seeAll": list(t.see_all), "strict": t.strict} for t in q.live_tables(ir)}
     config = (
         f"const CHANNEL = {json.dumps(q.CHANNEL)};\n"
         f"const TICKET_SECONDS = {q.TICKET_SECONDS};\n"
         f"export const PING_SECONDS = {q.PING_SECONDS};\n"
-        f"const LIVE: Record<string, {{ entity: string; owned: boolean; seeAll: string[] }}> = {json.dumps(tables, indent=2)};\n"
+        f"const LIVE: Record<string, {{ entity: string; owned: boolean; seeAll: string[]; strict: boolean }}> = {json.dumps(tables, indent=2)};\n"
     )
     return _SERVICE.replace("__CONFIG__", config)
 
@@ -81,6 +81,7 @@ export function mayHear(holder: Holder, change: Record<string, string | null>): 
   const live = LIVE[change.t ?? ''];
   if (!live) return false;
   if (!live.owned) return true;
+  if (live.strict) return Boolean(holder.sub) && holder.sub === change.a;  // a notification is its recipient's alone
   if (holder.roles.some((r) => r === 'admin' || live.seeAll.includes(r))) return true;
   return Boolean(holder.sub) && (holder.sub === change.o || holder.sub === change.a);
 }

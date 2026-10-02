@@ -196,6 +196,17 @@ def compile_schedule(ir: ApplicationIR, schedule: Schedule, timezone: str = "UTC
         age_seconds = seconds(age)
         cutoff = "NOW()" if age_seconds == 0 else f"NOW() - make_interval(secs => {age_seconds})"
         conditions.append(f"{sql_identifier(column)} < {cutoff}")
+    if schedule.due_within is not None:
+        column, age = schedule.due_within
+        conditions.append(f"{sql_identifier(column)} BETWEEN NOW() AND NOW() + make_interval(secs => {seconds(age)})")
+    if schedule.notify is not None:  # PC-053: a reminder
+        from .notifications_sql import reminder_sql
+
+        return CompiledSchedule(
+            name=schedule.name, entity=schedule.entity, every_seconds=schedule.every_seconds, action="notify",
+            sql=reminder_sql(ir, schedule, conditions, BATCH), description=describe(schedule, workflow, timezone),
+            at_minutes=schedule.at_minutes, on_day=schedule.on_day,
+        )
     picked = (f'SELECT "id" FROM {table} WHERE {" AND ".join(conditions)} '
               f'ORDER BY "id" LIMIT {BATCH} FOR UPDATE SKIP LOCKED')
     if schedule.delete:

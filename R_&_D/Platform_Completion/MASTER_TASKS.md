@@ -28,7 +28,7 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 454 |
+| Completed | 455 |
 | Completed - needs live proof | 7 |
 | In Progress | 0 |
 | Pending | 95 |
@@ -36,9 +36,9 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
-| **Total** | **1141** |
+| **Total** | **1142** |
 
-Open work queue: **90** tasks (P0: 4, P1: 38, P2: 34, P3: 14).
+Open work queue: **90** tasks (P0: 4, P1: 37, P2: 35, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -135,66 +135,67 @@ Open work queue: **90** tasks (P0: 4, P1: 38, P2: 34, P3: 14).
 | 86 | PC-021 | Screenshot or Figma to app | Not Started | P3 | Vibe |  | BP-FIGMA | Buildout idea 'R-527'. |
 | 87 | PC-048 | Database choice: MongoDB as an option beside PostgreSQL (the default) | Not Started | P2 | Both | R-570 | ARCH-DB-OPTIONS, R-075 | D-8. Every backend adapter needs a Mongo data layer; lifecycle and uniqueness rules move from SQL constraints to schema validation and indexes. Lifts the Phase T 'PostgreSQL only' gate. |
 | 88 | PC-052 | File uploads and storage in generated apps (S3-compatible, presigned URLs, image processing) | Superseded | P1 | Both | PC-102, PC-105 | ARCH-FILES | Local MinIO-style store for dev; any S3 provider on publish. From the architecture plan. Superseded 2026-09-30: PC-102 (Python, per-field rules, content checks, R2/S3/local, cloud drives through Companion; the founder chose R2/S3 and no MinIO) and PC-105 (Go and Node) did it. Left for later: image processing (resizing, thumbnails). |
-| 89 | PC-053 | Notifications in generated apps: email, push (Expo and native), in-app, user preferences | Not Started | P1 | Both | R-568 | ARCH-NOTIFY | R-516 gives email. From the architecture plan. |
-| 90 | PC-054 | Tests generated with every app: API contract, end-to-end (Playwright), unit | Not Started | P1 | Both |  | ARCH-TESTS | Architecture-plan target: over 80% coverage of generated code. |
-| 91 | PC-059 | Form and wizard engine: multi-step, conditional fields, draft autosave | Not Started | P2 | Both |  | ARCH-FORMS | From the architecture plan. |
-| 92 | PC-057 | Generated-app operations: rate limiting, signed webhooks with retries, audit log, error tracking and tracing hooks | Not Started | P2 | Both |  | ARCH-OBSERVABILITY | From the architecture plan (api-gateway, webhooks, audit, observability packs). |
-| 93 | PC-055 | Internationalisation in generated apps (web, admin, mobile) | Not Started | P2 | Both |  | ARCH-I18N | From the architecture plan. |
-| 94 | PC-064 | iOS Simulator preview: Xcode installed and driven from the command line, simulator streamed into the Studio (Mac only) | Not Started | P2 | Both | PC-063 | R-053 | See NATIVE_MOBILE_PREVIEW_PLAN.md. No open-source iOS simulator exists; Xcode is free but Mac-only. |
-| 95 | PC-056 | Feature flags and A/B tests in generated apps | Not Started | P3 | Both |  | ARCH-FLAGS | From the architecture plan. |
-| 96 | PC-058 | Search engine option (Meilisearch or Typesense) beyond keyword search | Not Started | P3 | Both |  | ARCH-SEARCH | From the architecture plan. |
-| 97 | R-583 | Next.js static export mode | Not Started | P3 | Both |  |  | The cheap answer to 'no SSR, no Vercel'. |
+| 89 | PC-053 | Notifications in generated apps: email, push (Expo and native), in-app, user preferences | Completed | P1 | Both | R-568 | ARCH-NOTIFY | R-516 gives email. From the architecture plan. Done 2026-10-02 (in-app, email, preferences, reminders): a `notifications` capability; a trigger writes each notification in the database (muted channels left out), so every backend delivers the same; reminders are jobs that notify once per record; a live bell (R-569), a page with preferences, an email outbox with retries (Resend, keys last). 27/27 live on Python, Go, Express and Hono; 6/6 in a browser. Push is PC-121 (mobile work: founder's go-ahead). |
+| 90 | PC-121 | Push notifications for the generated mobile apps (Expo push, then native) | Not Started | P2 | Both | PC-053 |  | PC-053's notifications reach the app and email; a phone needs push tokens per device and Expo's push service. Native mobile work waits for the founder's go-ahead. |
+| 91 | PC-054 | Tests generated with every app: API contract, end-to-end (Playwright), unit | Not Started | P1 | Both |  | ARCH-TESTS | Architecture-plan target: over 80% coverage of generated code. |
+| 92 | PC-059 | Form and wizard engine: multi-step, conditional fields, draft autosave | Not Started | P2 | Both |  | ARCH-FORMS | From the architecture plan. |
+| 93 | PC-057 | Generated-app operations: rate limiting, signed webhooks with retries, audit log, error tracking and tracing hooks | Not Started | P2 | Both |  | ARCH-OBSERVABILITY | From the architecture plan (api-gateway, webhooks, audit, observability packs). |
+| 94 | PC-055 | Internationalisation in generated apps (web, admin, mobile) | Not Started | P2 | Both |  | ARCH-I18N | From the architecture plan. |
+| 95 | PC-064 | iOS Simulator preview: Xcode installed and driven from the command line, simulator streamed into the Studio (Mac only) | Not Started | P2 | Both | PC-063 | R-053 | See NATIVE_MOBILE_PREVIEW_PLAN.md. No open-source iOS simulator exists; Xcode is free but Mac-only. |
+| 96 | PC-056 | Feature flags and A/B tests in generated apps | Not Started | P3 | Both |  | ARCH-FLAGS | From the architecture plan. |
+| 97 | PC-058 | Search engine option (Meilisearch or Typesense) beyond keyword search | Not Started | P3 | Both |  | ARCH-SEARCH | From the architecture plan. |
+| 98 | R-583 | Next.js static export mode | Not Started | P3 | Both |  |  | The cheap answer to 'no SSR, no Vercel'. |
 | | | **Phase 3 Engineering Mode**: Plan, stack choice, repo import, diffs, verification report, PRs, memory. | | | | | | |
-| 98 | PC-022 | Plan view: see and edit the plan (apps, roles, entities, flows) before building | Not Started | P1 | Engineering | PC-005 | ARCH-ENG-OPTIONS, SPEC-ENG-01 | Buildout idea 'intent cards'; specs/engineering-mode/01. Shows the design direction (PC-099) with the plan. |
-| 99 | PC-023 | Stack chooser: pick web/admin/mobile/backend, refused with a reason when unsupported | Pending | P1 | Engineering | PC-005 | R-135 | R-565 carries the stack in the IR; needs the UI. |
-| 100 | R-577 | Agentic mode core: plan -> edit files -> verify -> repair, bounded, auditable | Not Started | P1 | Engineering |  | R-042, R-176, R-177, R-178, R-179, R-180, R-183, R-184 |  |
-| 101 | R-578 | Import an existing local project (agentic mode, not IR mode) | Not Started | P1 | Engineering | R-577 | ARCH-IMPORT-MODES, R-018, R-076, SPEC-REPO-01, SPEC-STUDIO-02 |  |
-| 102 | R-579 | GitHub import and push-back | Pending | P1 | Engineering | R-578 | ARCH-IMPORT-SOURCES | R-501 can push a generated project; import is missing. |
-| 103 | PC-024 | Diff review per change, with change impact / blast radius | Not Started | P1 | Engineering | R-577 | R-016, R-017, T-5 |  |
-| 104 | PC-025 | Verification report view: per-surface compile, tests, security, in the Studio | Pending | P1 | Engineering |  |  | R-560/R-561/R-508 produce the data; nothing shows it as a report. |
-| 105 | PC-026 | Open GitHub pull requests (branch per change, PR naming) | Not Started | P1 | Engineering | R-579 | R-021, R-125 |  |
-| 106 | R-581 | Memory across sessions: semantic project memory on pgvector | Not Started | P1 | Both |  | R-019, R-027, R-057 |  |
-| 107 | PC-027 | Version timeline and safe, non-destructive rollback | Not Started | P1 | Both |  | BP-TIMELINE, R-022 |  |
-| 108 | PC-051 | Graduation bridge: open a Vibe project in Engineering Mode with nothing lost, and back | Not Started | P1 | Both | PC-005, PC-022 | ARCH-GRADUATION | Projects already keep ir.json, so the IR carries over; custom UI and history must too - model-written pages (PC-098) are kept as the project's own code, never regenerated. From the architecture plan. |
-| 109 | PC-028 | Cloud deploy adapters beyond Vercel/Netlify: containers, Kubernetes (Helm), Terraform | Not Started | P2 | Engineering | PC-008 | ARCH-K8S, SPEC-DEPLOY-01 | From specs/deploy-adapters/01 and the architecture plan. |
-| 110 | PC-029 | Team collaboration: roles, approvals, preview comments | Pending | P2 | Engineering |  | BP-COMMENTS, R-064, R-065 | R-515 gives teams. |
-| 111 | PC-030 | Tool registry and MCP gateway with a tool secret broker | Not Started | P2 | Engineering | R-577 | R-185, R-186, R-187 |  |
+| 99 | PC-022 | Plan view: see and edit the plan (apps, roles, entities, flows) before building | Not Started | P1 | Engineering | PC-005 | ARCH-ENG-OPTIONS, SPEC-ENG-01 | Buildout idea 'intent cards'; specs/engineering-mode/01. Shows the design direction (PC-099) with the plan. |
+| 100 | PC-023 | Stack chooser: pick web/admin/mobile/backend, refused with a reason when unsupported | Pending | P1 | Engineering | PC-005 | R-135 | R-565 carries the stack in the IR; needs the UI. |
+| 101 | R-577 | Agentic mode core: plan -> edit files -> verify -> repair, bounded, auditable | Not Started | P1 | Engineering |  | R-042, R-176, R-177, R-178, R-179, R-180, R-183, R-184 |  |
+| 102 | R-578 | Import an existing local project (agentic mode, not IR mode) | Not Started | P1 | Engineering | R-577 | ARCH-IMPORT-MODES, R-018, R-076, SPEC-REPO-01, SPEC-STUDIO-02 |  |
+| 103 | R-579 | GitHub import and push-back | Pending | P1 | Engineering | R-578 | ARCH-IMPORT-SOURCES | R-501 can push a generated project; import is missing. |
+| 104 | PC-024 | Diff review per change, with change impact / blast radius | Not Started | P1 | Engineering | R-577 | R-016, R-017, T-5 |  |
+| 105 | PC-025 | Verification report view: per-surface compile, tests, security, in the Studio | Pending | P1 | Engineering |  |  | R-560/R-561/R-508 produce the data; nothing shows it as a report. |
+| 106 | PC-026 | Open GitHub pull requests (branch per change, PR naming) | Not Started | P1 | Engineering | R-579 | R-021, R-125 |  |
+| 107 | R-581 | Memory across sessions: semantic project memory on pgvector | Not Started | P1 | Both |  | R-019, R-027, R-057 |  |
+| 108 | PC-027 | Version timeline and safe, non-destructive rollback | Not Started | P1 | Both |  | BP-TIMELINE, R-022 |  |
+| 109 | PC-051 | Graduation bridge: open a Vibe project in Engineering Mode with nothing lost, and back | Not Started | P1 | Both | PC-005, PC-022 | ARCH-GRADUATION | Projects already keep ir.json, so the IR carries over; custom UI and history must too - model-written pages (PC-098) are kept as the project's own code, never regenerated. From the architecture plan. |
+| 110 | PC-028 | Cloud deploy adapters beyond Vercel/Netlify: containers, Kubernetes (Helm), Terraform | Not Started | P2 | Engineering | PC-008 | ARCH-K8S, SPEC-DEPLOY-01 | From specs/deploy-adapters/01 and the architecture plan. |
+| 111 | PC-029 | Team collaboration: roles, approvals, preview comments | Pending | P2 | Engineering |  | BP-COMMENTS, R-064, R-065 | R-515 gives teams. |
+| 112 | PC-030 | Tool registry and MCP gateway with a tool secret broker | Not Started | P2 | Engineering | R-577 | R-185, R-186, R-187 |  |
 | | | **Phase 4 Production ops**: Security audits, backup/recovery, compliance, observability. | | | | | | |
-| 112 | PC-031 | Backup, restore drills and disaster recovery | Not Started | P1 | Platform | PC-009 | PG-08, R-096, R-097 |  |
-| 113 | PC-032 | Security audits: independent pen test, DAST, prompt-injection and MCP isolation tests | Not Started | P1 | Platform | PC-009 | GA-09, PG-04, PG-06, PG-21, R-069, R-098, R-213 |  |
-| 114 | PC-033 | Observability: platform logs, metrics, task trace, SLOs, incident process | Not Started | P1 | Platform | PC-009 | PG-07, PG-10, R-043, R-044, R-094, R-102 |  |
-| 115 | PC-034 | Load and capacity tests | Not Started | P1 | Platform | PC-009 | PG-09, R-103 |  |
-| 116 | PC-035 | Compliance: SOC 2 readiness, SBOM + licence gate, OSS licence review | Not Started | P2 | Platform |  | GA-11, R-070, R-099, R-154, R-190, R-219 |  |
-| 117 | PC-036 | Migration safety checks for generated schema changes | Pending | P1 | Both |  | GA-08, PG-20, R-040 | R-584 flags data loss; needs a real gate. |
-| 118 | PC-037 | Release quality: qualification suite, API contract tests, visual regression, performance budgets | Not Started | P2 | Platform |  | ARCH-PERF, GAP-TESTTOOLS, PG-02, PG-03, R-039, R-059, R-060, R-105 |  |
-| 119 | PC-038 | Reliability of runs: crash-resume, no duplicate side effects, stream replay | Not Started | P2 | Platform | R-577 | R-182, R-210, R-211, R-212, R-216 |  |
-| 120 | PC-039 | Unit economics dashboard | Not Started | P2 | Platform | PC-010 | PG-12, R-110 |  |
-| 121 | PC-040 | Environments per project (dev / preview / prod) | Not Started | P2 | Both |  | GA-07, R-126 |  |
-| 122 | PC-065 | Hosted Android emulators for every user: Linux + KVM pool, per-session isolation, browser streaming, metering | Not Started | P2 | Both | PC-009, PC-063 |  | See NATIVE_MOBILE_PREVIEW_PLAN.md. Built and proven on a local Linux VM; the server account is plugged in at PC-070. |
-| 123 | PC-067 | Production readiness sign-off: every blocking gate PG-01..PG-21 has evidence | Not Started | P1 | Platform | PC-031..PC-041 | GA-10, PG-01, PG-17 | The tracker's Production_Gates sheet. The platform is not called production-ready before this. |
-| 124 | PC-041 | HA control plane and canary platform releases | Not Started | P2 | Platform | PC-009 | GA-12, PG-11, R-095, R-106 |  |
+| 113 | PC-031 | Backup, restore drills and disaster recovery | Not Started | P1 | Platform | PC-009 | PG-08, R-096, R-097 |  |
+| 114 | PC-032 | Security audits: independent pen test, DAST, prompt-injection and MCP isolation tests | Not Started | P1 | Platform | PC-009 | GA-09, PG-04, PG-06, PG-21, R-069, R-098, R-213 |  |
+| 115 | PC-033 | Observability: platform logs, metrics, task trace, SLOs, incident process | Not Started | P1 | Platform | PC-009 | PG-07, PG-10, R-043, R-044, R-094, R-102 |  |
+| 116 | PC-034 | Load and capacity tests | Not Started | P1 | Platform | PC-009 | PG-09, R-103 |  |
+| 117 | PC-035 | Compliance: SOC 2 readiness, SBOM + licence gate, OSS licence review | Not Started | P2 | Platform |  | GA-11, R-070, R-099, R-154, R-190, R-219 |  |
+| 118 | PC-036 | Migration safety checks for generated schema changes | Pending | P1 | Both |  | GA-08, PG-20, R-040 | R-584 flags data loss; needs a real gate. |
+| 119 | PC-037 | Release quality: qualification suite, API contract tests, visual regression, performance budgets | Not Started | P2 | Platform |  | ARCH-PERF, GAP-TESTTOOLS, PG-02, PG-03, R-039, R-059, R-060, R-105 |  |
+| 120 | PC-038 | Reliability of runs: crash-resume, no duplicate side effects, stream replay | Not Started | P2 | Platform | R-577 | R-182, R-210, R-211, R-212, R-216 |  |
+| 121 | PC-039 | Unit economics dashboard | Not Started | P2 | Platform | PC-010 | PG-12, R-110 |  |
+| 122 | PC-040 | Environments per project (dev / preview / prod) | Not Started | P2 | Both |  | GA-07, R-126 |  |
+| 123 | PC-065 | Hosted Android emulators for every user: Linux + KVM pool, per-session isolation, browser streaming, metering | Not Started | P2 | Both | PC-009, PC-063 |  | See NATIVE_MOBILE_PREVIEW_PLAN.md. Built and proven on a local Linux VM; the server account is plugged in at PC-070. |
+| 124 | PC-067 | Production readiness sign-off: every blocking gate PG-01..PG-21 has evidence | Not Started | P1 | Platform | PC-031..PC-041 | GA-10, PG-01, PG-17 | The tracker's Production_Gates sheet. The platform is not called production-ready before this. |
+| 125 | PC-041 | HA control plane and canary platform releases | Not Started | P2 | Platform | PC-009 | GA-12, PG-11, R-095, R-106 |  |
 | | | **Phase 5 Native mobile (last)**: Kotlin/Compose + Swift/SwiftUI, through to Play Store and App Store. | | | | | | |
-| 125 | PC-042 | Native go-ahead gate: founder approval, toolchains, Apple and Google accounts | Not Started | P2 | Both | Phases 1-4 |  | Standing rule: stop and ask before native mobile work. |
-| 126 | R-575 | Native Android: Kotlin + Jetpack Compose, best in class | Not Started | P2 | Both | PC-042 | ARCH-NATIVE, R-035, R-144, R-145, SPEC-NATIVE-01 |  |
-| 127 | R-576 | Native iOS: Swift + SwiftUI, best in class | Not Started | P2 | Both | PC-042 | R-036, R-146, R-147 |  |
-| 128 | PC-043 | Native recommendation: when to offer native instead of PWA | Not Started | P2 | Both | R-575, R-576 | R-120 |  |
-| 129 | PC-044 | Signed native builds (AAB/IPA), signing-key hardening, and store submission through the R-574 pipeline | Not Started | P2 | Both | R-575, R-576 | R-049, R-050, R-101 |  |
-| 130 | PC-082 | Native implementations of every mobile & device pack and every vertical pack's app screens in Kotlin/Compose and Swift/SwiftUI | Not Started | P2 | Both | R-575, R-576 |  | PRD §5.1: packs are stack-aware; React Native implementations come first with the pack itself. |
-| 131 | PC-045 | Native modules and PWA-to-native migration | Not Started | P3 | Both | R-575, R-576 | R-163, R-165 |  |
-| 132 | PC-066 | Hosted iOS simulators on Mac hosts (on demand, metered) | Not Started | P3 | Both | PC-064 |  | Apple allows macOS only on Apple hardware, so this needs Mac servers. See NATIVE_MOBILE_PREVIEW_PLAN.md. |
-| 133 | PC-046 | Local Mac agent for iOS builds and simulators | Not Started | P3 | Engineering | R-576 | R-054, R-161 |  |
+| 126 | PC-042 | Native go-ahead gate: founder approval, toolchains, Apple and Google accounts | Not Started | P2 | Both | Phases 1-4 |  | Standing rule: stop and ask before native mobile work. |
+| 127 | R-575 | Native Android: Kotlin + Jetpack Compose, best in class | Not Started | P2 | Both | PC-042 | ARCH-NATIVE, R-035, R-144, R-145, SPEC-NATIVE-01 |  |
+| 128 | R-576 | Native iOS: Swift + SwiftUI, best in class | Not Started | P2 | Both | PC-042 | R-036, R-146, R-147 |  |
+| 129 | PC-043 | Native recommendation: when to offer native instead of PWA | Not Started | P2 | Both | R-575, R-576 | R-120 |  |
+| 130 | PC-044 | Signed native builds (AAB/IPA), signing-key hardening, and store submission through the R-574 pipeline | Not Started | P2 | Both | R-575, R-576 | R-049, R-050, R-101 |  |
+| 131 | PC-082 | Native implementations of every mobile & device pack and every vertical pack's app screens in Kotlin/Compose and Swift/SwiftUI | Not Started | P2 | Both | R-575, R-576 |  | PRD §5.1: packs are stack-aware; React Native implementations come first with the pack itself. |
+| 132 | PC-045 | Native modules and PWA-to-native migration | Not Started | P3 | Both | R-575, R-576 | R-163, R-165 |  |
+| 133 | PC-066 | Hosted iOS simulators on Mac hosts (on demand, metered) | Not Started | P3 | Both | PC-064 |  | Apple allows macOS only on Apple hardware, so this needs Mac servers. See NATIVE_MOBILE_PREVIEW_PLAN.md. |
+| 134 | PC-046 | Local Mac agent for iOS builds and simulators | Not Started | P3 | Engineering | R-576 | R-054, R-161 |  |
 | | | **Phase 6 Go-live (credentials last)**: The founder supplies accounts and keys; every live proof is run; the platform opens to real users. | | | | | | |
-| 134 | PC-070 | Credentials handover: founder supplies cloud, database, payment, email, Apple and Google accounts and keys; each is plugged in without code changes | Not Started | P0 | Platform | Phases 1-5 |  | Everything before this is built so that only keys and secrets are missing. Keys go into the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7. |
-| 135 | PC-071 | Live proof of every 'Completed - needs live proof' item with the real accounts | Not Started | P0 | Platform | PC-070 | R-546 | Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. Payments in test mode done 2026-10-01 (Stripe and Razorpay, see R-567); live-mode keys deferred by the founder 2026-10-01 to this step. |
-| 136 | PC-015 | Private beta with real users: product KPIs, minimal support tooling, feedback | Not Started | P0 | Platform | PC-071 | PG-15, R-051, R-107, R-513 | The platform is not 'live' until strangers use it. |
+| 135 | PC-070 | Credentials handover: founder supplies cloud, database, payment, email, Apple and Google accounts and keys; each is plugged in without code changes | Not Started | P0 | Platform | Phases 1-5 |  | Everything before this is built so that only keys and secrets are missing. Keys go into the secrets store (R-503) or .env, never into code, prompts or logs. D-2, D-3, D-6, D-7. |
+| 136 | PC-071 | Live proof of every 'Completed - needs live proof' item with the real accounts | Not Started | P0 | Platform | PC-070 | R-546 | Publish to a real URL, a real payment, a real email, EAS/store uploads to both stores. Payments in test mode done 2026-10-01 (Stripe and Razorpay, see R-567); live-mode keys deferred by the founder 2026-10-01 to this step. |
+| 137 | PC-015 | Private beta with real users: product KPIs, minimal support tooling, feedback | Not Started | P0 | Platform | PC-071 | PG-15, R-051, R-107, R-513 | The platform is not 'live' until strangers use it. |
 | | | **Phase 7 Win the category**: Measure against every competitor and close each gap until we lead. Done last, after native and go-live, by founder decision (2026-09-26). | | | | | | |
-| 137 | PC-083 | Head-to-head benchmark: the same 20 prompts on OmniStackAI, Lovable, Bolt, v0, Emergent and Replit; score UI quality, working features, build success and time | Not Started | P1 | Both | PC-015 |  | Without measurement 'best' is an opinion. Re-run every quarter (PC-087). |
-| 138 | PC-089 | Win on UI polish and speed against Lovable, Bolt and v0: iterate on the benchmark until we lead it | Not Started | P1 | Vibe | PC-083, PC-084 |  | Their whole focus, improved weekly; matching needs features, beating needs measurement. |
-| 139 | PC-090 | Engineering Mode positioning and proof: 'designs and builds structured multi-app platforms with verification', benchmarked against Cursor, Claude Code, Codex and Devin on platform-building tasks | Not Started | P1 | Engineering | PC-083 |  | We do not try to be a better general code editor; we win where they do not compete: whole platforms from a plan, verified. |
-| 140 | PC-091 | Native lead: match or beat the native Swift/Kotlin builders on quality and speed | Not Started | P2 | Both | R-575, R-576, PC-083 |  | Some builders already generate native apps; ours arrives in Phase 5. |
-| 141 | PC-086 | Public launch: docs site, tutorials and videos, pricing page, community, launch campaign | Not Started | P1 | Platform | PC-015 |  | The plan otherwise stops at a private beta. |
-| 142 | PC-092 | Users and brand: growth loops (referrals, template showcase, made-with gallery), partnerships, content, measured activation and retention | Not Started | P1 | Platform | PC-086 |  | Competitors already have millions of users. |
-| 143 | PC-087 | Quarterly competitor review: re-run the benchmark, update the plan and this queue | Not Started | P2 | Platform | PC-083 |  | Recurring; competitors ship weekly. |
+| 138 | PC-083 | Head-to-head benchmark: the same 20 prompts on OmniStackAI, Lovable, Bolt, v0, Emergent and Replit; score UI quality, working features, build success and time | Not Started | P1 | Both | PC-015 |  | Without measurement 'best' is an opinion. Re-run every quarter (PC-087). |
+| 139 | PC-089 | Win on UI polish and speed against Lovable, Bolt and v0: iterate on the benchmark until we lead it | Not Started | P1 | Vibe | PC-083, PC-084 |  | Their whole focus, improved weekly; matching needs features, beating needs measurement. |
+| 140 | PC-090 | Engineering Mode positioning and proof: 'designs and builds structured multi-app platforms with verification', benchmarked against Cursor, Claude Code, Codex and Devin on platform-building tasks | Not Started | P1 | Engineering | PC-083 |  | We do not try to be a better general code editor; we win where they do not compete: whole platforms from a plan, verified. |
+| 141 | PC-091 | Native lead: match or beat the native Swift/Kotlin builders on quality and speed | Not Started | P2 | Both | R-575, R-576, PC-083 |  | Some builders already generate native apps; ours arrives in Phase 5. |
+| 142 | PC-086 | Public launch: docs site, tutorials and videos, pricing page, community, launch campaign | Not Started | P1 | Platform | PC-015 |  | The plan otherwise stops at a private beta. |
+| 143 | PC-092 | Users and brand: growth loops (referrals, template showcase, made-with gallery), partnerships, content, measured activation and retention | Not Started | P1 | Platform | PC-086 |  | Competitors already have millions of users. |
+| 144 | PC-087 | Quarterly competitor review: re-run the benchmark, update the plan and this queue | Not Started | P2 | Platform | PC-083 |  | Recurring; competitors ship weekly. |
 
 ## Founder decisions
 
@@ -906,6 +907,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-014 | Local/offline models as a first-class path: build fully on Ollama, recommend a model per machine | Completed | 2026-09-30 | Ollama adapter exists (R-003/R-006). Found in PC-084: .env names qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not configured with — detect installed models instead of trusting the setting. PC-098 (2026-09-28): the founder replaced 7b with qwen2.5-coder:14b; the Ollama adapter now sends num_ctx (long prompts were cut silently) and page design sizes it to 16k context / 6k answer. Done 2026-09-30: installed models detected at start, a model recommended per machine in status, PREFER_LOCAL keeps page design local; a console build ran with no cloud call. On a 16 GB machine the 14b model's designed pages did not compile - templates kept. |
 | PC-047 | NVIDIA model provider (nemotron-3-ultra) for builds, configured from .env | Completed | 2026-09-26 | Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only. Includes a first comparison against the providers we already support on the same build prompts. |
 | PC-050 | Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, command menu, drawer, toasts, tables, forms, maps, uploads) | Completed | 2026-09-29 | framer-motion, recharts, tiptap, cmdk, vaul, sonner, tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, repaired like today's allowlist. From the architecture plan. Done 2026-09-29: framer-motion, recharts, @tanstack/react-table, react-hook-form + zod, date-fns, sonner, cmdk, vaul pinned for React 18 in every generated web and admin app, allowed and explained to the page writer; the type-check cache rebuilds when they change. Deferred: tiptap (rich text), maplibre (maps) and uppy (uploads) - heavy, and each needs a backend or tiles; add with the feature that uses them. |
+| PC-053 | Notifications in generated apps: email, push (Expo and native), in-app, user preferences | Completed | 2026-10-02 | R-516 gives email. From the architecture plan. Done 2026-10-02 (in-app, email, preferences, reminders): a `notifications` capability; a trigger writes each notification in the database (muted channels left out), so every backend delivers the same; reminders are jobs that notify once per record; a live bell (R-569), a page with preferences, an email outbox with retries (Resend, keys last). 27/27 live on Python, Go, Express and Hono; 6/6 in a browser. Push is PC-121 (mobile work: founder's go-ahead). |
 | PC-062 | Native mobile preview: R&D and plan (open source first) | Completed | 2026-09-26 | NATIVE_MOBILE_PREVIEW_PLAN.md in this folder. |
 | PC-063 | Android emulator preview without Android Studio: SDK command-line bootstrap, headless emulator, auto-install, streamed into the Studio | Completed | 2026-09-30 | See NATIVE_MOBILE_PREVIEW_PLAN.md. Open source first; local on the founder's Mac, then hosted in PC-065. Done 2026-09-30: the preview's Mobile tab sets up (checksum-verified, ~1.5 GB once), boots and drives an emulator and opens the app in Expo Go; one account holds it at a time. Screenshots, not video, for now. |
 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | 2026-09-26 | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |

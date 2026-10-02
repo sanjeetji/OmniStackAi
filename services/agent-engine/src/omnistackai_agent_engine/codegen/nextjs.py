@@ -785,11 +785,11 @@ def _api_client_file(ir: ApplicationIR) -> str:
 
 
 def _realtime_client_files(ir: ApplicationIR) -> list[GeneratedFile]:
-    """R-569: the live stream's client, beside the hooks that listen through it."""
-    from ..application_ir.realtime import live_entities
+    """R-569: the live stream's client, beside the hooks that listen through it (and PC-053's bell)."""
+    from .realtime_sql import has_stream
     from .realtime_ui import REALTIME_CLIENT
 
-    return [GeneratedFile("lib/realtime.ts", REALTIME_CLIENT)] if needs_auth(ir) and live_entities(ir) else []
+    return [GeneratedFile("lib/realtime.ts", REALTIME_CLIENT)] if needs_auth(ir) and has_stream(ir) else []
 
 
 def _hooks_file(ir: ApplicationIR) -> str:
@@ -74270,6 +74270,18 @@ class NextjsWebAdapter:
                 files.append(GeneratedFile("app/wallet/page.tsx", WALLET_PAGE))
                 files = [GeneratedFile(f.path, _navbar_component(ir, (("/wallet", "Wallet"),)))
                          if f.path == "components/navbar.tsx" else f for f in files]
+        # PC-053: notifications - the bell beside the navigation, the page, the API client.
+        from ..application_ir.notifications import has_notifications
+
+        if needs_auth(ir) and has_notifications(ir):
+            from .notifications_ui import BELL, NOTIFICATIONS_CLIENT, PAGE, with_bell
+
+            files.append(GeneratedFile("lib/notifications.ts", NOTIFICATIONS_CLIENT))
+            files.append(GeneratedFile("components/notification-bell.tsx", BELL))
+            files.append(GeneratedFile("app/notifications/page.tsx", PAGE))
+            self._bell = True
+        else:
+            self._bell = False
         # R-568: the admin watches what the app does on its own.
         from ..application_ir.jobs import jobs_of
 
@@ -74295,6 +74307,10 @@ class NextjsWebAdapter:
             taken = {f.path for f in files}
             files.extend(GeneratedFile(path, content) for path, content in admin_console_files(ir, needs_auth(ir))
                          if path not in taken)
+        if getattr(self, "_bell", False):  # PC-053: the bell beside the navigation
+            from .notifications_ui import with_bell
+
+            files = [GeneratedFile(f.path, with_bell(f.content)) if f.path == "components/navbar.tsx" else f for f in files]
         page_dirs = {f.path[len("app/"):-len("/page.tsx")] for f in files
                      if f.path.startswith("app/") and f.path.endswith("/page.tsx")}
         for route_dir, apis in by_dir.items():

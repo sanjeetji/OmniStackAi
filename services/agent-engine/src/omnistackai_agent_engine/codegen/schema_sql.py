@@ -353,6 +353,14 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         blocks.append(JOBS_SCHEMA)
         blocks.append("")
 
+    # PC-053: notifications - their tables, and the triggers that write them.
+    from .notifications_sql import notifications_schema
+
+    notes = notifications_schema(ir)
+    if notes:
+        blocks.append(notes)
+        blocks.append("")
+
     # R-569: the triggers that publish changes to live tables.
     from .realtime_sql import realtime_schema
 

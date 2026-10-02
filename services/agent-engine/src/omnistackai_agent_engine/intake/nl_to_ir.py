@@ -165,6 +165,20 @@ def _system_instruction(example_name: str) -> str:
             "reaches the signed-in people who may see the record, and their pages refresh by themselves. "
             "For tracking, give the entity float fields latitude and longitude.\n"
         )
+    if "notifications" in CAPABILITY_KINDS.implemented():
+        # PC-053: who hears of what.
+        capability_rules += (
+            "\nNotifications (optional, when the prompt says someone is told, emailed or alerted):\n"
+            "- ONE 'notifications' capability with a rule per message: {\"kind\": \"notifications\", \"name\": "
+            "\"app_notifications\", \"config\": {\"rules\": [{\"name\": \"order_shipped\", \"entity\": \"Order\", "
+            "\"when\": {\"field\": \"status\", \"becomes\": \"shipped\"}, \"to\": [\"creator\"], \"title\": "
+            "\"Your order {id} has shipped\", \"channels\": [\"in_app\", \"email\"]}]}}\n"
+            "- when: \"created\", \"changed\", \"deleted\", \"assigned\" (needs an ownership assignee) or a field "
+            "becoming a value. to: \"creator\", \"assignee\", a uuid field holding a user's id, or \"role:<role>\". "
+            "title/body may use {field} placeholders of the entity.\n"
+            "- A reminder before a date ('a day before the appointment') is a jobs schedule with \"due_within\": "
+            "{\"field\": \"starts_at\", \"age\": \"1d\"} and \"do\": {\"notify\": {\"to\": [\"creator\"], \"title\": ...}}.\n"
+        )
     field_types = ", ".join(t.value for t in FieldType)
     # R-559: what may be *offered* comes from the adapter registry, not from the enum. Naming
     # `flutter` here told the model to choose a profile the assembler then discarded, which is how
@@ -682,11 +696,12 @@ def _with_prompt_ownership(ir: ApplicationIR, prompt: str) -> tuple[ApplicationI
     from .jobs_intent import jobs_from_prompt
     from .money_intent import money_from_prompt
     from .ownership_intent import ownership_from_prompt
+    from .notifications_intent import notifications_from_prompt
     from .realtime_intent import realtime_from_prompt
 
     data = ir.to_dict()
     notes = (ownership_from_prompt(prompt, data) + money_from_prompt(prompt, data) + jobs_from_prompt(prompt, data)
-             + realtime_from_prompt(prompt, data))
+             + realtime_from_prompt(prompt, data) + notifications_from_prompt(prompt, data))
     if not notes:
         return ir, ()
     return ApplicationIR.from_dict(data), tuple(notes)

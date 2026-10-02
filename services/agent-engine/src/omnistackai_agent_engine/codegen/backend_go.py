@@ -473,7 +473,7 @@ def _forced_auth(ir: ApplicationIR) -> frozenset:
 
 def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, transitions: tuple = (), has_auth: bool = False,
                uploads: bool = False, forced_auth: frozenset = frozenset(), owned_transitions: frozenset = frozenset(),
-               money: bool = False, jobs: bool = False, realtime: bool = False) -> str:
+               money: bool = False, jobs: bool = False, realtime: bool = False, notifications: bool = False) -> str:
     lines = ["package main", "", "import ("]
     lines.append('\t"log"')
     lines.append('\t"net/http"')
@@ -516,6 +516,8 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
             lines.append("\tgo h.RunScheduler()")
         if realtime:  # R-569: the live listener too
             lines.append("\tgo h.RunRealtime()")
+        if notifications:  # PC-053: the email outbox
+            lines.append("\tgo h.RunNotifications()")
         lines.append("")
     lines.append("\tmux := http.NewServeMux()")
     lines.append('\tmux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {')
@@ -560,6 +562,11 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False, tran
         for method, path, handler, guarded in GO_REALTIME_ROUTES:
             target = f"handlers.RequireAuth(h.{handler})" if guarded else f"h.{handler}"
             lines.append(f'\tmux.HandleFunc("{method} {path}", {target})')
+    if notifications:  # PC-053: a person's notifications and preferences
+        from .notifications_go import GO_NOTIFICATION_ROUTES
+
+        for method, path, handler in GO_NOTIFICATION_ROUTES:
+            lines.append(f'\tmux.HandleFunc("{method} {path}", handlers.RequireAuth(h.{handler}))')
     if jobs:  # R-568: the admin's view of scheduled jobs
         from .jobs_go import GO_JOBS_ROUTES
 
@@ -669,15 +676,22 @@ class GoBackendAdapter:
         from .jobs_python import JOBS_ENV_EXAMPLE
 
         jobs = has_db and has_auth and jobs_of(ir) is not None
-        from ..application_ir.realtime import realtime_of
         from .realtime_go import go_realtime_file
+        from .realtime_sql import has_stream
 
-        realtime = has_db and has_auth and realtime_of(ir) is not None
+        realtime = has_db and has_auth and has_stream(ir)
+        from ..application_ir.notifications import has_notifications
+        from .notifications_go import go_notifications_file
+        from .notifications_python import NOTIFICATIONS_ENV_EXAMPLE
+
+        notifications = has_db and has_auth and has_notifications(ir)
+        if notifications:
+            env_example += NOTIFICATIONS_ENV_EXAMPLE
         if jobs:
             env_example += JOBS_ENV_EXAMPLE
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
-            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads, money=money, jobs=jobs, realtime=realtime,
+            GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db, transitions=transition_routes(ir) if has_db else (), has_auth=has_auth, uploads=uploads, money=money, jobs=jobs, realtime=realtime, notifications=notifications,
                                                 forced_auth=_forced_auth(ir) if has_db else frozenset(),
                                                 owned_transitions=frozenset(r.path for r in transition_routes(ir)
                                                                             if _owned_transition(_rules(ir), r) is not None) if has_db else frozenset())),
@@ -685,6 +699,7 @@ class GoBackendAdapter:
             *([GeneratedFile("internal/handlers/money.go", go_money_file(ir))] if money else []),
             *([GeneratedFile("internal/handlers/jobs.go", go_jobs_file(ir))] if jobs else []),
             *([GeneratedFile("internal/handlers/realtime.go", go_realtime_file(ir, slug))] if realtime else []),
+            *([GeneratedFile("internal/handlers/notifications.go", go_notifications_file(ir))] if notifications else []),
             GeneratedFile(".gitignore", "/bin/\n*.exe\n.env\n"),
             GeneratedFile(".env.example", env_example),
             GeneratedFile(

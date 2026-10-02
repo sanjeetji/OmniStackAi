@@ -211,3 +211,14 @@ CAPABILITY_KINDS.register(
         validator=validate_realtime_config,
     )
 )
+
+from .notifications import validate_notifications_config  # noqa: E402
+
+CAPABILITY_KINDS.register(
+    CapabilityKind(
+        name="notifications",
+        summary="who hears of what happens to a record: in-app and email, with preferences (PC-053)",
+        implemented=True,
+        validator=validate_notifications_config,
+    )
+)

@@ -1,8 +1,9 @@
 task_id: PC-053
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: PC-053
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   Notifications in generated apps: in-app and email, with each person's preferences. A
@@ -29,3 +30,10 @@ forbidden_changes:
 required_gates:
   - Live - on Python, Go, Express and Hono, a status change notifies exactly the right people, a reminder fires once, a mute holds, the email outbox delivers to a stand-in provider and retries a failure; a browser shows the bell update without a reload
   - scripts/verify.sh passes
+found_and_fixed:
+  - "Notify the courier when assigned" as a 'changed' rule told them again on every edit; an 'assigned' event fires only when the assignee becomes someone new.
+  - The preferences page offered staff-only rules to customers and showed raw {placeholders}; rules for some roles are offered only to them, labels read "…".
+  - A plan with a plain status (no lifecycle) missed "when their order is delivered"; it reads as status becoming delivered ("placed" stays "created").
+deferred:
+  - PC-121 - push notifications (Expo, native): mobile work waits for the founder's go-ahead.
+  - A notification does not know who made the change, so someone changing their own record is told too.

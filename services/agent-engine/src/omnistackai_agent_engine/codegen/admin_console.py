@@ -251,6 +251,10 @@ def nav_file(ir: ApplicationIR, has_auth: bool) -> str:
         items.append({"href": "/money", "label": "Money", "icon": "dashboard", "group": "Overview"})
     from ..application_ir.jobs import jobs_of
 
+    from ..application_ir.notifications import has_notifications
+
+    if has_auth and has_notifications(ir):  # PC-053: the admin's own notifications
+        items.append({"href": "/notifications", "label": "Notifications", "icon": "dashboard", "group": "Overview"})
     if has_auth and jobs_of(ir) is not None:  # R-568: what the app does on its own
         items.append({"href": "/scheduled-jobs", "label": "Scheduled jobs", "icon": "dashboard", "group": "Overview"})
     if has_auth:

@@ -520,8 +520,16 @@ QUEUE = [
      "drives through Companion; the founder chose R2/S3 and no MinIO) and PC-105 (Go and Node) did "
      "it. Left for later: image processing (resizing, thumbnails)."),
     ("PC-053", "Notifications in generated apps: email, push (Expo and native), in-app, "
-     "user preferences", "2 Maximum features", "Both", "Not Started", "P1", "R-568",
-     "R-516 gives email. From the architecture plan."),
+     "user preferences", "2 Maximum features", "Both", "Completed", "P1", "R-568",
+     "R-516 gives email. From the architecture plan. Done 2026-10-02 (in-app, email, preferences, reminders): "
+     "a `notifications` capability; a trigger writes each notification in the database (muted channels left "
+     "out), so every backend delivers the same; reminders are jobs that notify once per record; a live bell "
+     "(R-569), a page with preferences, an email outbox with retries (Resend, keys last). 27/27 live on Python, "
+     "Go, Express and Hono; 6/6 in a browser. Push is PC-121 (mobile work: founder's go-ahead)."),
+    ("PC-121", "Push notifications for the generated mobile apps (Expo push, then native)",
+     "2 Maximum features", "Both", "Not Started", "P2", "PC-053",
+     "PC-053's notifications reach the app and email; a phone needs push tokens per device and Expo's push "
+     "service. Native mobile work waits for the founder's go-ahead."),
     ("PC-054", "Tests generated with every app: API contract, end-to-end (Playwright), unit",
      "2 Maximum features", "Both", "Not Started", "P1", "",
      "Architecture-plan target: over 80% coverage of generated code."),

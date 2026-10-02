@@ -88,6 +88,10 @@ class Schedule:
     #: a whole number of days, and `on` (a weekday) pins a weekly schedule's day.
     at: str | None = None
     on: str | None = None
+    #: PC-053: a reminder - notify about each matching record, once - and the condition that suits
+    #: one: a date field falling within the next `age` ("the appointment is within a day").
+    notify: Any = None  # notifications.Message
+    due_within: tuple[str, str] | None = None
 
     def __post_init__(self) -> None:
         if not _IDENTIFIER.match(self.name or ""):
@@ -116,9 +120,20 @@ class Schedule:
                     raise InvalidIRError(f"schedule {self.name!r}: an age is at most 365d")
             except ValueError as error:
                 raise InvalidIRError(f"schedule {self.name!r}: {error}") from error
-        actions = (self.transition is not None) + bool(self.set) + self.delete
+        if self.due_within is not None:
+            column, age = self.due_within
+            if not _IDENTIFIER.match(column or ""):
+                raise InvalidIRError(f"schedule {self.name!r}: due_within needs a field")
+            try:
+                if not 0 < seconds(age) <= MAX_AGE:
+                    raise InvalidIRError(f"schedule {self.name!r}: due_within is 1m to 365d")
+            except ValueError as error:
+                raise InvalidIRError(f"schedule {self.name!r}: {error}") from error
+        actions = (self.transition is not None) + bool(self.set) + self.delete + (self.notify is not None)
         if actions != 1:
-            raise InvalidIRError(f"schedule {self.name!r} does one thing: a transition, set or delete")
+            raise InvalidIRError(f"schedule {self.name!r} does one thing: a transition, set, delete or notify")
+        if self.notify is not None:
+            self.notify.check(f"schedule {self.name!r}")
         if self.transition is not None and not _IDENTIFIER.match(self.transition):
             raise InvalidIRError(f"schedule {self.name!r}: transition must be lower_snake_case")
         if len(self.set) > 8:
@@ -138,8 +153,8 @@ class Schedule:
             if self.at is None or every != 7 * 86400:
                 raise InvalidIRError(f"schedule {self.name!r}: on (a weekday) needs at and every 7d")
         # A rule over every row of a table, every few minutes, is a mistake waiting to happen.
-        if not self.where and self.older_than is None:
-            raise InvalidIRError(f"schedule {self.name!r} needs a condition: where or older_than")
+        if not self.where and self.older_than is None and self.due_within is None:
+            raise InvalidIRError(f"schedule {self.name!r} needs a condition: where, older_than or due_within")
 
     @property
     def every_seconds(self) -> int:
@@ -159,6 +174,8 @@ class Schedule:
 
     @property
     def action(self) -> str:
+        if self.notify is not None:
+            return "notify"
         return "transition" if self.transition is not None else "set" if self.set else "delete"
 
     def to_dict(self) -> dict[str, Any]:
@@ -171,7 +188,11 @@ class Schedule:
             out["where"] = {name: list(values) for name, values in self.where}
         if self.older_than is not None:
             out["older_than"] = {"field": self.older_than[0], "age": self.older_than[1]}
-        if self.transition is not None:
+        if self.due_within is not None:
+            out["due_within"] = {"field": self.due_within[0], "age": self.due_within[1]}
+        if self.notify is not None:
+            out["do"] = {"notify": self.notify.to_dict()}
+        elif self.transition is not None:
             out["do"] = {"transition": self.transition}
         elif self.set:
             out["do"] = {"set": dict(self.set)}
@@ -183,7 +204,7 @@ class Schedule:
     def from_dict(cls, data: Any) -> "Schedule":
         if not isinstance(data, dict):
             raise InvalidIRError("a schedule is an object")
-        unknown = set(data) - {"name", "entity", "every", "where", "older_than", "do", "at", "on"}
+        unknown = set(data) - {"name", "entity", "every", "where", "older_than", "due_within", "do", "at", "on"}
         if unknown:
             raise InvalidIRError(f"unknown schedule keys: {', '.join(sorted(unknown))}")
         where_raw = data.get("where") or {}
@@ -196,11 +217,23 @@ class Schedule:
             if not isinstance(older, dict) or set(older) - {"field", "age"}:
                 raise InvalidIRError('older_than is {"field": ..., "age": "30m"}')
             older_than = (str(older.get("field") or "created_at"), str(older.get("age") or ""))
+        due = data.get("due_within")
+        due_within = None
+        if due is not None:
+            if not isinstance(due, dict) or set(due) - {"field", "age"}:
+                raise InvalidIRError('due_within is {"field": ..., "age": "1d"}')
+            due_within = (str(due.get("field") or ""), str(due.get("age") or ""))
         do = data.get("do")
-        if not isinstance(do, dict) or len(do) != 1 or next(iter(do)) not in ("transition", "set", "delete"):
-            raise InvalidIRError('a schedule\'s do is one of {"transition": ...}, {"set": {...}}, {"delete": true}')
-        transition, sets, delete = None, (), False
-        if "transition" in do:
+        if not isinstance(do, dict) or len(do) != 1 or next(iter(do)) not in ("transition", "set", "delete", "notify"):
+            raise InvalidIRError('a schedule\'s do is one of {"transition": ...}, {"set": {...}}, {"delete": true}, {"notify": {...}}')
+        transition, sets, delete, notify = None, (), False, None
+        if "notify" in do:
+            from .notifications import Message
+
+            if not isinstance(do["notify"], dict):
+                raise InvalidIRError("a schedule's notify is a message: to, title, body, channels")
+            notify = Message.from_dict(do["notify"])
+        elif "transition" in do:
             transition = str(do["transition"])
         elif "set" in do:
             if not isinstance(do["set"], dict) or not do["set"]:
@@ -221,6 +254,8 @@ class Schedule:
             delete=delete,
             at=str(data["at"]) if data.get("at") else None,
             on=str(data["on"]).lower() if data.get("on") else None,
+            notify=notify,
+            due_within=due_within,
         )
 
 
@@ -302,6 +337,8 @@ def describe(schedule: Schedule, workflow: Any = None, timezone: str = "UTC") ->
         verb = f"{schedule.transition.replace('_', ' ')} {noun}"
     elif schedule.set:
         verb = f"set {', '.join(f'{k} to {_say(v)}' for k, v in schedule.set)} on {noun}"
+    elif schedule.notify is not None:
+        verb = f"remind about {noun}"
     else:
         verb = f"delete {noun}"
     parts = []
@@ -316,6 +353,9 @@ def describe(schedule: Schedule, workflow: Any = None, timezone: str = "UTC") ->
         column, age = schedule.older_than
         condition += (f", once {column} has passed" if seconds(age) == 0
                       else f", {say_duration(age)} after {column}")
+    if schedule.due_within is not None:
+        column, age = schedule.due_within
+        condition += f", within {say_duration(age)} before {column} (once each)"
     return f"Every {every}: {verb}{condition}."
 
 

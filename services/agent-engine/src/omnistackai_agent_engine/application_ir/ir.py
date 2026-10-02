@@ -751,6 +751,59 @@ class ApplicationIR:
                 raise InvalidIRError(f"screen {screen.id!r} references unknown role {screen.role!r}")
         self._validate_workflows()
 
+    def _validate_notifications(self, entities_by_name: dict, role_ids: set) -> None:
+        from .jobs import AUDIT_FIELDS, jobs_of
+        from .notifications import API_PREFIX, RESERVED_TABLES, has_notifications, notifications_of, placeholders
+        from .ownership import ownership_for_entity
+
+        if len([c for c in self.capabilities if c.kind == "notifications"]) > 1:
+            raise InvalidIRError("an app has one notifications capability")
+        if not has_notifications(self):
+            return
+        for entity in self.entities:
+            table = re.sub(r"(?<!^)(?=[A-Z])", "_", entity.name).lower()
+            if table in RESERVED_TABLES:
+                raise InvalidIRError(f"entity {entity.name} would take the notifications table {table!r}")
+        for api in self.apis:
+            if api.path == API_PREFIX or api.path.startswith(API_PREFIX + "/"):
+                raise InvalidIRError(f"{api.path} is the notifications'; an app's own routes cannot use {API_PREFIX}")
+
+        def check(label: str, entity_name: str, message) -> dict:
+            entity = entities_by_name.get(entity_name)
+            if entity is None:
+                raise InvalidIRError(f"{label} names unknown entity {entity_name!r}")
+            kinds = {f.name: f.type.value for f in entity.fields}
+            for audit in AUDIT_FIELDS:
+                kinds.setdefault(audit, "datetime")
+            kinds.setdefault("id", "uuid")
+            for name in placeholders(message.title) + placeholders(message.body):
+                if name not in kinds:
+                    raise InvalidIRError(f"{label}: {{{name}}} is not a field of {entity_name}")
+            rule = ownership_for_entity(self, entity_name)
+            for who in message.to:
+                if who == "assignee" and (rule is None or rule.assignee is None):
+                    raise InvalidIRError(f"{label}: {entity_name} has no assignee to notify")
+                if who.startswith("role:") and who[5:] not in role_ids and who[5:] != "admin":
+                    raise InvalidIRError(f"{label}: {who[5:]!r} is not one of the app's roles")
+                if who not in ("creator", "assignee") and not who.startswith("role:") and kinds.get(who) != "uuid":
+                    raise InvalidIRError(f"{label}: {who!r} is not a uuid field of {entity_name} holding a user's id")
+            return kinds
+
+        rules = notifications_of(self)
+        for rule in rules.rules if rules else ():
+            kinds = check(f"notification {rule.name!r}", rule.entity, rule.message)
+            owned = ownership_for_entity(self, rule.entity)
+            if rule.when == "assigned" and (owned is None or owned.assignee is None):
+                raise InvalidIRError(f"notification {rule.name!r}: {rule.entity} is not assigned to anyone (no assignee)")
+            if rule.when == "becomes":
+                if rule.field not in kinds:
+                    raise InvalidIRError(f"notification {rule.name!r}: {rule.entity} has no field {rule.field!r}")
+                _check_job_values(f"notification {rule.name!r}", rule.field, kinds[rule.field], (rule.becomes,))
+        jobs = jobs_of(self)
+        for schedule in jobs.schedules if jobs else ():
+            if schedule.notify is not None:
+                check(f"reminder {schedule.name!r}", schedule.entity, schedule.notify)
+
     def _validate_jobs(self, entities_by_name: dict) -> None:
         from .jobs import API_PREFIX, AUDIT_FIELDS, RESERVED_TABLES, jobs_of
         from .workflow import workflows_of
@@ -786,6 +839,8 @@ class ApplicationIR:
                 _check_job_values(label, name, kind_of(name), values)
             if schedule.older_than is not None and kind_of(schedule.older_than[0]) != "datetime":
                 raise InvalidIRError(f"{label}: older_than needs a datetime field, not {schedule.older_than[0]!r}")
+            if schedule.due_within is not None and kind_of(schedule.due_within[0]) != "datetime":
+                raise InvalidIRError(f"{label}: due_within needs a datetime field, not {schedule.due_within[0]!r}")
             workflow = workflows.get(schedule.entity)
             if schedule.transition is not None:
                 if workflow is None or schedule.transition not in {t.name for t in workflow.transitions}:
@@ -853,6 +908,8 @@ class ApplicationIR:
         # R-568: a schedule names a declared entity, its fields (of the right kind) and its workflow's
         # transitions; the scheduler's own tables and routes are not the app's to take.
         self._validate_jobs(entities_by_name)
+        # PC-053: notification rules (and reminders) name the plan's entities, fields, people and roles.
+        self._validate_notifications(entities_by_name, role_ids)
         # R-569: live entities are the plan's; the stream's routes are not the app's to take.
         from .realtime import API_PREFIX as LIVE_PREFIX, realtime_of
 

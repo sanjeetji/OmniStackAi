@@ -48,14 +48,20 @@ class LiveTable:
     owned: bool  # read 'own': only the creator (or assignee, or see_all roles) hears of it
     see_all: tuple[str, ...]
     assignee: str | None
+    #: PC-053: only the person the row names hears of it - not see-all roles, not the admin.
+    strict: bool = False
 
 
 def live_tables(ir: ApplicationIR) -> tuple[LiveTable, ...]:
+    from ..application_ir.notifications import has_notifications
+
     live = realtime_of(ir)
-    if live is None:
-        return ()
     out = []
-    for name in live.entities:
+    # PC-053: a person's notifications reach their bell as they are written.
+    if has_notifications(ir):
+        out.append(LiveTable(entity="Notification", table="notification", owned=True, see_all=(),
+                             assignee="user_id", strict=True))
+    for name in live.entities if live else ():
         rule = ownership_for_entity(ir, name)
         out.append(LiveTable(
             entity=name,
@@ -65,6 +71,11 @@ def live_tables(ir: ApplicationIR) -> tuple[LiveTable, ...]:
             assignee=rule.assignee if rule else None,
         ))
     return tuple(out)
+
+
+def has_stream(ir: ApplicationIR) -> bool:
+    """Whether the app streams changes: live entities (R-569) or notifications (PC-053)."""
+    return bool(live_tables(ir))
 
 
 def realtime_schema(ir: ApplicationIR) -> str:

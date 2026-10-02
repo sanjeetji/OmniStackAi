@@ -13,7 +13,7 @@ from . import realtime_sql as q
 
 def python_realtime_file(ir: ApplicationIR) -> str:
     tables = "\n".join(
-        f"    {t.table!r}: {{\"entity\": {t.entity!r}, \"owned\": {t.owned!r}, \"see_all\": {t.see_all!r}}},"
+        f"    {t.table!r}: {{\"entity\": {t.entity!r}, \"owned\": {t.owned!r}, \"see_all\": {t.see_all!r}, \"strict\": {t.strict!r}}},"
         for t in q.live_tables(ir)
     )
     return (
@@ -82,10 +82,12 @@ def may_hear(holder: dict, change: dict) -> bool:
         return False
     if not live["owned"]:
         return True
+    me = holder.get("sub")
+    if live.get("strict"):  # a notification is its recipient's alone
+        return bool(me) and me == change.get("a")
     roles = set(holder.get("roles") or [])
     if roles & (set(live["see_all"]) | {"admin"}):
         return True
-    me = holder.get("sub")
     return bool(me) and me in (change.get("o"), change.get("a"))
 
 

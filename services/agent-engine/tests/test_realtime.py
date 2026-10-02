@@ -145,7 +145,7 @@ class Go(TestCase):
         self.assertIn("\tgo h.RunRealtime()", main)
         self.assertIn('mux.HandleFunc("POST /realtime/ticket", handlers.RequireAuth(h.RealtimeTicket))', main)
         self.assertIn('mux.HandleFunc("GET /realtime/stream", h.RealtimeStream)', main)
-        self.assertIn('"order": {Entity: "Order", Owned: true, SeeAll: []string{"staff", "admin"}},', live)
+        self.assertIn('"order": {Entity: "Order", Owned: true, SeeAll: []string{"staff", "admin"}, Strict: false},', live)
         self.assertIn("hmac.Equal(", live)
 
 

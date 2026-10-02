@@ -290,6 +290,7 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
         data["capabilities"] = kept
     _repair_jobs(data, entities, notes)
     _repair_realtime(data, entities, notes)
+    _repair_notifications(data, entities, notes)
 
 
 #: Names a model gives "the user this belongs to". Not "author": an Author is often a real entity.
@@ -506,6 +507,22 @@ def _repair_jobs(data: dict[str, Any], entities: dict[str, Any], notes: list[str
                 if name not in types or name == workflow.get("field"):
                     raise InvalidIRError(f"{name!r} cannot be set on {entity}")
                 _check_job_values(label, name, types[name], (value,))
+            if schedule.due_within is not None and types.get(schedule.due_within[0]) != "datetime":
+                raise InvalidIRError(f"{schedule.due_within[0]!r} is not a datetime field of {entity}")
+            if schedule.notify is not None:  # PC-053: a reminder's people and placeholders are the plan's
+                from ..application_ir.notifications import placeholders
+
+                types.setdefault("id", "uuid")
+                for name in placeholders(schedule.notify.title) + placeholders(schedule.notify.body):
+                    if name not in types:
+                        raise InvalidIRError(f"{{{name}}} is not a field of {entity}")
+                role_ids = {str(r.get("id")) for r in data.get("roles") or () if isinstance(r, dict)} | {"admin"}
+                assignee = next(((c.get("config") or {}).get("assignee") for c in capabilities if isinstance(c, dict)
+                                 and c.get("kind") == "ownership" and (c.get("config") or {}).get("entity") == entity), None)
+                for who in schedule.notify.to:
+                    if (who == "assignee" and not assignee) or (who.startswith("role:") and who[5:] not in role_ids) or (
+                            who not in ("creator", "assignee") and not who.startswith("role:") and types.get(who) != "uuid"):
+                        raise InvalidIRError(f"{who!r} cannot be notified about {entity}")
         except InvalidIRError as error:
             notes.append(f"jobs: {label} removed ({error})")
             continue
@@ -550,3 +567,68 @@ def _repair_realtime(data: dict[str, Any], entities: dict[str, Any], notes: list
         data["capabilities"].append(first)
     else:
         notes.append("live updates: no entity left; removed")
+
+
+def _repair_notifications(data: dict[str, Any], entities: dict[str, Any], notes: list[str]) -> None:
+    """PC-053: one notifications capability whose rules name the plan's entities, fields, people and roles."""
+    from ..application_ir.errors import InvalidIRError
+    from ..application_ir.notifications import Rule, placeholders
+
+    capabilities = data.get("capabilities")
+    if not isinstance(capabilities, list):
+        return
+    found = [c for c in capabilities if isinstance(c, dict) and c.get("kind") == "notifications"]
+    if not found:
+        return
+    raw: list[Any] = []
+    for capability in found:
+        config = capability.get("config")
+        raw += (config.get("rules") or []) if isinstance(config, dict) else []
+    if len(found) > 1:
+        notes.append("notifications: the rules of several notifications capabilities merged into one")
+    role_ids = {str(r.get("id")) for r in data.get("roles") or () if isinstance(r, dict)} | {"admin"}
+    assignees = {str((c.get("config") or {}).get("entity")): (c.get("config") or {}).get("assignee")
+                 for c in capabilities if isinstance(c, dict) and c.get("kind") == "ownership"}
+    kept: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        label = f"notification {item.get('name')!r}"
+        named = str(item.get("entity") or "")
+        entity = resolve_entity_reference(named, list(entities)) if named else None
+        if entity is None:
+            notes.append(f"notifications: {label} names {named!r}, which is not in the plan; removed")
+            continue
+        item["entity"] = entity
+        kinds = {str(f.get("name")): str(f.get("type")) for f in entities[entity].get("fields") or () if isinstance(f, dict)}
+        kinds.update({k: v for k, v in (("id", "uuid"), ("created_at", "datetime"), ("updated_at", "datetime")) if k not in kinds})
+        try:
+            rule = Rule.from_dict(item)
+            for name in placeholders(rule.message.title) + placeholders(rule.message.body):
+                if name not in kinds:
+                    raise InvalidIRError(f"{{{name}}} is not a field of {entity}")
+            for who in rule.message.to:
+                if who == "assignee" and not assignees.get(entity):
+                    raise InvalidIRError(f"{entity} has no assignee")
+                if who.startswith("role:") and who[5:] not in role_ids:
+                    raise InvalidIRError(f"{who[5:]!r} is not a role")
+                if who not in ("creator", "assignee") and not who.startswith("role:") and kinds.get(who) != "uuid":
+                    raise InvalidIRError(f"{who!r} is not a user field of {entity}")
+            if rule.when == "assigned" and not assignees.get(entity):
+                raise InvalidIRError(f"{entity} is not assigned to anyone")
+            if rule.when == "becomes" and rule.field not in kinds:
+                raise InvalidIRError(f"{entity} has no field {rule.field!r}")
+        except InvalidIRError as error:
+            notes.append(f"notifications: {label} removed ({error})")
+            continue
+        if any(k.get("name") == item.get("name") for k in kept):
+            notes.append(f"notifications: a second {label} removed")
+            continue
+        kept.append(item)
+    first = found[0]
+    data["capabilities"] = [c for c in capabilities if not (isinstance(c, dict) and c.get("kind") == "notifications")]
+    if kept:
+        first["config"] = {"rules": kept[:32]}
+        data["capabilities"].append(first)
+    else:
+        notes.append("notifications: no rule left; removed")
