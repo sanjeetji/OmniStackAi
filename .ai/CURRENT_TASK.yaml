@@ -1,17 +1,17 @@
-task_id: PC-121
-status: completed
-phase: Platform Completion — 2 Maximum features
-tracker_row: PC-121
+task_id: PC-049
+status: in_progress
+phase: Platform Completion — 1 Vibe Mode live
+tracker_row: PC-049
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Push notifications for the generated mobile app (founder's go-ahead 2026-10-02). A notification
-  rule may add the `push` channel. The phone app asks permission after sign-in, gets an Expo push
-  token and registers it; each backend sends due pushes through Expo's push API with retries,
-  forgets devices that were uninstalled (DeviceNotRegistered) and honours a person's push mutes.
-  Expo push needs no key for development; a real phone needs the project's EAS id, which the
-  founder creates (guided).
+  A published app's database keeps up with its project. PC-008 applies 0001_init.sql once; a
+  changed plan (a new field, a new entity, a new capability) never reached the live database. Now
+  every generated schema statement is safe to run again, and publishing evolves the live database:
+  the new schema is applied to a scratch schema, compared, missing columns are added to the live
+  tables (never dropped; leftovers and type changes are reported), and the schema is re-applied for
+  new tables, indexes, functions and triggers. A backup is taken before any schema change and the
+  last five kept. Hosted providers (Neon, Supabase) need the founder's account: their own task.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -22,15 +22,7 @@ allowed_paths:
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - task verify stays offline with 0 model calls
-  - no push is sent to Expo in tests; a stand-in push service proves the sender
+  - a live database never loses a column, a table or a row through publishing
 required_gates:
-  - Live - on Python, Go, Express and Hono, a status change pushes to the registered devices of the right people, a mute holds, a failure is retried, an uninstalled device is forgotten
-  - the generated mobile app type-checks with expo-notifications
+  - Live - an app published, its plan changed (a new field, a new entity, notifications), published again - the live database has the new column and tables, the old rows are intact, a backup exists, a dropped field is reported and kept
   - scripts/verify.sh passes
-found_and_fixed:
-  - The mobile type-check cache is built from a sample app without push, so a push app would have failed its build-time type-check; the cache now includes the push packages.
-  - "Send a push notification to ..." was not read as a notification; it is.
-deferred:
-  - Live proof on a real phone needs the founder's EAS project id (eas init) and a development build.
-  - Tapping a push does not yet open the record it is about.
