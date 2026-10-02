@@ -1,16 +1,18 @@
-task_id: PC-117
-status: completed
+task_id: PC-053
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-117
+tracker_row: PC-053
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Scheduled jobs at a time of day: "every night at 2am", "daily at 09:30", "every Monday at 9am", in
-  the app's time zone. A schedule may carry `at` (HH:MM) and, weekly, `on` (a weekday); the jobs
-  capability carries a `timezone` (IANA, default UTC). The next run is computed in Postgres
-  (`scheduler_next_at`), so Python, Go, Express and Hono run the same statements unchanged; daylight
-  saving is the database's to get right. Read from the prompt too.
+  Notifications in generated apps: in-app and email, with each person's preferences. A
+  `notifications` capability declares rules - an entity's event (created, changed, deleted, or a
+  field becoming a value such as status -> shipped), who hears (the creator, the assignee, a user
+  field, a role), a title and body from the record's fields, and channels. A trigger writes each
+  notification in the database, so Python, Go, Express and Hono deliver the same ones; scheduled jobs
+  gain reminders ("a day before the appointment"), once per record. In-app notifications are live
+  (R-569) behind a bell; email goes through an outbox with retries (Resend, keys last). People mute a
+  rule or everything per channel. Planned from the prompt too.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -21,11 +23,9 @@ allowed_paths:
   - CHANGELOG.md
   - docs/
 forbidden_changes:
-  - schedules without `at` keep running every N from their last run
+  - task verify stays offline with 0 model calls
+  - push notifications (Expo / native) wait for the founder's go-ahead on mobile work
+  - no real email is sent in tests; the outbox works and is proven without keys
 required_gates:
-  - Live - on Python, Go, Express and Hono, an anchored schedule's next run is the right local time, it runs then, and the following run is a day (or week) later at the same local time
+  - Live - on Python, Go, Express and Hono, a status change notifies exactly the right people, a reminder fires once, a mute holds, the email outbox delivers to a stand-in provider and retries a failure; a browser shows the bell update without a reload
   - scripts/verify.sh passes
-found_and_fixed:
-  - Repair rebuilt the jobs config from its schedules alone and would have dropped a time zone; it keeps it.
-deferred:
-  - A monthly schedule ("on the 1st of each month") is not expressible; every is at most 7 days.
