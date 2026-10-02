@@ -1,21 +1,22 @@
-task_id: PC-122
-status: completed
+task_id: PC-125
+status: in_progress
 phase: Platform Completion — M1 Quality foundation
-tracker_row: PC-122
+tracker_row: PC-125
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  A quality benchmark: a fixed set of varied, real prompts built end to end through the platform's own
-  build pipeline and scored - does it build, does it run, does every page and API answer, how much of
-  what the prompt asked for was delivered, and how the pages look (screenshots). Results are saved
-  with a baseline, and a drop is reported as a regression. It calls real (free) models, so it is
-  opt-in and never part of task verify.
+  Check and repair before the user sees it. Every generated page, link and API call is verified;
+  what fails is repaired - deterministically where the fix is certain, by the model with the exact
+  error otherwise - or replaced with a working fallback; and the build report says what was verified.
+  Includes PC-116 (dead links) and what the PC-122 benchmark found after the type check passed: a
+  link to a page that does not exist (404), text the colour of its background (contrast 1:1), a
+  hydration mismatch.
 founder_gate: none
-companions: []
+companions: [PC-116]
 allowed_paths:
   - services/agent-engine/
   - scripts/
+  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -24,16 +25,5 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - the benchmark builds a set of prompts end to end with a free model, writes a scored report with screenshots, and a second run compares against the first
+  - Live - the benchmark cases that showed a dead link and invisible text build again with neither, and the build report lists what was verified
   - scripts/verify.sh passes
-found_and_fixed:
-  - A second Expo app took a port already allocated to a web app; Expo asked to switch ports and exited, so a two-phone-app ecosystem never previewed. Every phone app now gets its own allocated port.
-  - A crashed preview said only "a background process exited"; it names the process and exit code, and the benchmark saves the apps' output.
-  - Scoring counted a Python API that only parses (and skipped web apps) as type-checked; build is now 100% only when every surface is clean or repaired.
-  - Without the Studio's type-check cache every designed page was put back to its template; the benchmark uses the cache the Studio uses.
-  - The page-provider log said "Ollama answering: False" when Ollama was simply not probed yet.
-deferred:
-  - For PC-125 - a dead link (/appointment_list 404), invisible text (contrast 1.00:1) and a hydration mismatch passed the build's checks.
-  - For PC-133 - the booking domain plans a clinic as Booking + Service, without doctors, appointments or reminders.
-  - For PC-126 - free tiers were exhausted mid-run (429s), leaving half of one project's pages as templates.
-  - For PC-130 - a judged visual score from the screenshots; today the report shows them for a person to judge.
