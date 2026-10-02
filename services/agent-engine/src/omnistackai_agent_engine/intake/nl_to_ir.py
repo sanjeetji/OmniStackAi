@@ -150,6 +150,9 @@ def _system_instruction(example_name: str) -> str:
             "a due date). At least one of where/older_than.\n"
             "- do: {\"transition\": <a transition of the entity's workflow>}, {\"set\": {\"is_overdue\": "
             "true}} (never the workflow's own field) or {\"delete\": true}.\n"
+            "- At a time of day ('every night at 2am', 'every Monday at 9am'): add \"at\": \"02:00\" with "
+            "\"every\": \"1d\" (or \"7d\" with \"on\": \"monday\"), and the app's IANA \"timezone\" beside "
+            "\"schedules\" (default UTC).\n"
             "- Reminders and emails are not scheduled jobs yet; do not invent them.\n"
         )
     if "realtime" in CAPABILITY_KINDS.implemented():

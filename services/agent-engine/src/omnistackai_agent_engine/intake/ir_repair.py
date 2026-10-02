@@ -514,9 +514,11 @@ def _repair_jobs(data: dict[str, Any], entities: dict[str, Any], notes: list[str
             continue
         kept.append(item)
     first = jobs[0]
+    zone = next((c.get("config", {}).get("timezone") for c in jobs
+                 if isinstance(c.get("config"), dict) and c["config"].get("timezone")), None)
     data["capabilities"] = [c for c in capabilities if not (isinstance(c, dict) and c.get("kind") == "jobs")]
     if kept:
-        first["config"] = {"schedules": kept[:16]}
+        first["config"] = {"schedules": kept[:16], **({"timezone": zone} if zone else {})}
         data["capabilities"].append(first)
     else:
         notes.append("jobs: no schedule left; removed")

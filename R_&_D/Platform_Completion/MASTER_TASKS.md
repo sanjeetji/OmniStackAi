@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 453 |
+| Completed | 454 |
 | Completed - needs live proof | 7 |
 | In Progress | 0 |
 | Pending | 95 |
-| Not Started | 506 |
+| Not Started | 505 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1141** |
 
-Open work queue: **91** tasks (P0: 4, P1: 38, P2: 34, P3: 15).
+Open work queue: **90** tasks (P0: 4, P1: 38, P2: 34, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -103,7 +103,7 @@ Open work queue: **91** tasks (P0: 4, P1: 38, P2: 34, P3: 15).
 | 54 | R-567 | Money: ledgers, payments, payouts, refunds, commission | Completed | P1 | Both |  | ARCH-PAYMENTS | R-512 gives Stripe/Razorpay checkout; this is the ledger. Done 2026-10-01: a `money` capability; every backend gets server-priced checkout, a double-entry ledger, commission splits, refunds and payouts, mock offline and verified Stripe/Razorpay webhooks. Real provider accounts are PC-070/PC-071; the screens are PC-113. Proved with real test-mode accounts 2026-10-01 on the console-built Bazaar Lite: Stripe (card, webhook via the Stripe CLI) and Razorpay (netbanking, webhook via a tunnel) each took ₹799, credited the seller ₹719.10 and refunded ₹100 through the provider. |
 | 55 | PC-113 | Money in the generated web and admin apps: pay, wallet, payouts, refunds, the books | Completed | P1 | Both | R-567 |  | R-567 built the API on every backend; the generated pages do not call it yet. Done 2026-10-01: a Pay panel on chargeable records, a Wallet page, an admin Money page; proven in a browser. |
 | 56 | R-568 | Background jobs and scheduling | Completed | P1 | Both |  |  | Done 2026-10-01: a `jobs` capability - schedules over an entity (which rows by state and age, how often, a workflow transition / set fields / delete), compiled to one bounded SQL statement each and run by every backend on a Postgres scheduler (SKIP LOCKED, retries with backoff, dead runs an admin retries); a Scheduled jobs page in the admin console; planned from the prompt. 28/28 live on Python, Go, Express and Hono; 8/8 in a browser. A time of day is PC-117; reminders are PC-053. |
-| 57 | PC-117 | Scheduled jobs at a time of day ('every night at 2am', in the app's time zone) | Not Started | P3 | Both | R-568 |  | R-568 runs a schedule every N minutes/hours/days from its first run; a nightly job at a set hour needs an anchor and a time zone. |
+| 57 | PC-117 | Scheduled jobs at a time of day ('every night at 2am', in the app's time zone) | Completed | P3 | Both | R-568 |  | R-568 runs a schedule every N minutes/hours/days from its first run; a nightly job at a set hour needs an anchor and a time zone. Done 2026-10-02: `at` (HH:MM), `on` (a weekday) and the jobs capability's `timezone`; the next run computed in Postgres (scheduler_next_at); read from the prompt. 7/7 live on Python, Go, Express and Hono. |
 | 58 | R-569 | Realtime channels: tracking, notifications, live status | Completed | P1 | Both |  | ARCH-REALTIME | Done 2026-10-02: a `realtime` capability - a trigger publishes each change to a live entity through Postgres LISTEN/NOTIFY, every backend streams it over Server-Sent Events to the signed-in people its ownership rule lets see the row (one-minute signed tickets open a stream), and the pages' data hooks and the admin tables refresh quietly. Planned from the prompt. 19/19 live on Python, Go, Express and Hono; 4/4 in a browser. In-app notifications ride on it in PC-053. |
 | 59 | PC-118 | The job build API honours the build budget setting (it gave up after a fixed five minutes) | Completed | P2 | Platform |  |  | Found in R-569's console proof (2026-10-02): POST /jobs/build gave a multi-app build five minutes and the console a 502, while the project build already read OMNISTACKAI_AGENT_CALL_TIMEOUT (R-530; 30m in this machine's .env). Done 2026-10-02: both read the setting. The console's own non-streaming call to the job API still waits at most Node fetch's 300s for headers; the console's UI builds stream. |
 | 60 | R-571 | Escape hatch: behaviour the IR declares and the model implements, verified | Not Started | P1 | Both | R-560 |  | No hard ceiling, only a typed boundary. |
@@ -931,6 +931,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-113 | Money in the generated web and admin apps: pay, wallet, payouts, refunds, the books | Completed | 2026-10-01 | R-567 built the API on every backend; the generated pages do not call it yet. Done 2026-10-01: a Pay panel on chargeable records, a Wallet page, an admin Money page; proven in a browser. |
 | PC-114 | A prompt's privacy and money rules reach every app of an ecosystem; customers sign up with the plan's customer role | Completed | 2026-10-01 | Found creating the payments test project (2026-10-01): a marketplace planned as three apps got none of its money; fixed for every planner, the shared backend and sign-up. |
 | PC-115 | Remove R-512's Manage -> Payments toggle (replaced by R-567) | Completed | 2026-10-01 | Founder decision 2026-10-01: it took the amount from the client, recorded nothing and only reached the web app. Payments come from the plan; keys are project secrets. |
+| PC-117 | Scheduled jobs at a time of day ('every night at 2am', in the app's time zone) | Completed | 2026-10-02 | R-568 runs a schedule every N minutes/hours/days from its first run; a nightly job at a set hour needs an anchor and a time zone. Done 2026-10-02: `at` (HH:MM), `on` (a weekday) and the jobs capability's `timezone`; the next run computed in Postgres (scheduler_next_at); read from the prompt. 7/7 live on Python, Go, Express and Hono. |
 | PC-118 | The job build API honours the build budget setting (it gave up after a fixed five minutes) | Completed | 2026-10-02 | Found in R-569's console proof (2026-10-02): POST /jobs/build gave a multi-app build five minutes and the console a 502, while the project build already read OMNISTACKAI_AGENT_CALL_TIMEOUT (R-530; 30m in this machine's .env). Done 2026-10-02: both read the setting. The console's own non-streaming call to the job API still waits at most Node fetch's 300s for headers; the console's UI builds stream. |
 | PC-119 | 'Couriers see only the orders assigned to them' makes an assignment rule (word order, role synonyms) | Completed | 2026-10-02 | Found in R-569's console proof (2026-10-02): QuickShip's prompt said couriers see only the orders assigned to them; the plan's role was 'driver' and the reader knew only 'their own/assigned orders', so no rule was made and every signed-in user could read every order. Done 2026-10-02: the '<things> assigned to them' order and role synonyms (courier/rider -> driver, ...); every QuickShip app now gets Order.driver_id. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |

@@ -27,6 +27,29 @@ Python, Go, Express and Hono.
 
 A schedule needs at least one of `where` and `older_than`. A rule over every row is refused.
 
+### At a time of day (PC-117)
+
+```json
+{"kind": "jobs", "name": "app_jobs", "config": {"timezone": "Asia/Kolkata", "schedules": [
+  {"name": "purge_old_products", "entity": "Product", "every": "1d", "at": "02:00",
+   "older_than": {"field": "created_at", "age": "365d"}, "do": {"delete": true}},
+  {"name": "weekly_close", "entity": "Ticket", "every": "7d", "at": "09:00", "on": "monday",
+   "where": {"status": ["resolved"]}, "do": {"transition": "close"}}]}}
+```
+
+- `at` is a 24-hour local time, and `every` is then a whole number of days.
+- `on` is a weekday, with `every` set to `7d`.
+- `timezone` is IANA; the default is UTC.
+- A schedule at a time of day does **not** run at startup. Its first run is the next time that
+  local time comes round, and each run after that is a day (or a week) later at the same local
+  time.
+- The next run is computed in Postgres (`scheduler_next_at`), so daylight saving is handled by the
+  database, and every backend runs the same statements.
+- Changing a schedule's time, day or zone moves its next run. Leaving them alone keeps it.
+- The prompt reader picks up "every night at 2am", "daily at 23:15", "every Monday at 9:30 am" and
+  "at midnight". It sets the time zone from the prompt, for example rupees or India gives
+  Asia/Kolkata.
+
 ### Where schedules come from
 
 - **The planning model.** It is told about the `jobs` capability.
@@ -104,8 +127,10 @@ runner, and each passed 28 checks:
 In a browser, the admin page ran a job, showed the failed run and retried it, and paused a
 schedule (8 of 8 checks).
 
+Times of day (PC-117) passed 7 checks on each of the four backends. A daily and a weekly schedule
+two minutes ahead in Asia/Kolkata waited, ran by themselves at that minute, and were next due a day
+and a week later at the same local time.
+
 ## Not yet
 
-- A time of day ("every night at 2am"). Schedules run every N minutes, hours or days, counted from
-  their first run (PC-117).
 - Reminders and emails. Notifications are PC-053, which builds on this.

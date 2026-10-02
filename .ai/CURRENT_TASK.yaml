@@ -1,8 +1,9 @@
 task_id: PC-117
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: PC-117
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   Scheduled jobs at a time of day: "every night at 2am", "daily at 09:30", "every Monday at 9am", in
@@ -24,3 +25,7 @@ forbidden_changes:
 required_gates:
   - Live - on Python, Go, Express and Hono, an anchored schedule's next run is the right local time, it runs then, and the following run is a day (or week) later at the same local time
   - scripts/verify.sh passes
+found_and_fixed:
+  - Repair rebuilt the jobs config from its schedules alone and would have dropped a time zone; it keeps it.
+deferred:
+  - A monthly schedule ("on the 1st of each month") is not expressible; every is at most 7 days.

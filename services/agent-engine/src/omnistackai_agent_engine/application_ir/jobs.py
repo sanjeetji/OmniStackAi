@@ -37,6 +37,10 @@ _DURATION = re.compile(r"^(\d{1,4})\s*([mhd])$")
 _SECONDS = {"m": 60, "h": 3600, "d": 86400}
 _UNITS = {"m": "minute", "h": "hour", "d": "day"}
 
+_AT = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+#: PC-117: a weekly schedule's day, Monday first (Postgres's ISO week starts on Monday).
+WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
 MAX_SCHEDULES = 16
 MIN_EVERY = 60  # a minute: a schedule is a sweep, not a busy loop
 MAX_EVERY = 7 * 86400
@@ -80,6 +84,10 @@ class Schedule:
     transition: str | None = None
     set: tuple[tuple[str, Scalar], ...] = ()
     delete: bool = False
+    #: PC-117: run at this local time ("02:00") rather than every N from the last run; `every` is then
+    #: a whole number of days, and `on` (a weekday) pins a weekly schedule's day.
+    at: str | None = None
+    on: str | None = None
 
     def __post_init__(self) -> None:
         if not _IDENTIFIER.match(self.name or ""):
@@ -119,6 +127,16 @@ class Schedule:
             if not _IDENTIFIER.match(name) or name in ("id", *AUDIT_FIELDS, "created_by"):
                 raise InvalidIRError(f"schedule {self.name!r} cannot set {name!r}")
             _check_scalar(self.name, name, value)
+        if self.at is not None:
+            if not _AT.match(self.at):
+                raise InvalidIRError(f"schedule {self.name!r}: at is a 24-hour time like 02:00, not {self.at!r}")
+            if every % 86400:
+                raise InvalidIRError(f"schedule {self.name!r}: a schedule at a time of day runs every whole day(s)")
+        if self.on is not None:
+            if self.on not in WEEKDAYS:
+                raise InvalidIRError(f"schedule {self.name!r}: on is a weekday, not {self.on!r}")
+            if self.at is None or every != 7 * 86400:
+                raise InvalidIRError(f"schedule {self.name!r}: on (a weekday) needs at and every 7d")
         # A rule over every row of a table, every few minutes, is a mistake waiting to happen.
         if not self.where and self.older_than is None:
             raise InvalidIRError(f"schedule {self.name!r} needs a condition: where or older_than")
@@ -128,11 +146,27 @@ class Schedule:
         return seconds(self.every)
 
     @property
+    def at_minutes(self) -> int | None:
+        """'02:30' -> 150, minutes after local midnight."""
+        if self.at is None:
+            return None
+        hours, minutes = self.at.split(":")
+        return int(hours) * 60 + int(minutes)
+
+    @property
+    def on_day(self) -> int | None:
+        return WEEKDAYS.index(self.on) if self.on is not None else None
+
+    @property
     def action(self) -> str:
         return "transition" if self.transition is not None else "set" if self.set else "delete"
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {"name": self.name, "entity": self.entity, "every": self.every}
+        if self.at is not None:
+            out["at"] = self.at
+        if self.on is not None:
+            out["on"] = self.on
         if self.where:
             out["where"] = {name: list(values) for name, values in self.where}
         if self.older_than is not None:
@@ -149,7 +183,7 @@ class Schedule:
     def from_dict(cls, data: Any) -> "Schedule":
         if not isinstance(data, dict):
             raise InvalidIRError("a schedule is an object")
-        unknown = set(data) - {"name", "entity", "every", "where", "older_than", "do"}
+        unknown = set(data) - {"name", "entity", "every", "where", "older_than", "do", "at", "on"}
         if unknown:
             raise InvalidIRError(f"unknown schedule keys: {', '.join(sorted(unknown))}")
         where_raw = data.get("where") or {}
@@ -185,6 +219,8 @@ class Schedule:
             transition=transition,
             set=sets,
             delete=delete,
+            at=str(data["at"]) if data.get("at") else None,
+            on=str(data["on"]).lower() if data.get("on") else None,
         )
 
 
@@ -201,8 +237,16 @@ class Jobs:
     """An app's schedules (one `jobs` capability per app)."""
 
     schedules: tuple[Schedule, ...] = field(default_factory=tuple)
+    #: PC-117: the time zone a schedule's `at` is in (IANA, e.g. "Asia/Kolkata").
+    timezone: str = "UTC"
 
     def __post_init__(self) -> None:
+        try:
+            from zoneinfo import ZoneInfo
+
+            ZoneInfo(self.timezone)
+        except (ValueError, KeyError, OSError) as error:
+            raise InvalidIRError(f"unknown time zone {self.timezone!r}") from error
         if not self.schedules:
             raise InvalidIRError("a jobs capability needs at least one schedule")
         if len(self.schedules) > MAX_SCHEDULES:
@@ -215,16 +259,20 @@ class Jobs:
     def from_config(cls, config: dict[str, Any]) -> "Jobs":
         if not isinstance(config, dict):
             raise InvalidIRError("a jobs config must be a mapping")
-        unknown = set(config) - {"schedules"}
+        unknown = set(config) - {"schedules", "timezone"}
         if unknown:
             raise InvalidIRError(f"unknown jobs keys: {', '.join(sorted(unknown))}")
         raw = config.get("schedules") or []
         if not isinstance(raw, list):
             raise InvalidIRError("jobs schedules must be a list")
-        return cls(schedules=tuple(Schedule.from_dict(item) for item in raw))
+        return cls(schedules=tuple(Schedule.from_dict(item) for item in raw),
+                   timezone=str(config.get("timezone") or "UTC"))
 
     def to_config(self) -> dict[str, Any]:
-        return {"schedules": [s.to_dict() for s in self.schedules]}
+        out: dict[str, Any] = {"schedules": [s.to_dict() for s in self.schedules]}
+        if self.timezone != "UTC":
+            out["timezone"] = self.timezone
+        return out
 
 
 def validate_jobs_config(name: str, config: dict[str, Any]) -> None:
@@ -242,9 +290,13 @@ def jobs_of(ir: Any) -> "Jobs | None":
     return None
 
 
-def describe(schedule: Schedule, workflow: Any = None) -> str:
+def describe(schedule: Schedule, workflow: Any = None, timezone: str = "UTC") -> str:
     """One sentence for the admin: 'Every 5 minutes: cancel Orders where paid is false, 30 minutes after created_at.'"""
     every = say_duration(schedule.every)
+    if schedule.on is not None:
+        every = f"{schedule.on.title()} at {schedule.at} ({timezone})"
+    elif schedule.at is not None:
+        every = f"{every} at {schedule.at} ({timezone})"
     noun = f"{schedule.entity}s" if not schedule.entity.endswith("s") else schedule.entity
     if schedule.transition is not None:
         verb = f"{schedule.transition.replace('_', ' ')} {noun}"

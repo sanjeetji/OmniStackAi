@@ -414,9 +414,11 @@ QUEUE = [
      "retries); a Scheduled jobs page in the admin console; planned from the prompt. 28/28 live on Python, "
      "Go, Express and Hono; 8/8 in a browser. A time of day is PC-117; reminders are PC-053."),
     ("PC-117", "Scheduled jobs at a time of day ('every night at 2am', in the app's time zone)",
-     "2 Maximum features", "Both", "Not Started", "P3", "R-568",
+     "2 Maximum features", "Both", "Completed", "P3", "R-568",
      "R-568 runs a schedule every N minutes/hours/days from its first run; a nightly job at a set hour "
-     "needs an anchor and a time zone."),
+     "needs an anchor and a time zone. Done 2026-10-02: `at` (HH:MM), `on` (a weekday) and the jobs "
+     "capability's `timezone`; the next run computed in Postgres (scheduler_next_at); read from the prompt. "
+     "7/7 live on Python, Go, Express and Hono."),
     ("R-569", "Realtime channels: tracking, notifications, live status", "2 Maximum features",
      "Both", "Completed", "P1", "", "Done 2026-10-02: a `realtime` capability - a trigger publishes each change to "
      "a live entity through Postgres LISTEN/NOTIFY, every backend streams it over Server-Sent Events to the "

@@ -51,12 +51,38 @@ CREATE TABLE IF NOT EXISTS "scheduler_run" (
     "finished_at"  TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS "ix_scheduler_run_due" ON "scheduler_run" ("run_at") WHERE "status" IN ('queued', 'failed', 'running');
-CREATE INDEX IF NOT EXISTS "ix_scheduler_run_recent" ON "scheduler_run" ("created_at" DESC);"""
+CREATE INDEX IF NOT EXISTS "ix_scheduler_run_recent" ON "scheduler_run" ("created_at" DESC);
+-- PC-117: a schedule at a time of day (minutes after local midnight), on a weekday (0 = Monday), in a zone.
+ALTER TABLE "scheduler_schedule" ADD COLUMN IF NOT EXISTS "at_minutes" INTEGER;
+ALTER TABLE "scheduler_schedule" ADD COLUMN IF NOT EXISTS "on_day" INTEGER;
+ALTER TABLE "scheduler_schedule" ADD COLUMN IF NOT EXISTS "timezone" VARCHAR NOT NULL DEFAULT 'UTC';
+-- The next local time at "at_minutes" (on "on_day") after now, as an instant. Postgres does the zone
+-- arithmetic, daylight saving included, so every backend agrees.
+CREATE OR REPLACE FUNCTION "scheduler_next_at"("at_minutes" integer, "on_day" integer, "every_seconds" integer, "zone" varchar)
+RETURNS timestamptz AS $$
+DECLARE
+    "local_now" timestamp := NOW() AT TIME ZONE "zone";
+    "step" interval := make_interval(secs => GREATEST("every_seconds", 86400));
+    "candidate" timestamp;
+BEGIN
+    IF "on_day" IS NULL THEN
+        "candidate" := date_trunc('day', "local_now") + make_interval(mins => "at_minutes");
+    ELSE
+        "candidate" := date_trunc('week', "local_now") + make_interval(days => "on_day", mins => "at_minutes");
+    END IF;
+    WHILE "candidate" <= "local_now" LOOP
+        "candidate" := "candidate" + "step";
+    END LOOP;
+    RETURN "candidate" AT TIME ZONE "zone";
+END
+$$ LANGUAGE plpgsql STABLE;"""
 
 #: Make every schedule that is due into a queued run, moving its next run on. Row locks on the
 #: schedule make this safe with several replicas: each due schedule is enqueued once.
 ENQUEUE_DUE = (
-    'WITH due AS (UPDATE "scheduler_schedule" SET "next_run_at" = NOW() + make_interval(secs => "every_seconds") '
+    'WITH due AS (UPDATE "scheduler_schedule" SET "next_run_at" = CASE WHEN "at_minutes" IS NULL '
+    'THEN NOW() + make_interval(secs => "every_seconds") '
+    'ELSE "scheduler_next_at"("at_minutes", "on_day", "every_seconds", "timezone") END '
     'WHERE "next_run_at" <= NOW() AND NOT "paused" RETURNING "name") '
     'INSERT INTO "scheduler_run" ("schedule") SELECT "name" FROM due'
 )
@@ -137,9 +163,11 @@ class CompiledSchedule:
     action: str
     sql: str
     description: str
+    at_minutes: int | None = None
+    on_day: int | None = None
 
 
-def compile_schedule(ir: ApplicationIR, schedule: Schedule) -> CompiledSchedule:
+def compile_schedule(ir: ApplicationIR, schedule: Schedule, timezone: str = "UTC") -> CompiledSchedule:
     table = sql_identifier(table_name(schedule.entity))
     workflow = next((w for w in workflows_of(ir) if w.entity == schedule.entity), None)
     conditions: list[str] = []
@@ -180,23 +208,41 @@ def compile_schedule(ir: ApplicationIR, schedule: Schedule) -> CompiledSchedule:
         every_seconds=schedule.every_seconds,
         action=schedule.action,
         sql=sql,
-        description=describe(schedule, workflow),
+        description=describe(schedule, workflow, timezone),
+        at_minutes=schedule.at_minutes,
+        on_day=schedule.on_day,
     )
 
 
 def compiled_schedules(ir: ApplicationIR) -> tuple[CompiledSchedule, ...]:
     jobs = jobs_of(ir)
-    return tuple(compile_schedule(ir, s) for s in jobs.schedules) if jobs else ()
+    return tuple(compile_schedule(ir, s, jobs.timezone) for s in jobs.schedules) if jobs else ()
 
 
 def sync_statements(ir: ApplicationIR) -> tuple[str, ...]:
     """Make the table of schedules match the app's: add new ones (due at once), keep each one's
     next run when it already exists, drop the ones the app no longer has."""
     compiled = compiled_schedules(ir)
-    upserts = tuple(
-        f'INSERT INTO "scheduler_schedule" ("name", "every_seconds") VALUES ({_literal(c.name)}, {c.every_seconds}) '
-        'ON CONFLICT ("name") DO UPDATE SET "every_seconds" = EXCLUDED."every_seconds"'
-        for c in compiled
-    )
+    jobs = jobs_of(ir)
+    zone = _literal(jobs.timezone if jobs else "UTC")
+
+    def upsert(c: CompiledSchedule) -> str:
+        at = "NULL" if c.at_minutes is None else str(c.at_minutes)
+        on = "NULL" if c.on_day is None else str(c.on_day)
+        # PC-117: a schedule at a time of day first runs at that time, not at start-up.
+        first = "NOW()" if c.at_minutes is None else f'"scheduler_next_at"({at}, {on}, {c.every_seconds}, {zone})'
+        return (
+            'INSERT INTO "scheduler_schedule" ("name", "every_seconds", "at_minutes", "on_day", "timezone", "next_run_at") '
+            f"VALUES ({_literal(c.name)}, {c.every_seconds}, {at}, {on}, {zone}, {first}) "
+            'ON CONFLICT ("name") DO UPDATE SET "every_seconds" = EXCLUDED."every_seconds", '
+            '"at_minutes" = EXCLUDED."at_minutes", "on_day" = EXCLUDED."on_day", "timezone" = EXCLUDED."timezone", '
+            # A schedule whose time changed is due at its new time; one that did not keeps its next run.
+            '"next_run_at" = CASE WHEN "scheduler_schedule"."at_minutes" IS DISTINCT FROM EXCLUDED."at_minutes" '
+            'OR "scheduler_schedule"."on_day" IS DISTINCT FROM EXCLUDED."on_day" '
+            'OR "scheduler_schedule"."timezone" IS DISTINCT FROM EXCLUDED."timezone" '
+            'THEN EXCLUDED."next_run_at" ELSE "scheduler_schedule"."next_run_at" END'
+        )
+
+    upserts = tuple(upsert(c) for c in compiled)
     names = ", ".join(_literal(c.name) for c in compiled)
     return (*upserts, f'DELETE FROM "scheduler_schedule" WHERE "name" NOT IN ({names})')

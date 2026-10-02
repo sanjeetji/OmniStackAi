@@ -37,7 +37,41 @@ _MAY = re.compile(r"\b(?:can|may|able to|allowed to|allow\w*|let|lets|option to)
 _DUE_WORDS = re.compile(r"\b(overdue|late|expired)\b", re.I)
 _DUE_FIELDS = ("due_date", "due_at", "deadline", "due", "expires_at", "expiry_date", "expiration_date", "end_date",
                "ends_at", "valid_until")
+# PC-117: "every night at 2am", "daily at 09:30", "every Monday at 9am", "at midnight".
+_CLOCK = re.compile(r"\b(?:at\s+)?(?:(?P<h>\d{1,2})(?::(?P<m>\d{2}))?\s*(?P<ampm>am|pm|a\.m\.|p\.m\.)|(?P<word>midnight|noon))\b"
+                    r"|\bat\s+(?P<h24>[01]?\d|2[0-3]):(?P<m24>[0-5]\d)\b", re.I)
+_DAILY = re.compile(r"\b(?:every\s+(?:day|night|morning|evening)|daily|nightly|each\s+(?:day|night))\b", re.I)
+_WEEKLY = re.compile(r"\b(?:every|each|on)\s+(?P<day>monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b", re.I)
+_ZONES = (("Asia/Kolkata", ("india", "rupee", "₹", " inr", " ist")), ("Europe/London", ("london", " uk ", "britain")),
+          ("America/New_York", ("new york", " est ", "eastern time")), ("Europe/Berlin", ("germany", "berlin")))
 _UNPAID = re.compile(r"\b(?:unpaid|not\s+(?:been\s+)?paid|without\s+payment)\b", re.I)
+
+
+def _clock(sentence: str) -> tuple[str | None, str | None, str | None]:
+    """(every, at, on) for a sentence that names a time of day, else (None, None, None)."""
+    clock = _CLOCK.search(sentence)
+    weekly = _WEEKLY.search(sentence)
+    if clock is None or not (_DAILY.search(sentence) or weekly or re.search(r"\bat\s", sentence, re.I)):
+        return None, None, None
+    if clock.group("word"):
+        hours, minutes = (0, 0) if clock.group("word").lower() == "midnight" else (12, 0)
+    elif clock.group("h24"):
+        hours, minutes = int(clock.group("h24")), int(clock.group("m24"))
+    else:
+        hours, minutes = int(clock.group("h")) % 12, int(clock.group("m") or 0)
+        if clock.group("ampm").lower().startswith("p"):
+            hours += 12
+    if hours > 23 or minutes > 59:
+        return None, None, None
+    at = f"{hours:02d}:{minutes:02d}"
+    if weekly:
+        return "7d", at, weekly.group("day").lower()
+    return "1d", at, None
+
+
+def _zone(prompt: str) -> str | None:
+    text = f" {prompt.lower()} "
+    return next((zone for zone, signs in _ZONES if any(sign in text for sign in signs)), None)
 
 
 def _age(n: str, unit: str) -> str | None:
@@ -130,6 +164,16 @@ def _where(data: dict[str, Any], entity: str, text: str, do: dict[str, Any]) -> 
     return where
 
 
+def _at_time(schedule: dict[str, Any], sentence: str) -> None:
+    """PC-117: "every night at 2am" runs the schedule at that local time instead of every few minutes."""
+    every, at, on = _clock(sentence)
+    if at is None:
+        return
+    schedule["every"], schedule["at"] = every, at
+    if on:
+        schedule["on"] = on
+
+
 def _add(data: dict[str, Any], schedule: dict[str, Any], notes: list[str], note: str) -> None:
     """Add a schedule only if the plan, with it, is still valid."""
     from ..application_ir import ApplicationIR
@@ -166,9 +210,15 @@ def jobs_from_prompt(prompt: str, data: dict[str, Any]) -> list[str]:
     if not entities:
         return []
     notes: list[str] = []
-    for sentence in re.split(r"[.;\n!?]+", prompt):
+    for sentence in re.split(r"[;\n!?]+|\.(?!\d)(?:\s|$)", prompt):
         _age_rule(sentence, data, entities, notes)
         _due_rule(sentence, data, entities, notes)
+    zone = _zone(prompt)
+    jobs = next((c for c in data.get("capabilities") or () if isinstance(c, dict) and c.get("kind") == "jobs"), None)
+    timed = jobs and any(isinstance(s, dict) and s.get("at") for s in (jobs.get("config") or {}).get("schedules") or ())
+    if timed and zone and not jobs["config"].get("timezone"):
+        jobs["config"]["timezone"] = zone  # PC-117: times of day are the app's local time
+        notes.append(f"scheduled times are in {zone}")
     return notes
 
 
@@ -191,6 +241,7 @@ def _age_rule(sentence: str, data: dict[str, Any], entities: list[str], notes: l
         name = f"{'delete' if 'delete' in do else verb if 'transition' in do else 'flag'}_{_snake(entity)}s"
         schedule: dict[str, Any] = {"name": name, "entity": entity, "every": _every(_seconds(age)),
                                     "older_than": {"field": "created_at", "age": age}, "do": do}
+        _at_time(schedule, sentence)
         if where:
             schedule["where"] = where
         what = do.get("transition") or ("delete" if "delete" in do else f"set {next(iter(do['set']))}")
@@ -230,4 +281,5 @@ def _due_rule(sentence: str, data: dict[str, Any], entities: list[str], notes: l
         do = {"set": {flag: True}}
     schedule = {"name": f"mark_{word}_{_snake(entity)}s", "entity": entity, "every": "5m",
                 "older_than": {"field": due, "age": "0m"}, "do": do}
+    _at_time(schedule, sentence)
     _add(data, schedule, notes, f"a scheduled job: {entity} records become {word} once {due} passes")

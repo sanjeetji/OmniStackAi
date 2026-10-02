@@ -269,3 +269,60 @@ class AnEcosystemGetsThemToo(TestCase):
                 self.assertEqual((schedule.entity, schedule.action, schedule.older_than), ("Listing", "delete", ("created_at", "90d")))
         files = {f.path for f in assemble_ecosystem(plan, prompt=prompt).files()}
         self.assertLessEqual({"services/api/app/jobs.py", "apps/admin/app/scheduled-jobs/page.tsx"}, files)
+
+
+class AtATimeOfDay(TestCase):
+    """PC-117: 'every night at 2am', 'every Monday at 9am', in the app's time zone."""
+
+    def _ir(self, *schedules, timezone=None):
+        data = _plan(list(schedules))
+        if timezone:
+            next(c for c in data["capabilities"] if c["kind"] == "jobs")["config"]["timezone"] = timezone
+        return ApplicationIR.from_dict(data)
+
+    def test_the_plan(self) -> None:
+        jobs = jobs_of(self._ir({**PURGE, "at": "02:30"}, {**CANCEL, "every": "7d", "at": "09:00", "on": "monday"},
+                                timezone="Asia/Kolkata"))
+        self.assertEqual(jobs.timezone, "Asia/Kolkata")
+        self.assertEqual([(s.at_minutes, s.on_day) for s in jobs.schedules], [(150, None), (540, 0)])
+        self.assertEqual(jobs_of(ApplicationIR.from_dict(_ir().to_dict())).timezone, "UTC")
+
+    def test_bad_times_are_refused(self) -> None:
+        for bad, zone in (({**PURGE, "at": "2am"}, None), ({**PURGE, "at": "24:00"}, None),
+                          ({**CANCEL, "at": "02:00"}, None),                      # every minute, at 2am?
+                          ({**PURGE, "on": "monday"}, None),                      # a weekday needs a time
+                          ({**PURGE, "at": "02:00", "on": "monday"}, None),       # ... and every 7d
+                          ({**PURGE, "every": "7d", "at": "02:00", "on": "funday"}, None),
+                          ({**PURGE, "at": "02:00"}, "Mars/Olympus")):
+            with self.subTest(bad=bad, zone=zone), self.assertRaises(InvalidIRError):
+                self._ir(bad, timezone=zone)
+
+    def test_the_next_run_is_computed_in_the_database(self) -> None:
+        ir = self._ir({**PURGE, "at": "02:30"}, {**CANCEL, "every": "7d", "at": "09:00", "on": "monday"}, timezone="Asia/Kolkata")
+        self.assertIn('CREATE OR REPLACE FUNCTION "scheduler_next_at"', render_postgres_schema(ir))
+        self.assertIn('ADD COLUMN IF NOT EXISTS "timezone"', render_postgres_schema(ir))
+        sync = jobs_sql.sync_statements(ir)
+        self.assertIn("VALUES ('purge_old_products', 86400, 150, NULL, 'Asia/Kolkata', \"scheduler_next_at\"(150, NULL, 86400, 'Asia/Kolkata'))", sync[0])
+        self.assertIn("VALUES ('cancel_unpaid_orders', 604800, 540, 0, 'Asia/Kolkata', ", sync[1])
+        self.assertIn("THEN EXCLUDED.\"next_run_at\" ELSE \"scheduler_schedule\".\"next_run_at\" END", sync[0])
+        self.assertIn('ELSE "scheduler_next_at"("at_minutes", "on_day", "every_seconds", "timezone") END', jobs_sql.ENQUEUE_DUE)
+        self.assertEqual([c.description.split(":")[0] + ":" + c.description.split(":")[1] for c in jobs_sql.compiled_schedules(ir)],
+                         ["Every day at 02:30 (Asia/Kolkata)", "Every Monday at 09:00 (Asia/Kolkata)"])
+
+    def test_a_schedule_without_a_time_runs_at_start_up(self) -> None:
+        self.assertIn("NULL, NULL, 'UTC', NOW())", jobs_sql.sync_statements(_ir())[0])
+
+    def test_the_prompt(self) -> None:
+        cases = (("Every night at 2am delete products older than 1 year. Prices in rupees.", ("1d", "02:00", None), "Asia/Kolkata"),
+                 ("Every Monday at 9:30 am, cancel unpaid orders older than 2 hours.", ("7d", "09:30", "monday"), None),
+                 ("Daily at 23:15 mark invoices overdue once the due date passes.", ("1d", "23:15", None), None),
+                 ("At midnight every day, delete products older than 90 days.", ("1d", "00:00", None), None))
+        for prompt, (every, at, on), zone in cases:
+            with self.subTest(prompt=prompt):
+                data = _plan(jobs=False)
+                jobs_from_prompt(prompt, data)
+                config = next(c for c in data["capabilities"] if c["kind"] == "jobs")["config"]
+                (schedule,) = config["schedules"]
+                self.assertEqual((schedule["every"], schedule.get("at"), schedule.get("on")), (every, at, on))
+                self.assertEqual(config.get("timezone"), zone)
+                ApplicationIR.from_dict(data)
