@@ -30,12 +30,26 @@ PRIORITIES = {
 }
 
 PHASES = {
+    # Founder direction, 2026-10-02 (M1_M6_PLAN.md): these six come first, then everything below on
+    # the same path. Every feature built so far stays, as tested building blocks the planner picks.
+    "M1 Quality foundation": "The phone QR works; a benchmark of real prompts; every generated page, link "
+    "and API call checked and repaired; local / free-cloud / paid models routed per job.",
+    "M2 Scope and brief": "The platform proposes one app, an app and admin, a few apps or a whole "
+    "ecosystem; a short project brief (apps, features, brand, language) with smart defaults.",
+    "M3 Wow UI": "Every page designed by the model, screenshotted, reviewed and improved; a marketing "
+    "website generator; realistic demo data.",
+    "M4 Any domain": "The model plans apps, people, data and flows for any domain; the domain library "
+    "is hints, not a limit.",
+    "M5 Features": "Custom behaviour the model writes and tests prove (escape hatch); more building "
+    "blocks: reviews, chat, maps, analytics, search, forms, languages.",
+    "M6 Speed and customisation": "Previews in seconds, chat edits applied live, click-to-edit.",
     "0 Foundation": "Reconcile, decide, set the stack policy.",
     "1 Vibe Mode live": "Prompt -> running app with real API + DB -> live URL, for real users.",
     "2 Maximum features": "Every prompt yields the most complete product the IR can express.",
     "3 Engineering Mode": "Plan, stack choice, repo import, diffs, verification report, PRs, memory.",
     "4 Production ops": "Security audits, backup/recovery, compliance, observability.",
-    "5 Native mobile (last)": "Kotlin/Compose + Swift/SwiftUI, through to Play Store and App Store.",
+    "5 Native mobile (last)": "Kotlin/Compose + Swift/SwiftUI, through to Play Store and App Store. "
+    "M7 by founder decision (2026-10-02): right after M6; Flutter is out.",
     "6 Go-live (credentials last)": "The founder supplies accounts and keys; every live proof "
     "is run; the platform opens to real users.",
     "7 Win the category": "Measure against every competitor and close each gap until we lead. "
@@ -712,6 +726,71 @@ QUEUE = [
      "7 Win the category", "Platform", "Not Started", "P2", "PC-083",
      "Recurring; competitors ship weekly."),
 ]
+
+# --- M1-M6 (founder direction, 2026-10-02; R_&_D/Platform_Completion/M1_M6_PLAN.md) ----------------
+# New tasks for the six milestones, and the existing tasks that belong to them, moved to the front of
+# the queue in this order. Nothing is removed: every other task keeps its place behind them.
+_M1, _M2, _M3, _M4, _M5, _M6 = (
+    "M1 Quality foundation", "M2 Scope and brief", "M3 Wow UI", "M4 Any domain", "M5 Features",
+    "M6 Speed and customisation")
+_MILESTONE_TASKS = [
+    ("PC-124", "The phone QR opens the generated app: a current Expo SDK (the store's Expo Go), and a "
+     "tunnel when the phone is on another network", _M1, "Vibe", "Not Started", "P0", "",
+     "Founder report 2026-10-02: scanning the QR to use the app on a phone does not work."),
+    ("PC-125", "Check and repair: every generated page, link and API call verified (types, build, a "
+     "browser walk); failures go back to the model with the exact error; a working fallback; the build "
+     "report says what is verified", _M1, "Both", "Not Started", "P0", "",
+     "The answer to hallucination: never trust model output, verify it and repair it. Folds PC-116."),
+    ("PC-126", "Model routing: local Ollama, free cloud tiers and paid keys, per job (plan, design, repair), "
+     "with budgets and fallbacks", _M1, "Platform", "Not Started", "P0", "",
+     "Works with no paid key (free cloud first, local as the fallback); a paid key raises quality "
+     "without code changes."),
+    ("PC-127", "Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a "
+     "marketing website and the phone app when the product needs them; an editable proposal", _M2,
+     "Vibe", "Not Started", "P0", "", ""),
+    ("PC-128", "The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand "
+     "(name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults'",
+     _M2, "Vibe", "Not Started", "P0", "PC-127", "Simple for a non-technical user, complete for a developer."),
+    ("PC-129", "Model-designed pages by default (web, admin, phone) on a modern component kit and the "
+     "product's design system; templates only when repair fails", _M3, "Both", "Not Started", "P0",
+     "PC-125", ""),
+    ("PC-130", "Design review: each page screenshotted on phone and desktop, critiqued and scored, and "
+     "improved until it passes", _M3, "Both", "Not Started", "P0", "PC-129", ""),
+    ("PC-131", "Marketing website generator: a multi-section site with copy and SEO from the brief",
+     _M3, "Vibe", "Not Started", "P1", "PC-128", ""),
+    ("PC-133", "Model-planned products for any domain: apps, people, data and flows planned by the model, "
+     "the domain library as hints; validated and reviewed (R-582)", _M4, "Both", "Not Started", "P0", "",
+     "Founder: there are lakhs of domains; a fixed library cannot be the limit."),
+    ("PC-134", "Building blocks, next wave: reviews and ratings, chat and messages, maps and locations, "
+     "analytics dashboards", _M5, "Both", "Not Started", "P1", "", "Each one tested like payments, jobs and "
+     "notifications were; the planner picks them from the prompt."),
+    ("PC-135", "Chat edits applied in seconds: incremental regeneration and hot reload in the preview",
+     _M6, "Both", "Not Started", "P1", "", ""),
+]
+_MILESTONE_ORDER = (
+    "PC-124", "PC-122", "PC-125", "PC-116", "PC-126",
+    "PC-127", "PC-128", "PC-020",
+    "PC-129", "PC-130", "PC-050", "PC-131", "PC-077",
+    "PC-133",
+    "R-571", "PC-134", "PC-058", "PC-059", "PC-055",
+    "PC-096", "PC-135", "PC-019",
+)
+_MOVED_PHASE = {"PC-122": _M1, "PC-116": _M1, "PC-020": _M2, "PC-050": _M3, "PC-077": _M3, "R-571": _M5,
+                "PC-058": _M5, "PC-059": _M5, "PC-055": _M5, "PC-096": _M6, "PC-019": _M6}
+
+
+def _milestones_first(queue: list) -> list:
+    by_id = {t[0]: t for t in [*_MILESTONE_TASKS, *queue]}
+    first = []
+    for tid in _MILESTONE_ORDER:
+        t = by_id[tid]
+        if tid in _MOVED_PHASE:
+            t = (t[0], t[1], _MOVED_PHASE[tid], *t[3:])
+        first.append(t)
+    return first + [t for t in queue if t[0] not in _MILESTONE_ORDER]
+
+
+QUEUE = _milestones_first(QUEUE)
 
 # --- Tracker items that are not Done in the v6 tracker ----------------------------------------
 # id -> (status, priority, tracked_in, note). Tracker items marked Done there are Completed.
