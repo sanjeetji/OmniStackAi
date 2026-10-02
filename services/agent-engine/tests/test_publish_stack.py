@@ -209,7 +209,10 @@ class ThePublisher(TestCase):
         self._publish(publisher)
         self.assertTrue(publisher._dir("ws1").is_dir())
         down = publisher.unpublish("ws1", str(self.repo), delete_data=True)
-        self.assertIn("-v", docker.calls[-1])
+        down_call = next(c for c in docker.calls if "down" in c)
+        self.assertIn("-v", down_call)
+        # PC-049: and its images are looked up to be removed.
+        self.assertIn(["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"], docker.calls)
         self.assertFalse(publisher._dir("ws1").exists())
         self.assertEqual((down["status"], down["admin"]), ("unpublished", None))
 
