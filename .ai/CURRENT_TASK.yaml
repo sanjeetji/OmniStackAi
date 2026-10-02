@@ -1,19 +1,16 @@
-task_id: PC-053
-status: completed
+task_id: PC-121
+status: in_progress
 phase: Platform Completion — 2 Maximum features
-tracker_row: PC-053
+tracker_row: PC-121
 started_at: "2026-10-02"
-completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
-  Notifications in generated apps: in-app and email, with each person's preferences. A
-  `notifications` capability declares rules - an entity's event (created, changed, deleted, or a
-  field becoming a value such as status -> shipped), who hears (the creator, the assignee, a user
-  field, a role), a title and body from the record's fields, and channels. A trigger writes each
-  notification in the database, so Python, Go, Express and Hono deliver the same ones; scheduled jobs
-  gain reminders ("a day before the appointment"), once per record. In-app notifications are live
-  (R-569) behind a bell; email goes through an outbox with retries (Resend, keys last). People mute a
-  rule or everything per channel. Planned from the prompt too.
+  Push notifications for the generated mobile app (founder's go-ahead 2026-10-02). A notification
+  rule may add the `push` channel. The phone app asks permission after sign-in, gets an Expo push
+  token and registers it; each backend sends due pushes through Expo's push API with retries,
+  forgets devices that were uninstalled (DeviceNotRegistered) and honours a person's push mutes.
+  Expo push needs no key for development; a real phone needs the project's EAS id, which the
+  founder creates (guided).
 founder_gate: none
 companions: []
 allowed_paths:
@@ -25,15 +22,8 @@ allowed_paths:
   - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - push notifications (Expo / native) wait for the founder's go-ahead on mobile work
-  - no real email is sent in tests; the outbox works and is proven without keys
+  - no push is sent to Expo in tests; a stand-in push service proves the sender
 required_gates:
-  - Live - on Python, Go, Express and Hono, a status change notifies exactly the right people, a reminder fires once, a mute holds, the email outbox delivers to a stand-in provider and retries a failure; a browser shows the bell update without a reload
+  - Live - on Python, Go, Express and Hono, a status change pushes to the registered devices of the right people, a mute holds, a failure is retried, an uninstalled device is forgotten
+  - the generated mobile app type-checks with expo-notifications
   - scripts/verify.sh passes
-found_and_fixed:
-  - "Notify the courier when assigned" as a 'changed' rule told them again on every edit; an 'assigned' event fires only when the assignee becomes someone new.
-  - The preferences page offered staff-only rules to customers and showed raw {placeholders}; rules for some roles are offered only to them, labels read "…".
-  - A plan with a plain status (no lifecycle) missed "when their order is delivered"; it reads as status becoming delivered ("placed" stays "created").
-deferred:
-  - PC-121 - push notifications (Expo, native): mobile work waits for the founder's go-ahead.
-  - A notification does not know who made the change, so someone changing their own record is told too.

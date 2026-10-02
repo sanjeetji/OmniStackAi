@@ -369,6 +369,10 @@ QUEUE = [
      "2 Maximum features", "Both", "Not Started", "P2", "PC-119",
      "Seen with QuickShip (2026-10-02): once orders are private to their creator and courier, the template's "
      "merchant sees none; 'Order.restaurant -> Restaurant.owner' is a third kind of owner R-570/PC-111 cannot say."),
+    ("PC-122", "A quality benchmark: real prompts built end to end in the console, screenshots, scored for "
+     "look, completeness and working features", "2 Maximum features", "Both", "Not Started", "P1", "",
+     "Founder question 2026-10-02: will finished apps look modern and 'wow'? Finishing tasks does not prove it; "
+     "a fixed set of prompts (marketplace, clinic, delivery, SaaS, blog) built and reviewed after each wave does."),
     ("PC-116", "A generated page links only to screens that exist in its app", "2 Maximum features",
      "Both", "Not Started", "P2", "PC-114", "Seen 2026-10-01 in Bazaar Lite: the buyer storefront's home "
      "page has 'List with us' -> /listings/new, but only the seller portal has a listing editor, and the "
