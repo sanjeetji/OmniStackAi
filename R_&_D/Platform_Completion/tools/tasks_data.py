@@ -354,7 +354,11 @@ QUEUE = [
      "keyboards and switches in forms; 14/14 on the Android emulator."),
     # Phase 2 - Maximum features
     ("R-582", "Smarter IR synthesis: multi-pass planning and self-critique before generation",
-     "2 Maximum features", "Both", "Not Started", "P1", "", "Where 'more features per prompt' is won."),
+     "2 Maximum features", "Both", "Completed", "P1", "", "Where 'more features per prompt' is won. Done "
+     "2026-10-02: a deterministic critique of the plan against the prompt (named things, features, roles, "
+     "unreachable entities), one revision pass kept only if it loses nothing, missing endpoints added without a "
+     "model; two planner crashes the live run found are repaired. Live (groq gpt-oss-120b): 4/4 prompts planned, "
+     "every gap closed."),
     ("R-580", "Domain knowledge in ecosystem detection ('logistics' implies drivers)",
      "2 Maximum features", "Both", "Not Started", "P1", "", ""),
     ("R-570", "Permissions beyond role: ownership and row-level rules", "2 Maximum features",

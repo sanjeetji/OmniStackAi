@@ -707,6 +707,36 @@ def _with_prompt_ownership(ir: ApplicationIR, prompt: str) -> tuple[ApplicationI
     return ApplicationIR.from_dict(data), tuple(notes)
 
 
+async def _review_plan(prompt: str, ir: ApplicationIR, provider: ModelProvider, model_id: str,
+                       max_output_tokens: int, timeout_seconds: float) -> tuple[ApplicationIR, tuple[str, ...]]:
+    """R-582: check the plan against the prompt; when it lacks something, ask once for the complete plan
+    with it added, and keep the revision only if it is valid and loses nothing."""
+    from .plan_critique import accept, critique, describe, enabled, revision_request, with_endpoints
+
+    ir, completed = with_endpoints(ir)  # what needs no model is done without one
+    if not enabled():
+        return ir, completed
+    gaps = critique(prompt, ir)
+    if not gaps:
+        return ir, completed
+    messages = build_intake_messages(prompt)
+    follow_up = (messages[0], Message(ChatRole.USER, messages[1].content + "\n\n" + revision_request(gaps, ir)))
+    request = GenerateRequest(_REQUEST_ID, ModelRef(provider.provider_id, model_id), follow_up, max_output_tokens, timeout_seconds)
+    try:
+        response = await provider.generate(request)
+        revised, repaired = parse_ir_response_with_repairs(response.text)
+        revised, owned = _with_prompt_ownership(revised, prompt)
+        if has_errors(validate_ir(revised)):
+            raise IntakeResponseError("the revision is not a valid plan")
+        kept, why = accept(ir, revised, gaps, prompt)
+    except Exception as error:  # noqa: BLE001 - the first plan stands; the review is a bonus
+        kept, why, revised, repaired, owned = False, f"the revision failed ({type(error).__name__})", ir, (), ()
+    if kept:
+        revised, more = with_endpoints(revised)
+        return revised, (*completed, *repaired, *owned, *more, f"plan review: {why}")
+    return ir, (*completed, *describe(gaps), f"plan review kept the first plan: {why}")
+
+
 async def generate_ir(
     prompt: str,
     provider: ModelProvider,
@@ -743,6 +773,9 @@ async def generate_ir(
     ir, repairs = parse_ir_response_with_repairs(response.text)
     ir, owned = _with_prompt_ownership(ir, prompt)
     repairs = repairs + owned
+    if not has_errors(validate_ir(ir)):
+        ir, reviewed = await _review_plan(prompt, ir, provider, model_id, max_output_tokens, timeout_seconds)
+        repairs = repairs + reviewed
     issues = validate_ir(ir)
     if has_errors(issues):
         detail = "; ".join(
@@ -822,6 +855,14 @@ async def generate_ir_stream(
     ir, repairs = parse_ir_response_with_repairs(text)
     ir, owned = _with_prompt_ownership(ir, prompt)
     repairs = repairs + owned
+    if not has_errors(validate_ir(ir)):
+        from .plan_critique import critique, enabled
+
+        gaps = critique(prompt, ir) if enabled() else []
+        if gaps:
+            yield f"\n\n[checking the plan against the description: {len(gaps)} thing(s) to add]\n\n"
+            ir, reviewed = await _review_plan(prompt, ir, active, model_id, max_output_tokens, timeout_seconds)
+            repairs = repairs + reviewed
     issues = validate_ir(ir)
     if has_errors(issues):
         detail = "; ".join(

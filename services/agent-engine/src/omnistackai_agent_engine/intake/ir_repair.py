@@ -214,6 +214,12 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
                 notes.append(f"ownership {label!r}: {entity} already has a rule; removed")
                 continue
             config["entity"] = entity
+            for key in ("read", "write"):
+                # Found in R-582's live proof: "write": "none" (certificates nobody edits) failed the build.
+                # Only own and all exist; own is the narrower, safer reading of anything else.
+                if key in config and config[key] not in ("own", "all"):
+                    notes.append(f"ownership {label!r}: {key} {config[key]!r} read as 'own' (only own or all exist)")
+                    config[key] = "own"
             _drop_owner_reference(entities[entity], entity, notes)
             see_all = config.get("see_all")
             if isinstance(see_all, list) and role_ids:
@@ -382,11 +388,45 @@ def _drop_account_duplicates(data: dict[str, Any], notes: list[str]) -> None:
                 isinstance(c, dict) and (c.get("config") or {}).get("entity") == name)]
 
 
+def _repair_dangling_relations(data: dict[str, Any], notes: list[str]) -> None:
+    """A relation to an entity the plan does not have (found in R-582's live proof: Enrollment.student ->
+    User) failed the whole build. A person becomes a user field; a misnamed entity is resolved; else it goes."""
+    entities = [e for e in data.get("entities") or () if isinstance(e, dict) and e.get("name")]
+    names = [str(e["name"]) for e in entities]
+    for entity in entities:
+        kept = []
+        for relation in entity.get("relations") or ():
+            if not isinstance(relation, dict):
+                continue
+            target = str(relation.get("target_entity") or "")
+            if target in names:
+                kept.append(relation)
+                continue
+            resolved = resolve_entity_reference(target, names) if target else None
+            if resolved:
+                relation["target_entity"] = resolved
+                kept.append(relation)
+                notes.append(f"{entity['name']}.{relation.get('name')}: target {target!r} resolved to {resolved}")
+                continue
+            field = f"{relation.get('name') or 'user'}_id"
+            if _norm(target) in _ACCOUNT_ENTITIES:
+                fields = entity.setdefault("fields", [])
+                if not any(isinstance(f, dict) and f.get("name") == field for f in fields):
+                    fields.append({"name": field, "type": "uuid", "required": False})
+                notes.append(f"{entity['name']}.{relation.get('name')} pointed at {target}, which is the app's accounts; "
+                             f"it is a user field {field}")
+            else:
+                notes.append(f"{entity['name']}.{relation.get('name')} pointed at {target!r}, which is not in the plan; removed")
+        if "relations" in entity:
+            entity["relations"] = kept
+
+
 def repair_ir_dict(data: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...]]:
     """Repair `data` in place where it can; return it and a human-readable note per repair."""
     notes: list[str] = []
     _repair_structure(data, notes)
     _drop_account_duplicates(data, notes)
+    _repair_dangling_relations(data, notes)
     apis = data.get("apis")
     entities = data.get("entities")
     if not isinstance(apis, list) or not isinstance(entities, list):

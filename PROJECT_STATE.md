@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-582 (2026-10-02): plans are reviewed.** The plan is checked against the prompt and revised once when it misses something; 4/4 real prompts planned with no gaps left.
 > **PC-109 (2026-10-02): the mobile app reads as a product.** Names, badges and details on cards, a home screen for the user, human forms; 14/14 on the Android emulator.
 > **PC-049 (2026-10-02): live databases keep up.** A republish adds what the plan gained (after a backup) and never drops data; unpublished apps' images are removed.
 > **PC-121 (2026-10-02): push.** Notifications can reach the phone app through Expo; 14/14 live on all four backends; a real phone needs the founder's EAS project id.

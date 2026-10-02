@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 457 |
+| Completed | 458 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 95 |
-| Not Started | 504 |
+| Not Started | 503 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1144** |
 
-Open work queue: **89** tasks (P0: 3, P1: 38, P2: 34, P3: 14).
+Open work queue: **88** tasks (P0: 3, P1: 37, P2: 34, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -89,7 +89,7 @@ Open work queue: **89** tasks (P0: 3, P1: 38, P2: 34, P3: 14).
 | 41 | PC-063 | Android emulator preview without Android Studio: SDK command-line bootstrap, headless emulator, auto-install, streamed into the Studio | Completed | P1 | Both |  | R-052 | See NATIVE_MOBILE_PREVIEW_PLAN.md. Open source first; local on the founder's Mac, then hosted in PC-065. Done 2026-09-30: the preview's Mobile tab sets up (checksum-verified, ~1.5 GB once), boots and drives an emulator and opens the app in Expo Go; one account holds it at a time. Screenshots, not video, for now. |
 | 42 | PC-109 | Generated React Native screens read as a finished product: list cards titled by the record's name (not its ID), actions inside the card, the same care as PC-108's web pages | Completed | P1 | Both | PC-063 |  | Seen on the emulator in PC-063: the chore tracker's list showed each chore by its UUID and a clipped red button at the card's edge. Done 2026-10-02: names, state badges and details on cards, delete in the card behind a confirmation, a home screen for the user (not 'System Metrics'), human labels, keyboards and switches in forms; 14/14 on the Android emulator. |
 | | | **Phase 2 Maximum features**: Every prompt yields the most complete product the IR can express. | | | | | | |
-| 43 | R-582 | Smarter IR synthesis: multi-pass planning and self-critique before generation | Not Started | P1 | Both |  |  | Where 'more features per prompt' is won. |
+| 43 | R-582 | Smarter IR synthesis: multi-pass planning and self-critique before generation | Completed | P1 | Both |  |  | Where 'more features per prompt' is won. Done 2026-10-02: a deterministic critique of the plan against the prompt (named things, features, roles, unreachable entities), one revision pass kept only if it loses nothing, missing endpoints added without a model; two planner crashes the live run found are repaired. Live (groq gpt-oss-120b): 4/4 prompts planned, every gap closed. |
 | 44 | R-580 | Domain knowledge in ecosystem detection ('logistics' implies drivers) | Not Started | P1 | Both |  |  |  |
 | 45 | R-570 | Permissions beyond role: ownership and row-level rules | Completed | P1 | Both |  | ARCH-DOMAIN-IR | 'A driver sees only their own orders'. Seen live 2026-09-27 (PC-008): a published notes app saved notes with created_by null, so private notes were not private. Done 2026-10-01: every create records its creator from the token; an `ownership` rule (read/write own\|all, see_all roles) is enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. Assigned-to visibility (a driver's deliveries) is PC-111. |
 | 46 | PC-119 | 'Couriers see only the orders assigned to them' makes an assignment rule (word order, role synonyms) | Completed | P1 | Both | PC-111 |  | Found in R-569's console proof (2026-10-02): QuickShip's prompt said couriers see only the orders assigned to them; the plan's role was 'driver' and the reader knew only 'their own/assigned orders', so no rule was made and every signed-in user could read every order. Done 2026-10-02: the '<things> assigned to them' order and role synonyms (courier/rider -> driver, ...); every QuickShip app now gets Order.driver_id. |
@@ -1348,6 +1348,7 @@ What each tracker phase asks for, and where it is covered:
 | R-570 | Permissions beyond role: ownership and row-level rules | Completed | 2026-10-01 | 'A driver sees only their own orders'. Seen live 2026-09-27 (PC-008): a published notes app saved notes with created_by null, so private notes were not private. Done 2026-10-01: every create records its creator from the token; an `ownership` rule (read/write own\|all, see_all roles) is enforced by the Python, Go and Node APIs (404 for someone else's record); planned from the prompt. Assigned-to visibility (a driver's deliveries) is PC-111. |
 | R-573 | PWA really by default: manifest, service worker, icons, install prompt, QR | Completed | 2026-09-26 | Works for templates only today; generated projects must install on a real phone. |
 | R-574 | Store publishing for React Native apps: EAS build and submit to Play Store and App Store, proven with real accounts | Completed | 2026-09-30 | R-546/R-547 generate the EAS config. Everything up to the upload is built and tested; the Apple and Google accounts (D-7) are plugged in at PC-070. Done 2026-09-30: Publish -> App stores checks, builds and uploads with the owner's credentials as project secrets (missing ones listed with where to get them); proven through the console up to Expo's account check with a made-up token. The real-account run is PC-070/PC-071. |
+| R-582 | Smarter IR synthesis: multi-pass planning and self-critique before generation | Completed | 2026-10-02 | Where 'more features per prompt' is won. Done 2026-10-02: a deterministic critique of the plan against the prompt (named things, features, roles, unreachable entities), one revision pass kept only if it loses nothing, missing endpoints added without a model; two planner crashes the live run found are repaired. Live (groq gpt-oss-120b): 4/4 prompts planned, every gap closed. |
 | R-584 | An edit can change a project, not only add to it. | Completed | 2026-09-25 |  |
 | R-586 | The CareClinic seed generator stops reading the clock. | Completed | 2026-09-25 |  |
 | R-587 | Generated Go is gofmt-clean. | Completed | 2026-09-25 |  |

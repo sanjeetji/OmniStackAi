@@ -1,8 +1,9 @@
 task_id: R-582
-status: in_progress
+status: completed
 phase: Platform Completion — 2 Maximum features
 tracker_row: R-582
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   Smarter IR synthesis: the plan is checked against the prompt before anything is generated. A
@@ -25,3 +26,9 @@ forbidden_changes:
 required_gates:
   - Live - on real prompts with the configured model, the critique finds the gaps of the first plan and the revised plan closes most of them without losing anything
   - scripts/verify.sh passes
+found_and_fixed:
+  - A relation to an entity the plan lacks (Enrollment.student -> User) failed the whole build; repaired (a user field, a resolved name, or dropped with a note).
+  - An ownership write of 'none' failed the build; it reads as 'own'.
+  - "favourites" against a Favorite entity was a false gap (British spelling); normalised.
+deferred:
+  - The critique's word lists are English; prompts in other languages get no review yet.
