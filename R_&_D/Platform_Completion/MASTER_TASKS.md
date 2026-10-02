@@ -28,24 +28,24 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 459 |
+| Completed | 460 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 95 |
-| Not Started | 513 |
+| Not Started | 512 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1155** |
 
-Open work queue: **98** tasks (P0: 11, P1: 39, P2: 34, P3: 14).
+Open work queue: **97** tasks (P0: 10, P1: 39, P2: 34, P3: 14).
 
 ## Work queue (do these in order)
 
 | # | ID | Task | Status | Priority | Mode | Depends on | Covers | Notes |
 |---|---|---|---|---|---|---|---|---|
 | | | **Phase M1 Quality foundation**: The phone QR works; a benchmark of real prompts; every generated page, link and API call checked and repaired; local / free-cloud / paid models routed per job. | | | | | | |
-| 1 | PC-124 | The phone QR opens the generated app: a current Expo SDK (the store's Expo Go), and a tunnel when the phone is on another network | Not Started | P0 | Vibe |  |  | Founder report 2026-10-02: scanning the QR to use the app on a phone does not work. |
+| 1 | PC-124 | The phone QR opens the generated app: a current Expo SDK (the store's Expo Go), and a tunnel when the phone is on another network | Completed | P0 | Vibe |  |  | Done 2026-10-02: apps on Expo SDK 57 (the store Expo Go's; one file to bump); OMNISTACKAI_PHONE_ACCESS=anywhere tunnels app + API through cloudflared, behind sign-in; bundles built before the scan; emulator installs the matching Expo Go. Live: LAN 7/7, anywhere 9/9 in Expo Go 57. |
 | 2 | PC-122 | A quality benchmark: real prompts built end to end in the console, screenshots, scored for look, completeness and working features | Not Started | P1 | Both |  |  | Founder question 2026-10-02: will finished apps look modern and 'wow'? Finishing tasks does not prove it; a fixed set of prompts (marketplace, clinic, delivery, SaaS, blog) built and reviewed after each wave does. |
 | 3 | PC-125 | Check and repair: every generated page, link and API call verified (types, build, a browser walk); failures go back to the model with the exact error; a working fallback; the build report says what is verified | Not Started | P0 | Both |  |  | The answer to hallucination: never trust model output, verify it and repair it. Folds PC-116. |
 | 4 | PC-116 | A generated page links only to screens that exist in its app | Not Started | P2 | Both | PC-114 |  | Seen 2026-10-01 in Bazaar Lite: the buyer storefront's home page has 'List with us' -> /listings/new, but only the seller portal has a listing editor, and the storefront's /listings/* are API proxy routes, so the link answers 422. The preview's UI check reports it; nothing repairs it. |
@@ -960,6 +960,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-118 | The job build API honours the build budget setting (it gave up after a fixed five minutes) | Completed | 2026-10-02 | Found in R-569's console proof (2026-10-02): POST /jobs/build gave a multi-app build five minutes and the console a 502, while the project build already read OMNISTACKAI_AGENT_CALL_TIMEOUT (R-530; 30m in this machine's .env). Done 2026-10-02: both read the setting. The console's own non-streaming call to the job API still waits at most Node fetch's 300s for headers; the console's UI builds stream. |
 | PC-119 | 'Couriers see only the orders assigned to them' makes an assignment rule (word order, role synonyms) | Completed | 2026-10-02 | Found in R-569's console proof (2026-10-02): QuickShip's prompt said couriers see only the orders assigned to them; the plan's role was 'driver' and the reader knew only 'their own/assigned orders', so no rule was made and every signed-in user could read every order. Done 2026-10-02: the '<things> assigned to them' order and role synonyms (courier/rider -> driver, ...); every QuickShip app now gets Order.driver_id. |
 | PC-121 | Push notifications for the generated mobile apps (Expo push, then native) | Completed - needs live proof | 2026-10-02 | PC-053's notifications reach the app and email; a phone needs push tokens per device and Expo's push service. Done 2026-10-02 (founder's go-ahead): a push channel, device registration after sign-in, every backend sends through Expo with retries and forgets uninstalled devices; 14/14 live on four backends against a stand-in. A real phone needs the founder's EAS project id (guided in the runbook). |
+| PC-124 | The phone QR opens the generated app: a current Expo SDK (the store's Expo Go), and a tunnel when the phone is on another network | Completed | 2026-10-02 | Done 2026-10-02: apps on Expo SDK 57 (the store Expo Go's; one file to bump); OMNISTACKAI_PHONE_ACCESS=anywhere tunnels app + API through cloudflared, behind sign-in; bundles built before the scan; emulator installs the matching Expo Go. Live: LAN 7/7, anywhere 9/9 in Expo Go 57. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
 | R-003 | Local Ollama Stage 0 bootstrap | Completed | 2026-09-06 |  |

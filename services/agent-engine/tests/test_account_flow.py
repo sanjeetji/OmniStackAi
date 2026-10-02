@@ -211,7 +211,7 @@ class TheMobileAppCanSignIn(TestCase):
         import json
 
         deps = json.loads(_file(self.PROJECT, "package.json"))["dependencies"]
-        self.assertEqual(deps["expo-secure-store"], "~13.0.2")
+        self.assertEqual(deps["expo-secure-store"], "~57.0.4")
 
     def test_no_screens_without_auth(self) -> None:
         import dataclasses

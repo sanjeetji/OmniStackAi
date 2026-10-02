@@ -192,6 +192,7 @@ is in [COMMANDS.md](../COMMANDS.md).
 | Next edit returns 409 "workspace is currently locked" | The previous edit is still running upstream (see the row above). Wait for it, or restart the Studio |
 | Chat edit says it cannot type-check | Start the project's preview once, so its dependencies exist |
 | A generated **Python** backend fails to start its virtualenv (`ensurepip` error) | Homebrew's Python 3.13 on macOS 26 ships a `pyexpat` linked against a newer `libexpat` than the OS provides, so XML parsing fails and pip's TLS setup crashes. Use a Python from python.org or `uv` for generated backends, or rebuild: `brew reinstall --build-from-source python@3.13` |
+| Scanning the phone QR does nothing, or Expo Go says the project is incompatible | Update Expo Go from the store: generated apps are on the SDK the current Expo Go opens (57). On mobile data, a VPN, or a guest/office Wi-Fi, set `OMNISTACKAI_PHONE_ACCESS=anywhere` and restart the preview. See [the phone preview runbook](runbooks/phone-preview.md) |
 | Preview page loads but clicking a link feels like a full reload | Known limit: the console is itself a Next app and answers the preview's client-side navigation requests first. Pages, forms and buttons work normally |
 
 ---

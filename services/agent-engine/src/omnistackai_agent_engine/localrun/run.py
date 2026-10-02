@@ -25,7 +25,7 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
 from concurrent.futures import wait as wait_for
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Mapping
 
 from .api_env import link_shared_environment
 from .plan import RunPlan, RunStep, build_run_plan
@@ -50,6 +50,8 @@ class LocalAppSession:
         self._stopped = False
         #: PC-107: the page warm-up started once the apps answered (None when there is nothing to warm).
         self.warming: "PageWarmer | None" = None
+        #: PC-124: the phone bundles being built ahead of the first scan.
+        self.bundles: threading.Thread | None = None
 
     def is_alive(self) -> bool:
         """True only when this session is not stopped and every owned process is still running."""
@@ -97,6 +99,8 @@ def _plan_from_env(
     public_base: str = "",
     extra_env: Mapping[str, str] | None = None,
     db: Mapping[str, str] | None = None,
+    phone_tunnels: Mapping[str, str] | None = None,
+    jwt_secret: str | None = None,
 ) -> RunPlan:
     # PC-009: a multi-tenant preview uses its own database server (`db`), never the platform's.
     db = db or {}
@@ -114,8 +118,9 @@ def _plan_from_env(
         mobile_port=mobile_port if mobile_port is not None else int(os.environ.get("OMNISTACKAI_APP_MOBILE_PORT", "8081")),
         extra_app_ports=extra_app_ports,
         public_base=public_base,
-        jwt_secret=os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret"),
+        jwt_secret=jwt_secret or os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret"),
         extra_env=extra_env,
+        phone_tunnels=phone_tunnels,
     )
 
 
@@ -539,6 +544,13 @@ def start_app(
 
         await_ready(session, active_plan, health_timeout_seconds, require_ready, emit)
         warmed = warm_pages(active_plan)
+        if active_plan.mobile_surfaces:
+            # PC-124: each phone bundle is built before the QR is scanned (see phone_tunnel.warm_bundles).
+            from .phone_tunnel import warm_bundles
+
+            session.bundles = threading.Thread(
+                target=warm_bundles, args=([s["port"] for s in active_plan.mobile_surfaces],), kwargs={"log": emit}, daemon=True)
+            session.bundles.start()
         # PC-107: the caller reports the preview ready once this is done (see studio/preview.py).
         session.warming = warmed
         # PC-106: then every page is checked at phone and desktop width, in the background.
@@ -593,24 +605,71 @@ def start_preview_app(
     extra_count = max(0, len(discover_web_apps(root)) - 2)  # web and admin already have ports
     ports = allocate_free_ports(4 + extra_count, host)
     api_port, web_port, admin_port, mobile_port = ports[:4]
-    plan = _plan_from_env(
-        str(root),
-        api_port=api_port,
-        web_port=web_port,
-        admin_port=admin_port,
-        mobile_port=mobile_port,
-        extra_app_ports=ports[4:],
-        public_base=public_base,
-        extra_env=extra_env,
-    )
-    return start_app(
-        str(root),
-        plan=plan,
-        log=log,
-        health_timeout_seconds=health_timeout_seconds,
-        on_phase=on_phase,
-        log_callback=log_callback,
-    )
+    tunnels, jwt_secret = _phone_tunnels(root, api_port, mobile_port, extra_env, log)
+    if jwt_secret:  # the caller's environment is applied last, so it must not bring the dev secret back
+        # OMNISTACKAI_DEV_MODE=1 also lets a request with no token in as an admin.
+        extra_env = {**(extra_env or {}), "JWT_SECRET": jwt_secret, "OMNISTACKAI_DEV_MODE": "0"}
+    try:
+        plan = _plan_from_env(
+            str(root),
+            api_port=api_port,
+            web_port=web_port,
+            admin_port=admin_port,
+            mobile_port=mobile_port,
+            extra_app_ports=ports[4:],
+            public_base=public_base,
+            extra_env=extra_env,
+            phone_tunnels={key: t.url for key, t in tunnels.items()},
+            jwt_secret=jwt_secret,
+        )
+        session = start_app(
+            str(root),
+            plan=plan,
+            log=log,
+            health_timeout_seconds=health_timeout_seconds,
+            on_phase=on_phase,
+            log_callback=log_callback,
+        )
+    except BaseException:
+        for tunnel in tunnels.values():
+            from .phone_tunnel import close
+
+            close(tunnel.process)
+        raise
+    session.processes.extend(t.process for t in tunnels.values())  # stopped with the preview
+    return session
+
+
+def _phone_tunnels(root: Path, api_port: int, mobile_port: int, extra_env: Mapping[str, str] | None,
+                   log: Callable[[str], None] | None) -> tuple[dict, str | None]:
+    """PC-124: with OMNISTACKAI_PHONE_ACCESS=anywhere, a public tunnel to the API and to each Expo app.
+
+    Returns the tunnels by key ("api" and each app id) and the JWT secret the preview must use: a
+    development secret lets a request with no token in as an admin, which a public URL must not.
+    """
+    from .phone_tunnel import ANYWHERE, close, open_tunnel, phone_access, preview_secret, wait_until_reachable
+    from .plan import discover_mobile_apps
+
+    mobile_ids = discover_mobile_apps(root)
+    if not mobile_ids or phone_access(extra_env) != ANYWHERE:
+        return {}, None
+    tunnels: dict = {}
+    try:
+        tunnels["api"] = open_tunnel(api_port)
+        for offset, app_id in enumerate(mobile_ids):
+            tunnels[app_id] = open_tunnel(mobile_port + offset)
+    except Exception as error:  # noqa: BLE001 - no tunnel: the QR stays on the LAN and says so
+        for tunnel in tunnels.values():
+            close(tunnel.process)
+        if log is not None:
+            log(f"!  phone access from anywhere is unavailable ({error}); the QR works on this Wi-Fi only")
+        return {}, None
+    for tunnel in tunnels.values():
+        wait_until_reachable(tunnel.url)
+    if log is not None:
+        log(f"-> phone access from anywhere: {', '.join(t.url for t in tunnels.values())}")
+    current = (extra_env or {}).get("JWT_SECRET") or os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret")
+    return tunnels, preview_secret(current)
 
 
 def run_app(repo_dir: str) -> None:

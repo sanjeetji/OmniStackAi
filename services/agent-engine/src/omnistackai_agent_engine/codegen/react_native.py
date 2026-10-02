@@ -19,6 +19,7 @@ from .lifecycle_ui import mobile_lifecycle_panel
 from .adapter import GenerationTarget
 from .files import GeneratedFile, GeneratedProject
 from .brand_project import app_config_js
+from .expo_sdk import DEPENDENCIES, DEV_DEPENDENCIES, PUSH
 from .mobile_release import bundle_identifier, release_files
 
 if TYPE_CHECKING:
@@ -126,42 +127,12 @@ class ReactNativeAdapter:
                 "ios": "expo start --ios",
                 "web": "expo start --web",
             },
-            "dependencies": {
-                # R-545: babel-preset-expo transpiles through @babel/plugin-transform-runtime,
-                # whose output imports @babel/runtime helpers at runtime. Undeclared, pnpm's
-                # strict resolution cannot find them and the very first bundle fails with
-                # "Unable to resolve module @babel/runtime/helpers/interopRequireDefault" —
-                # the app never opened on a phone.
-                "@babel/runtime": "^7.25.0",
-                "@react-navigation/native": "^6.1.18",
-                "@react-navigation/native-stack": "^6.10.1",
-                "expo": "~51.0.0",
-                "expo-constants": "~16.0.2",
-                # R-591: the session token lives in the Keychain/Keystore. Pinned to the version
-                # Expo SDK 51 bundles (expo/packages/expo/bundledNativeModules.json).
-                "expo-secure-store": "~13.0.2",
-                "expo-status-bar": "~1.12.1",
-                "lucide-react-native": "^0.453.0",
-                "react": "18.2.0",
-                "react-native": "0.74.5",
-                "react-native-safe-area-context": "4.10.5",
-                "react-native-screens": "3.31.1",
-                "react-native-svg": "15.2.0",
-            },
-            "devDependencies": {
-                "@babel/core": "^7.20.0",
-                # PC-101: types `process.env.EXPO_PUBLIC_*` (Expo inlines it at bundle time). Under
-                # pnpm it is not hoisted from Expo's own dependencies, so tsc reported `process` unknown.
-                "@types/node": "^20.14.0",
-                "@types/react": "~18.2.45",
-                "typescript": "~5.3.3",
-            },
+            "dependencies": dict(DEPENDENCIES),
+            "devDependencies": dict(DEV_DEPENDENCIES),
             "private": True,
         }
         if push:  # PC-121
-            from .push_mobile import PUSH_DEPENDENCIES
-
-            manifest["dependencies"] = dict(sorted({**manifest["dependencies"], **PUSH_DEPENDENCIES}.items()))
+            manifest["dependencies"] = dict(sorted({**manifest["dependencies"], **PUSH}.items()))
         return GeneratedFile("package.json", json.dumps(manifest, indent=2) + "\n")
 
     def _generate_tsconfig(self) -> GeneratedFile:

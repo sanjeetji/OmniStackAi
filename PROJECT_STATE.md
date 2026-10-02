@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-124 (2026-10-02): the phone QR works.** Generated apps are on Expo SDK 57, the store Expo Go's; OMNISTACKAI_PHONE_ACCESS=anywhere opens the app from any network through a tunnel, behind sign-in.
 > **R-580 (2026-10-02): the domain knows its people.** A logistics, ride-hailing, home-services or marketplace prompt builds every side's app and its privacy, even naming only customers.
 > **R-582 (2026-10-02): plans are reviewed.** The plan is checked against the prompt and revised once when it misses something; 4/4 real prompts planned with no gaps left.
 > **PC-109 (2026-10-02): the mobile app reads as a product.** Names, badges and details on cards, a home screen for the user, human forms; 14/14 on the Android emulator.

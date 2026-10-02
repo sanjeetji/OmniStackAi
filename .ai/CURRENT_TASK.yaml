@@ -1,8 +1,9 @@
 task_id: PC-124
-status: in_progress
+status: completed
 phase: Platform Completion — M1 Quality foundation
 tracker_row: PC-124
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   Scanning the QR opens the generated app on a real phone. The generated Expo app moves from SDK 51
@@ -27,3 +28,16 @@ forbidden_changes:
 required_gates:
   - Live - a generated app installs, type-checks and opens in the current store Expo Go on the Android emulator, signs in and lists data from the real API
   - scripts/verify.sh passes
+found_and_fixed:
+  - Generated apps were on Expo SDK 51; the store's Expo Go opens only SDK 57 ("incompatible"). Now SDK 57, versions in codegen/expo_sdk.py.
+  - babel-preset-expo was not resolvable under pnpm's strict layout; declared as a devDependency.
+  - expo-notifications in Expo Go (no remote push since SDK 53) reports an error over the app; push is loaded only outside Expo Go, with the SDK 57 handler fields.
+  - The QR only worked on the same, non-isolating Wi-Fi; OMNISTACKAI_PHONE_ACCESS=anywhere tunnels the app and API.
+  - A public preview would let token-less requests in as admin (dev JWT secret / dev mode); tunnels force a random secret and dev mode off.
+  - A cold bundle streamed through a quick tunnel stopped at "Bundling 99%"; bundles are built locally before the scan.
+  - The emulator kept an older Expo Go; it is replaced with the SDK's (version compared, downgrade allowed).
+  - Expo Go 57 opened its developer menu and a floating Tools button over the app's header (its sign-in button); its dev-menu preferences are set.
+  - Expo Go reopened the previous project at start (a dead tunnel) and spun instead of opening the new link; tryToLaunchLastBundle is off on the emulator.
+deferred:
+  - Phone access is a machine setting (.env), not a console toggle; a per-preview switch needs the control-plane to pass options to the preview start.
+  - Quick tunnels have no uptime guarantee; hosted previews (cloud) remove the need for them.

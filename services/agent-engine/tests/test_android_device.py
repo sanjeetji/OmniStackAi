@@ -152,8 +152,11 @@ class TheAppOpensInExpoGoAndTheScreenIsDriven(TestCase):
                                      sleep=lambda s: None)
             with patch.object(a, "expo_go_url", return_value="https://example.com/Exponent-2.31.2.apk"):
                 device.open_expo("exp://192.168.1.20:8081", 51)
-            staged = (Path(tmp) / "cache" / "expo-go-prefs.xml").read_text()
+            staged = (Path(tmp) / "cache" / f"staged-{a.EXPO_GO_PREFS.rsplit('/', 1)[-1]}").read_text()
+            menu = (Path(tmp) / "cache" / "staged-expo.modules.devmenu.sharedpreferences.xml").read_text()
         self.assertIn('<boolean name="is_onboarding_finished" value="true" />', staged)
+        for setting in ('"isOnboardingFinished" value="true"', '"showsAtLaunch" value="false"', '"showFab" value="false"', '"tryToLaunchLastBundle" value="false"'):
+            self.assertIn(setting, menu, "Expo Go 57: no menu over the app, no Tools button over its header")
         self.assertEqual(fetched, ["https://example.com/Exponent-2.31.2.apk"])
         joined = [" ".join(c) for c in fake.calls]
         install = next(i for i, j in enumerate(joined) if "install -r" in j)
@@ -266,3 +269,66 @@ class TheStudioServesTheDevice(TestCase):
     def test_without_a_device_the_routes_say_so(self) -> None:
         base = self._server(None)
         self.assertEqual(self._call(base + "/api/device/android")[0], 404)
+
+
+class TheEmulatorsExpoGoMatchesTheApp(TestCase):
+    """PC-124: an emulator set up for SDK 51 kept its Expo Go, which cannot open an SDK 57 app."""
+
+    def _device(self, tmp: str, installed: str):
+        class Old(_Fake):
+            def __call__(self, cmd, env=None, input=None, timeout=0, text=True):
+                if cmd[-3:] == ["dumpsys", "package", a.EXPO_GO_PACKAGE]:
+                    self.calls.append(cmd)
+                    return _done(f"    versionCode=1 minSdk=24\n    versionName={installed}\n")
+                return super().__call__(cmd, env, input, timeout, text)
+
+        fake = Old(packages="package:host.exp.exponent")
+        device = a.AndroidDevice(sdk=_sdk(Path(tmp) / "sdk", full=True), cache=Path(tmp) / "cache", runner=fake,
+                                 downloader=lambda url, target: (target.parent.mkdir(parents=True, exist_ok=True), target.write_bytes(b"apk")),
+                                 host="mac-arm64", sleep=lambda s: None)
+        return device, fake
+
+    def test_an_older_expo_go_is_replaced(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            device, fake = self._device(tmp, "2.31.2")
+            with patch.object(a, "expo_go_url", return_value="https://example.com/Expo-Go-57.0.9.apk"):
+                device.open_expo("exps://brave-otter.trycloudflare.com", 57)
+        self.assertTrue(any(c[-4:-1] == ["install", "-r", "-d"] for c in fake.calls), "reinstalled, downgrades allowed")
+        self.assertTrue(any("android.intent.action.VIEW" in c and "exps://brave-otter.trycloudflare.com" in c for c in fake.calls))
+
+    def test_the_right_one_is_kept(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            device, fake = self._device(tmp, "57.0.9")
+            with patch.object(a, "expo_go_url", return_value="https://example.com/Expo-Go-57.0.9.apk"):
+                device.open_expo("exp://192.168.1.20:8081", 57)
+        self.assertFalse(any("install" in c for c in fake.calls))
+
+
+class ExpoGosDeveloperMenuIsClosed(TestCase):
+    """PC-124, found live: Expo Go 57 opened its developer menu over the app on the first load."""
+
+    def test_it_is_closed_when_it_appears(self) -> None:
+        class Menu(_Fake):
+            shown = 0
+
+            def __call__(self, cmd, env=None, input=None, timeout=0, text=True):
+                if cmd[-2:] == ["cat", "/sdcard/omnistack-ui.xml"]:
+                    self.calls.append(cmd)
+                    Menu.shown += 1
+                    return _done('<node text="SDK version: 57.0.0"/><node text="Toggle performance monitor"/>' if Menu.shown > 2 else "<node/>")
+                return super().__call__(cmd, env, input, timeout, text)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Menu()
+            fake.front = "ExperienceActivity"
+            device = a.AndroidDevice(sdk=_sdk(Path(tmp) / "sdk", full=True), runner=fake, host="mac-arm64", sleep=lambda s: None)
+            self.assertTrue(device.dismiss_dev_menu())
+        self.assertEqual(fake.calls[-1][-3:], ["input", "keyevent", "4"])
+
+    def test_nothing_is_pressed_when_it_never_appears(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = _Fake()
+            fake.front = "ExperienceActivity"
+            device = a.AndroidDevice(sdk=_sdk(Path(tmp) / "sdk", full=True), runner=fake, host="mac-arm64", sleep=lambda s: None)
+            self.assertFalse(device.dismiss_dev_menu(polls=3))
+        self.assertFalse(any("keyevent" in c for c in fake.calls))

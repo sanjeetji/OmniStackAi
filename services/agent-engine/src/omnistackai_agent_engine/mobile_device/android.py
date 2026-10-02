@@ -32,11 +32,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from ..codegen.expo_sdk import SDK
+
 AVD_NAME = "omnistack-phone"
 DEVICE_PROFILE = "pixel_6"
 CONSOLE_PORT = 5580  # the emulator's serial is emulator-<port>; 5554 stays free for an owner's own
 SERIAL = f"emulator-{CONSOLE_PORT}"
-API_LEVEL = 34  # Android 14, what Expo SDK 51 targets
+API_LEVEL = 34  # Android 14: Expo Go runs from Android 7 up, and 34 is a well-tested image
 # A smaller screen than the phone profile keeps every screenshot small enough to refresh quickly.
 SCREEN = {"hw.lcd.width": "720", "hw.lcd.height": "1560", "hw.lcd.density": "320", "hw.keyboard": "yes",
           "hw.ramSize": "2048"}
@@ -49,9 +51,17 @@ CMDLINE_TOOLS = {
     "linux-x86_64": ("commandlinetools-linux-16111833_latest.zip", "e025545c62a8e64c7559119566a569fb1dec5f60"),
 }
 # Expo Go per Expo SDK (from https://api.expo.dev/v2/versions/latest), used when that is unreachable.
-EXPO_GO = {51: "https://d1ahtucjixef4r.cloudfront.net/Exponent-2.31.2.apk"}
+EXPO_GO = {51: "https://d1ahtucjixef4r.cloudfront.net/Exponent-2.31.2.apk",
+           57: "https://github.com/expo/expo-go-releases/releases/download/Expo-Go-57.0.9/Expo-Go-57.0.9.apk"}
 EXPO_GO_PACKAGE = "host.exp.exponent"
 EXPO_GO_PREFS = f"/data/data/{EXPO_GO_PACKAGE}/shared_prefs/{EXPO_GO_PACKAGE}.SharedPreferences.xml"
+#: Expo Go 57's developer menu (expo-dev-menu's DevMenuPreferences): no menu over the app at launch,
+#: no floating "Tools" button over its header (shake or the menu key still opens it), and no reopening
+#: the last project at start - found live: it reopened an earlier preview whose address was gone and
+#: spun there instead of opening the one asked for.
+EXPO_DEV_MENU_PREFS = f"/data/data/{EXPO_GO_PACKAGE}/shared_prefs/expo.modules.devmenu.sharedpreferences.xml"
+EXPO_DEV_MENU_SETTINGS = {"isOnboardingFinished": True, "showsAtLaunch": False, "showFab": False,
+                          "tryToLaunchLastBundle": False}
 KEYS = {"back": 4, "home": 3, "enter": 66, "delete": 67, "apps": 187}
 
 
@@ -136,14 +146,28 @@ def _sha1(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _with_booleans(prefs: str | None, values: dict[str, bool]) -> str | None:
+    """An Android shared-preferences file with these booleans set; None when there is no file to edit."""
+    if prefs is None:
+        return None
+    if "</map>" not in prefs:
+        prefs = "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n</map>\n"
+    prefs = prefs.replace("<map />", "<map>\n</map>")
+    for name, value in values.items():
+        line = f'<boolean name="{name}" value="{str(value).lower()}" />'
+        pattern = re.compile(rf'<boolean name="{re.escape(name)}" value="(?:true|false)" />')
+        prefs = pattern.sub(line, prefs) if pattern.search(prefs) else prefs.replace("</map>", f"    {line}\n</map>")
+    return prefs
+
+
 def expo_sdk_major(app_dir: Path) -> int:
-    """The Expo SDK a generated app is on ("expo": "~51.0.0" -> 51)."""
+    """The Expo SDK a generated app is on ("expo": "~57.0.26" -> 57)."""
     try:
         version = json.loads((app_dir / "package.json").read_text(encoding="utf-8"))["dependencies"]["expo"]
     except (OSError, ValueError, KeyError, TypeError):
-        return 51
+        return SDK
     match = re.search(r"(\d+)", str(version))
-    return int(match.group(1)) if match else 51
+    return int(match.group(1)) if match else SDK
 
 
 def expo_go_url(sdk_major: int, fetch: Callable[[str], bytes] | None = None) -> str:
@@ -173,6 +197,8 @@ class AndroidDevice:
     host: str = field(default_factory=_host)
     busy: str = ""
     log: list[str] = field(default_factory=list)
+    #: PC-124: Expo Go's developer menu is configured not to open over the app (needs root).
+    menu_settled: bool = False
     error: str = ""
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _process: "subprocess.Popen | None" = None
@@ -341,20 +367,34 @@ class AndroidDevice:
     def has_expo_go(self) -> bool:
         return EXPO_GO_PACKAGE in (self._adb("shell", "pm", "list", "packages", EXPO_GO_PACKAGE).stdout or "")
 
-    def open_expo(self, url: str, sdk_major: int = 51) -> dict:
+    def expo_go_version(self) -> str:
+        out = self._adb("shell", "dumpsys", "package", EXPO_GO_PACKAGE).stdout or ""
+        match = re.search(r"versionName=(\S+)", out)
+        return match.group(1) if match else ""
+
+    def _expo_go_matches(self, sdk_major: int) -> bool:
+        """PC-124: Expo Go opens one SDK, so an emulator that has an older Expo Go gets the right one."""
+        if not self.has_expo_go():
+            return False
+        installed = self.expo_go_version()
+        wanted = re.search(r"(\d+\.\d+\.\d+)\.apk$", expo_go_url(sdk_major)) if installed else None
+        return not wanted or wanted.group(1) == installed
+
+    def open_expo(self, url: str, sdk_major: int = SDK) -> dict:
         """Install Expo Go for the app's SDK if needed, then open the preview in it."""
-        if not url.startswith("exp://"):
-            raise ValueError("an Expo preview URL starts with exp://")
+        # exps:// is the same preview over https - a phone-access tunnel (PC-124).
+        if not url.startswith(("exp://", "exps://")):
+            raise ValueError("an Expo preview URL starts with exp:// or exps://")
         if not (self.running() and self.booted()):
             raise RuntimeError("start the emulator first")
-        if not self.has_expo_go():
+        if not self._expo_go_matches(sdk_major):
             apk_url = expo_go_url(sdk_major)
             apk = self.cache / apk_url.rsplit("/", 1)[-1]
             if not apk.exists():
                 self._note(f"Downloading Expo Go for Expo SDK {sdk_major}")
                 self.downloader(apk_url, apk)
             self._note("Installing Expo Go on the emulator")
-            done = self._adb("install", "-r", str(apk), timeout=300)
+            done = self._adb("install", "-r", "-d", str(apk), timeout=300)  # -d: also an older Expo Go
             if done.returncode != 0 or "Success" not in (done.stdout or ""):
                 raise RuntimeError(f"installing Expo Go failed: {(done.stderr or done.stdout or '')[-300:]}")
         # Found live: a link that cold-starts Expo Go 2.31 crashes it ("Unable to attach a rootView
@@ -372,7 +412,28 @@ class AndroidDevice:
         if not self._wait_for(lambda: self._expo_screen() == "ExperienceActivity", 20):
             raise RuntimeError("Expo Go closed while opening the app - its log is `adb logcat` on the emulator")
         self._note(f"Opened {url} in Expo Go")
+        # PC-124: where Expo Go's preferences could not be written (an image without root), its
+        # developer menu opens over the app once the bundle has loaded; it is watched for and closed.
+        # Only then - two UI dumps at once fail, and the owner's screen would be read meanwhile.
+        if not self.menu_settled:
+            threading.Thread(target=self.dismiss_dev_menu, daemon=True).start()
         return {"opened": url, "sdk": sdk_major}
+
+    def dismiss_dev_menu(self, polls: int = 90) -> bool:
+        """Close Expo Go's developer menu if it opens over the app; True when it was closed."""
+        for _ in range(polls):
+            # A dump can fail while the app loads; a file left from before must not be read as now.
+            self._adb("shell", "rm", "-f", "/sdcard/omnistack-ui.xml")
+            self._adb("shell", "uiautomator", "dump", "/sdcard/omnistack-ui.xml", timeout=30)
+            screen = self._adb("exec-out", "cat", "/sdcard/omnistack-ui.xml", timeout=30).stdout or ""
+            if "Toggle performance monitor" in screen and "SDK version" in screen:
+                self._adb("shell", "input", "keyevent", str(KEYS["back"]))
+                self._note("Closed Expo Go's developer menu")
+                return True
+            if self._expo_screen() != "ExperienceActivity":
+                return False
+            self.sleep(2)
+        return False
 
     def _start_expo_home(self) -> None:
         if self._expo_screen():
@@ -382,28 +443,39 @@ class AndroidDevice:
             raise RuntimeError("Expo Go did not start on the emulator")
 
     def _finish_expo_onboarding(self) -> bool:
-        """Mark Expo Go's developer-menu introduction as seen; True when Expo Go had to restart."""
-        prefs = EXPO_GO_PREFS
+        """Mark Expo Go's developer-menu introduction as seen; True when Expo Go had to restart.
+
+        Expo Go 2.31 (SDK 51) kept it in its own preferences. Expo Go 57 keeps it in the developer
+        menu's (PC-124, found live): the menu opened over the app on its first load, and a floating
+        "Tools" button covered the app's header - its sign-in button - until moved.
+        """
         rooted = self._adb("root", timeout=30)
         if rooted.returncode != 0 or "cannot" in f"{rooted.stdout}{rooted.stderr}".lower():
-            return False  # not rootable (a Play Store image): the owner taps Back once
+            self.menu_settled = False
+            return False  # not rootable (a Play Store image): the menu is closed when it appears
         self._adb("wait-for-device", timeout=60)
-        current = self._adb("shell", "cat", prefs).stdout or ""
-        if '"is_onboarding_finished" value="true"' in current or "</map>" not in current:
-            return False
-        if '"is_onboarding_finished"' in current:
-            updated = current.replace('"is_onboarding_finished" value="false"', '"is_onboarding_finished" value="true"')
-        else:
-            updated = current.replace("</map>", '    <boolean name="is_onboarding_finished" value="true" />\n</map>')
-        self._adb("shell", "am", "force-stop", EXPO_GO_PACKAGE)
-        # Written through the existing file, so it keeps the app as its owner.
-        staged = self.cache / "expo-go-prefs.xml"
-        staged.parent.mkdir(parents=True, exist_ok=True)
-        staged.write_text(updated, encoding="utf-8")
-        self._adb("push", str(staged), "/data/local/tmp/omnistack-expo-prefs.xml")
-        self._adb("shell", f"cat /data/local/tmp/omnistack-expo-prefs.xml > {prefs} && rm /data/local/tmp/omnistack-expo-prefs.xml")
-        self._note("Marked Expo Go's developer-menu introduction as seen")
-        return True
+        self.menu_settled = True
+        changed = False
+        for path, values, create in ((EXPO_GO_PREFS, {"is_onboarding_finished": True}, False),
+                                     (EXPO_DEV_MENU_PREFS, EXPO_DEV_MENU_SETTINGS, True)):
+            current = self._adb("shell", "cat", path).stdout or ""
+            updated = _with_booleans(current if "</map>" in current else ("" if create else None), values)
+            if updated is None or updated == current:
+                continue
+            if not changed:
+                self._adb("shell", "am", "force-stop", EXPO_GO_PACKAGE)
+                changed = True
+            # Written through the file (or created and handed to the app), so the app stays its owner.
+            staged = self.cache / f"staged-{path.rsplit('/', 1)[-1]}"
+            staged.parent.mkdir(parents=True, exist_ok=True)
+            staged.write_text(updated, encoding="utf-8")
+            self._adb("push", str(staged), "/data/local/tmp/omnistack-expo-prefs.xml")
+            owner = f"$(stat -c %u /data/data/{EXPO_GO_PACKAGE})"
+            self._adb("shell", f"cat /data/local/tmp/omnistack-expo-prefs.xml > {path} && chown {owner}:{owner} {path} "
+                               f"&& chmod 660 {path} && rm /data/local/tmp/omnistack-expo-prefs.xml")
+        if changed:
+            self._note("Marked Expo Go's developer-menu introduction as seen")
+        return changed
 
     def _expo_screen(self) -> str | None:
         """The Expo Go screen in front (HomeActivity, ExperienceActivity, ...), or None."""

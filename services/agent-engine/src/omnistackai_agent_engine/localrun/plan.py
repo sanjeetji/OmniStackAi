@@ -17,6 +17,8 @@ import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..codegen.expo_sdk import SDK as EXPO_SDK
+
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
@@ -172,6 +174,9 @@ class RunPlan:
                     "url": surface["url"],
                     "path": "",
                     "scan": surface["scan"],
+                    # PC-124: how the phone reaches it, and the Expo SDK the store's Expo Go must match.
+                    "access": surface.get("access", "lan"),
+                    "sdk": EXPO_SDK,
                 }
             )
         for app in apps:
@@ -289,6 +294,7 @@ def build_run_plan(
     public_base: str = "",
     jwt_secret: str = "local-dev-secret",
     extra_env: Mapping[str, str] | None = None,
+    phone_tunnels: Mapping[str, str] | None = None,
 ) -> RunPlan:
     """Compose the ordered plan to run the generated repo at ``repo_dir`` locally."""
     root = Path(repo_dir)
@@ -326,12 +332,24 @@ def build_run_plan(
     # One port per app, from `mobile_port` upward. The first keeps the original port and the
     # original `mobile_url`/`expo_url`, so a single-app project and everything reading those two
     # fields behaves exactly as before.
+    # PC-124: with phone access from anywhere, each app and the API have a public https tunnel
+    # ("api" and the app's id -> https://<name>.trycloudflare.com); Expo Go opens https as exps://.
+    tunnels = dict(phone_tunnels or {})
     mobile_surfaces = tuple(
         {
             "id": app_id,
             "port": mobile_port + offset,
+            "url": tunnels[app_id],
+            "scan": "exps://" + tunnels[app_id].removeprefix("https://"),
+            "access": "anywhere",
+        }
+        if app_id in tunnels
+        else {
+            "id": app_id,
+            "port": mobile_port + offset,
             "url": f"http://{lan}:{mobile_port + offset}",
             "scan": f"exp://{lan}:{mobile_port + offset}",
+            "access": "lan",
         }
         for offset, app_id in enumerate(mobile_ids)
     )
@@ -593,7 +611,8 @@ def build_run_plan(
                 cwd=str(surface_dir),
                 env=(
                     # The phone is a different device: a loopback API base fails every call.
-                    ("EXPO_PUBLIC_API_URL", f"http://{lan}:{api_port}"),
+                    ("EXPO_PUBLIC_API_URL", tunnels.get("api") or f"http://{lan}:{api_port}"),
+                ) + ((("EXPO_PACKAGER_PROXY_URL", tunnels[surface["id"]]),) if surface["id"] in tunnels else ()) + (
                     ("CI", "1"),  # keeps Expo non-interactive; it otherwise waits on a keypress.
                     ("BROWSER", "none"),
                 ) + extra_tuples,

@@ -254,7 +254,7 @@ class PushToThePhone(TestCase):
         from omnistackai_agent_engine.codegen.react_native import ReactNativeAdapter
 
         files = {f.path: f.content for f in ReactNativeAdapter().generate(self._ir()).files()}
-        self.assertIn('"expo-notifications": "~0.28.19"', files["package.json"])
+        self.assertIn('"expo-notifications": "~57.0.21"', files["package.json"])
         self.assertIn("<PushRegistration />", files["src/app/App.tsx"])
         module = files["src/shared/notifications/PushRegistration.tsx"]
         self.assertIn("getExpoPushTokenAsync({ projectId })", module)

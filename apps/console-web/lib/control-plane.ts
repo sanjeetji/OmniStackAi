@@ -353,6 +353,10 @@ export interface PreviewApp {
   ready: boolean;
   /** A mobile (Expo) app: the exp:// link Expo Go opens (R-545). */
   scan?: string;
+  /** PC-124: `lan` (same Wi-Fi only) or `anywhere` (through a public tunnel). */
+  access?: "lan" | "anywhere";
+  /** PC-124: the Expo SDK the app is on; the store's Expo Go opens only the newest. */
+  sdk?: number;
 }
 
 /** A local demo login shipped with a template, shown next to the preview. */

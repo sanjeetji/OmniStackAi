@@ -64,8 +64,26 @@ function PhoneQr({ app }: { app: PreviewApp }) {
         <div className="mx-auto aspect-square w-full max-w-48 animate-pulse rounded-md bg-muted" aria-hidden="true" />
       )}
       <p className="text-pretty text-xs text-muted-foreground">
-        Install Expo Go, then scan this with the phone&apos;s camera. The phone must be on the same Wi-Fi as this computer.
+        Install Expo Go from the App Store or Google Play{app.sdk ? ` (it opens SDK ${app.sdk} apps)` : ""}, then scan
+        this with the phone&apos;s camera.
       </p>
+      {app.access === "anywhere" ? (
+        <p className="text-pretty text-xs text-muted-foreground">
+          Works on any network, mobile data included. The app asks you to sign in or create an account.
+        </p>
+      ) : (
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer select-none">The phone must be on this computer&apos;s Wi-Fi. Not opening?</summary>
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-pretty">
+            <li>Update Expo Go: an older Expo Go cannot open a newer app.</li>
+            <li>Turn off the phone&apos;s VPN, and check it is not on mobile data.</li>
+            <li>
+              Office and guest Wi-Fi often stop devices from reaching each other. To open the app from any network, add{" "}
+              <code>OMNISTACKAI_PHONE_ACCESS=anywhere</code> to <code>.env</code> and restart the preview.
+            </li>
+          </ul>
+        </details>
+      )}
       {app.scan ? (
         <div className="flex items-center gap-1 rounded-md bg-muted px-2 py-1">
           <code className="min-w-0 flex-1 truncate text-xs">{app.scan}</code>

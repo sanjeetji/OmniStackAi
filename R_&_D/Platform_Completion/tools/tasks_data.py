@@ -735,8 +735,10 @@ _M1, _M2, _M3, _M4, _M5, _M6 = (
     "M6 Speed and customisation")
 _MILESTONE_TASKS = [
     ("PC-124", "The phone QR opens the generated app: a current Expo SDK (the store's Expo Go), and a "
-     "tunnel when the phone is on another network", _M1, "Vibe", "Not Started", "P0", "",
-     "Founder report 2026-10-02: scanning the QR to use the app on a phone does not work."),
+     "tunnel when the phone is on another network", _M1, "Vibe", "Completed", "P0", "",
+     "Done 2026-10-02: apps on Expo SDK 57 (the store Expo Go's; one file to bump); "
+     "OMNISTACKAI_PHONE_ACCESS=anywhere tunnels app + API through cloudflared, behind sign-in; bundles built "
+     "before the scan; emulator installs the matching Expo Go. Live: LAN 7/7, anywhere 9/9 in Expo Go 57."),
     ("PC-125", "Check and repair: every generated page, link and API call verified (types, build, a "
      "browser walk); failures go back to the model with the exact error; a working fallback; the build "
      "report says what is verified", _M1, "Both", "Not Started", "P0", "",
