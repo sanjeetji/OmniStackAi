@@ -1,8 +1,9 @@
 task_id: PC-109
-status: in_progress
+status: completed
 phase: Platform Completion — 1 Vibe Mode live
 tracker_row: PC-109
 started_at: "2026-10-02"
+completed_at: "2026-10-02"
 branch: platform-completion
 objective: >-
   Generated React Native screens read as a finished product. A list card is titled by the record's
@@ -25,3 +26,9 @@ required_gates:
   - the generated mobile app type-checks
   - Live - the screens on the Android emulator (or, without it, rendered on the web through Expo) show names, states and details, not IDs
   - scripts/verify.sh passes
+found_and_fixed:
+  - The home screen was the builder's view (System Metrics, "8 fields - Full CRUD", an OmniStackAI badge); it is the user's.
+  - Every screen had a band of empty space above it (top safe area padded twice under the header).
+  - Navigator titles were "OrderItems" / "Customer Details"; they are "Order Items" / "Customer".
+deferred:
+  - The mobile app does not listen for live updates (R-569) yet; it refreshes when opened or pulled.

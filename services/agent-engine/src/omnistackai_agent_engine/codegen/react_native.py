@@ -588,7 +588,9 @@ class ReactNativeAdapter:
             "  scrollable = true,\n"
             "}) => {\n"
             "  return (\n"
-            "    <SafeAreaView style={styles.safeArea}>\n"
+            # PC-109: every screen sits under the navigator's header, which already clears the status
+            # bar; padding the top edge again left a band of empty space above every screen.
+            "    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>\n"
             "      <KeyboardAvoidingView\n"
             "        style={styles.keyboardAvoid}\n"
             "        behavior={Platform.OS === 'ios' ? 'padding' : undefined}\n"
@@ -673,7 +675,6 @@ class ReactNativeAdapter:
     def _generate_entity_feature(self, entity: Entity, ir: ApplicationIR) -> list[GeneratedFile]:
         slug = _to_snake(entity.name)
         pascal = _to_pascal(entity.name)
-        primary_field = entity.fields[0].name if entity.fields else "id"
         files: list[GeneratedFile] = []
 
         # 1. Model Types
@@ -779,8 +780,9 @@ export const use__PASCAL__s = () => {
         files.append(GeneratedFile(f"src/features/{slug}/hooks/use{pascal}.ts", hook_content))
 
         # 4. List Screen
-        list_screen_template = """import React, { useState } from 'react';
+        list_screen_template = """import React from 'react';
 import {
+  Alert,
   View,
   Text,
   FlatList,
@@ -788,10 +790,10 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { Trash2 } from 'lucide-react-native';
 import { ScreenContainer } from '../../../design-system/components/ScreenContainer';
 import { Card } from '../../../design-system/components/Card';
 import { Button } from '../../../design-system/components/Button';
-import { StatCard } from '../../../design-system/components/StatCard';
 import { Badge } from '../../../design-system/components/Badge';
 import { tokens } from '../../../design-system/tokens';
 import { use__PASCAL__s } from '../hooks/use__PASCAL__';
@@ -800,39 +802,55 @@ import { __PASCAL__ } from '../model/types';
 export const __PASCAL__ListScreen = ({ navigation }: any) => {
   const { items, loading, error, refresh, deleteItem } = use__PASCAL__s();
 
-  const renderItem = ({ item }: { item: __PASCAL__ }) => (
-    <Card style={styles.itemCard}>
-      <TouchableOpacity
-        onPress={() => navigation.navigate('__PASCAL__Detail', { id: item.id, initial: item })}
-      >
-        <Text style={styles.itemTitle}>{String((item as any).__PRIMARY_FIELD__ || item.id)}</Text>
-        <Text style={styles.itemId}>ID: {item.id}</Text>
-      </TouchableOpacity>
-      <View style={styles.itemActions}>
-        <Button
-          title="Delete"
-          variant="danger"
-          size="sm"
-          onPress={() => void deleteItem(item.id)}
-        />
-      </View>
-    </Card>
-  );
+  // PC-109: a record reads by its name, its state and what matters about it - never its UUID.
+  const titleOf = (item: __PASCAL__) => __TITLE_EXPR__;
+  const confirmDelete = (item: __PASCAL__) =>
+    Alert.alert(`Delete ${titleOf(item)}?`, 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void deleteItem(item.id) },
+    ]);
+
+  const renderItem = ({ item }: { item: __PASCAL__ }) => {
+    const meta = __META_EXPR__;
+    return (
+      <Card style={styles.itemCard}>
+        <TouchableOpacity
+          style={styles.itemMain}
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('__PASCAL__Detail', { id: item.id, initial: item })}
+        >
+          <View style={styles.itemTitleRow}>
+            <Text style={styles.itemTitle} numberOfLines={1}>{titleOf(item)}</Text>
+__BADGE__
+          </View>
+          {meta ? <Text style={styles.itemMeta} numberOfLines={1}>{meta}</Text> : null}
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${titleOf(item)}`}
+          hitSlop={8}
+          style={styles.deleteButton}
+          onPress={() => confirmDelete(item)}
+        >
+          <Trash2 size={18} color={tokens.colors.danger} />
+        </TouchableOpacity>
+      </Card>
+    );
+  };
 
   return (
     <ScreenContainer scrollable={false}>
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>__ENTITY_NAME__ Management</Text>
+        <View>
+          <Text style={styles.screenSubtitle}>
+            {items.length} {items.length === 1 ? '__SINGULAR_LOWER__' : '__PLURAL_LOWER__'}
+          </Text>
+        </View>
         <Button
           title="+ New"
           size="sm"
           onPress={() => navigation.navigate('__PASCAL__Detail', {})}
         />
-      </View>
-
-      <View style={styles.statsRow}>
-        <StatCard title="Total __ENTITY_NAME__s" value={items.length} variant="primary" />
-        <StatCard title="Sync Status" value="Active" subtext="Live" variant="success" />
       </View>
 
       {error && (
@@ -856,7 +874,7 @@ export const __PASCAL__ListScreen = ({ navigation }: any) => {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No __ENTITY_NAME__ records found.</Text>
+              <Text style={styles.emptyText}>No __PLURAL_LOWER__ yet. Tap + New to add the first.</Text>
             </View>
           ) : null
         }
@@ -877,9 +895,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: tokens.colors.text,
   },
-  statsRow: {
-    flexDirection: 'row',
-    marginBottom: tokens.spacing.md,
+  screenSubtitle: {
+    fontSize: tokens.fontSize.sm,
+    color: tokens.colors.textMuted,
+    marginTop: 2,
   },
   listContent: {
     paddingBottom: 40,
@@ -890,18 +909,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: tokens.spacing.sm,
   },
+  itemMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  itemTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
   itemTitle: {
+    flexShrink: 1,
     fontSize: tokens.fontSize.md,
     fontWeight: '600',
     color: tokens.colors.text,
   },
-  itemId: {
-    fontSize: tokens.fontSize.xs,
+  itemMeta: {
+    fontSize: tokens.fontSize.sm,
     color: tokens.colors.textMuted,
-    marginTop: 2,
+    marginTop: 4,
   },
-  itemActions: {
+  deleteButton: {
     marginLeft: tokens.spacing.sm,
+    padding: tokens.spacing.xs,
   },
   emptyState: {
     padding: 32,
@@ -923,12 +953,20 @@ const styles = StyleSheet.create({
   },
 });
 """
+        title_expr, meta_expr, badge = _card_parts(entity, ir)
+        plural = _plural_label(entity)
+        singular = _title(entity.name)
         list_screen_content = (
             list_screen_template
+            .replace("__TITLE_EXPR__", title_expr)
+            .replace("__META_EXPR__", meta_expr)
+            .replace("__BADGE__", badge)
+            .replace("__PLURAL_LOWER__", plural.lower())
+            .replace("__SINGULAR_LOWER__", singular.lower())
+            .replace("__PLURAL__", plural)
             .replace("__PASCAL__", pascal)
             .replace("__SLUG__", slug)
             .replace("__ENTITY_NAME__", entity.name)
-            .replace("__PRIMARY_FIELD__", primary_field)
         )
         files.append(GeneratedFile(f"src/features/{slug}/ui/{pascal}ListScreen.tsx", list_screen_content))
 
@@ -942,6 +980,9 @@ const styles = StyleSheet.create({
         for f in entity.fields:
             if f.name.lower() == "id":
                 continue
+            # PC-109: the database keeps these; a file is not typed in as text.
+            if f.name in ("created_at", "updated_at", "created_by") or f.type is FieldType.ATTACHMENT:
+                continue
             if lifecycle is not None and f.name == lifecycle.field:
                 continue  # R-590: moved only by its transitions, from the panel below
             if f.type is FieldType.RICH_TEXT:
@@ -952,16 +993,29 @@ const styles = StyleSheet.create({
                     ".replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>')"
                     ".replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/&amp;/g, '&').replace(/\\n{3,}/g, '\\n\\n').trim() : '');"
                 )
+            elif f.type is FieldType.BOOL:
+                state_inits.append(f"  const [{f.name}, set{_to_pascal(f.name)}] = useState<boolean>(Boolean(initial?.{f.name}));")
             else:
-                state_inits.append(f"  const [{f.name}, set{_to_pascal(f.name)}] = useState(initial?.{f.name} ? String(initial.{f.name}) : '');")
-            form_inputs.append(
-                f'        <Input\n'
-                f'          label="{f.name.capitalize()}"\n'
-                f'          value={{{f.name}}}\n'
-                f'          onChangeText={{set{_to_pascal(f.name)}}}\n'
-                f'          placeholder="Enter {f.name}"\n'
-                f'        />'
-            )
+                state_inits.append(f"  const [{f.name}, set{_to_pascal(f.name)}] = useState(initial?.{f.name} != null ? String(initial.{f.name}) : '');")
+            # PC-109: human labels, the keyboard each field needs, a switch for yes/no, required marked.
+            label = _sentence(f.name) + (" *" if f.required else "")
+            if f.type is FieldType.BOOL:
+                form_inputs.append(
+                    f'        <View style={{styles.switchRow}}>\n'
+                    f'          <Text style={{styles.switchLabel}}>{label}</Text>\n'
+                    f'          <Switch value={{{f.name}}} onValueChange={{set{_to_pascal(f.name)}}} />\n'
+                    f'        </View>'
+                )
+            else:
+                form_inputs.append(
+                    f'        <Input\n'
+                    f'          label="{label}"\n'
+                    f'          value={{{f.name}}}\n'
+                    f'          onChangeText={{set{_to_pascal(f.name)}}}\n'
+                    f'          placeholder="{_placeholder(f)}"\n'
+                    + "".join(f"          {prop}\n" for prop in _input_props(f))
+                    + '        />'
+                )
             if f.type is FieldType.RICH_TEXT:
                 payload_assignments.append(
                     f"      payload.{f.name} = {f.name}.split(/\\n{{2,}}/).filter((part) => part.trim())"
@@ -971,12 +1025,15 @@ const styles = StyleSheet.create({
             elif f.type in (FieldType.INT, FieldType.FLOAT):
                 payload_assignments.append(f"      payload.{f.name} = Number({f.name}) || 0;")
             elif f.type is FieldType.BOOL:
-                payload_assignments.append(f"      payload.{f.name} = {f.name}.toLowerCase() === 'true';")
+                payload_assignments.append(f"      payload.{f.name} = {f.name};")
+            elif f.type is FieldType.DATETIME:
+                payload_assignments.append(
+                    f"      payload.{f.name} = {f.name} ? (Number.isNaN(Date.parse({f.name})) ? {f.name} : new Date({f.name}).toISOString()) : null;")
             else:
                 payload_assignments.append(f"      payload.{f.name} = {f.name};")
 
         detail_screen_template = """import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, Switch } from 'react-native';
 import { ScreenContainer } from '../../../design-system/components/ScreenContainer';
 import { Card } from '../../../design-system/components/Card';
 import { Button } from '../../../design-system/components/Button';
@@ -1011,12 +1068,12 @@ __PAYLOAD_ASSIGNMENTS__
 
   return (
     <ScreenContainer scrollable={true}>
-      <Text style={styles.title}>{isEditing ? 'Edit' : 'Create'} __ENTITY_NAME__</Text>
+      <Text style={styles.title}>{isEditing ? 'Edit __SINGULAR_LOWER__' : 'New __SINGULAR_LOWER__'}</Text>
 __LIFECYCLE_PANEL__
       <Card style={styles.formCard}>
 __FORM_INPUTS__
         <Button
-          title={isEditing ? 'Save Changes' : 'Create Record'}
+          title={isEditing ? 'Save changes' : 'Create __SINGULAR_LOWER__'}
           onPress={handleSave}
           loading={loading}
           style={styles.saveButton}
@@ -1039,6 +1096,17 @@ const styles = StyleSheet.create({
   saveButton: {
     marginTop: tokens.spacing.md,
   },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: tokens.spacing.md,
+  },
+  switchLabel: {
+    fontSize: tokens.fontSize.sm,
+    fontWeight: '600',
+    color: tokens.colors.text,
+  },
 });
 """
         detail_screen_content = (
@@ -1049,6 +1117,7 @@ const styles = StyleSheet.create({
             .replace("__STATE_INITS__", "\n".join(state_inits))
             .replace("__PAYLOAD_ASSIGNMENTS__", "\n".join(payload_assignments))
             .replace("__FORM_INPUTS__", "\n".join(form_inputs))
+            .replace("__SINGULAR_LOWER__", _title(entity.name).lower())
             .replace(
                 "__LIFECYCLE_IMPORT__",
                 f"import {{ {entity.name}Lifecycle }} from './{entity.name}Lifecycle';\n" if lifecycle else "",
@@ -1070,119 +1139,101 @@ const styles = StyleSheet.create({
     # ── App Overview & Navigation ──────────────────────────────────────────────
 
     def _generate_overview_screen(self, ir: ApplicationIR) -> GeneratedFile:
-        entity_nav_cards: list[str] = []
+        # PC-109: the home screen a customer sees - a greeting and the app's sections. It used to show
+        # "System Metrics: ENTITIES 4, SCREENS 7" and "Customer - 8 fields - Full CRUD": the builder's
+        # view of the app, not the user's.
+        rows: list[str] = []
         for entity in ir.entities:
             pascal = _to_pascal(entity.name)
-            card_str = (
-                "        <Card style={styles.entityCard}>\n"
-                "          <View style={styles.entityInfo}>\n"
-                f"            <Text style={{styles.entityName}}>{entity.name}</Text>\n"
-                f"            <Text style={{styles.entityDesc}}>{len(entity.fields)} fields • Full CRUD</Text>\n"
-                "          </View>\n"
-                "          <Button\n"
-                '            title="Open"\n'
-                '            size="sm"\n'
-                f"            onPress={{() => navigation.navigate('{pascal}List')}}\n"
-                "          />\n"
-                "        </Card>"
+            plural = _plural_label(entity)
+            rows.append(
+                "        <TouchableOpacity\n"
+                "          accessibilityRole=\"button\"\n"
+                f"          onPress={{() => navigation.navigate('{pascal}List')}}\n"
+                "        >\n"
+                "          <Card style={styles.sectionCard}>\n"
+                "            <View style={styles.sectionText}>\n"
+                f"              <Text style={{styles.sectionName}}>{plural}</Text>\n"
+                f"              <Text style={{styles.sectionHint}}>See and add {plural.lower()}</Text>\n"
+                "            </View>\n"
+                "            <ChevronRight size={20} color={tokens.colors.textMuted} />\n"
+                "          </Card>\n"
+                "        </TouchableOpacity>"
             )
-            entity_nav_cards.append(card_str)
-
-        # R-545: this file is emitted at src/app/screens/OverviewScreen.tsx, so reaching
-        # src/design-system takes two levels (screens -> app -> src). It used one, and Metro
-        # failed to resolve every component on the app's own home screen — the first thing a
-        # phone would have tried to render. The navigator and App.tsx depths were already right.
         overview_template = """import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { ScreenContainer } from '../../design-system/components/ScreenContainer';
 import { Card } from '../../design-system/components/Card';
-import { StatCard } from '../../design-system/components/StatCard';
-import { Badge } from '../../design-system/components/Badge';
-import { Button } from '../../design-system/components/Button';
 import { tokens } from '../../design-system/tokens';
+import { useAuth } from '../../shared/auth/AuthContext';
 
 export const OverviewScreen = ({ navigation }: any) => {
+  const { user } = useAuth();
+  const name = (user as any)?.full_name || (user as any)?.email || '';
   return (
     <ScreenContainer scrollable={true}>
-      {/* Hero Welcome */}
-      <Card style={styles.heroCard}>
-        <Badge label="OmniStackAI Mobile" variant="primary" />
-        <Text style={styles.heroTitle}>__APP_NAME__</Text>
-        <Text style={styles.heroSubtext}>
-          __APP_DESC__
-        </Text>
-      </Card>
-
-      {/* KPI Metrics */}
-      <Text style={styles.sectionHeader}>System Metrics</Text>
-      <View style={styles.statsRow}>
-        <StatCard title="Entities" value="__ENTITY_COUNT__" variant="primary" />
-        <StatCard title="Screens" value="__SCREEN_COUNT__" variant="success" />
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>{name ? `Welcome back, ${String(name).split(' ')[0]}` : '__APP_NAME__'}</Text>
+        <Text style={styles.heroSubtext}>__APP_DESC__</Text>
       </View>
-
-      {/* Feature Modules */}
-      <Text style={styles.sectionHeader}>App Modules</Text>
-__ENTITY_NAV_CARDS__
+      <Text style={styles.sectionHeader}>Browse</Text>
+__ROWS__
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  heroCard: {
+  hero: {
     marginBottom: tokens.spacing.lg,
-    padding: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
   },
   heroTitle: {
     fontSize: tokens.fontSize.xxl,
     fontWeight: '800',
     color: tokens.colors.text,
-    marginTop: tokens.spacing.sm,
   },
   heroSubtext: {
     fontSize: tokens.fontSize.sm,
     color: tokens.colors.textMuted,
-    marginTop: 4,
+    marginTop: 6,
     lineHeight: 20,
   },
   sectionHeader: {
-    fontSize: tokens.fontSize.md,
+    fontSize: tokens.fontSize.xs,
     fontWeight: '700',
-    color: tokens.colors.text,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: tokens.colors.textMuted,
     marginBottom: tokens.spacing.sm,
-    marginTop: tokens.spacing.xs,
   },
-  statsRow: {
-    flexDirection: 'row',
-    marginBottom: tokens.spacing.md,
-  },
-  entityCard: {
+  sectionCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacing.sm,
   },
-  entityInfo: {
+  sectionText: {
     flex: 1,
   },
-  entityName: {
+  sectionName: {
     fontSize: tokens.fontSize.md,
     fontWeight: '600',
     color: tokens.colors.text,
   },
-  entityDesc: {
+  sectionHint: {
     fontSize: tokens.fontSize.xs,
     color: tokens.colors.textMuted,
     marginTop: 2,
   },
 });
 """
+        description = (ir.description or "").replace("`", "'").replace("{", "(").replace("}", ")")
         content = (
             overview_template
-            .replace("__APP_NAME__", ir.name)
-            .replace("__APP_DESC__", ir.description)
-            .replace("__ENTITY_COUNT__", str(len(ir.entities)))
-            .replace("__SCREEN_COUNT__", str(len(ir.screens)))
-            .replace("__ENTITY_NAV_CARDS__", "\n".join(entity_nav_cards))
+            .replace("__APP_NAME__", ir.name.replace("'", "\\'"))
+            .replace("__APP_DESC__", description)
+            .replace("__ROWS__", "\n".join(rows))
         )
         return GeneratedFile("src/app/screens/OverviewScreen.tsx", content)
 
@@ -1217,8 +1268,9 @@ const styles = StyleSheet.create({
             pascal = _to_pascal(entity.name)
             imports.append(f"import {{ {pascal}ListScreen }} from '../../features/{slug}/ui/{pascal}ListScreen';")
             imports.append(f"import {{ {pascal}DetailScreen }} from '../../features/{slug}/ui/{pascal}DetailScreen';")
-            screens.append(f'      <Stack.Screen name="{pascal}List" component={{{pascal}ListScreen}} options={{{{ title: "{entity.name}s" }}}} />')
-            screens.append(f'      <Stack.Screen name="{pascal}Detail" component={{{pascal}DetailScreen}} options={{{{ title: "{entity.name} Details" }}}} />')
+            # PC-109: "Order Items", not "OrderItems"; a record's screen is titled by what it is.
+            screens.append(f'      <Stack.Screen name="{pascal}List" component={{{pascal}ListScreen}} options={{{{ title: "{_plural_label(entity)}" }}}} />')
+            screens.append(f'      <Stack.Screen name="{pascal}Detail" component={{{pascal}DetailScreen}} options={{{{ title: "{_title(entity.name)}" }}}} />')
 
         content = (
             "\n".join(imports)
@@ -1268,6 +1320,93 @@ const styles = StyleSheet.create({
             "}\n"
         )
         return GeneratedFile("src/app/App.tsx", content)
+
+
+def _card_parts(entity: Entity, ir: ApplicationIR) -> tuple[str, str, str]:
+    """PC-109: a list card's title, its one-line details and its state badge, as TypeScript."""
+    from ..application_ir.workflow import workflow_for_entity
+    from .admin_console import _LABEL_PREFERENCE
+
+    singular = _title(entity.name)
+    lifecycle = workflow_for_entity(ir, entity.name)
+    status = lifecycle.field if lifecycle else next(
+        (f.name for f in entity.fields if f.name in ("status", "state", "stage") and f.type in (FieldType.STRING, FieldType.TEXT)), None)
+    strings = [f.name for f in entity.fields if f.type in (FieldType.STRING, FieldType.TEXT)]
+    fallback = f"'{singular} ' + item.id.slice(0, 8)"
+    # A name-like field; a person's first and last name together; never a state or a reference.
+    names = [n for n in _LABEL_PREFERENCE if n not in ("email", "code", "sku")]
+    key = next((n for n in names if n in strings), None)
+    if key is None and {"first_name", "last_name"} <= set(strings):
+        title = "[(item as any).first_name, (item as any).last_name].filter(Boolean).join(' ') || " + fallback
+        key = "first_name"
+    else:
+        key = key or next((n for n in _LABEL_PREFERENCE if n in strings), None)
+        key = key or next((n for n in strings if n != status and not n.endswith("_id")
+                           and n not in ("description", "notes", "body", "content")), "id")
+        title = f"String((item as any).{key} ?? '') || {fallback}" if key != "id" else fallback
+    badge = (f"            {{(item as any).{status} ? <Badge label={{String((item as any).{status}).replace(/_/g, ' ')}} variant=\"primary\" /> : null}}"
+             if status else "")
+    parts: list[str] = []
+    skip = {key, status, "id", "created_at", "updated_at", "created_by", "first_name", "last_name"}
+    numbers = [f for f in entity.fields if f.type in (FieldType.INT, FieldType.FLOAT) and f.name not in skip
+               and not f.name.endswith(("_id", "latitude", "longitude"))]
+    money = next((f for f in numbers if any(w in f.name for w in ("price", "total", "amount", "fee", "cost"))), None)
+    if money is not None:
+        parts.append(f"(item as any).{money.name} != null ? '{_sentence(money.name)} ' + (item as any).{money.name} : null")
+    date = next((f for f in entity.fields if f.type is FieldType.DATETIME and f.name not in skip), None)
+    if date is not None:
+        parts.append(f"(item as any).{date.name} ? new Date((item as any).{date.name}).toLocaleDateString() : null")
+    if not parts:
+        other = next((f for f in entity.fields if f.type in (FieldType.STRING, FieldType.TEXT) and f.name not in skip
+                      and not f.name.endswith("_id")), None)
+        if other is not None:
+            parts.append(f"(item as any).{other.name} ? String((item as any).{other.name}) : null")
+    meta = f"[{', '.join(parts)}].filter(Boolean).join(' · ')" if parts else "''"
+    return title, meta, badge
+
+
+def _title(value: str) -> str:
+    from .admin_console import _title as title
+
+    return title(value)
+
+
+def _sentence(value: str) -> str:
+    """'total_amount' -> 'Total amount'."""
+    words = _title(value).split(" ")
+    return " ".join([words[0], *(w if w.isupper() and len(w) > 1 else w.lower() for w in words[1:])])
+
+
+def _plural_label(entity: Entity) -> str:
+    from .admin_console import _plural_label as plural
+
+    return plural(entity)
+
+
+def _placeholder(field) -> str:
+    if field.type is FieldType.DATETIME:
+        return "YYYY-MM-DD HH:MM"
+    if field.type in (FieldType.INT, FieldType.FLOAT):
+        return "0"
+    return f"Enter {_sentence(field.name).lower()}"
+
+
+def _input_props(field) -> list[str]:
+    """The keyboard and text behaviour a field needs on a phone."""
+    name = field.name.lower()
+    if field.type is FieldType.INT:
+        return ['keyboardType="number-pad"']
+    if field.type is FieldType.FLOAT:
+        return ['keyboardType="decimal-pad"']
+    if "email" in name:
+        return ['keyboardType="email-address"', 'autoCapitalize="none"', 'autoCorrect={false}']
+    if "phone" in name or name.endswith("mobile"):
+        return ['keyboardType="phone-pad"']
+    if "url" in name or "website" in name or "link" in name:
+        return ['keyboardType="url"', 'autoCapitalize="none"', 'autoCorrect={false}']
+    if field.type in (FieldType.TEXT, FieldType.RICH_TEXT):
+        return ["multiline", "numberOfLines={4}"]
+    return []
 
 
 def _collection_path(entity: Entity, ir: ApplicationIR) -> str:

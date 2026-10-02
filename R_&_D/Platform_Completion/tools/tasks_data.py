@@ -347,9 +347,11 @@ QUEUE = [
      "the app in Expo Go; one account holds it at a time. Screenshots, not video, for now."),
     ("PC-109", "Generated React Native screens read as a finished product: list cards titled by the "
      "record's name (not its ID), actions inside the card, the same care as PC-108's web pages",
-     "1 Vibe Mode live", "Both", "Not Started", "P1", "PC-063",
+     "1 Vibe Mode live", "Both", "Completed", "P1", "PC-063",
      "Seen on the emulator in PC-063: the chore tracker's list showed each chore by its UUID and a "
-     "clipped red button at the card's edge."),
+     "clipped red button at the card's edge. Done 2026-10-02: names, state badges and details on cards, delete "
+     "in the card behind a confirmation, a home screen for the user (not 'System Metrics'), human labels, "
+     "keyboards and switches in forms; 14/14 on the Android emulator."),
     # Phase 2 - Maximum features
     ("R-582", "Smarter IR synthesis: multi-pass planning and self-critique before generation",
      "2 Maximum features", "Both", "Not Started", "P1", "", "Where 'more features per prompt' is won."),
