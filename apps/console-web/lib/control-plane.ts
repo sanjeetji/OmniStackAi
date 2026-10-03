@@ -587,11 +587,13 @@ export function streamProjectBuild(
   projectId: string,
   prompt: string,
   mentionSkills: string[] = [],
+  confirmed: { scope?: Record<string, unknown>; brief?: Record<string, unknown> } = {},
 ): Promise<Response> {
   return fetch(`${controlPlaneUrl()}/projects/${encodeURIComponent(projectId)}/build/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ prompt, mention_skills: mentionSkills }),
+    // PC-127/PC-128: the scope and brief the person confirmed, when there are any.
+    body: JSON.stringify({ prompt, mention_skills: mentionSkills, ...confirmed }),
     cache: "no-store",
   });
 }
@@ -2705,6 +2707,47 @@ export function proposeScope(
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(included ? { prompt, included } : { prompt }),
+  });
+}
+
+/** PC-128: one building block of the brief - ticked when the prompt or the product needs it. */
+export type BriefFeature = {
+  id: string;
+  label: string;
+  included: boolean;
+  reason: string;
+  capability: string;
+  /** Named in the prompt: stays on. */
+  from_prompt: boolean;
+};
+
+/** PC-128: a question only this prompt raises, with an answer already chosen. */
+export type BriefQuestion = {
+  id: string;
+  question: string;
+  options: { value: string; label: string }[];
+  answer: string;
+  reason: string;
+};
+
+/** PC-128: the project brief after the prompt - every answer pre-filled. */
+export type ProjectBrief = {
+  prompt: string;
+  scope: ProjectScope;
+  features: BriefFeature[];
+  questions: BriefQuestion[];
+  name: string;
+  brand: { primary_color?: string; accent_color?: string; style?: string; font?: string; heading_font?: string };
+  region: { languages?: string[]; currency?: string; timezone?: string };
+  advanced: { backend?: string; database?: string };
+  choices?: { currencies: string[]; backends: string[]; styles: string[] };
+};
+
+export function proposeBrief(token: string, prompt: string, locale?: string, timezone?: string): Promise<ProjectBrief> {
+  return callControlPlane<ProjectBrief>("/brief", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, locale, timezone }),
   });
 }
 

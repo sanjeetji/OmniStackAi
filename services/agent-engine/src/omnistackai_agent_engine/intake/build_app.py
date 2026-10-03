@@ -327,6 +327,7 @@ def build_ecosystem_from_plan(
     context_truncated: bool = False,
     active_skills: tuple[str, ...] = (),
     truncated_skills: tuple[str, ...] = (),
+    finish=None,
 ) -> AppBuildResult:
     """Materialize a planned ecosystem as one owned Git repo (R-555).
 
@@ -344,6 +345,11 @@ def build_ecosystem_from_plan(
 
         plan = _replace(plan, apps=tuple(_replace(app, ir=with_rich_text(app.ir, prompt)) for app in plan.apps))
         plan = _with_prompt_rules_for_plan(plan, prompt)
+    if finish is not None:
+        # PC-128: what the owner's brief switched off stays off after the prompt's rules.
+        from dataclasses import replace as _finish_replace
+
+        plan = _finish_replace(plan, apps=tuple(_finish_replace(app, ir=finish(app.ir)) for app in plan.apps))
     # PC-101 for ecosystems too: every record a surface lists has a page of its own (found with
     # PC-113: a buyer's purchase had no page, so there was nowhere to pay for it).
     from dataclasses import replace as _replace_app
@@ -444,6 +450,7 @@ async def build_app_from_prompt(
     ui_outcomes: list | None = None,
     context: dict | str | None = None,
     scope: dict | None = None,
+    brief: dict | None = None,
 ) -> AppBuildResult:
     """Compile ``prompt`` into an IR via ``provider`` and materialize an owned Git repo.
 
@@ -454,9 +461,10 @@ async def build_app_from_prompt(
     # R-555: does this prompt want one app or a whole ecosystem? Decided from the prompt alone,
     # deterministically and offline — whether a build produces one app or four must not vary
     # between runs of the same sentence, and it is not a judgement for a small local model.
+    owner_brief, prompt, scope = _with_brief(prompt, brief, scope)
     intent = detect_ecosystem_intent(prompt)
     chosen = _chosen_scope(prompt, scope)
-    plan = _scoped_ecosystem_plan(prompt, intent, chosen)
+    plan = _scoped_ecosystem_plan(prompt, intent, chosen, owner_brief)
     if plan is not None:
         built = build_ecosystem_from_plan(
             plan,
@@ -467,6 +475,7 @@ async def build_app_from_prompt(
             overwrite=overwrite,
             provider=provider,
             reason=intent.reason,
+            finish=_brief_finish(owner_brief),
         )
         built = _replace_result(built, scope=chosen.to_dict())
         return built
@@ -483,7 +492,7 @@ async def build_app_from_prompt(
     )
     plan_seconds = round(time.perf_counter() - plan_started, 3)
     built = build_app_from_ir(
-        _scoped_ir(result.ir, chosen, confirmed=scope is not None),
+        _briefed_ir(_scoped_ir(result.ir, chosen, confirmed=scope is not None), owner_brief),
         target_dir,
         author_name=author_name,
         author_email=author_email,
@@ -522,7 +531,7 @@ def _chosen_scope(prompt: str, scope: dict | None):
     return propose_scope(prompt)
 
 
-def _scoped_ecosystem_plan(prompt: str, intent, chosen):
+def _scoped_ecosystem_plan(prompt: str, intent, chosen, owner_brief=None):
     """The ecosystem to build, with only the apps the scope includes; None for one product."""
     from .scope import apply_to_plan
 
@@ -531,7 +540,38 @@ def _scoped_ecosystem_plan(prompt: str, intent, chosen):
     from .ecosystem import plan_ecosystem_from_prompt  # local: `ecosystem` imports this module
 
     plan = apply_to_plan(plan_ecosystem_from_prompt(prompt, intent.option_id), chosen)
+    if owner_brief is not None:
+        plan = _replace_result(plan, apps=tuple(_replace_result(app, ir=_briefed_ir(app.ir, owner_brief, rename=False))
+                                                for app in plan.apps))
     return plan if len(plan.apps) > 1 else None
+
+
+def _with_brief(prompt: str, brief: dict | None, scope: dict | None):
+    """PC-128: the brief the owner confirmed - its answers become the plan's facts, its apps the scope."""
+    if not brief:
+        return None, prompt, scope
+    from .brief import Brief, plan_prompt
+
+    try:
+        owner_brief = Brief.from_dict({**brief, "prompt": brief.get("prompt") or prompt})
+    except (TypeError, ValueError, KeyError):
+        return None, prompt, scope
+    return owner_brief, plan_prompt(owner_brief), scope or owner_brief.scope.to_dict()
+
+
+def _briefed_ir(ir, owner_brief, *, rename: bool = True):
+    if owner_brief is None:
+        return ir
+    from .brief import apply_brief
+
+    return apply_brief(ir, owner_brief, rename=rename)
+
+
+def _brief_finish(owner_brief):
+    """Applied to each app after the prompt's rules: a building block switched off stays off."""
+    if owner_brief is None:
+        return None
+    return lambda ir: _briefed_ir(ir, owner_brief, rename=False)
 
 
 def _scoped_ir(ir, chosen, *, confirmed: bool):
@@ -555,6 +595,7 @@ async def build_app_from_prompt_stream(
     overwrite: bool = False,
     context: dict | str | None = None,
     scope: dict | None = None,
+    brief: dict | None = None,
 ) -> AsyncIterator[str | AppBuildResult]:
     """Streaming twin of `build_app_from_prompt` (R-484): yields text deltas from the IR-generation
     call as they arrive, then does the existing `build_app_from_ir`'s pure-disk work (assemble +
@@ -565,9 +606,10 @@ async def build_app_from_prompt_stream(
     # Wiring only `build_app_from_prompt` left this path on the single-app branch, which a live run
     # through the console exposed immediately: the offline tests called the function I had wired,
     # not the one the product uses.
+    owner_brief, prompt, scope = _with_brief(prompt, brief, scope)
     intent = detect_ecosystem_intent(prompt)
     chosen = _chosen_scope(prompt, scope)
-    plan = _scoped_ecosystem_plan(prompt, intent, chosen)
+    plan = _scoped_ecosystem_plan(prompt, intent, chosen, owner_brief)
     if plan is not None:
         names = ", ".join(app.ir.name for app in plan.apps)
         # The ecosystem is planned deterministically, so there is no model stream to relay.
@@ -583,6 +625,7 @@ async def build_app_from_prompt_stream(
             overwrite=overwrite,
             provider=provider,
             reason=intent.reason,
+            finish=_brief_finish(owner_brief),
         )
         built = _replace_result(built, scope=chosen.to_dict())
         yield built
@@ -606,7 +649,7 @@ async def build_app_from_prompt_stream(
     assert result is not None  # generate_ir_stream always yields exactly one IntakeResult last
     plan_seconds = round(time.perf_counter() - plan_started, 3)
     built = build_app_from_ir(
-        _scoped_ir(result.ir, chosen, confirmed=scope is not None),
+        _briefed_ir(_scoped_ir(result.ir, chosen, confirmed=scope is not None), owner_brief),
         target_dir,
         author_name=author_name,
         author_email=author_email,

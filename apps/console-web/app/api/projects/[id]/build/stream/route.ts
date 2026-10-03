@@ -5,6 +5,19 @@ import { getSessionToken } from "@/lib/session";
 interface BuildStreamRequestBody {
   prompt?: unknown;
   mention_skills?: unknown;
+  scope?: unknown;
+  brief?: unknown;
+}
+
+/** PC-127/PC-128, found live: this route forwarded only the prompt and skills, so the scope and brief
+ * the person confirmed never reached the build. Plain objects only, bounded in size. */
+function plainObject(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  try {
+    return JSON.stringify(value).length <= 32_000 ? (value as Record<string, unknown>) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function POST(
@@ -36,7 +49,10 @@ export async function POST(
   const { id } = await params;
   let upstream: Response;
   try {
-    upstream = await streamProjectBuild(token, id, body.prompt, mentionSkills);
+    upstream = await streamProjectBuild(token, id, body.prompt, mentionSkills, {
+      scope: plainObject(body.scope),
+      brief: plainObject(body.brief),
+    });
   } catch {
     return NextResponse.json({ error: "could not reach the control-plane" }, { status: 502 });
   }

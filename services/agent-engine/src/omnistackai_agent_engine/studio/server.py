@@ -1712,6 +1712,28 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/brief":
+                # PC-128: the project brief for this prompt - apps, features, questions, brand, region,
+                # stack - every answer chosen. No model call. `locale`/`timezone` come from the browser.
+                data = self._read_json_body()
+                if data is None:
+                    return
+                prompt = str(data.get("prompt", "")).strip()
+                if not prompt:
+                    self._send_json(400, {"error": "prompt is required"})
+                    return
+                from ..intake.brief import CURRENCIES, propose_brief
+
+                try:
+                    brief = propose_brief(prompt, locale=str(data.get("locale") or "")[:20],
+                                          timezone=str(data.get("timezone") or "")[:60])
+                    self._send_json(200, {**brief.to_dict(), "choices": {
+                        "currencies": list(CURRENCIES), "backends": ["python", "node", "go"],
+                        "styles": ["professional", "bold", "playful", "elegant", "minimal", "editorial", "friendly",
+                                   "calm", "vibrant"]}})
+                except Exception as error:  # noqa: BLE001 - the build still works without a brief
+                    self._send_json(502, {"error": f"could not propose a brief: {type(error).__name__}"})
+                return
             if self.path == "/api/scope":
                 # PC-127: what will be built for this prompt, each app with its reason - no model call.
                 data = self._read_json_body()

@@ -547,6 +547,8 @@ def _build(
                 ui_outcomes=(plain_ui_outcomes if hybrid_ui else None),
                 # PC-127: the scope the person confirmed (apps switched on or off) decides what is built.
                 scope=extra_options.get("scope") if isinstance(extra_options.get("scope"), dict) else None,
+                # PC-128: the brief the owner confirmed (features, answers, brand, region, stack).
+                brief=extra_options.get("brief") if isinstance(extra_options.get("brief"), dict) else None,
             )
         )
         # A provider is already mandatory on this path, so a requested hybrid_ui is always honored.
@@ -674,6 +676,8 @@ async def _build_stream(
             context=context,
             # PC-127: the scope the person confirmed (apps switched on or off) decides what is built.
             scope=extra_options.get("scope") if isinstance(extra_options.get("scope"), dict) else None,
+            # PC-128: the brief the owner confirmed (features, answers, brand, region, stack).
+            brief=extra_options.get("brief") if isinstance(extra_options.get("brief"), dict) else None,
         ):
             if workspace_store is not None and workspace_id and workspace_store.is_cancelled(workspace_id):
                 if log_mgr is not None:

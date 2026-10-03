@@ -133,6 +133,7 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("GET /projects/{id}/estimate", handleProjectEstimate(deps))
 	mux.HandleFunc("GET /estimate", handleProjectEstimate(deps))
 	mux.HandleFunc("POST /scope", handleScope(deps))
+	mux.HandleFunc("POST /brief", handleBrief(deps))
 	// PC-008: the whole app (database, API, web, admin) at a live URL.
 	mux.HandleFunc("GET /projects/{id}/live", handleProjectLive(deps, "", http.MethodGet))
 	mux.HandleFunc("POST /projects/{id}/live", handleProjectLive(deps, "", http.MethodPost))
@@ -1031,6 +1032,25 @@ func handleScope(deps Deps) http.HandlerFunc {
 			return
 		}
 		proxyUpstreamWithin(w, r, deps, http.MethodPost, deps.AgentEngineURL+"/api/scope", bytes.NewReader(body), defaultProxyTimeout)
+	}
+}
+
+// handleBrief (PC-128) answers "what do you need to know?" after the prompt: apps, features,
+// questions for what the prompt leaves open, brand, region and stack, every answer pre-filled.
+// Decided by the agent-engine without a model call, so it costs nothing.
+func handleBrief(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		body, err := io.ReadAll(io.LimitReader(r.Body, 64*1024))
+		_ = r.Body.Close()
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "could not read request body")
+			return
+		}
+		proxyUpstreamWithin(w, r, deps, http.MethodPost, deps.AgentEngineURL+"/api/brief", bytes.NewReader(body), defaultProxyTimeout)
 	}
 }
 

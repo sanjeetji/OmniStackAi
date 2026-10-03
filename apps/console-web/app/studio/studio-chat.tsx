@@ -31,13 +31,13 @@ import type {
   ChatTurn,
   Project,
   ProjectKnowledge,
-  ProjectScope,
+  ProjectBrief as ProjectBriefData,
   Skill,
 } from "@/lib/control-plane";
 import BrandMark from "@/components/brand-mark";
 import { formatServerError } from "@/components/field";
 import ProjectSwitcher from "@/components/project-switcher";
-import { ScopeProposal } from "@/components/scope-proposal";
+import { ProjectBrief } from "@/components/project-brief";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -130,8 +130,8 @@ export default function StudioChat({
   const [project, setProject] = useState<Project | null>(null);
   const [buildId, setBuildId] = useState<string | null>(urlBuildId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  // PC-127: the scope proposed for a new project's prompt, shown before anything is built.
-  const [pendingScope, setPendingScope] = useState<{ prompt: string; visible: string; scope: ProjectScope } | null>(null);
+  // PC-127/PC-128: the brief proposed for a new project's prompt, shown before anything is built.
+  const [pendingScope, setPendingScope] = useState<{ prompt: string; visible: string; brief: ProjectBriefData } | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null);
   // Bumped after every successful edit so <StudioPreview> (rendered by <StudioTabs>) re-previews
   const [previewVersion, setPreviewVersion] = useState(0);
@@ -611,17 +611,25 @@ export default function StudioChat({
       } else if (buildId !== null) {
         await sendEdit(buildId, fullPrompt);
       } else {
-        // PC-127: first say what will be built, and let it be changed. If the proposal cannot be
-        // fetched, the build goes ahead exactly as before - a proposal never blocks a build.
-        const scope = await fetch("/api/scope", {
+        // PC-127/PC-128: first the brief - what will be built, with every answer chosen - and let it
+        // be changed. If it cannot be fetched, the build goes ahead as before: a brief never blocks.
+        let locale = "";
+        let timezone = "";
+        try {
+          locale = navigator.language;
+          timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        } catch {
+          // no locale: the brief uses its own defaults
+        }
+        const brief = await fetch("/api/brief", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: fullPrompt }),
+          body: JSON.stringify({ prompt: fullPrompt, locale, timezone }),
         })
-          .then((res) => (res.ok ? (res.json() as Promise<ProjectScope>) : null))
+          .then((res) => (res.ok ? (res.json() as Promise<ProjectBriefData>) : null))
           .catch(() => null);
-        if (scope && Array.isArray(scope.apps) && scope.apps.length > 0) {
-          setPendingScope({ prompt: fullPrompt, visible: userVisibleText, scope });
+        if (brief && Array.isArray(brief.scope?.apps) && brief.scope.apps.length > 0) {
+          setPendingScope({ prompt: fullPrompt, visible: userVisibleText, brief });
         } else {
           await sendBuildStream(fullPrompt);
         }
@@ -736,14 +744,14 @@ export default function StudioChat({
     }
   };
 
-  async function buildWithScope(scope: ProjectScope) {
+  async function buildWithBrief(brief: ProjectBriefData) {
     if (!pendingScope || submitting) return;
     const text = pendingScope.prompt;
     setPendingScope(null);
-    appendMessage("assistant", scope.summary);
+    appendMessage("assistant", brief.scope.summary);
     setSubmitting(true);
     try {
-      await sendBuildStream(text, scope);
+      await sendBuildStream(text, brief);
     } finally {
       setSubmitting(false);
     }
@@ -759,7 +767,7 @@ export default function StudioChat({
   }
 
   /** Streams a new build (via project if fresh) */
-  async function sendBuildStream(text: string, scope?: ProjectScope) {
+  async function sendBuildStream(text: string, brief?: ProjectBriefData) {
     setStreamChars(0);
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -795,7 +803,11 @@ export default function StudioChat({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(scope ? { prompt: text, mention_skills: mentionList, scope } : { prompt: text, mention_skills: mentionList }),
+          body: JSON.stringify(
+            brief
+              ? { prompt: text, mention_skills: mentionList, scope: brief.scope, brief: { ...brief, choices: undefined } }
+              : { prompt: text, mention_skills: mentionList },
+          ),
           signal: controller.signal,
         },
       );
@@ -1244,11 +1256,10 @@ export default function StudioChat({
           )}
 
           {pendingScope ? (
-            <ScopeProposal
+            <ProjectBrief
               key={pendingScope.prompt}
-              prompt={pendingScope.prompt}
-              scope={pendingScope.scope}
-              onBuild={(scope) => void buildWithScope(scope)}
+              brief={pendingScope.brief}
+              onBuild={(brief) => void buildWithBrief(brief)}
               onCancel={cancelScope}
             />
           ) : null}

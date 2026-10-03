@@ -778,7 +778,9 @@ _MILESTONE_TASKS = [
      "with no setting to change; DeepSeek, Mistral and xAI join the page chain when their keys are set."),
     ("PC-128", "The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand "
      "(name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults'",
-     _M2, "Vibe", "Not Started", "P0", "PC-127", "Simple for a non-technical user, complete for a developer."),
+     _M2, "Vibe", "Completed", "P0", "PC-127", "Done 2026-10-03: intake/brief.py + the console's brief (apps, "
+     "features, prompt-specific questions, brand, region from the browser, backend); answers become plan facts; "
+     "live in the browser an edited brief built exactly what it said. Simple for a non-technical user, complete for a developer."),
     ("PC-129", "Model-designed pages by default (web, admin, phone) on a modern component kit and the "
      "product's design system; templates only when repair fails", _M3, "Both", "Not Started", "P0",
      "PC-125", ""),

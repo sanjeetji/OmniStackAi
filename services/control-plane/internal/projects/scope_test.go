@@ -50,3 +50,26 @@ func TestTheScopeIsProposedForSignedInUsers(t *testing.T) {
 		t.Errorf("anonymous: status %d, want 401", resp.StatusCode)
 	}
 }
+
+// PC-128: the brief, likewise.
+func TestTheBriefIsProposedForSignedInUsers(t *testing.T) {
+	studio := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/brief" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, _ = w.Write([]byte(`{"questions":[{"id":"signup","answer":"anyone"}]}`))
+	}))
+	defer studio.Close()
+	server, _ := creditServer(t, 100, studio.URL)
+	req, _ := http.NewRequest(http.MethodPost, server.URL+"/brief", strings.NewReader(`{"prompt":"A shop"}`))
+	req.Header.Set("Authorization", testBearer)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", resp.StatusCode)
+	}
+}

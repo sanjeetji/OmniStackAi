@@ -1,23 +1,21 @@
-task_id: PC-127
+task_id: PC-128
 status: completed
 phase: Platform Completion — M2 Scope and brief
-tracker_row: PC-127
+tracker_row: PC-128
 started_at: "2026-10-03"
 completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  The platform decides the scope from the prompt - one app, an app and its admin, a few apps or a
-  whole ecosystem, plus a phone app and a marketing website when the product needs them - and shows
-  it as an editable proposal (each app with the reason it is there) before building; the build
-  follows the edited proposal. Also (open from M1): any paid key the owner adds leads plans, chat
-  edits and pages with no setting to change; DeepSeek, Mistral and xAI join the page chain.
+  The project brief after the prompt: apps (PC-127), features ticked from the prompt and the kind of
+  product, a few questions only this prompt raises, brand, language and region, advanced stack -
+  every answer pre-filled, any of it skippable, "Use smart defaults" to build at once - and the build
+  follows it exactly.
 founder_gate: none
-companions: []
+companions: [PC-127]
 allowed_paths:
   - services/agent-engine/
   - services/control-plane/
   - apps/console-web/
-  - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -25,15 +23,14 @@ allowed_paths:
   - docs/
 forbidden_changes:
   - task verify stays offline with 0 model calls
-  - no paid provider is called unless its owner has set its key
 required_gates:
-  - Live - varied prompts get the right scope (single app, app + admin, few apps, ecosystem, phone app, marketing site), an edited proposal builds what it says
+  - Live - in the console a prompt shows its brief with prompt-specific questions and browser region defaults; the edited brief builds what it says
   - scripts/verify.sh passes
 found_and_fixed:
-  - The build result is a frozen record, so the first live build could not carry its scope; it is replaced, and a test now goes through build_app_from_prompt.
-  - ./scripts/omnistack.sh up served an existing console build after the console's code changed, so the new card never appeared; it rebuilds when any console source is newer than the build.
-  - Two-app plans (a web app and its admin) were labelled ecosystems; an ecosystem now needs two kinds of people with apps of their own.
-  - Internal tools were offered a public website; only customer-facing products are.
+  - The console's build route forwarded only the prompt and skills, so the scope (PC-127) and the brief never reached a console build; it forwards both now (PC-127's proof had gone straight to the control-plane).
+  - Generic feature sentences ("everyone sees changes live") did not trigger the live-update and notification readers, which need the record named; the sentences name the product's own record.
+  - "Track my daily habits" read as order tracking and as a request for reminders; a personal app was asked who may sign up; a clinic was reminded of its "booking" rather than its appointment.
 deferred:
-  - Domain-library limits show in the scope (restaurant ordering planned as food delivery, inventory as a store, landlords and tenants not seen as two sides) - PC-133 plans any domain with the model.
-  - The public website is the web app's public home page until PC-131 generates a separate marketing site; the card says so.
+  - A name typed for an ecosystem is passed to the planner but each app keeps its own name; one product name across the ecosystem's brand comes with PC-020 (brand kit).
+  - Logo upload and fonts beyond the style's pair are PC-020.
+  - Languages are recorded and told to the planner; translated apps are PC-055.

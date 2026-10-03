@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 465 |
+| Completed | 466 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 95 |
-| Not Started | 509 |
+| Not Started | 508 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1157** |
 
-Open work queue: **94** tasks (P0: 8, P1: 39, P2: 33, P3: 14).
+Open work queue: **93** tasks (P0: 7, P1: 39, P2: 33, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -54,7 +54,7 @@ Open work queue: **94** tasks (P0: 8, P1: 39, P2: 33, P3: 14).
 | 7 | PC-137 | Founder action: scan the preview QR with a real phone (store Expo Go, same Wi-Fi; then OMNISTACKAI_PHONE_ACCESS=anywhere on mobile data) and report what happens | Not Started | P1 | Both | PC-124 |  | Open from M1: PC-124 was proven on the Android emulator with the store's Expo Go 57; a real phone on a real network is the remaining check. Nothing else waits on it. |
 | | | **Phase M2 Scope and brief**: The platform proposes one app, an app and admin, a few apps or a whole ecosystem; a short project brief (apps, features, brand, language) with smart defaults. | | | | | | |
 | 8 | PC-127 | Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a marketing website and the phone app when the product needs them; an editable proposal | Completed | P0 | Vibe |  |  | Done 2026-10-03: intake/scope.py proposes the scope with reasons (no model call); the console's "What we'll build" card edits it; builds follow it; paid keys lead every job. Live: control-plane 10/10, browser 6/6. Public website is the web app's home page until PC-131. Also (open from M1, PC-126): any paid key the owner adds leads plans and chat edits as well as pages, with no setting to change; DeepSeek, Mistral and xAI join the page chain when their keys are set. |
-| 9 | PC-128 | The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand (name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults' | Not Started | P0 | Vibe | PC-127 |  | Simple for a non-technical user, complete for a developer. |
+| 9 | PC-128 | The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand (name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults' | Completed | P0 | Vibe | PC-127 |  | Done 2026-10-03: intake/brief.py + the console's brief (apps, features, prompt-specific questions, brand, region from the browser, backend); answers become plan facts; live in the browser an edited brief built exactly what it said. Simple for a non-technical user, complete for a developer. |
 | 10 | PC-020 | Brand kit / Style DNA UI across all surfaces | Pending | P2 | Vibe |  | ARCH-COMPONENT-BROWSER, BP-BRANDKIT | brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. Edits the per-project design direction PC-099 creates. |
 | | | **Phase M3 Wow UI**: Every page designed by the model, screenshotted, reviewed and improved; a marketing website generator; realistic demo data. | | | | | | |
 | 11 | PC-129 | Model-designed pages by default (web, admin, phone) on a modern component kit and the product's design system; templates only when repair fails | Not Started | P0 | Both | PC-125 |  |  |
@@ -968,6 +968,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-125 | Check and repair: every generated page, link and API call verified (types, build, a browser walk); failures go back to the model with the exact error; a working fallback; the build report says what is verified | Completed | 2026-10-03 | Done 2026-10-03: links checked against each app's pages (compiler-style errors to the model, then deterministic repair); background colours used as text fixed; build report lists the checks. On 8 benchmark apps: 8 dead links and 15 invisible-text classes -> 0. The answer to hallucination: never trust model output, verify it and repair it. Folds PC-116. Benchmark run 20261002-191643 (PC-122) found, after the type check passed: a link to a page that does not exist (/appointment_list 404), text the same colour as its background (contrast 1.00:1), a hydration mismatch; without a type-check cache, pages using components they never imported. |
 | PC-126 | Model routing: local Ollama, free cloud tiers and paid keys, per job (plan, design, repair), with budgets and fallbacks | Completed | 2026-10-03 | Done 2026-10-03: shared provider health (rate limit, daily quota, outage, refused key) skipped by every chain; no retry waits while another provider can answer; paid keys lead page design when set; scripts/models.sh. Live: 55 retry waits (~7 min) per benchmark run -> 0. Works with no paid key (free cloud first, local as the fallback); a paid key raises quality without code changes. |
 | PC-127 | Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a marketing website and the phone app when the product needs them; an editable proposal | Completed | 2026-10-03 | Done 2026-10-03: intake/scope.py proposes the scope with reasons (no model call); the console's "What we'll build" card edits it; builds follow it; paid keys lead every job. Live: control-plane 10/10, browser 6/6. Public website is the web app's home page until PC-131. Also (open from M1, PC-126): any paid key the owner adds leads plans and chat edits as well as pages, with no setting to change; DeepSeek, Mistral and xAI join the page chain when their keys are set. |
+| PC-128 | The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand (name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults' | Completed | 2026-10-03 | Done 2026-10-03: intake/brief.py + the console's brief (apps, features, prompt-specific questions, brand, region from the browser, backend); answers become plan facts; live in the browser an edited brief built exactly what it said. Simple for a non-technical user, complete for a developer. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
 | R-003 | Local Ollama Stage 0 bootstrap | Completed | 2026-09-06 |  |
