@@ -1,14 +1,13 @@
-task_id: PC-131
-status: completed
+task_id: PC-077
+status: in_progress
 phase: Platform Completion — M3 Wow UI
-tracker_row: PC-131
+tracker_row: PC-077
 started_at: "2026-10-03"
-completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  A marketing website generator: when the confirmed scope keeps "Public website", the build adds
-  apps/site - hero, features, how it works, questions, a call to action into the product, SEO - with
-  copy written by the model from the brief and code from the platform's own template.
+  Realistic demo data in every preview: rows for every entity in dependency order, foreign keys
+  that point at real rows, workflow states that make sense, values written by the model for the
+  domain (deterministic generated values without one), loaded after the migrations.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -21,11 +20,5 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - a prompt built in the console with the public website kept serves a branded multi-section site in the preview, its call to action into the web app
+  - Live - a prompt built in the console shows domain-realistic rows in the preview's pages
   - scripts/verify.sh passes
-found_and_fixed:
-  - The scope offered a public website that the build never made (the card said so); the site is built now.
-  - Model copy could claim testimonials, user counts or awards a new product does not have; such copy is refused and the plan's own copy is used.
-deferred:
-  - The site's copy is edited in apps/site/content/site.json (or by chat); a dedicated copy editor in the console is later.
-  - The design review scores the site's page, but its improvement step does not rewrite the site (its code is the platform's template; its words are the copy).
