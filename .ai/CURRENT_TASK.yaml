@@ -1,20 +1,21 @@
-task_id: PC-126
-status: completed
-phase: Platform Completion — M1 Quality foundation
-tracker_row: PC-126
+task_id: PC-127
+status: in_progress
+phase: Platform Completion — M2 Scope and brief
+tracker_row: PC-127
 started_at: "2026-10-03"
-completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  Model routing per job (plans, page design and repair) across local Ollama, free cloud tiers and
-  paid keys, with fallbacks that do not waste time: a provider that is out (a spent quota, a
-  limit, an outage) is skipped by every job until it is back, limits are waited out only on the
-  last provider left, a paid key raises page quality the moment it is added, and the routing is
-  visible.
+  The platform decides the scope from the prompt - one app, an app and its admin, a few apps or a
+  whole ecosystem, plus a phone app and a marketing website when the product needs them - and shows
+  it as an editable proposal (each app with the reason it is there) before building; the build
+  follows the edited proposal. Also (open from M1): any paid key the owner adds leads plans, chat
+  edits and pages with no setting to change; DeepSeek, Mistral and xAI join the page chain.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
+  - services/control-plane/
+  - apps/console-web/
   - scripts/
   - .ai/
   - R_&_D/Platform_Completion/
@@ -25,14 +26,5 @@ forbidden_changes:
   - task verify stays offline with 0 model calls
   - no paid provider is called unless its owner has set its key
 required_gates:
-  - Live - a benchmark run on spent free tiers moves past spent providers without retry waits
+  - Live - varied prompts get the right scope (single app, app + admin, few apps, ecosystem, phone app, marketing site), an edited proposal builds what it says
   - scripts/verify.sh passes
-found_and_fixed:
-  - Each chain remembered a spent provider only for its own run (page design) or not at all (builds), so every page and build asked spent free tiers again; health is now shared and persisted.
-  - Page design waited out a spent provider's per-minute limit (20 + 40 + 60 s) while another provider could answer; it waits only on the last provider left.
-  - Chained cloud clients retried 429s themselves (about 30 s each) before the chain could move on; chained entries do not retry.
-  - Groq's 413 (tokens-per-minute limit) was not treated as a limit.
-  - The page-chain log said "Ollama answering - False" when Ollama simply had not been probed.
-  - The Anthropic default model was out of date (claude-sonnet-5 -> claude-sonnet-5-5).
-deferred:
-  - Per-task credit budgets exist (PC-010); a per-job cost cap for paid keys is for the credentials step (PC-070).
