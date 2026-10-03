@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-129 (2026-10-03): phone screens designed too.** Every page, web, admin and phone, is model-designed by default, checked or put back.
 > **PC-020 (2026-10-03): the brand kit.** Name, logo, colours, fonts, corners and style changed in one place; every app follows live.
 > **PC-128 (2026-10-03): the project brief.** A few prompt-specific questions after the prompt, every answer pre-filled; features, brand, region and stack; the build follows it.
 > **PC-127 (2026-10-03): the platform decides the scope, the person confirms it.** One app to a full ecosystem, each app with its reason, editable before the build; any paid key now leads every job.

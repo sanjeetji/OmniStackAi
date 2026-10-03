@@ -33,7 +33,9 @@ logger = logging.getLogger(__name__)
 
 DESIGN_ENV = "OMNISTACKAI_PAGE_DESIGN"
 MAX_PAGES_ENV = "OMNISTACKAI_PAGE_DESIGN_MAX_PAGES"
-DEFAULT_MAX_PAGES = 8
+#: PC-129: every page by default (home pages first); the time budget still bounds a run, and an
+#: operator can lower it. It was 8, so most of a larger product kept its templates.
+DEFAULT_MAX_PAGES = 40
 #: Compile passes after the first: every one but the last asks the model to fix the errors.
 DESIGN_REPAIR_ROUNDS = 3
 TIME_BUDGET_ENV = "OMNISTACKAI_PAGE_DESIGN_BUDGET_SECONDS"
@@ -332,9 +334,12 @@ async def design_pages(
 
     root = Path(repo_dir)
     targets = plan_pages(root, ir, only=only, limit=limit, apps=apps)
-    yield {"phase": "planned", "pages": [t.path for t in targets]}
+    from .mobile_design import plan_screens
+
+    phones = plan_screens(root, [p for p in (only or []) if "/src/" in p] if only else None) if limit != 0 else []
+    yield {"phase": "planned", "pages": [t.path for t in targets] + [s.full for s in phones]}
     results: dict[str, dict] = {}
-    if not targets:
+    if not targets and not phones:
         yield {"phase": "summary", "designed": 0, "kept_template": 0, "pages": results}
         return
 
@@ -440,6 +445,20 @@ async def design_pages(
                                  "reason": "it stopped compiling when the app's other pages were checked"}
                 yield {"phase": "page", "path": path, **results[path]}
         yield {"phase": "checked", "app": app, "compiles": ok}
+
+    # PC-129: then the phone app's screens, with the same promise - checked, or put back.
+    if not limit_reached and time.monotonic() <= deadline and not cancelled():
+        from .mobile_design import design_phone_screens
+
+        phone_only = [p for p in (only or []) if "/src/" in p] if only else None
+        if phones:
+            async for event in design_phone_screens(root, prompt, provider, model_id=model_id, only=phone_only,
+                                                    timeout_seconds=timeout_seconds, cancelled=cancelled):
+                if event.get("phase") == "page":
+                    results[event["path"]] = {k: v for k, v in event.items() if k in ("status", "reason")}
+                    if event.get("status") == "designed":
+                        changed = True
+                yield event
 
     designed = sum(1 for r in results.values() if r["status"] == "designed")
     # PC-014, found live: every page was put back, yet the dependency install's lockfile was

@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 467 |
+| Completed | 468 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 94 |
-| Not Started | 508 |
+| Not Started | 507 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1157** |
 
-Open work queue: **92** tasks (P0: 7, P1: 39, P2: 32, P3: 14).
+Open work queue: **91** tasks (P0: 6, P1: 39, P2: 32, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -57,7 +57,7 @@ Open work queue: **92** tasks (P0: 7, P1: 39, P2: 32, P3: 14).
 | 9 | PC-128 | The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand (name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults' | Completed | P0 | Vibe | PC-127 |  | Done 2026-10-03: intake/brief.py + the console's brief (apps, features, prompt-specific questions, brand, region from the browser, backend); answers become plan facts; live in the browser an edited brief built exactly what it said. Simple for a non-technical user, complete for a developer. |
 | 10 | PC-020 | Brand kit / Style DNA UI across all surfaces | Completed | P2 | Vibe |  | ARCH-COMPONENT-BROWSER, BP-BRANDKIT | Done 2026-10-03: Studio Brand dialog (name, logo, colours, fonts, corners, style) -> brand.json, logo in every app, headers read brand.json, commit; live preview followed without a rebuild. brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. Edits the per-project design direction PC-099 creates. |
 | | | **Phase M3 Wow UI**: Every page designed by the model, screenshotted, reviewed and improved; a marketing website generator; realistic demo data. | | | | | | |
-| 11 | PC-129 | Model-designed pages by default (web, admin, phone) on a modern component kit and the product's design system; templates only when repair fails | Not Started | P0 | Both | PC-125 |  |  |
+| 11 | PC-129 | Model-designed pages by default (web, admin, phone) on a modern component kit and the product's design system; templates only when repair fails | Completed | P0 | Both | PC-125 |  | Done 2026-10-03: phone screens model-designed (grounded in their templates, type-checked, repaired or put back); every page by default. Live: 5/5 phone screens designed and type-checked, running in Expo Go with real data. |
 | 12 | PC-130 | Design review: each page screenshotted on phone and desktop, critiqued and scored, and improved until it passes | Not Started | P0 | Both | PC-129 |  | Also (open from M1): a looks score from the screenshots in the benchmark (PC-122 shows them for a person to judge); forms filled in and saved end to end in the browser walk, not only list endpoints called; the hydration mismatch PC-125 found (server and client render differently) fed back to the model. |
 | 13 | PC-050 | Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, command menu, drawer, toasts, tables, forms, maps, uploads) | Completed | P0 | Vibe |  | ARCH-ALLOWLIST | framer-motion, recharts, tiptap, cmdk, vaul, sonner, tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, repaired like today's allowlist. From the architecture plan. Done 2026-09-29: framer-motion, recharts, @tanstack/react-table, react-hook-form + zod, date-fns, sonner, cmdk, vaul pinned for React 18 in every generated web and admin app, allowed and explained to the page writer; the type-check cache rebuilds when they change. Deferred: tiptap (rich text), maplibre (maps) and uppy (uploads) - heavy, and each needs a backend or tiles; add with the feature that uses them. |
 | 14 | PC-131 | Marketing website generator: a multi-section site with copy and SEO from the brief | Not Started | P1 | Vibe | PC-128 |  |  |
@@ -970,6 +970,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-126 | Model routing: local Ollama, free cloud tiers and paid keys, per job (plan, design, repair), with budgets and fallbacks | Completed | 2026-10-03 | Done 2026-10-03: shared provider health (rate limit, daily quota, outage, refused key) skipped by every chain; no retry waits while another provider can answer; paid keys lead page design when set; scripts/models.sh. Live: 55 retry waits (~7 min) per benchmark run -> 0. Works with no paid key (free cloud first, local as the fallback); a paid key raises quality without code changes. |
 | PC-127 | Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a marketing website and the phone app when the product needs them; an editable proposal | Completed | 2026-10-03 | Done 2026-10-03: intake/scope.py proposes the scope with reasons (no model call); the console's "What we'll build" card edits it; builds follow it; paid keys lead every job. Live: control-plane 10/10, browser 6/6. Public website is the web app's home page until PC-131. Also (open from M1, PC-126): any paid key the owner adds leads plans and chat edits as well as pages, with no setting to change; DeepSeek, Mistral and xAI join the page chain when their keys are set. |
 | PC-128 | The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand (name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults' | Completed | 2026-10-03 | Done 2026-10-03: intake/brief.py + the console's brief (apps, features, prompt-specific questions, brand, region from the browser, backend); answers become plan facts; live in the browser an edited brief built exactly what it said. Simple for a non-technical user, complete for a developer. |
+| PC-129 | Model-designed pages by default (web, admin, phone) on a modern component kit and the product's design system; templates only when repair fails | Completed | 2026-10-03 | Done 2026-10-03: phone screens model-designed (grounded in their templates, type-checked, repaired or put back); every page by default. Live: 5/5 phone screens designed and type-checked, running in Expo Go with real data. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
 | R-003 | Local Ollama Stage 0 bootstrap | Completed | 2026-09-06 |  |

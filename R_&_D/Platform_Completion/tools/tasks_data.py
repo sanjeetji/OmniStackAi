@@ -783,8 +783,10 @@ _MILESTONE_TASKS = [
      "features, prompt-specific questions, brand, region from the browser, backend); answers become plan facts; "
      "live in the browser an edited brief built exactly what it said. Simple for a non-technical user, complete for a developer."),
     ("PC-129", "Model-designed pages by default (web, admin, phone) on a modern component kit and the "
-     "product's design system; templates only when repair fails", _M3, "Both", "Not Started", "P0",
-     "PC-125", ""),
+     "product's design system; templates only when repair fails", _M3, "Both", "Completed", "P0",
+     "PC-125", "Done 2026-10-03: phone screens model-designed (grounded in their templates, type-checked, repaired "
+     "or put back); every page by default. Live: 5/5 phone screens designed and type-checked, running in Expo Go "
+     "with real data."),
     ("PC-130", "Design review: each page screenshotted on phone and desktop, critiqued and scored, and "
      "improved until it passes", _M3, "Both", "Not Started", "P0", "PC-129",
      "Also (open from M1): a looks score from the screenshots in the benchmark (PC-122 shows them for a "

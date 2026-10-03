@@ -1,19 +1,17 @@
-task_id: PC-020
+task_id: PC-129
 status: completed
-phase: Platform Completion — M2 Scope and brief
-tracker_row: PC-020
+phase: Platform Completion — M3 Wow UI
+tracker_row: PC-129
 started_at: "2026-10-03"
 completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  The brand kit: one place in the Studio to change a built product's name, logo, colours, fonts,
-  corners and style, and every app (web, admin, phone) follows without a rebuild.
+  Model-designed pages by default on every surface - web, admin and the phone app - on the product's
+  design system, every page checked, repaired or put back to its template.
 founder_gate: none
 companions: []
 allowed_paths:
   - services/agent-engine/
-  - services/control-plane/
-  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -22,12 +20,12 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - in the console, a built project's brand is changed (name, logo, colour, corners) and the running preview shows it
+  - Live - a generated phone app's screens are designed by a real model, type-check, and run in Expo Go with real data
   - scripts/verify.sh passes
 found_and_fixed:
-  - The product name was written into each app's header when generated, so a rename did not reach it; generated headers now read the name and logo from brand.json, and older projects are renamed in their pages.
-  - A logo had nowhere to go; it reaches every web app's header and tab icon and the phone app's icons.
-  - Page design holds a project for minutes after a build, so the first save was refused as busy; the console keeps the change and saves it when the project is free.
-  - lib/brand.ts referenced process without Node's types; it declares what it uses.
+  - The phone app's screens were never designed - templates only; they are now designed after the web pages, grounded in their own templates, type-checked with the shared mobile cache, repaired once, or put back.
+  - Page design stopped at 8 pages, so most of a larger product kept its templates; every page is designed by default within the run's time budget.
+  - The first live run refused two good screens for using the design system's own components (Badge, Input); the kit is allowed.
 deferred:
-  - The phone app's in-app header still shows the generated name until its next regeneration; its app name (home screen) follows brand.json already.
+  - On the designed Orders screen the status badge overlaps the delete icon - layout overlap is caught by the screenshot design review (PC-130).
+  - Phone detail and form screens keep their templates (the lists and the home screen are designed first); forms with validation are PC-059.
