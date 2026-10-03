@@ -478,7 +478,8 @@ async def build_app_from_prompt(
             finish=_brief_finish(owner_brief),
         )
         built = _replace_result(built, scope=chosen.to_dict())
-        return built
+        return await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+                           confirmed=scope is not None)
 
     plan_started = time.perf_counter()
     result = await generate_ir(
@@ -508,7 +509,40 @@ async def build_app_from_prompt(
     )
     built.timings["plan"] = plan_seconds
     built = _replace_result(built, scope=chosen.to_dict())
-    return built
+    return await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+                           confirmed=scope is not None)
+
+
+async def _with_site(built: AppBuildResult, chosen, prompt: str, provider, model_id, owner_brief, author_name: str,
+                     author_email: str, *, confirmed: bool) -> AppBuildResult:
+    """PC-131: the public website, when the confirmed scope keeps it - copy by the model, code by the platform.
+
+    Only a scope the person confirmed (the console's brief) adds it, as with every other scope choice;
+    a build without one keeps the apps it always had."""
+    from .scope import SITE
+
+    if not confirmed or not chosen.included(SITE):
+        return built
+    from ..codegen.marketing_site import site_files, write_copy
+    from ..git_service import RepositoryError, commit_all
+
+    features = [f.label for f in owner_brief.features if f.included] if owner_brief is not None else []
+    started = time.perf_counter()
+    copy, writer = await write_copy(built.ir, prompt.split("\n\nProject brief")[0], features, provider, model_id)
+    root = Path(built.target_dir)
+    for generated in site_files(built.ir, copy):
+        path = root / generated.path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(generated.content, encoding="utf-8")
+    try:
+        commit = commit_all(str(root), author_name=author_name, author_email=author_email,
+                            message="feat(site): the public website")
+        sha = commit.commit_sha
+    except RepositoryError:
+        sha = built.commit_sha
+    timings = {**built.timings, "site": round(time.perf_counter() - started, 3)}
+    scope = {**built.scope, "site": {"app": "apps/site", "copy_by": writer}}
+    return _replace_result(built, commit_sha=sha, timings=timings, scope=scope)
 
 
 def _replace_result(result: AppBuildResult, **changes) -> AppBuildResult:
@@ -628,7 +662,8 @@ async def build_app_from_prompt_stream(
             finish=_brief_finish(owner_brief),
         )
         built = _replace_result(built, scope=chosen.to_dict())
-        yield built
+        yield await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+                           confirmed=scope is not None)
         return
 
     result: IntakeResult | None = None
@@ -667,4 +702,5 @@ async def build_app_from_prompt_stream(
     )
     built.timings["plan"] = plan_seconds
     built = _replace_result(built, scope=chosen.to_dict())
-    yield built
+    yield await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+                           confirmed=scope is not None)

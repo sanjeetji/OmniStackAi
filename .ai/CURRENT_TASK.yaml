@@ -1,20 +1,18 @@
-task_id: PC-130
+task_id: PC-131
 status: completed
 phase: Platform Completion — M3 Wow UI
-tracker_row: PC-130
+tracker_row: PC-131
 started_at: "2026-10-03"
 completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  The design review: every page screenshotted on phone and desktop after page design, scored by a
-  model that can see, and the pages below the bar designed again from their review - kept only when
-  they score higher. A "looks" score in the benchmark.
+  A marketing website generator: when the confirmed scope keeps "Public website", the build adds
+  apps/site - hero, features, how it works, questions, a call to action into the product, SEO - with
+  copy written by the model from the brief and code from the platform's own template.
 founder_gate: none
-companions: [PC-050]
+companions: []
 allowed_paths:
   - services/agent-engine/
-  - services/control-plane/
-  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -23,16 +21,11 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - after page design in the console the pages are screenshotted, scored by a vision model, the low ones redesigned and kept only if they score higher
+  - Live - a prompt built in the console with the public website kept serves a branded multi-section site in the preview, its call to action into the web app
   - scripts/verify.sh passes
 found_and_fixed:
-  - The model gateway could not send an image; messages carry screenshots now, in each provider's own form (OpenAI-compatible, Anthropic, Gemini).
-  - The preview's UI check ran before page design, so its screenshots showed templates; the review screenshots the pages again first.
-  - Gemini's free daily quota was spent mid-day and no other vision model was configured; OpenRouter's free vision models follow it.
-  - Free vision tiers refuse per minute; a refused review is retried once after a pause.
-  - A redesign from its review did not always score higher (live, 5 -> 5, 5 -> 4); it is now re-screenshotted, re-scored and kept only if higher, else the previous page is restored.
-  - A model plan with an empty validation rule failed a whole build (found starting this proof); blank rules are dropped.
+  - The scope offered a public website that the build never made (the card said so); the site is built now.
+  - Model copy could claim testimonials, user counts or awards a new product does not have; such copy is refused and the plan's own copy is used.
 deferred:
-  - Phone screens are not screenshotted by the browser check; their review needs the emulator (later).
-  - Admin pages that are not plan screens (manage/*) are scored but not redesigned by the page writer.
-  - With free models, scores move little (5.0 -> 5.4 over a round); a paid key is the lever for 7+.
+  - The site's copy is edited in apps/site/content/site.json (or by chat); a dedicated copy editor in the console is later.
+  - The design review scores the site's page, but its improvement step does not rewrite the site (its code is the platform's template; its words are the copy).

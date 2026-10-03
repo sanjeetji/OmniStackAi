@@ -109,8 +109,7 @@ def _site(prompt: str, customer_app: bool = False) -> ScopeApp:
         reason = "the product has customers to win, and a public website is how they find it"
     else:
         reason = "a personal or internal tool needs no public website; switch it on to introduce it to others"
-    # Honest about today (PC-131 builds the separate site): until then the web app's home page is public.
-    reason += "; for now your web app's public home page, with a separate marketing site to come"
+    # PC-131: a separate marketing site (hero, features, how it works, questions, SEO) is built.
     return ScopeApp(SITE, "Public website", SITE, "public", asked or customers, reason)
 
 

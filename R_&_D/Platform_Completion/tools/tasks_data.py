@@ -798,7 +798,9 @@ _MILESTONE_TASKS = [
      "called; the hydration mismatch PC-125 found (server and client render differently) fed back to the "
      "model."),
     ("PC-131", "Marketing website generator: a multi-section site with copy and SEO from the brief",
-     _M3, "Vibe", "Not Started", "P1", "PC-128", ""),
+     _M3, "Vibe", "Completed", "P1", "PC-128", "Done 2026-10-03: apps/site from the confirmed scope - checked model "
+     "copy (no invented claims) on the platform's template, SEO, brand.json; live: a bakery site with 5 features and a "
+     "CTA into the web app."),
     ("PC-133", "Model-planned products for any domain: apps, people, data and flows planned by the model, "
      "the domain library as hints; validated and reviewed (R-582)", _M4, "Both", "Not Started", "P0", "",
      "Founder: there are lakhs of domains; a fixed library cannot be the limit. Open from M1 (PC-122): the "

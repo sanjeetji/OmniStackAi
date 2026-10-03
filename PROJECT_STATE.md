@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-131 (2026-10-03): a real public website.** Multi-section, SEO-ready, model-written copy on the platform's template, honest claims only.
 > **PC-130 (2026-10-03): pages are looked at.** Screenshots scored by a vision model; low pages redesigned and kept only if better; a Looks score in the benchmark.
 > **PC-129 (2026-10-03): phone screens designed too.** Every page, web, admin and phone, is model-designed by default, checked or put back.
 > **PC-020 (2026-10-03): the brand kit.** Name, logo, colours, fonts, corners and style changed in one place; every app follows live.

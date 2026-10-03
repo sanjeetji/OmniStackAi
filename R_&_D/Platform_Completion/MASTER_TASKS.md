@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 469 |
+| Completed | 470 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
 | Pending | 94 |
-| Not Started | 506 |
+| Not Started | 505 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1157** |
 
-Open work queue: **90** tasks (P0: 5, P1: 39, P2: 32, P3: 14).
+Open work queue: **89** tasks (P0: 5, P1: 38, P2: 32, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -60,7 +60,7 @@ Open work queue: **90** tasks (P0: 5, P1: 39, P2: 32, P3: 14).
 | 11 | PC-129 | Model-designed pages by default (web, admin, phone) on a modern component kit and the product's design system; templates only when repair fails | Completed | P0 | Both | PC-125 |  | Done 2026-10-03: phone screens model-designed (grounded in their templates, type-checked, repaired or put back); every page by default. Live: 5/5 phone screens designed and type-checked, running in Expo Go with real data. |
 | 12 | PC-130 | Design review: each page screenshotted on phone and desktop, critiqued and scored, and improved until it passes | Completed | P0 | Both | PC-129 |  | Done 2026-10-03: fresh screenshots, vision-model score and fixes per page, low pages redesigned and kept only if they score higher, Looks in the benchmark; live mean 5.0-5.4 on free models. Phone-screen review and forms end to end remain. Also (open from M1): a looks score from the screenshots in the benchmark (PC-122 shows them for a person to judge); forms filled in and saved end to end in the browser walk, not only list endpoints called; the hydration mismatch PC-125 found (server and client render differently) fed back to the model. |
 | 13 | PC-050 | Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, command menu, drawer, toasts, tables, forms, maps, uploads) | Completed | P0 | Vibe |  | ARCH-ALLOWLIST | framer-motion, recharts, tiptap, cmdk, vaul, sonner, tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, repaired like today's allowlist. From the architecture plan. Done 2026-09-29: framer-motion, recharts, @tanstack/react-table, react-hook-form + zod, date-fns, sonner, cmdk, vaul pinned for React 18 in every generated web and admin app, allowed and explained to the page writer; the type-check cache rebuilds when they change. Deferred: tiptap (rich text), maplibre (maps) and uppy (uploads) - heavy, and each needs a backend or tiles; add with the feature that uses them. Closed 2026-10-03: maplibre-gl arrived with PC-100, uploads (Uppy) with PC-102 and rich text (tiptap) with PC-104. |
-| 14 | PC-131 | Marketing website generator: a multi-section site with copy and SEO from the brief | Not Started | P1 | Vibe | PC-128 |  |  |
+| 14 | PC-131 | Marketing website generator: a multi-section site with copy and SEO from the brief | Completed | P1 | Vibe | PC-128 |  | Done 2026-10-03: apps/site from the confirmed scope - checked model copy (no invented claims) on the platform's template, SEO, brand.json; live: a bakery site with 5 features and a CTA into the web app. |
 | 15 | PC-077 | Rich seed data generator: realistic, domain-aware, deterministic demo data | Pending | P2 | Both | PC-017 | SPEC-PACK-06E | Fixture seeds exist (R-248) and must stay deterministic (R-586). From specs/pack-framework/06e. |
 | | | **Phase M4 Any domain**: The model plans apps, people, data and flows for any domain; the domain library is hints, not a limit. | | | | | | |
 | 16 | PC-133 | Model-planned products for any domain: apps, people, data and flows planned by the model, the domain library as hints; validated and reviewed (R-582) | Not Started | P0 | Both |  |  | Founder: there are lakhs of domains; a fixed library cannot be the limit. Open from M1 (PC-122): the benchmark's clinic was planned from the booking library as Booking + Service, with no doctors, appointments or reminders, and the model was never asked - the clinic case must pass. |
@@ -972,6 +972,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-128 | The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand (name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults' | Completed | 2026-10-03 | Done 2026-10-03: intake/brief.py + the console's brief (apps, features, prompt-specific questions, brand, region from the browser, backend); answers become plan facts; live in the browser an edited brief built exactly what it said. Simple for a non-technical user, complete for a developer. |
 | PC-129 | Model-designed pages by default (web, admin, phone) on a modern component kit and the product's design system; templates only when repair fails | Completed | 2026-10-03 | Done 2026-10-03: phone screens model-designed (grounded in their templates, type-checked, repaired or put back); every page by default. Live: 5/5 phone screens designed and type-checked, running in Expo Go with real data. |
 | PC-130 | Design review: each page screenshotted on phone and desktop, critiqued and scored, and improved until it passes | Completed | 2026-10-03 | Done 2026-10-03: fresh screenshots, vision-model score and fixes per page, low pages redesigned and kept only if they score higher, Looks in the benchmark; live mean 5.0-5.4 on free models. Phone-screen review and forms end to end remain. Also (open from M1): a looks score from the screenshots in the benchmark (PC-122 shows them for a person to judge); forms filled in and saved end to end in the browser walk, not only list endpoints called; the hydration mismatch PC-125 found (server and client render differently) fed back to the model. |
+| PC-131 | Marketing website generator: a multi-section site with copy and SEO from the brief | Completed | 2026-10-03 | Done 2026-10-03: apps/site from the confirmed scope - checked model copy (no invented claims) on the platform's template, SEO, brand.json; live: a bakery site with 5 features and a CTA into the web app. |
 | R-001 | Platform monorepo bootstrap | Completed | 2026-09-06 |  |
 | R-002 | PostgreSQL + pgvector local bootstrap | Completed | 2026-09-06 |  |
 | R-003 | Local Ollama Stage 0 bootstrap | Completed | 2026-09-06 |  |
