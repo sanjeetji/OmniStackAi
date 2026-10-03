@@ -5,6 +5,7 @@ import { ArrowUpRight, Download, ExternalLink, Globe } from "lucide-react";
 import type { BuildJobUsage, ProjectGitStatus } from "@/lib/control-plane";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProjectBrand } from "@/components/project-brand";
 import { PublishDialog } from "@/components/publish-dialog";
 import type { StudioMode } from "./studio-mode";
 
@@ -150,6 +151,7 @@ export function StudioWorkspace({
                 <Globe className="size-3.5" />
                 Publish
               </Button>
+              <ProjectBrand projectId={projectId} />
               <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                 <a href={`/api/projects/${encodeURIComponent(projectId)}/export`} download>
                   <Download className="size-3.5" />
@@ -307,6 +309,7 @@ export function StudioWorkspace({
               <Globe className="size-3.5" />
               Publish
             </Button>
+            <ProjectBrand projectId={projectId} />
             {engineering ? (
               <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                 <a href={`/api/projects/${encodeURIComponent(projectId)}/export`} download>

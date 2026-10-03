@@ -186,9 +186,9 @@ def _make_handler(
             except Exception as error:  # surface any control failure as a clean 502
                 self._send_json(502, {"error": str(error)})
 
-        def _read_json_body(self) -> dict | None:
+        def _read_json_body(self, max_bytes: int = _MAX_BODY_BYTES) -> dict | None:
             length = int(self.headers.get("Content-Length", 0) or 0)
-            if length > _MAX_BODY_BYTES:
+            if length > max_bytes:
                 self._send_json(413, {"error": "request body too large"})
                 return None
             raw = self.rfile.read(length) if length else b""
@@ -267,6 +267,47 @@ def _make_handler(
                 self._send_json(404, {"error": f"workspace {ws_id} not found"})
                 return
             self._send_json(200, state)
+
+        def _handle_workspace_brand(self, ws_id: str, write: bool) -> None:
+            """PC-020: read or change the project's brand (name, colours, fonts, corners, style, logo)."""
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            from .brand_kit import BrandError, brand_tokens_for, read_brand, update_brand
+
+            repo = workspace_store.repo_path(ws_id)
+            if not write:
+                try:
+                    self._send_json(200, read_brand(repo))
+                except BrandError as error:
+                    self._send_json(404, {"error": str(error)})
+                return
+            data = self._read_json_body(max_bytes=1024 * 1024)  # a logo, base64-encoded
+            if data is None:
+                return
+            try:
+                with workspace_store.lock(ws_id):
+                    result = update_brand(repo, data)
+                    ir = workspace_store.load_ir(ws_id)
+                    if ir is not None:
+                        from dataclasses import replace as _replace
+
+                        brand = result["brand"]
+                        workspace_store.save_ir(ws_id, _replace(ir, name=brand["name"] or ir.name,
+                                                                brand=brand_tokens_for(brand, ir.brand)))
+                    state = workspace_store.get_state(ws_id) or {}
+                    if result.get("commit_sha"):
+                        state["commit_sha"] = result["commit_sha"]
+                    if "name" in result["changed"]:
+                        state["name"] = result["brand"]["name"]
+                    workspace_store.save_state(ws_id, state)
+                self._send_json(200, result)
+            except BrandError as error:
+                self._send_json(400, {"error": str(error)})
+            except WorkspaceLockedError:
+                self._send_json(409, {"error": "This project is busy with another change; try again when it finishes."})
+            except Exception as error:  # noqa: BLE001
+                self._send_json(502, {"error": f"could not change the brand: {type(error).__name__}"})
 
         def _handle_workspace_file_tree(self, ws_id: str) -> None:
             if workspace_store is None:
@@ -1518,6 +1559,10 @@ def _make_handler(
                     self._handle_workspace_publish_readiness(ws_publish_id)
                     return
                 # --- existing workspace GET routes ---
+                ws_brand_get_id = self._workspace_id_for_suffix(path_only, "/brand")
+                if ws_brand_get_id is not None:
+                    self._handle_workspace_brand(ws_brand_get_id, write=False)
+                    return
                 ws_files_id = self._workspace_id_for_suffix(path_only, "/files")
                 if ws_files_id is not None:
                     self._handle_workspace_file_tree(ws_files_id)
@@ -1961,6 +2006,10 @@ def _make_handler(
                 self._handle_workspace_connector_remove(ws_conn_remove_id)
                 return
             # --- existing workspace POST routes ---
+            ws_brand_id = self._workspace_id_for_suffix(path_only, "/brand")
+            if ws_brand_id is not None:
+                self._handle_workspace_brand(ws_brand_id, write=True)
+                return
             ws_cancel_id = self._workspace_id_for_suffix(path_only, "/cancel")
             if ws_cancel_id is not None:
                 self._handle_workspace_cancel(ws_cancel_id)

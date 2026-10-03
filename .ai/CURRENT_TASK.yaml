@@ -1,17 +1,15 @@
-task_id: PC-128
+task_id: PC-020
 status: completed
 phase: Platform Completion — M2 Scope and brief
-tracker_row: PC-128
+tracker_row: PC-020
 started_at: "2026-10-03"
 completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  The project brief after the prompt: apps (PC-127), features ticked from the prompt and the kind of
-  product, a few questions only this prompt raises, brand, language and region, advanced stack -
-  every answer pre-filled, any of it skippable, "Use smart defaults" to build at once - and the build
-  follows it exactly.
+  The brand kit: one place in the Studio to change a built product's name, logo, colours, fonts,
+  corners and style, and every app (web, admin, phone) follows without a rebuild.
 founder_gate: none
-companions: [PC-127]
+companions: []
 allowed_paths:
   - services/agent-engine/
   - services/control-plane/
@@ -24,13 +22,12 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - in the console a prompt shows its brief with prompt-specific questions and browser region defaults; the edited brief builds what it says
+  - Live - in the console, a built project's brand is changed (name, logo, colour, corners) and the running preview shows it
   - scripts/verify.sh passes
 found_and_fixed:
-  - The console's build route forwarded only the prompt and skills, so the scope (PC-127) and the brief never reached a console build; it forwards both now (PC-127's proof had gone straight to the control-plane).
-  - Generic feature sentences ("everyone sees changes live") did not trigger the live-update and notification readers, which need the record named; the sentences name the product's own record.
-  - "Track my daily habits" read as order tracking and as a request for reminders; a personal app was asked who may sign up; a clinic was reminded of its "booking" rather than its appointment.
+  - The product name was written into each app's header when generated, so a rename did not reach it; generated headers now read the name and logo from brand.json, and older projects are renamed in their pages.
+  - A logo had nowhere to go; it reaches every web app's header and tab icon and the phone app's icons.
+  - Page design holds a project for minutes after a build, so the first save was refused as busy; the console keeps the change and saves it when the project is free.
+  - lib/brand.ts referenced process without Node's types; it declares what it uses.
 deferred:
-  - A name typed for an ecosystem is passed to the planner but each app keeps its own name; one product name across the ecosystem's brand comes with PC-020 (brand kit).
-  - Logo upload and fonts beyond the style's pair are PC-020.
-  - Languages are recorded and told to the planner; translated apps are PC-055.
+  - The phone app's in-app header still shows the generated name until its next regeneration; its app name (home screen) follows brand.json already.

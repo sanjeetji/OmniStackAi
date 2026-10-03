@@ -125,6 +125,8 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /projects/{id}/edit", handleProjectEdit(deps))
 	mux.HandleFunc("GET /projects/{id}/turns", handleProjectTurns(deps))
 	mux.HandleFunc("GET /projects/{id}/files", handleProjectFiles(deps))
+	mux.HandleFunc("GET /projects/{id}/brand", handleProjectBrand(deps))
+	mux.HandleFunc("POST /projects/{id}/brand", handleProjectBrand(deps))
 	mux.HandleFunc("GET /projects/{id}/file", handleProjectFile(deps))
 	mux.HandleFunc("GET /projects/{id}/preview", handleProjectPreviewGet(deps))
 	mux.HandleFunc("POST /projects/{id}/preview", handleProjectPreview(deps))
@@ -929,6 +931,70 @@ func handleProjectTurns(deps Deps) http.HandlerFunc {
 			return
 		}
 		proxyGet(w, r, deps, deps.AgentEngineURL+"/api/workspaces/"+url.PathEscape(id)+"/turns")
+	}
+}
+
+// handleProjectBrand (PC-020) reads or changes a project's brand - name, colours, fonts, corners,
+// style, logo - which every app derives from. A rename also renames the project in the console.
+func handleProjectBrand(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/brand"
+		if r.Method == http.MethodGet {
+			proxyGet(w, r, deps, target)
+			return
+		}
+		body, err := io.ReadAll(io.LimitReader(r.Body, 1024*1024+1))
+		_ = r.Body.Close()
+		if err != nil || len(body) > 1024*1024 {
+			writeError(w, http.StatusRequestEntityTooLarge, "the brand change is too large (a logo may be at most 512 KB)")
+			return
+		}
+		ctx, cancel := upstreamContext(r.Context(), 2*time.Minute)
+		defer cancel()
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(body))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "could not build the brand request")
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := deps.httpClient().Do(req)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "could not reach the build service")
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+		out, _ := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
+		if resp.StatusCode == http.StatusOK {
+			var result struct {
+				Changed []string `json:"changed"`
+				Brand   struct {
+					Name string `json:"name"`
+				} `json:"brand"`
+			}
+			if json.Unmarshal(out, &result) == nil && result.Brand.Name != "" {
+				for _, changed := range result.Changed {
+					if changed == "name" {
+						name := result.Brand.Name
+						if _, err := deps.ProjectStore.UpdateProject(r.Context(), id, user.ID, &name, nil); err != nil {
+							deps.logger().Warn("rename project after brand change", "error", err, "project_id", id)
+						}
+					}
+				}
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(resp.StatusCode)
+		_, _ = w.Write(out)
 	}
 }
 

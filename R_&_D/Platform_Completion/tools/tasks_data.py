@@ -540,7 +540,8 @@ QUEUE = [
     ("PC-019", "Visual click-to-edit in the preview (design tokens and copy only)",
      "2 Maximum features", "Vibe", "Not Started", "P2", "", "Buildout plan idea 'R-520'."),
     ("PC-020", "Brand kit / Style DNA UI across all surfaces", "2 Maximum features", "Vibe",
-     "Pending", "P2", "", "brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. Edits the per-project design direction PC-099 creates."),
+     "Completed", "P2", "", "Done 2026-10-03: Studio Brand dialog (name, logo, colours, fonts, corners, style) -> brand.json, "
+     "logo in every app, headers read brand.json, commit; live preview followed without a rebuild. brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. Edits the per-project design direction PC-099 creates."),
     ("PC-021", "Screenshot or Figma to app", "2 Maximum features", "Vibe", "Not Started", "P3",
      "", "Buildout idea 'R-527'."),
     ("PC-048", "Database choice: MongoDB as an option beside PostgreSQL (the default)",

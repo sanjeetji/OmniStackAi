@@ -82,7 +82,8 @@ class NavbarNavigationTests(TestCase):
         self.assertIn('href="/"', self.navbar)
         self.assertIn("TripManager", self.navbar)
         # Brand avatar initial
-        self.assertIn(f">\n              {self.ir.name[:1]}\n", self.navbar)
+        # PC-020: the initial is the fallback when brand.json has no logo.
+        self.assertIn(f': "{self.ir.name[:1]}"}}\n', self.navbar)
 
     def test_navbar_renders_overview_link(self) -> None:
         self.assertIn('href="/"', self.navbar)

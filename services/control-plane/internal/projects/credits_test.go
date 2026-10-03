@@ -13,9 +13,18 @@ import (
 )
 
 // PC-010: no paid model work at zero credits, and the task budget is the control plane's alone.
+func creditServerWithStore(t *testing.T, pStore *fakeProjectStore, studio string) (*httptest.Server, string) {
+	t.Helper()
+	return creditServerFor(t, pStore, 100, studio)
+}
+
 func creditServer(t *testing.T, balance int64, studio string) (*httptest.Server, string) {
 	t.Helper()
-	pStore := newFakeProjectStore()
+	return creditServerFor(t, newFakeProjectStore(), balance, studio)
+}
+
+func creditServerFor(t *testing.T, pStore *fakeProjectStore, balance int64, studio string) (*httptest.Server, string) {
+	t.Helper()
 	user := auth.User{EmailVerified: true, ID: "usr-credit", Email: "c@example.com", CreditBalance: balance}
 	project, _ := pStore.CreateProject(context.Background(), user.ID, "Credits", "")
 	guard := credits.Guard{CreditsPerUSD: 1000, TaskBudgetCredits: 200}

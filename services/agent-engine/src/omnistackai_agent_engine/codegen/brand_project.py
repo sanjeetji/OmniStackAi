@@ -321,6 +321,15 @@ function fontImport(...names: (string | undefined)[]): string {
   return `@import url("https://fonts.googleapis.com/css2?${query}&display=swap");`;
 }
 
+/** PC-020: the product's name and logo, read from brand.json - a rename or a new logo reaches every
+ * page without regenerating it. The logo is served from this app's public folder (under its base path). */
+// Declared here so this module type-checks with or without Node's types; Next replaces the
+// literal process.env.NEXT_PUBLIC_* below at build time either way.
+declare const process: { env: Record<string, string | undefined> };
+export const brandName: string = (brand as { name?: string }).name ?? "";
+const logoPath = (brand as { logo?: string }).logo ?? "";
+export const brandLogo: string = logoPath ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${logoPath}` : "";
+
 /** Every CSS variable this product's branding sets, light and dark. */
 export function brandCss(): string {
   const primary = (brand as { primaryColor: string }).primaryColor;

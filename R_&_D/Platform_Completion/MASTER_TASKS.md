@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 466 |
+| Completed | 467 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
-| Pending | 95 |
+| Pending | 94 |
 | Not Started | 508 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1157** |
 
-Open work queue: **93** tasks (P0: 7, P1: 39, P2: 33, P3: 14).
+Open work queue: **92** tasks (P0: 7, P1: 39, P2: 32, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -55,7 +55,7 @@ Open work queue: **93** tasks (P0: 7, P1: 39, P2: 33, P3: 14).
 | | | **Phase M2 Scope and brief**: The platform proposes one app, an app and admin, a few apps or a whole ecosystem; a short project brief (apps, features, brand, language) with smart defaults. | | | | | | |
 | 8 | PC-127 | Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a marketing website and the phone app when the product needs them; an editable proposal | Completed | P0 | Vibe |  |  | Done 2026-10-03: intake/scope.py proposes the scope with reasons (no model call); the console's "What we'll build" card edits it; builds follow it; paid keys lead every job. Live: control-plane 10/10, browser 6/6. Public website is the web app's home page until PC-131. Also (open from M1, PC-126): any paid key the owner adds leads plans and chat edits as well as pages, with no setting to change; DeepSeek, Mistral and xAI join the page chain when their keys are set. |
 | 9 | PC-128 | The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand (name, logo, colours, style, font), language and region, advanced stack; 'use smart defaults' | Completed | P0 | Vibe | PC-127 |  | Done 2026-10-03: intake/brief.py + the console's brief (apps, features, prompt-specific questions, brand, region from the browser, backend); answers become plan facts; live in the browser an edited brief built exactly what it said. Simple for a non-technical user, complete for a developer. |
-| 10 | PC-020 | Brand kit / Style DNA UI across all surfaces | Pending | P2 | Vibe |  | ARCH-COMPONENT-BROWSER, BP-BRANDKIT | brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. Edits the per-project design direction PC-099 creates. |
+| 10 | PC-020 | Brand kit / Style DNA UI across all surfaces | Completed | P2 | Vibe |  | ARCH-COMPONENT-BROWSER, BP-BRANDKIT | Done 2026-10-03: Studio Brand dialog (name, logo, colours, fonts, corners, style) -> brand.json, logo in every app, headers read brand.json, commit; live preview followed without a rebuild. brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. Edits the per-project design direction PC-099 creates. |
 | | | **Phase M3 Wow UI**: Every page designed by the model, screenshotted, reviewed and improved; a marketing website generator; realistic demo data. | | | | | | |
 | 11 | PC-129 | Model-designed pages by default (web, admin, phone) on a modern component kit and the product's design system; templates only when repair fails | Not Started | P0 | Both | PC-125 |  |  |
 | 12 | PC-130 | Design review: each page screenshotted on phone and desktop, critiqued and scored, and improved until it passes | Not Started | P0 | Both | PC-129 |  | Also (open from M1): a looks score from the screenshots in the benchmark (PC-122 shows them for a person to judge); forms filled in and saved end to end in the browser walk, not only list endpoints called; the hydration mismatch PC-125 found (server and client render differently) fed back to the model. |
@@ -928,6 +928,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-012 | Legal and account basics: ToS, privacy, retention, deletion/export, email verification | Completed | 2026-09-27 | Done 2026-09-27; emails go through Resend once keyed (PC-070), legal texts are drafts for counsel. Not built: cancelling a paid plan from Settings (deleting the account cancels it) — with billing go-live at PC-070. |
 | PC-013 | Verified integrations catalog with health tests | Completed | 2026-09-27 | R-511 Connectors v1 exists. Done 2026-09-27 (also proves R-511 live); real-account checks of Resend/Stripe/Razorpay pass at PC-070. |
 | PC-014 | Local/offline models as a first-class path: build fully on Ollama, recommend a model per machine | Completed | 2026-09-30 | Ollama adapter exists (R-003/R-006). Found in PC-084: .env names qwen2.5-coder:14b but only 7b is installed, and the adapter refuses a pinned model it was not configured with — detect installed models instead of trusting the setting. PC-098 (2026-09-28): the founder replaced 7b with qwen2.5-coder:14b; the Ollama adapter now sends num_ctx (long prompts were cut silently) and page design sizes it to 16k context / 6k answer. Done 2026-09-30: installed models detected at start, a model recommended per machine in status, PREFER_LOCAL keeps page design local; a console build ran with no cloud call. On a 16 GB machine the 14b model's designed pages did not compile - templates kept. |
+| PC-020 | Brand kit / Style DNA UI across all surfaces | Completed | 2026-10-03 | Done 2026-10-03: Studio Brand dialog (name, logo, colours, fonts, corners, style) -> brand.json, logo in every app, headers read brand.json, commit; live preview followed without a rebuild. brand.json exists (R-548); needs the UI. Buildout idea 'R-526'. Edits the per-project design direction PC-099 creates. |
 | PC-047 | NVIDIA model provider (nemotron-3-ultra) for builds, configured from .env | Completed | 2026-09-26 | Founder's chosen LLM (D-9). OpenAI-compatible, so one provider entry plus the NVIDIA_MODEL_BASE_URL override, prices and tests. The key stays in .env only. Includes a first comparison against the providers we already support on the same build prompts. |
 | PC-049 | Managed database for published apps: provision PostgreSQL (Neon, Supabase or self-hosted) and run migrations and seeds on publish | Completed | 2026-10-02 | Done 2026-10-02: a republish brings the live database up to date (scratch-schema comparison, added columns, the schema re-applied; nothing dropped), with a backup first; unpublished apps' images are removed. Hosted providers are PC-123. A live URL needs a live database. Provider interface with a local Docker implementation; MongoDB Atlas once PC-048 exists. From the architecture plan. PC-008 (2026-09-27) delivered the per-app PostgreSQL in Docker with a migration ledger; left: hosted providers (Neon/Supabase), backups, and follow-on migrations for schema changes after first publish (today a changed 0001_init.sql is not re-applied to a live database). |
 | PC-050 | Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, command menu, drawer, toasts, tables, forms, maps, uploads) | Completed | 2026-09-29 | framer-motion, recharts, tiptap, cmdk, vaul, sonner, tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, repaired like today's allowlist. From the architecture plan. Done 2026-09-29: framer-motion, recharts, @tanstack/react-table, react-hook-form + zod, date-fns, sonner, cmdk, vaul pinned for React 18 in every generated web and admin app, allowed and explained to the page writer; the type-check cache rebuilds when they change. Deferred: tiptap (rich text), maplibre (maps) and uppy (uploads) - heavy, and each needs a backend or tiles; add with the feature that uses them. |
