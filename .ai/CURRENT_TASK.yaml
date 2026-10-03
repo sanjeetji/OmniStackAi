@@ -1,17 +1,20 @@
-task_id: PC-129
+task_id: PC-130
 status: completed
 phase: Platform Completion — M3 Wow UI
-tracker_row: PC-129
+tracker_row: PC-130
 started_at: "2026-10-03"
 completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  Model-designed pages by default on every surface - web, admin and the phone app - on the product's
-  design system, every page checked, repaired or put back to its template.
+  The design review: every page screenshotted on phone and desktop after page design, scored by a
+  model that can see, and the pages below the bar designed again from their review - kept only when
+  they score higher. A "looks" score in the benchmark.
 founder_gate: none
-companions: []
+companions: [PC-050]
 allowed_paths:
   - services/agent-engine/
+  - services/control-plane/
+  - apps/console-web/
   - .ai/
   - R_&_D/Platform_Completion/
   - PROJECT_STATE.md
@@ -20,12 +23,16 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - a generated phone app's screens are designed by a real model, type-check, and run in Expo Go with real data
+  - Live - after page design in the console the pages are screenshotted, scored by a vision model, the low ones redesigned and kept only if they score higher
   - scripts/verify.sh passes
 found_and_fixed:
-  - The phone app's screens were never designed - templates only; they are now designed after the web pages, grounded in their own templates, type-checked with the shared mobile cache, repaired once, or put back.
-  - Page design stopped at 8 pages, so most of a larger product kept its templates; every page is designed by default within the run's time budget.
-  - The first live run refused two good screens for using the design system's own components (Badge, Input); the kit is allowed.
+  - The model gateway could not send an image; messages carry screenshots now, in each provider's own form (OpenAI-compatible, Anthropic, Gemini).
+  - The preview's UI check ran before page design, so its screenshots showed templates; the review screenshots the pages again first.
+  - Gemini's free daily quota was spent mid-day and no other vision model was configured; OpenRouter's free vision models follow it.
+  - Free vision tiers refuse per minute; a refused review is retried once after a pause.
+  - A redesign from its review did not always score higher (live, 5 -> 5, 5 -> 4); it is now re-screenshotted, re-scored and kept only if higher, else the previous page is restored.
+  - A model plan with an empty validation rule failed a whole build (found starting this proof); blank rules are dropped.
 deferred:
-  - On the designed Orders screen the status badge overlaps the delete icon - layout overlap is caught by the screenshot design review (PC-130).
-  - Phone detail and form screens keep their templates (the lists and the home screen are designed first); forms with validation are PC-059.
+  - Phone screens are not screenshotted by the browser check; their review needs the emulator (later).
+  - Admin pages that are not plan screens (manage/*) are scored but not redesigned by the page writer.
+  - With free models, scores move little (5.0 -> 5.4 over a round); a paid key is the lever for 7+.

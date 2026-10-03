@@ -11,7 +11,9 @@ A case gets a 0-100 score from what was measured, each part 0..1:
 * **complete** - what the prompt needs and the build has: the case's expected things, building
   blocks and number of apps;
 * **designed** - the share of pages the model designed rather than left as the template (only
-  when the run designs pages).
+  when the run designs pages);
+* **looks** - the design review's mean score out of 10 (PC-130), from both screenshots of every page
+  (only with ``--review`` and a model that can see).
 
 A part that was not measured (no preview, no design step, no browser) is left out of the average and
 the report says so, rather than counted as zero or as full marks.
@@ -23,7 +25,8 @@ from typing import Any, Iterable
 
 from .cases import Case
 
-WEIGHTS = {"build": 0.20, "runs": 0.20, "api": 0.15, "pages": 0.15, "complete": 0.20, "designed": 0.10}
+#: PC-130: "looks" is the design review's mean score (a model that can see, from the screenshots).
+WEIGHTS = {"build": 0.20, "runs": 0.15, "api": 0.15, "pages": 0.10, "complete": 0.20, "designed": 0.05, "looks": 0.15}
 #: A case whose score falls by more than this against the baseline is a regression.
 REGRESSION_POINTS = 10.0
 

@@ -320,6 +320,7 @@ async def design_pages(
     author_email: str = "agent@omnistack.ai",
     runner: Any = None,
     apps: list[tuple[str, Any, str]] | None = None,
+    critiques: dict[str, str] | None = None,
 ) -> AsyncIterator[dict]:
     """Design pages one app at a time, streaming what happens to each.
 
@@ -382,7 +383,9 @@ async def design_pages(
                 yield {"phase": "page", "path": target.path, **results[target.path]}
                 continue
             grounding, compact = grounding_for(app)
-            content, reason = await _write_page(target, app_irs[app], prompt, provider, model_id, timeout_seconds,
+            # PC-130: a page the design review sent back is written with its review as the brief.
+            page_prompt = prompt + ("\n\n" + critiques[target.path] if critiques and target.path in critiques else "")
+            content, reason = await _write_page(target, app_irs[app], page_prompt, provider, model_id, timeout_seconds,
                                                 grounding, compact)
             if content is None and "rate-limiting" in reason:
                 limit_reached = "the model's request limit is used up for now; try designing again later"

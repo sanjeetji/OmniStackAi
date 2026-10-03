@@ -99,6 +99,32 @@ def summarize(report: dict) -> dict:
     }
 
 
+def check_now(plan: RunPlan) -> dict:
+    """PC-130: screenshot every page again, now (the design review needs the pages as they are after
+    page design, not as they were when the preview started). Blocks; returns the status it wrote."""
+    if not plan.public_base:
+        return {"status": "skipped", "reason": "this preview has no base path to check under"}
+    folder = report_dir(plan.repo_dir)
+    if folder is None:
+        return {"status": "skipped", "reason": "this project keeps no logs"}
+    reason = unavailable_reason()
+    if reason:
+        return {"status": "skipped", "reason": reason}
+    started = time.time()
+    _write_status(folder, {"status": "running", "started_at": started})
+    try:
+        done = subprocess.run(check_arguments(plan, folder), capture_output=True, text=True,
+                              timeout=_TIMEOUT_SECONDS, check=False)
+        summary = summarize(json.loads((folder / "report.json").read_text(encoding="utf-8")))
+        if done.returncode not in (0, 1):
+            summary = {"status": "error", "reason": (done.stderr or done.stdout)[-300:]}
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        summary = {"status": "error", "reason": f"{type(error).__name__}: {error}"[:300]}
+    status = {**summary, "started_at": started, "finished_at": time.time()}
+    _write_status(folder, status)
+    return status
+
+
 def run_ui_check(plan: RunPlan, *, after: threading.Thread | None = None) -> threading.Thread | None:
     """Start the check in the background for a preview (multi-app, under the console's base path)."""
     if not (plan.multi_app and plan.public_base):

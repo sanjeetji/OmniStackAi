@@ -389,6 +389,8 @@ func handleProjectDesignStream(deps Deps) http.HandlerFunc {
 		}
 		var body struct {
 			Pages []string `json:"pages"`
+			// PC-130: review the pages from their screenshots and design again those below the bar.
+			Review bool `json:"review"`
 		}
 		_ = json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&body)
 		if !account.RequireVerified(w, user) {
@@ -397,6 +399,9 @@ func handleProjectDesignStream(deps Deps) http.HandlerFunc {
 		upstreamPayload := map[string]any{}
 		if len(body.Pages) > 0 {
 			upstreamPayload["pages"] = body.Pages
+		}
+		if body.Review {
+			upstreamPayload["review"] = true
 		}
 		resolved := ai.ResolveModel(r.Context(), deps.AIStore, user.ID, id)
 		if resolved.ProviderID != "" {

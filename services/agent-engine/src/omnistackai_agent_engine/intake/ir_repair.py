@@ -185,6 +185,17 @@ def _repair_structure(data: dict[str, Any], notes: list[str]) -> None:
         if isinstance(entity, dict):
             name = entity.get("name")
             entity["fields"] = _dedupe(entity.get("fields"), lambda f: f.get("name"), f"{name} field", notes)
+            # Found live (PC-130): one blank validation rule ("") from the model failed the whole
+            # build. A blank or non-text rule says nothing, so it is dropped; the rest are trimmed.
+            for field_ in entity.get("fields") or ():
+                rules = field_.get("validation") if isinstance(field_, dict) else None
+                if isinstance(rules, list):
+                    kept = [r.strip() for r in rules if isinstance(r, str) and r.strip()]
+                    if len(kept) != len(rules):
+                        notes.append(f"{name}.{field_.get('name')}: {len(rules) - len(kept)} empty validation rule(s) dropped")
+                    field_["validation"] = kept
+                elif rules is not None and not isinstance(rules, list):
+                    field_["validation"] = [str(rules).strip()] if str(rules).strip() else []
             if "relations" in entity:
                 entity["relations"] = _dedupe(entity.get("relations"), lambda r: r.get("name"),
                                               f"{name} relation", notes)

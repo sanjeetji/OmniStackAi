@@ -600,11 +600,12 @@ export function streamProjectBuild(
 
 /** PC-098: the model designs the project's pages after the build; `pages` names specific ones
  * (an edit asks for the designed pages it left in place). Server-sent events. */
-export function streamProjectDesign(token: string, projectId: string, pages?: string[]): Promise<Response> {
+export function streamProjectDesign(token: string, projectId: string, pages?: string[], review = false): Promise<Response> {
   return fetch(`${controlPlaneUrl()}/projects/${encodeURIComponent(projectId)}/design/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(pages && pages.length > 0 ? { pages } : {}),
+    // PC-130: `review` scores every page from fresh screenshots and designs again those below the bar.
+    body: JSON.stringify({ ...(pages && pages.length > 0 ? { pages } : {}), ...(review ? { review: true } : {}) }),
     cache: "no-store",
   });
 }

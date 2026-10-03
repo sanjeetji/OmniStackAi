@@ -143,7 +143,7 @@ export default function StudioChat({
   const [hydrating, setHydrating] = useState(Boolean(initialProjectId || urlBuildId));
   const [creditBalance, setCreditBalance] = useState(initialCreditBalance);
   // PC-098: the model designing pages after a build, page by page, while the preview runs.
-  const [designing, setDesigning] = useState<{ done: number; total: number } | null>(null);
+  const [designing, setDesigning] = useState<{ done: number; total: number; reviewing?: boolean } | null>(null);
 
   // Skills & Knowledge state
   const [projectKnowledge, setProjectKnowledge] = useState<ProjectKnowledge | null>(null);
@@ -928,6 +928,85 @@ export default function StudioChat({
     }
   }
 
+  /** PC-130: every page screenshotted again, scored by a model that can see, and the pages below the
+   * bar designed again with their review. One round; the scores are kept with the project. */
+  async function reviewDesign(id: string) {
+    setDesigning({ done: 0, total: 0, reviewing: true });
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(id)}/design/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ review: true }),
+      });
+      if (!response.ok || !response.body) return;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let summary: Record<string, unknown> | null = null;
+      let failure: string | null = null;
+      let reviewed = 0;
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary !== -1) {
+          const rawFrame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          for (const line of rawFrame.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            let payload: Record<string, unknown>;
+            try {
+              payload = JSON.parse(line.slice("data: ".length)) as Record<string, unknown>;
+            } catch {
+              continue;
+            }
+            if (payload.phase === "review") {
+              reviewed += 1;
+              setDesigning({ done: reviewed, total: 0, reviewing: true });
+            } else if (payload.phase === "done") {
+              summary = payload;
+            } else if (payload.phase === "error") {
+              failure = typeof payload.error === "string" ? payload.error : "the design review failed";
+            } else if (typeof payload.credits_spent === "number" && payload.credits_spent > 0) {
+              const spent = payload.credits_spent;
+              setCreditBalance((balance) => Math.max(0, balance - spent));
+            }
+          }
+          boundary = buffer.indexOf("\n\n");
+        }
+      }
+      if (failure) {
+        appendMessage("assistant", `Design review skipped: ${failure}`);
+        return;
+      }
+      if (!summary || typeof summary.page_count !== "number" || summary.page_count === 0) return;
+      const mean = typeof summary.mean === "number" ? summary.mean : null;
+      const outcomes = Object.values((summary.improved ?? {}) as Record<string, unknown>);
+      const kept = outcomes.filter((o) => typeof o === "object" && o !== null && (o as { kept?: boolean }).kept).length;
+      const putBack = outcomes.filter((o) => typeof o === "object" && o !== null && !(o as { kept?: boolean }).kept).length;
+      const unchecked = outcomes.filter((o) => o === "designed").length;
+      const below = Array.isArray(summary.below_bar) ? summary.below_bar.length : 0;
+      let note = mean === null
+        ? `Reviewed ${summary.page_count} pages, but no model that can see answered.`
+        : `Design review: ${mean}/10 on average across ${summary.page_count} pages.`;
+      if (below > 0) {
+        note += ` ${below} scored below ${String(summary.pass_score ?? 7)} and were designed again:`;
+        note += ` ${kept} now score higher and were kept`;
+        if (putBack > 0) note += `, ${putBack} did not and were put back`;
+        if (unchecked > 0) note += `, ${unchecked} not re-scored`;
+        note += ".";
+      }
+      appendMessage("assistant", note);
+      const files = await fetchProjectFiles(id);
+      if (files.length > 0) setWorkspace((prev) => (prev ? { ...prev, files } : prev));
+    } catch {
+      // the review is an extra: the designed pages stand without it
+    } finally {
+      setDesigning(null);
+    }
+  }
+
   /** PC-098: the model designs the pages after the build (or redesigns the ones an edit kept).
    * The template preview is already running; each page swaps in once it has compiled. */
   async function designPages(id: string, pages?: string[]) {
@@ -1008,6 +1087,8 @@ export default function StudioChat({
       appendMessage("assistant", note);
       const files = await fetchProjectFiles(id);
       if (files.length > 0) setWorkspace((prev) => (prev ? { ...prev, files } : prev));
+      // PC-130: then look at every page as it now is, and design again what falls below the bar.
+      if (designed > 0 && !pages) await reviewDesign(id);
     } catch {
       appendMessage("assistant", "Page design stopped: couldn't reach the server. The pages keep their built-in design.", "error");
     } finally {
@@ -1286,7 +1367,9 @@ export default function StudioChat({
           {!submitting && designing ? (
             <WorkingBubble
               label={
-                designing.total > 0
+                designing.reviewing
+                  ? `Reviewing the design from screenshots${designing.done > 0 ? `: ${designing.done} pages scored` : "…"}`
+                  : designing.total > 0
                   ? `Designing pages with the model: ${designing.done} of ${designing.total}. The preview updates as each one is ready.`
                   : "Designing pages with the model…"
               }

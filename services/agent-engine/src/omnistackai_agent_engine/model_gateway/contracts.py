@@ -131,11 +131,24 @@ class ModelDescriptor:
 class Message:
     role: ChatRole
     content: str
+    #: PC-130: screenshots for a model that can see (PNG or JPEG bytes). Providers that cannot see
+    #: are never sent one: the design review routes only to vision-capable models.
+    images: tuple[bytes, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.role, ChatRole):
             raise TypeError("role must be a ChatRole")
         _validate_bounded_text(self.content, "content", 1_000_000)
+        if not isinstance(self.images, tuple) or len(self.images) > 8:
+            raise ValueError("images must be a tuple of at most 8 images")
+        for image in self.images:
+            if not isinstance(image, bytes) or len(image) > 5_000_000 or not (
+                    image.startswith(b"\x89PNG\r\n\x1a\n") or image.startswith(b"\xff\xd8\xff")):
+                raise ValueError("each image must be a PNG or JPEG of at most 5 MB")
+
+
+def image_mime(image: bytes) -> str:
+    return "image/png" if image.startswith(b"\x89PNG") else "image/jpeg"
 
 
 @dataclass(frozen=True, slots=True)

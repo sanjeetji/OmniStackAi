@@ -8,14 +8,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!token) {
     return NextResponse.json({ error: "not signed in" }, { status: 401 });
   }
-  const body = (await request.json().catch(() => ({}))) as { pages?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { pages?: unknown; review?: unknown };
   const pages = Array.isArray(body.pages)
     ? body.pages.filter((p): p is string => typeof p === "string" && p.length > 0 && p.length < 300)
     : undefined;
   const { id } = await params;
   let upstream: Response;
   try {
-    upstream = await streamProjectDesign(token, id, pages);
+    upstream = await streamProjectDesign(token, id, pages, body.review === true);
   } catch {
     return NextResponse.json({ error: "could not reach the control-plane" }, { status: 502 });
   }

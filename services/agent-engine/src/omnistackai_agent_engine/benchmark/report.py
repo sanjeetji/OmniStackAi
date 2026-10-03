@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 PART_NAMES = {"build": "Build", "runs": "Runs", "api": "API", "pages": "Pages", "complete": "Complete",
-              "designed": "Designed"}
+              "designed": "Designed", "looks": "Looks"}
 
 
 def _cell(value: float | None) -> str:
@@ -63,6 +63,12 @@ def markdown(report: dict, run_dir: Path) -> str:
                 reasons[why] = reasons.get(why, 0) + 1
             for why, count in sorted(reasons.items(), key=lambda kv: -kv[1])[:3]:
                 lines.append(f"  - {count} because {why or 'no reason given'}")
+        review = case.get("review") or {}
+        if review.get("mean") is not None:
+            lines.append(f"- Design review: {review['mean']}/10 over {review['scored']} pages"
+                         + (f"; below the bar: {', '.join(review['below_bar'][:6])}" if review.get("below_bar") else ""))
+            for score, page, why in review.get("worst") or []:
+                lines.append(f"  - {page} {score:g}: {why}")
         if case.get("timings"):
             lines.append("- Seconds: " + ", ".join(f"{k} {v}" for k, v in case["timings"].items() if v))
         for error in case.get("errors") or []:

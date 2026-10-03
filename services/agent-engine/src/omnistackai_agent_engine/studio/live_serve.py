@@ -1145,9 +1145,14 @@ async def _workspace_design_stream(
     model_id: str | None = None,
     api_key: str | None = None,
     budget_micros: int | None = None,
+    review: bool = False,
+    preview_manager: "StudioPreviewManager | None" = None,
     **_ignored,
 ) -> AsyncIterator[dict]:
     """Design a workspace's pages with the model (PC-098), streaming each page's outcome.
+
+    ``review`` (PC-130): instead, review every screenshotted page with a model that can see and
+    design again those below the bar, with their review as the brief.
 
     Runs after the build, while the template preview is already up. A final ``done`` event carries
     the usage the control plane bills, exactly like a build's.
@@ -1194,11 +1199,34 @@ async def _workspace_design_stream(
 
             apps = ecosystem_next_apps(plan_ecosystem_from_prompt(prompt, entities=ir.entities), brand=ir.brand)
         summary: dict = {}
-        async for event in design_pages(
-            repo_dir, ir, prompt, provider, model_id=eff_model, only=pages, timeout_seconds=timeout, apps=apps,
-            cancelled=lambda: workspace_store.is_cancelled(ws_id),
-            author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
-        ):
+        if review:
+            from .design_review import review_and_improve
+
+            # Screenshots of the pages as they are now: the preview's own check ran before page design.
+            ws_preview = getattr(preview_manager, "_workspaces", {}).get(ws_id) if preview_manager is not None else None
+            live = getattr(ws_preview, "session", None)
+            if live is None or not getattr(live, "plan", None):
+                yield {"phase": "error", "error": "Start the preview first, so every page can be screenshotted and reviewed."}
+                return
+            from ..localrun.ui_check import check_now
+
+            yield {"phase": "screenshots", "status": "running"}
+            shots = await asyncio.to_thread(check_now, live.plan)
+            yield {"phase": "screenshots", **{k: v for k, v in shots.items() if k in ("status", "reason", "pages", "page_views")}}
+            if shots.get("status") not in ("passed", "failed"):
+                yield {"phase": "error", "error": f"The pages could not be screenshotted: {shots.get('reason', shots.get('status'))}"}
+                return
+
+            stream = review_and_improve(repo_dir, ir, prompt, provider, page_model=eff_model, timeout_seconds=timeout,
+                                        apps=apps, author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
+                                        usage_ledger=usage_ledger, rescreenshot=lambda: check_now(live.plan))
+        else:
+            stream = design_pages(
+                repo_dir, ir, prompt, provider, model_id=eff_model, only=pages, timeout_seconds=timeout, apps=apps,
+                cancelled=lambda: workspace_store.is_cancelled(ws_id),
+                author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
+            )
+        async for event in stream:
             if event.get("phase") == "summary":
                 summary = event
                 continue
@@ -1214,7 +1242,15 @@ async def _workspace_design_stream(
             state["commit_sha"] = head.stdout.strip()
         workspace_store.save_state(ws_id, state)
         designed, kept = summary.get("designed", 0), summary.get("kept_template", 0)
-        if designed or kept:
+        if review and summary.get("page_count"):
+            mean = summary.get("mean")
+            note = (f"Reviewed {summary['page_count']} pages from their screenshots"
+                    + (f": {mean}/10 on average." if mean is not None else "; no model that can see answered."))
+            better = [p for p, s in (summary.get("improved") or {}).items() if s == "designed"]
+            if better:
+                note += f" Designed {len(better)} again from their review."
+            workspace_store.append_turn(ws_id, "assistant", note)
+        elif designed or kept:
             note = f"Designed {designed} page{'s' if designed != 1 else ''} with the model."
             if kept:
                 note += f" {kept} kept {'their' if kept != 1 else 'its'} built-in template."
@@ -1496,7 +1532,7 @@ def main() -> None:
         return _workspace_build_stream(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)
 
     def workspace_design_stream(ws_id: str, **options) -> AsyncIterator[dict]:
-        return _workspace_design_stream(ws_id, workspace_store=workspace_store, **options)
+        return _workspace_design_stream(ws_id, workspace_store=workspace_store, preview_manager=preview_manager, **options)
 
     def workspace_edit(ws_id: str, prompt: str, **options) -> dict:
         result = asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store, **options))

@@ -215,13 +215,14 @@ QUEUE = [
      "themed; ecosystems designed too. Not built: the Plan view and brand kit that edit it."),
     ("PC-050", "Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, "
      "command menu, drawer, toasts, tables, forms, maps, uploads)", "1 Vibe Mode live", "Vibe",
-     "Not Started", "P0", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
+     "Completed", "P0", "", "framer-motion, recharts, tiptap, cmdk, vaul, sonner, "
      "tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, "
      "repaired like today's allowlist. From the architecture plan. Done 2026-09-29: framer-motion, "
      "recharts, @tanstack/react-table, react-hook-form + zod, date-fns, sonner, cmdk, vaul pinned for "
      "React 18 in every generated web and admin app, allowed and explained to the page writer; the "
      "type-check cache rebuilds when they change. Deferred: tiptap (rich text), maplibre (maps) and "
-     "uppy (uploads) - heavy, and each needs a backend or tiles; add with the feature that uses them."),
+     "uppy (uploads) - heavy, and each needs a backend or tiles; add with the feature that uses them. Closed "
+     "2026-10-03: maplibre-gl arrived with PC-100, uploads (Uppy) with PC-102 and rich text (tiptap) with PC-104."),
     ("PC-100", "A modern admin panel: redesign the generated admin console (dashboard with real "
      "metrics and charts, rich data tables, forms, filters, bulk actions, command menu) in the "
      "project's design direction", "1 Vibe Mode live", "Both", "Not Started", "P0", "PC-099, PC-050",
@@ -788,7 +789,10 @@ _MILESTONE_TASKS = [
      "or put back); every page by default. Live: 5/5 phone screens designed and type-checked, running in Expo Go "
      "with real data."),
     ("PC-130", "Design review: each page screenshotted on phone and desktop, critiqued and scored, and "
-     "improved until it passes", _M3, "Both", "Not Started", "P0", "PC-129",
+     "improved until it passes", _M3, "Both", "Completed", "P0", "PC-129",
+     "Done 2026-10-03: fresh screenshots, vision-model score and fixes per page, low pages redesigned and kept only "
+     "if they score higher, Looks in the benchmark; live mean 5.0-5.4 on free models. Phone-screen review and forms "
+     "end to end remain. "
      "Also (open from M1): a looks score from the screenshots in the benchmark (PC-122 shows them for a "
      "person to judge); forms filled in and saved end to end in the browser walk, not only list endpoints "
      "called; the hydration mismatch PC-125 found (server and client render differently) fed back to the "

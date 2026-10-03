@@ -153,3 +153,19 @@ class ARelationToNothingIsRepaired(TestCase):
         repaired, notes = repair_ir_dict(data)
         self.assertEqual(ApplicationIR.from_dict(repaired).capabilities[0].config["write"], "own")
         self.assertTrue(any("'none' read as 'own'" in n for n in notes))
+
+
+class ABlankValidationRuleIsDropped(TestCase):
+    """Found live in PC-130: one "" in a field's validation list failed a whole build."""
+
+    def test_blank_rules(self) -> None:
+        from omnistackai_agent_engine.intake.ir_repair import repair_ir_dict
+
+        data = _plan()
+        field = next(e for e in data["entities"] if e["name"] == "Order")["fields"][0]
+        field["validation"] = ["", "  min:0  ", None, "max:10"]
+        repaired, notes = repair_ir_dict(data)
+        ir = ApplicationIR.from_dict(repaired)
+        order = next(e for e in ir.entities if e.name == "Order")
+        self.assertEqual(list(order.fields[0].validation), ["min:0", "max:10"])
+        self.assertTrue(any("empty validation rule" in n for n in notes))

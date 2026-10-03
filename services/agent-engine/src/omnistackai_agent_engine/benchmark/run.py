@@ -48,6 +48,7 @@ class CaseResult:
     endpoints: dict[str, int] = field(default_factory=dict)
     ui: dict = field(default_factory=dict)
     design: dict = field(default_factory=dict)
+    review: dict = field(default_factory=dict)
     timings: dict[str, float] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
     repo: str = ""
@@ -124,7 +125,8 @@ async def _design(case: Case, repo: Path, built: Any) -> dict:
 
 
 def preview_case(result: CaseResult, built: Any, *, log: Callable[[str], None],
-                 start: Callable[..., Any] | None = None, fetch: Callable[[str], int] | None = None) -> None:
+                 start: Callable[..., Any] | None = None, fetch: Callable[[str], int] | None = None,
+                 review: bool = False) -> None:
     """Run the project, call every list endpoint, and wait for the UI check of every page."""
     from ..localrun import start_preview_app
     from ..localrun.ui_check import read_status
@@ -161,9 +163,32 @@ def preview_case(result: CaseResult, built: Any, *, log: Callable[[str], None],
             time.sleep(5)
         result.ui = dict(status or {"status": "timeout"})
         log(f"   ui check: {result.ui.get('status')} ({result.ui.get('failing', '?')}/{result.ui.get('page_views', '?')} page views with problems)")
+        if review and result.ui.get("status") in ("passed", "failed"):
+            result.review = _review(result, log)
     finally:
         session.stop()
         sink.close()
+
+
+def _review(result: CaseResult, log: Callable[[str], None]) -> dict:
+    """PC-130: every page's look, scored from its screenshots by a model that can see."""
+    import asyncio
+
+    from ..studio.design_review import PASS_SCORE, review_pages
+
+    async def go() -> list:
+        return [r async for r in review_pages(Path(result.repo).parent / "logs" / "ui-check", result.prompt)]
+
+    try:
+        reviews = asyncio.run(go())
+    except Exception as error:  # noqa: BLE001
+        return {"error": f"{type(error).__name__}: {error}"[:200]}
+    scored = [r for r in reviews if not r.error]
+    mean = round(sum(r.score for r in scored) / len(scored), 1) if scored else None
+    log(f"   design review: {mean}/10 over {len(scored)} pages" if scored else "   design review: no model that can see answered")
+    return {"mean": mean, "pages": len(reviews), "scored": len(scored),
+            "below_bar": [f"{r.app}{r.route} {r.score:g}" for r in scored if r.score < PASS_SCORE],
+            "worst": sorted(([r.score, f"{r.app}{r.route}", r.summary] for r in scored))[:3]}
 
 
 def call_list_endpoints(api_url: str, ir: Any, *, fetch: Callable[[str], int] | None = None) -> dict[str, int]:
@@ -196,6 +221,8 @@ def finish(case: Case, result: CaseResult) -> CaseResult:
     if result.ui.get("status") in ("passed", "failed"):
         views = int(result.ui.get("page_views") or 0)
         result.parts["pages"] = score.ratio(views - int(result.ui.get("failing") or 0), views)
+    if result.review.get("mean") is not None:
+        result.parts["looks"] = result.review["mean"] / 10
     if "designed" in result.design:
         result.parts["designed"] = score.ratio(result.design["designed"], result.design["designed"] + result.design["kept_template"])
     result.score = score.total(result.parts)
@@ -203,7 +230,7 @@ def finish(case: Case, result: CaseResult) -> CaseResult:
 
 
 async def run_benchmark(cases: tuple[Case, ...], out: Path, *, design: bool = False, preview: bool = True,
-                        baseline: Path | None = None, log: Callable[[str], None] = print) -> dict:
+                        baseline: Path | None = None, log: Callable[[str], None] = print, review: bool = False) -> dict:
     run_id = time.strftime("%Y%m%d-%H%M%S")
     run_dir = out / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -214,7 +241,7 @@ async def run_benchmark(cases: tuple[Case, ...], out: Path, *, design: bool = Fa
         try:
             result, built = await build_case(case, run_dir / case.id, design=design, log=log)
             if built is not None and preview:
-                preview_case(result, built, log=log)
+                await asyncio.to_thread(preview_case, result, built, log=log, review=review)
         except Exception as error:  # noqa: BLE001 - one case never ends the run
             result = CaseResult(case.id, case.prompt, case.tags)
             result.errors.append(_error("run", error) + " | " + traceback.format_exc(limit=2)[-300:])

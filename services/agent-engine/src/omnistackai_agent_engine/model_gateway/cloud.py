@@ -640,6 +640,38 @@ class _HttpCloudProvider:
         return value
 
 
+def _b64(image: bytes) -> str:
+    import base64
+
+    return base64.b64encode(image).decode("ascii")
+
+
+def _openai_content(message) -> Any:
+    """PC-130: text, or text and images in the chat-completions content-part form."""
+    if not message.images:
+        return message.content
+    from .contracts import image_mime
+
+    return [{"type": "text", "text": message.content}] + [
+        {"type": "image_url", "image_url": {"url": f"data:{image_mime(i)};base64,{_b64(i)}"}} for i in message.images]
+
+
+def _anthropic_content(message) -> Any:
+    if not message.images:
+        return message.content
+    from .contracts import image_mime
+
+    return [{"type": "image", "source": {"type": "base64", "media_type": image_mime(i), "data": _b64(i)}}
+            for i in message.images] + [{"type": "text", "text": message.content}]
+
+
+def _gemini_parts(message) -> list[dict[str, Any]]:
+    from .contracts import image_mime
+
+    return [{"text": message.content}] + [{"inline_data": {"mime_type": image_mime(i), "data": _b64(i)}}
+                                         for i in message.images]
+
+
 class OpenAICompatibleProvider(_HttpCloudProvider):
     """Adapter for OpenAI, OpenRouter, Groq, and other OpenAI chat-completions endpoints."""
 
@@ -647,7 +679,7 @@ class OpenAICompatibleProvider(_HttpCloudProvider):
         headers = {"Authorization": f"Bearer {self._auth_key()}"}
         payload = {
             "model": request.model.model_id,
-            "messages": [{"role": m.role.value, "content": m.content} for m in request.messages],
+            "messages": [{"role": m.role.value, "content": _openai_content(m)} for m in request.messages],
             "max_tokens": request.max_output_tokens,
             "stream": False,
         }
@@ -710,7 +742,7 @@ class AnthropicProvider(_HttpCloudProvider):
         headers = {"x-api-key": self._auth_key(), "anthropic-version": "2023-06-01"}
         system = "\n\n".join(m.content for m in request.messages if m.role is ChatRole.SYSTEM)
         conversation = [
-            {"role": m.role.value, "content": m.content}
+            {"role": m.role.value, "content": _anthropic_content(m)}
             for m in request.messages
             if m.role in (ChatRole.USER, ChatRole.ASSISTANT)
         ]
@@ -783,7 +815,7 @@ class GeminiProvider(_HttpCloudProvider):
         headers = {"x-goog-api-key": self._auth_key()}
         system = "\n\n".join(m.content for m in request.messages if m.role is ChatRole.SYSTEM)
         contents = [
-            {"role": "model" if m.role is ChatRole.ASSISTANT else "user", "parts": [{"text": m.content}]}
+            {"role": "model" if m.role is ChatRole.ASSISTANT else "user", "parts": _gemini_parts(m)}
             for m in request.messages
             if m.role in (ChatRole.USER, ChatRole.ASSISTANT)
         ]

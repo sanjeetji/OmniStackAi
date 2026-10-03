@@ -85,7 +85,7 @@ class OneCase(TestCase):
         result.parts["runs"] = 1.0
         parts = bench.finish(case, result).parts
         self.assertEqual(parts, {"runs": 1.0, "build": 1.0, "complete": 1.0, "api": 0.5, "pages": 0.8, "designed": 0.75})
-        self.assertEqual(result.score, 87.0)
+        self.assertEqual(result.score, 87.4, "PC-130 rebalanced the weights for 'looks'")
 
     def test_a_failed_build_scores_zero_where_it_counts(self) -> None:
         result = bench.CaseResult("blog", "A blog", ())

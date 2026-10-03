@@ -26,6 +26,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--only", default="", help="comma-separated case ids")
     parser.add_argument("--design", action="store_true", help="let the model design the pages, as the console does")
     parser.add_argument("--no-preview", action="store_true", help="skip running the projects")
+    parser.add_argument("--review", action="store_true", help="score every page's look from its screenshots (PC-130)")
     parser.add_argument("--out", default=os.environ.get("OMNISTACKAI_BENCHMARK_DIR", str(Path.home() / ".omnistackai" / "benchmark")))
     parser.add_argument("--baseline", default="", help="a report.json to compare with (default: the previous run)")
     parser.add_argument("--list", action="store_true", help="print the cases and exit")
@@ -56,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     out = Path(args.out).expanduser()
     out.mkdir(parents=True, exist_ok=True)
     report = main_async(cases, out, design=args.design, preview=not args.no_preview,
-                        baseline=Path(args.baseline) if args.baseline else None)
+                        baseline=Path(args.baseline) if args.baseline else None, review=args.review)
     print(f"\nmean score {report['mean']} - {out / report['run'] / 'report.md'}")
     regressions = report["comparison"].get("regressions") or []
     for line in regressions:

@@ -744,7 +744,7 @@ def _make_handler(
             self.send_header("Connection", "close")
             self.send_header("X-Accel-Buffering", "no")
             self.end_headers()
-            options = {k: v for k, v in data.items() if k in {"pages", "provider_id", "model_id", "api_key", "budget_micros"}}
+            options = {k: v for k, v in data.items() if k in {"pages", "provider_id", "model_id", "api_key", "budget_micros", "review"}}
 
             self._stream_events(lambda: workspace_design_stream_fn(ws_id, **options), ws_id)
 
