@@ -1,8 +1,9 @@
 task_id: PC-127
-status: in_progress
+status: completed
 phase: Platform Completion — M2 Scope and brief
 tracker_row: PC-127
 started_at: "2026-10-03"
+completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
   The platform decides the scope from the prompt - one app, an app and its admin, a few apps or a
@@ -28,3 +29,11 @@ forbidden_changes:
 required_gates:
   - Live - varied prompts get the right scope (single app, app + admin, few apps, ecosystem, phone app, marketing site), an edited proposal builds what it says
   - scripts/verify.sh passes
+found_and_fixed:
+  - The build result is a frozen record, so the first live build could not carry its scope; it is replaced, and a test now goes through build_app_from_prompt.
+  - ./scripts/omnistack.sh up served an existing console build after the console's code changed, so the new card never appeared; it rebuilds when any console source is newer than the build.
+  - Two-app plans (a web app and its admin) were labelled ecosystems; an ecosystem now needs two kinds of people with apps of their own.
+  - Internal tools were offered a public website; only customer-facing products are.
+deferred:
+  - Domain-library limits show in the scope (restaurant ordering planned as food delivery, inventory as a store, landlords and tenants not seen as two sides) - PC-133 plans any domain with the model.
+  - The public website is the web app's public home page until PC-131 generates a separate marketing site; the card says so.

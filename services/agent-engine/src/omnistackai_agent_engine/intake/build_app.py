@@ -66,6 +66,8 @@ class AppBuildResult:
     #: PC-084: seconds spent in each stage of this build (plan, assemble, repository, verify), so
     #: speed is measured on every build rather than guessed at.
     timings: dict = field(default_factory=dict)
+    #: PC-127: what was built - the scope the person confirmed, or the one proposed for the prompt.
+    scope: dict = field(default_factory=dict)
 
 
 def build_app_from_ir(
@@ -240,6 +242,7 @@ def app_build_result_to_dict(
         **({"substitutions": [dict(s) for s in result.substitutions]} if result.substitutions else {}),
         **({"not_connected": [dict(g) for g in result.not_connected]} if result.not_connected else {}),
         **({"timings": dict(result.timings)} if result.timings else {}),
+        **({"scope": dict(result.scope)} if result.scope else {}),
         # R-560: always present, unlike the two above. A build that was not type-checked has to say
         # so; silence would read as "checked and fine", which is the impression that let a
         # non-compiling app ship for nine tasks.
@@ -440,6 +443,7 @@ async def build_app_from_prompt(
     synthesize_screens: bool = False,
     ui_outcomes: list | None = None,
     context: dict | str | None = None,
+    scope: dict | None = None,
 ) -> AppBuildResult:
     """Compile ``prompt`` into an IR via ``provider`` and materialize an owned Git repo.
 
@@ -451,23 +455,21 @@ async def build_app_from_prompt(
     # deterministically and offline — whether a build produces one app or four must not vary
     # between runs of the same sentence, and it is not a judgement for a small local model.
     intent = detect_ecosystem_intent(prompt)
-    if intent.build_ecosystem:
-        # Local import: `ecosystem` imports AppBuildResult from this module, so a top-level import
-        # here would be a cycle.
-        from .ecosystem import plan_ecosystem_from_prompt
-
-        plan = plan_ecosystem_from_prompt(prompt, intent.option_id)
-        if len(plan.apps) > 1:
-            return build_ecosystem_from_plan(
-                plan,
-                target_dir,
-                author_name=author_name,
-                author_email=author_email,
-                prompt=prompt,
-                overwrite=overwrite,
-                provider=provider,
-                reason=intent.reason,
-            )
+    chosen = _chosen_scope(prompt, scope)
+    plan = _scoped_ecosystem_plan(prompt, intent, chosen)
+    if plan is not None:
+        built = build_ecosystem_from_plan(
+            plan,
+            target_dir,
+            author_name=author_name,
+            author_email=author_email,
+            prompt=prompt,
+            overwrite=overwrite,
+            provider=provider,
+            reason=intent.reason,
+        )
+        built = _replace_result(built, scope=chosen.to_dict())
+        return built
 
     plan_started = time.perf_counter()
     result = await generate_ir(
@@ -481,7 +483,7 @@ async def build_app_from_prompt(
     )
     plan_seconds = round(time.perf_counter() - plan_started, 3)
     built = build_app_from_ir(
-        result.ir,
+        _scoped_ir(result.ir, chosen, confirmed=scope is not None),
         target_dir,
         author_name=author_name,
         author_email=author_email,
@@ -496,7 +498,47 @@ async def build_app_from_prompt(
         truncated_skills=result.truncated_skills,
     )
     built.timings["plan"] = plan_seconds
+    built = _replace_result(built, scope=chosen.to_dict())
     return built
+
+
+def _replace_result(result: AppBuildResult, **changes) -> AppBuildResult:
+    from dataclasses import replace as _replace
+
+    return _replace(result, **changes)
+
+
+def _chosen_scope(prompt: str, scope: dict | None):
+    """PC-127: the scope the person confirmed, or the one the prompt implies."""
+    from .scope import ProjectScope, propose_scope
+
+    if scope:
+        try:
+            chosen = ProjectScope.from_dict(scope)
+            if chosen.apps:
+                return chosen
+        except (TypeError, ValueError):
+            pass
+    return propose_scope(prompt)
+
+
+def _scoped_ecosystem_plan(prompt: str, intent, chosen):
+    """The ecosystem to build, with only the apps the scope includes; None for one product."""
+    from .scope import apply_to_plan
+
+    if not (intent.build_ecosystem and chosen.plan == "ecosystem"):
+        return None
+    from .ecosystem import plan_ecosystem_from_prompt  # local: `ecosystem` imports this module
+
+    plan = apply_to_plan(plan_ecosystem_from_prompt(prompt, intent.option_id), chosen)
+    return plan if len(plan.apps) > 1 else None
+
+
+def _scoped_ir(ir, chosen, *, confirmed: bool):
+    """One product: a confirmed scope decides its apps. Unconfirmed, the planner's choice stands."""
+    from .scope import apply_to_ir
+
+    return apply_to_ir(ir, chosen) if confirmed and chosen.plan == "product" else ir
 
 
 async def build_app_from_prompt_stream(
@@ -512,6 +554,7 @@ async def build_app_from_prompt_stream(
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     overwrite: bool = False,
     context: dict | str | None = None,
+    scope: dict | None = None,
 ) -> AsyncIterator[str | AppBuildResult]:
     """Streaming twin of `build_app_from_prompt` (R-484): yields text deltas from the IR-generation
     call as they arrive, then does the existing `build_app_from_ir`'s pure-disk work (assemble +
@@ -523,27 +566,27 @@ async def build_app_from_prompt_stream(
     # through the console exposed immediately: the offline tests called the function I had wired,
     # not the one the product uses.
     intent = detect_ecosystem_intent(prompt)
-    if intent.build_ecosystem:
-        from .ecosystem import plan_ecosystem_from_prompt  # local: `ecosystem` imports this module
-
-        plan = plan_ecosystem_from_prompt(prompt, intent.option_id)
-        if len(plan.apps) > 1:
-            names = ", ".join(app.ir.name for app in plan.apps)
-            # The ecosystem is planned deterministically, so there is no model stream to relay.
-            # Say what is happening instead of going silent for the length of a build.
-            yield f"Planning {len(plan.apps)} apps over one API and one database: {names}.\n"
-            yield f"{intent.reason}.\n"
-            yield build_ecosystem_from_plan(
-                plan,
-                target_dir,
-                author_name=author_name,
-                author_email=author_email,
-                prompt=prompt,
-                overwrite=overwrite,
-                provider=provider,
-                reason=intent.reason,
-            )
-            return
+    chosen = _chosen_scope(prompt, scope)
+    plan = _scoped_ecosystem_plan(prompt, intent, chosen)
+    if plan is not None:
+        names = ", ".join(app.ir.name for app in plan.apps)
+        # The ecosystem is planned deterministically, so there is no model stream to relay.
+        # Say what is happening instead of going silent for the length of a build.
+        yield f"Planning {len(plan.apps)} apps over one API and one database: {names}.\n"
+        yield f"{intent.reason}.\n"
+        built = build_ecosystem_from_plan(
+            plan,
+            target_dir,
+            author_name=author_name,
+            author_email=author_email,
+            prompt=prompt,
+            overwrite=overwrite,
+            provider=provider,
+            reason=intent.reason,
+        )
+        built = _replace_result(built, scope=chosen.to_dict())
+        yield built
+        return
 
     result: IntakeResult | None = None
     plan_started = time.perf_counter()
@@ -563,7 +606,7 @@ async def build_app_from_prompt_stream(
     assert result is not None  # generate_ir_stream always yields exactly one IntakeResult last
     plan_seconds = round(time.perf_counter() - plan_started, 3)
     built = build_app_from_ir(
-        result.ir,
+        _scoped_ir(result.ir, chosen, confirmed=scope is not None),
         target_dir,
         author_name=author_name,
         author_email=author_email,
@@ -580,4 +623,5 @@ async def build_app_from_prompt_stream(
         truncated_skills=result.truncated_skills,
     )
     built.timings["plan"] = plan_seconds
+    built = _replace_result(built, scope=chosen.to_dict())
     yield built

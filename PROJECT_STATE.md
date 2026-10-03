@@ -4,6 +4,7 @@ Last updated: 2026-09-26
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **PC-127 (2026-10-03): the platform decides the scope, the person confirms it.** One app to a full ecosystem, each app with its reason, editable before the build; any paid key now leads every job.
 > **PC-126 (2026-10-03): no waiting on spent models.** Every job skips providers that are out until they are back; a paid key leads page design once added; scripts/models.sh shows the routing.
 > **PC-125 (2026-10-03): no dead links, no invisible text.** Links are checked against the app's pages and repaired; background colours used as text are fixed; the build report says what was verified.
 > **PC-122 (2026-10-02): quality is measured.** scripts/benchmark.sh builds real prompts end to end, scores them with screenshots and flags regressions; first runs 60.4 -> 76.8.

@@ -770,7 +770,10 @@ _MILESTONE_TASKS = [
      "real phone on a real network is the remaining check. Nothing else waits on it."),
     ("PC-127", "Scope from the prompt: one app, an app and admin, a few apps or a whole ecosystem, plus a "
      "marketing website and the phone app when the product needs them; an editable proposal", _M2,
-     "Vibe", "Not Started", "P0", "",
+     "Vibe", "Completed", "P0", "",
+     "Done 2026-10-03: intake/scope.py proposes the scope with reasons (no model call); the console's \"What "
+     "we'll build\" card edits it; builds follow it; paid keys lead every job. Live: control-plane 10/10, "
+     "browser 6/6. Public website is the web app's home page until PC-131. "
      "Also (open from M1, PC-126): any paid key the owner adds leads plans and chat edits as well as pages, "
      "with no setting to change; DeepSeek, Mistral and xAI join the page chain when their keys are set."),
     ("PC-128", "The project brief: apps, features (from the catalogue, pre-ticked and suggested), brand "

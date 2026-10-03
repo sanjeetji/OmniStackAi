@@ -1712,6 +1712,26 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/scope":
+                # PC-127: what will be built for this prompt, each app with its reason - no model call.
+                data = self._read_json_body()
+                if data is None:
+                    return
+                prompt = str(data.get("prompt", "")).strip()
+                if not prompt:
+                    self._send_json(400, {"error": "prompt is required"})
+                    return
+                from ..intake.scope import propose_scope, with_choices
+
+                try:
+                    scope = propose_scope(prompt)
+                    choices = data.get("included")
+                    if isinstance(choices, dict):
+                        scope = with_choices(scope, {str(k): bool(v) for k, v in choices.items()})
+                    self._send_json(200, scope.to_dict())
+                except Exception as error:  # noqa: BLE001 - the build still works without a proposal
+                    self._send_json(502, {"error": f"could not propose a scope: {type(error).__name__}"})
+                return
             if self.path == "/api/ecosystem-packs/recommend":
                 data = self._read_json_body()
                 if data is None:

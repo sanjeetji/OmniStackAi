@@ -132,6 +132,7 @@ func Register(mux *http.ServeMux, deps Deps) {
 	// PC-010: what a build or edit will cost, before it starts.
 	mux.HandleFunc("GET /projects/{id}/estimate", handleProjectEstimate(deps))
 	mux.HandleFunc("GET /estimate", handleProjectEstimate(deps))
+	mux.HandleFunc("POST /scope", handleScope(deps))
 	// PC-008: the whole app (database, API, web, admin) at a live URL.
 	mux.HandleFunc("GET /projects/{id}/live", handleProjectLive(deps, "", http.MethodGet))
 	mux.HandleFunc("POST /projects/{id}/live", handleProjectLive(deps, "", http.MethodPost))
@@ -1011,6 +1012,25 @@ func handleProjectPreview(deps Deps) http.HandlerFunc {
 
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/preview"
 		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, bodyReader, defaultPreviewTimeout)
+	}
+}
+
+// handleScope (PC-127) answers "what will be built for this prompt?" before a build: one app, an
+// app and its admin, a few apps or an ecosystem, each app with its reason. The agent-engine decides
+// it without a model call, so it costs nothing; signed-in users only, like every build request.
+func handleScope(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		body, err := io.ReadAll(io.LimitReader(r.Body, 64*1024))
+		_ = r.Body.Close()
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "could not read request body")
+			return
+		}
+		proxyUpstreamWithin(w, r, deps, http.MethodPost, deps.AgentEngineURL+"/api/scope", bytes.NewReader(body), defaultProxyTimeout)
 	}
 }
 

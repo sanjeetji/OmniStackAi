@@ -5,7 +5,8 @@
 
 Jobs and where their order comes from:
 
-* **plan** (the product plan, chat edits) - ``OMNISTACKAI_CLOUD_PROVIDER`` first, then
+* **plan** (the product plan, chat edits) - a paid key the owner has set first (Anthropic, OpenAI,
+  DeepSeek, xAI, Mistral - PC-127), then ``OMNISTACKAI_CLOUD_PROVIDER``, then
   ``OMNISTACKAI_FALLBACK_PROVIDERS``, ranked by the model scorecard (PC-085) when one exists;
   ``OMNISTACKAI_PREFER_LOCAL=1`` keeps every call on this machine;
 * **pages** (designing pages, and repairing them) - ``OMNISTACKAI_PAGE_CHAIN``, or the default:
@@ -45,7 +46,9 @@ def _model(provider: str, model: str | None) -> str:
 def plan_chain() -> list[tuple[str, str]]:
     if (os.environ.get("OMNISTACKAI_PREFER_LOCAL", "") or "").strip().lower() in ("1", "true", "yes"):
         return [("ollama", _model("ollama", None))]
-    names = [(os.environ.get("OMNISTACKAI_CLOUD_PROVIDER", "") or "").strip().lower()]
+    from ..intake.provider_resolution import paid_lead
+
+    names = [paid_lead() or "", (os.environ.get("OMNISTACKAI_CLOUD_PROVIDER", "") or "").strip().lower()]
     names += [n.strip().lower() for n in (os.environ.get("OMNISTACKAI_FALLBACK_PROVIDERS", "") or "").split(",")]
     chain: list[tuple[str, str]] = []
     for name in names:

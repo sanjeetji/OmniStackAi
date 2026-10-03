@@ -182,3 +182,39 @@ class NoWaitingWhileAnotherCanAnswer(_Health):
         chain = ChainProvider([(OnceLimited("google-gemini"), "g")], waits=(20.0,), sleep=sleep)
         self.assertEqual(asyncio.run(chain.generate(_request())).text, "from gemini")
         self.assertEqual(waits, [20.0])
+
+
+class APaidKeyLeadsEveryJob(TestCase):
+    """PC-127 (open from M1): adding a paid key is the whole change - plans and pages both use it first."""
+
+    CLEAN = {k: "" for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY", "XAI_API_KEY", "MISTRAL_API_KEY",
+                             "OMNISTACKAI_PAGE_CHAIN", "OMNISTACKAI_PAGE_PROVIDER", "OMNISTACKAI_PREFER_LOCAL",
+                             "OMNISTACKAI_PAID_LEADS")}
+
+    def test_plans(self) -> None:
+        from omnistackai_agent_engine.intake.provider_resolution import paid_lead, resolve_generation_provider_from_env
+        from omnistackai_agent_engine.model_gateway import routing
+
+        env = {**self.CLEAN, "DEEPSEEK_API_KEY": "sk-test", "OMNISTACKAI_CLOUD_PROVIDER": "groq",
+               "GROQ_API_KEY": "gsk-test", "OMNISTACKAI_FALLBACK_PROVIDERS": "ollama"}
+        with mock.patch.dict(os.environ, env):
+            self.assertEqual(paid_lead(), "deepseek")
+            provider, model, _out, _t = resolve_generation_provider_from_env(load_dotenv=False)
+            chain = list(getattr(provider, "chain", ()))
+            self.assertTrue(chain[0].startswith("deepseek:"), chain)
+            self.assertTrue(any(c.startswith("groq:") for c in chain), "the free tier is still the fallback")
+            self.assertEqual(routing.plan_chain()[0][0], "deepseek")
+        with mock.patch.dict(os.environ, {**env, "OMNISTACKAI_PAID_LEADS": "0"}):
+            self.assertIsNone(paid_lead())
+
+    def test_no_paid_key_no_change(self) -> None:
+        from omnistackai_agent_engine.intake.provider_resolution import paid_lead
+
+        with mock.patch.dict(os.environ, self.CLEAN):
+            self.assertIsNone(paid_lead())
+
+    def test_pages(self) -> None:
+        from omnistackai_agent_engine.model_gateway import routing
+
+        with mock.patch.dict(os.environ, {**self.CLEAN, "DEEPSEEK_API_KEY": "sk-test"}):
+            self.assertEqual(routing.page_chain()[0][0], "deepseek")

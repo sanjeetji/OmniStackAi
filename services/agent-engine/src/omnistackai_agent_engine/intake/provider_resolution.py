@@ -159,6 +159,18 @@ def resolve_generation_provider_from_env(
     if cloud_selection == "gemini":
         cloud_selection = "google"
 
+    # PC-127: a paid key the owner has added leads every job - no setting to change. The configured
+    # provider and its fallbacks follow it, so a spent paid balance still falls back to the free tiers.
+    lead = paid_lead()
+    if lead and not env_prefer_local and lead != cloud_selection:
+        provider, lead_model, max_output, timeout = resolve_generation_provider_from_env(
+            load_dotenv=False, provider_id=lead, rate_limit_retries=0, max_output_tokens=max_output_tokens)
+        first = (cloud_selection,) if cloud_selection and cloud_selection != "none" else ()
+        provider, lead_model, max_output = _with_fallbacks(provider, lead_model, max_output, lead, task,
+                                                           first=first, pin_primary=True)
+        logger.info("a paid key is set: %s leads %s jobs", lead, task)
+        return _maybe_record(provider, usage_ledger), lead_model, max_output, timeout
+
     # If preference is local and Ollama is online, use Ollama immediately
     if env_prefer_local and ollama_ready_patiently():
         logger.info("Local Ollama is ready and preferred; routing to Ollama")
@@ -205,8 +217,27 @@ def resolve_generation_provider_from_env(
     return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
 
 
+#: PC-127: providers that bill per use and have no free tier - a key set for one is the owner's
+#: decision to pay for quality, so it leads. In order of preference when several are set.
+PAID_PROVIDERS = ("anthropic", "openai", "deepseek", "xai", "mistral")
+PAID_LEADS_ENV = "OMNISTACKAI_PAID_LEADS"
+
+
+def paid_lead() -> str | None:
+    """The paid provider that leads every job: the first whose key is set (OMNISTACKAI_PAID_LEADS=0 turns it off)."""
+    if (os.environ.get(PAID_LEADS_ENV, "1") or "1").strip().lower() in ("0", "false", "no", "off"):
+        return None
+    specs = resolve_provider_specs()
+    for name in PAID_PROVIDERS:
+        spec = specs.get(name)
+        if spec is not None and os.environ.get(spec.key_env, "").strip():
+            return name
+    return None
+
+
 def _with_fallbacks(
-    primary: ModelProvider, model_id: str, max_output: int, primary_id: str | None, task: str = "plan"
+    primary: ModelProvider, model_id: str, max_output: int, primary_id: str | None, task: str = "plan",
+    *, first: tuple[str, ...] = (), pin_primary: bool = False,
 ) -> tuple[ModelProvider, str, int]:
     """Wrap the build provider in OMNISTACKAI_FALLBACK_PROVIDERS (founder, 2026-09-26).
 
@@ -218,6 +249,8 @@ def _with_fallbacks(
     from ..model_gateway.fallback import ChainEntry, FallbackChainProvider
 
     names = [n.strip().lower() for n in (os.environ.get("OMNISTACKAI_FALLBACK_PROVIDERS", "") or "").split(",") if n.strip()]
+    names = [n for n in (*first, *names) if n] if first else names
+    names = list(dict.fromkeys(names))
     if not names:
         return primary, model_id, max_output
     entries = [ChainEntry(primary, model_id, max_output)]
@@ -251,6 +284,8 @@ def _with_fallbacks(
 
     keys = [f"{e.provider.provider_id}:{e.model_id}" for e in entries]
     order = rank_chain(keys, task)
+    if pin_primary and order and order[0] != 0:
+        order = [0] + [i for i in order if i != 0]  # the owner's paid key stays first
     if order != list(range(len(entries))):
         logger.info("%s jobs routed by model scorecard: %s", task, " -> ".join(keys[i] for i in order))
     entries = [entries[i] for i in order]
@@ -334,6 +369,9 @@ DEFAULT_PAGE_CHAIN = (
     # the entry is skipped, so free tiers and the local model stay the default and nothing is billed.
     "anthropic",
     "openai",
+    "deepseek",
+    "xai",
+    "mistral",
     "google:gemini-3.8-flash",
     "google:gemini-3.5-flash-lite",
     "openrouter:qwen/qwen3.8-27b:free",

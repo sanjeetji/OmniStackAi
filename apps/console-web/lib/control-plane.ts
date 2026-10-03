@@ -2675,6 +2675,39 @@ export type CostEstimate = {
   includes_page_design?: boolean;
 };
 
+/** PC-127: one app of the proposed scope, with the reason it is there. */
+export type ScopeApp = {
+  id: string;
+  name: string;
+  kind: "web" | "admin" | "mobile" | "site";
+  audience: string;
+  included: boolean;
+  reason: string;
+};
+
+/** PC-127: what the platform will build for a prompt, before it builds. Editable. */
+export type ProjectScope = {
+  shape: "single" | "single_admin" | "few" | "ecosystem";
+  shape_label: string;
+  summary: string;
+  reason: string;
+  domain: string;
+  plan: "product" | "ecosystem";
+  apps: ScopeApp[];
+};
+
+export function proposeScope(
+  token: string,
+  prompt: string,
+  included?: Record<string, boolean>,
+): Promise<ProjectScope> {
+  return callControlPlane<ProjectScope>("/scope", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(included ? { prompt, included } : { prompt }),
+  });
+}
+
 export function getEstimate(token: string, kind: "build" | "edit", projectId?: string): Promise<CostEstimate> {
   const path = projectId ? `/projects/${encodeURIComponent(projectId)}/estimate` : "/estimate";
   return callControlPlane<CostEstimate>(`${path}?kind=${kind}`, {

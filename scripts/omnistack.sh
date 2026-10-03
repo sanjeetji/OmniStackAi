@@ -578,7 +578,13 @@ cmd_up() {
       if (( dev_console )); then
         start_bg console bash "$repo_root/scripts/console.sh" dev
       else
-        [[ -d "$repo_root/apps/console-web/.next" ]] || cmd_build
+        # PC-127, found live: an existing build was served even when the console's code had changed
+        # since, so a new screen (the scope proposal) never appeared. Rebuild when any source is newer.
+        local web="$repo_root/apps/console-web"
+        if [[ ! -f "$web/.next/BUILD_ID" ]] || [[ -n "$(find "$web/app" "$web/components" "$web/lib" "$web/package.json" \
+              -newer "$web/.next/BUILD_ID" -type f -print -quit 2>/dev/null)" ]]; then
+          cmd_build
+        fi
         start_bg console bash "$repo_root/scripts/console.sh" start
       fi
       if wait_http "$(console_url)/login" 90; then
