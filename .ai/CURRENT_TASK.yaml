@@ -1,14 +1,14 @@
-task_id: PC-077
-status: completed
-phase: Platform Completion — M3 Wow UI
-tracker_row: PC-077
+task_id: PC-133
+status: in_progress
+phase: Platform Completion — M4 Any domain
+tracker_row: PC-133
 started_at: "2026-10-03"
-completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
-  Realistic demo data in every preview: rows for every entity in dependency order, foreign keys
-  that point at real rows, workflow states that make sense, values written by the model for the
-  domain (deterministic generated values without one), loaded after the migrations.
+  Model-planned products for any domain: when a model is available, the multi-app path asks it for
+  the product's things, people and flows, with the domain library as hints rather than the limit;
+  the answer is validated and reviewed (R-582) against the prompt. The library plan remains the
+  fallback. The benchmark's clinic case (Doctor, Appointment, reminders) must pass.
 founder_gate: none
 companions: []
 allowed_paths:
@@ -21,13 +21,5 @@ allowed_paths:
 forbidden_changes:
   - task verify stays offline with 0 model calls
 required_gates:
-  - Live - a prompt built in the console shows domain-realistic rows in the preview's pages
+  - Live - the clinic prompt plans Doctor and Appointment with a reminder, and builds
   - scripts/verify.sh passes
-found_and_fixed:
-  - A plan whose tables refer to each other in a cycle failed the build; the foreign keys are now added after the tables, guarded.
-  - A planner timeout failed the build with local Ollama untried - the usage ledger hid the chain's restart hook; it is passed through, in the live health order.
-  - A plan with no schema version (or wrapped in one key) failed the build although the plan was sound; it is read now.
-  - The model marked up a plain-text value with HTML; markup is stripped from plain fields.
-deferred:
-  - Demo data for the phone apps' local stores and for media fields (images) is later; they read the same API rows.
-  - PC-136 (M1 gate) is still open - the quick benchmark ran out of free quota after 2 prompts (food-delivery 87.5, clinic 75.6); it runs again with a paid key.
