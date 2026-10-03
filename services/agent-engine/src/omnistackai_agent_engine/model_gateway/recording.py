@@ -51,6 +51,21 @@ class RecordingProvider:
     async def health(self) -> ProviderHealth:
         return await self._inner.health()
 
+    @property
+    def last_provider_id(self) -> str | None:
+        return getattr(self._inner, "last_provider_id", None)
+
+    @last_provider_id.setter
+    def last_provider_id(self, value: str | None) -> None:
+        # The planner reports which provider answered after a restart (PC-106).
+        self._inner.last_provider_id = value
+
+    def after(self, provider_id: str | None, error: Exception) -> "RecordingProvider | None":
+        """PC-106 through the ledger: the rest of a fallback chain, still recorded."""
+        after = getattr(self._inner, "after", None)
+        rest = after(provider_id, error) if callable(after) else None
+        return RecordingProvider(rest, self._ledger) if rest is not None else None
+
     async def discover_models(self) -> tuple[ModelDescriptor, ...]:
         return await self._inner.discover_models()
 

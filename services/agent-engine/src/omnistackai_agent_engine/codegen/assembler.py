@@ -336,6 +336,15 @@ def assemble_project(
     if ir.apis:
         files.append(GeneratedFile("contracts/openapi.json", render_openapi_json(ir)))
 
+    # PC-077: demo rows for the preview (never applied by publishing), part of the first commit.
+    if any(app.directory == "services/api" for app in apps):
+        from .demo_data import PATH as DEMO_PATH
+        from .demo_data import demo_sql
+
+        demo = demo_sql(ir)
+        if demo:
+            files.append(GeneratedFile(DEMO_PATH, demo))
+
     # PC-102: an app that takes files can offer cloud drives and web links through Uppy Companion
     # (started only when its keys are set). Python backends accept the uploads today (PC-105: Go, Node).
     from .upload_policy import has_uploads

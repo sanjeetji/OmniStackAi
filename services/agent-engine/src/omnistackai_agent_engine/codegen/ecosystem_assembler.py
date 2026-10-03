@@ -203,6 +203,7 @@ def assemble_ecosystem(plan, *, provider=None, prompt: str = "") -> GeneratedPro
 
     # One brand, one contract, one README for the whole ecosystem.
     files += brand_files(shared, _slug(shared.name))
+    # PC-077: the shared API's demo rows come with its backend (assembler.assemble_project).
     if shared.apis:
         files.append(GeneratedFile("contracts/openapi.json", render_openapi_json(shared)))
     files.append(GeneratedFile("README.md", _ecosystem_readme(plan, shared, app_dirs)))

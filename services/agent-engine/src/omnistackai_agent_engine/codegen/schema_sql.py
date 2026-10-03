@@ -108,38 +108,49 @@ def sql_identifier(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
-def ordered_entities(ir: ApplicationIR) -> tuple[Entity, ...]:
-    """Stable FK-dependency order for entity creation and fixture insertion.
+def _fk_column(relation: Relation) -> str:
+    return relation.name if relation.name.endswith("_id") else f"{relation.name}_id"
 
-    PostgreSQL accepts a self-reference in the table currently being created, but an inline foreign
-    key to another table requires that target table to exist already. A non-self cycle cannot satisfy
-    that contract with inline constraints, so fail honestly instead of emitting a broken migration.
+
+def entity_order(ir: ApplicationIR) -> tuple[tuple[Entity, ...], frozenset[tuple[str, str]]]:
+    """Stable FK-dependency order, and the foreign keys that must be added after the tables.
+
+    PostgreSQL accepts a self-reference in the table being created, but an inline foreign key to
+    another table needs that table to exist already. Found live (PC-077): a model planned an Order
+    with its Delivery and a Delivery of its Order - a cycle no order can satisfy inline, and the whole
+    build failed. A cycle is now broken at the table with the fewest unmet links: those columns are
+    created plain and their foreign keys added once every table exists. Returns (order, deferred) with
+    deferred as (entity name, column).
     """
 
     remaining = list(ir.entities)
     emitted: set[str] = set()
     ordered: list[Entity] = []
-    while remaining:
-        ready_index: int | None = None
-        for index, entity in enumerate(remaining):
-            dependencies = {
-                relation.target_entity
-                for relation in entity.relations
+    deferred: set[tuple[str, str]] = set()
+
+    def unmet(entity: Entity) -> list[Relation]:
+        return [relation for relation in entity.relations
                 if relation.kind in _FK_KINDS and relation.target_entity != entity.name
-            }
-            if dependencies <= emitted:
-                ready_index = index
-                break
+                and relation.target_entity not in emitted]
+
+    while remaining:
+        ready_index = next((i for i, entity in enumerate(remaining) if not unmet(entity)), None)
         if ready_index is None:
-            names = ", ".join(entity.name for entity in remaining)
-            raise ValueError(f"cyclic foreign-key dependencies: {names}")
+            ready_index = min(range(len(remaining)), key=lambda i: (len(unmet(remaining[i])), i))
+            deferred.update((remaining[ready_index].name, _fk_column(r)) for r in unmet(remaining[ready_index]))
         entity = remaining.pop(ready_index)
         ordered.append(entity)
         emitted.add(entity.name)
-    return tuple(ordered)
+    return tuple(ordered), frozenset(deferred)
 
 
-def _column_lines(entity: Entity, has_auth: bool = False) -> list[str]:
+def ordered_entities(ir: ApplicationIR) -> tuple[Entity, ...]:
+    """Stable FK-dependency order for entity creation and fixture insertion (cycles broken)."""
+
+    return entity_order(ir)[0]
+
+
+def _column_lines(entity: Entity, has_auth: bool = False, deferred: frozenset[str] = frozenset()) -> list[str]:
     lines: list[str] = []
     has_id = any(field.name == "id" for field in entity.fields)
     if not has_id:
@@ -165,7 +176,8 @@ def _column_lines(entity: Entity, has_auth: bool = False) -> list[str]:
             target = sql_identifier(_table(relation.target_entity))
             null = " NOT NULL" if field.required else ""
             unique = " UNIQUE" if field.unique else ""
-            lines.append(f"    {column} UUID{null}{unique} REFERENCES {target}({sql_identifier('id')})")
+            reference = "" if field.name in deferred else f" REFERENCES {target}({sql_identifier('id')})"
+            lines.append(f"    {column} UUID{null}{unique}{reference}")
         else:
             pg = _PG_TYPE[field.type]
             rules = parse_field_rules(field)
@@ -196,7 +208,8 @@ def _column_lines(entity: Entity, has_auth: bool = False) -> list[str]:
             relation_column_name = f"{relation.name}_id"
             if relation_column_name not in emitted_field_names and relation.name not in emitted_field_names:
                 relation_column = sql_identifier(relation_column_name)
-                lines.append(f"    {relation_column} UUID REFERENCES {target}({sql_identifier('id')})")
+                reference = "" if relation_column_name in deferred else f" REFERENCES {target}({sql_identifier('id')})"
+                lines.append(f"    {relation_column} UUID{reference}")
                 emitted_field_names.add(relation_column_name)
 
     # Phase 3: Row ownership column (created_by) when auth is enabled.
@@ -300,9 +313,11 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
 
     workflows_by_entity = {w.entity: w for w in workflows_of(ir)}
 
-    for entity in ordered_entities(ir):
+    order, deferred = entity_order(ir)
+    for entity in order:
         table = _table(entity.name)
-        columns = ",\n".join(_column_lines(entity, has_auth=auth))
+        own_deferred = frozenset(column for name, column in deferred if name == entity.name)
+        columns = ",\n".join(_column_lines(entity, has_auth=auth, deferred=own_deferred))
         workflow = workflows_by_entity.get(entity.name)
         # PC-049: every statement is safe to run again, so a published database can be brought up to
         # date by re-applying the schema (new tables, a lifecycle's new states, new triggers).
@@ -328,6 +343,24 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
             f"  BEFORE UPDATE ON {sql_identifier(table)}\n"
             f"  FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
         )
+        blocks.append("")
+
+    if deferred:
+        # The links of a cycle, once every table exists. Guarded, so re-applying the schema is safe.
+        blocks.append("-- Foreign keys of tables that refer to each other")
+        by_name = {e.name: e for e in ir.entities}
+        for entity_name, column in sorted(deferred):
+            relation = next(r for r in by_name[entity_name].relations if _fk_column(r) == column)
+            table, target = _table(entity_name), _table(relation.target_entity)
+            name = f"fk_{table}_{column}"[:63]
+            blocks.append(
+                "DO $$ BEGIN\n"
+                f"  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = '{name}') THEN\n"
+                f"    ALTER TABLE {sql_identifier(table)} ADD CONSTRAINT {sql_identifier(name)} "
+                f"FOREIGN KEY ({sql_identifier(column)}) REFERENCES {sql_identifier(target)}({sql_identifier('id')});\n"
+                "  END IF;\n"
+                "END $$;"
+            )
         blocks.append("")
 
     join_tables = _join_tables(ir)

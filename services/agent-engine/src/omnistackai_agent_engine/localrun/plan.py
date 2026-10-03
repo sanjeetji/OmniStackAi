@@ -468,6 +468,21 @@ def build_run_plan(
                     env=pg_env,
                 )
             )
+    # PC-077: demo rows, so the preview looks used. Preview only (publishing reads migrations only), and
+    # never in the way: a row that does not fit is skipped with its transaction, the preview still starts.
+    demo_dir = api_dir / "demo"
+    if demo_dir.is_dir():
+        for demo in sorted(demo_dir.glob("*.sql")):
+            steps.append(
+                RunStep(
+                    label=f"load demo data into the database ({demo.name})",
+                    program="docker",
+                    args=("exec", "-i", db_container, "psql", "-U", app_role, "-d", database, "-v", "ON_ERROR_STOP=1"),
+                    stdin_file=str(demo),
+                    env=pg_env,
+                    tolerate_failure=True,
+                )
+            )
 
     # --- backend ---
     if backend_kind == "python":

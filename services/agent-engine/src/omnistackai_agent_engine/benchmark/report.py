@@ -64,6 +64,8 @@ def markdown(report: dict, run_dir: Path) -> str:
             for why, count in sorted(reasons.items(), key=lambda kv: -kv[1])[:3]:
                 lines.append(f"  - {count} because {why or 'no reason given'}")
         review = case.get("review") or {}
+        if review.get("mean") is None and review.get("pages"):
+            lines.append(f"- Design review: no page scored ({'; '.join(review.get('errors') or ['no reason recorded'])[:300]})")
         if review.get("mean") is not None:
             lines.append(f"- Design review: {review['mean']}/10 over {review['scored']} pages"
                          + (f"; below the bar: {', '.join(review['below_bar'][:6])}" if review.get("below_bar") else ""))

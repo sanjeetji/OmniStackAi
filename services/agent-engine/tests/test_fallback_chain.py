@@ -178,8 +178,45 @@ class APlanThatStopsPartWayStartsAgainWithTheNextProvider(TestCase):
         chain = _chain(_Fake("groq"), _Fake("openrouter"), _Fake("nvidia"))
         rest = chain.after("groq", ProviderTimeoutError("slow"))
         self.assertEqual([e.provider.provider_id for e in rest.entries], ["openrouter", "nvidia"])
-        self.assertIsNone(chain.after("nvidia", ProviderTimeoutError("slow")), "nothing after the last")
+        self.assertEqual([e.provider.provider_id for e in chain.after("nvidia", ProviderTimeoutError("slow")).entries],
+                         ["groq", "openrouter"], "the live order: one listed earlier is still worth trying")
+        self.assertIsNone(_chain(_Fake("nvidia")).after("nvidia", ProviderTimeoutError("slow")), "nothing else to try")
         self.assertIsNone(chain.after("groq", ProviderResponseError("bad")), "not a failure another can fix")
+
+    def test_through_the_usage_ledger(self) -> None:
+        """Seen live (PC-077): the build's provider is the chain wrapped in the usage ledger, which
+        hid ``after`` - a NVIDIA timeout failed the build with local Ollama still untried."""
+        from omnistackai_agent_engine.model_gateway.accounting import UsageLedger
+        from omnistackai_agent_engine.model_gateway.recording import RecordingProvider
+
+        chain = _chain(_Fake("nvidia"), _Fake("ollama"))
+        chain.last_provider_id = "nvidia"
+        recorded = RecordingProvider(chain, UsageLedger())
+        self.assertEqual(recorded.last_provider_id, "nvidia")
+        rest = recorded.after("nvidia", ProviderTimeoutError("slow"))
+        self.assertIsInstance(rest, RecordingProvider)
+        self.assertEqual(rest.provider_id, "ollama")
+        recorded.last_provider_id = "ollama"
+        self.assertEqual(chain.last_provider_id, "ollama", "the planner reports who answered")
+
+    def test_the_planner_restarts_through_the_usage_ledger(self) -> None:
+        from omnistackai_agent_engine.application_ir import example_ir
+        from omnistackai_agent_engine.intake.nl_to_ir import IntakeResult, generate_ir_stream
+        from omnistackai_agent_engine.model_gateway.accounting import UsageLedger
+        from omnistackai_agent_engine.model_gateway.recording import RecordingProvider
+        import json
+
+        plan = json.dumps(example_ir("minimal-blog").to_dict())
+        chain = _chain(_Fake("nvidia", text='{"name": "half', fail=ProviderTimeoutError("slow"), fail_after_first_token=True),
+                       _Fake("ollama", text=plan))
+        recorded = RecordingProvider(chain, UsageLedger())
+
+        async def run():
+            return [item async for item in generate_ir_stream("A blog", recorded, model_id="m")]
+
+        items = asyncio.run(run())
+        self.assertIsInstance(items[-1], IntakeResult)
+        self.assertEqual(chain.last_provider_id, "ollama")
 
     def test_the_planner_drops_the_partial_answer_and_uses_the_next_provider(self) -> None:
         from omnistackai_agent_engine.application_ir import example_ir

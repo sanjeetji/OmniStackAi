@@ -96,3 +96,21 @@ class AMalformedPartIsACleanError(TestCase):
                 except IntakeResponseError:
                     pass  # a clean, catchable rejection
                 # anything else propagates and fails the test
+
+
+class AWrappedOrUnversionedPlanIsRead(TestCase):
+    """PC-077, seen live: a local model answered a bakery plan with no schema_version, and the
+    build failed although the plan itself was sound."""
+
+    def test_a_null_or_missing_version_is_the_current_one(self) -> None:
+        for version in (None, ""):
+            with self.subTest(version=version):
+                plan = _plan()
+                plan["schema_version"] = version
+                self.assertTrue(_parse(plan)[0].entities)
+        plan = _plan()
+        plan.pop("schema_version", None)
+        self.assertTrue(_parse(plan)[0].entities)
+
+    def test_a_plan_wrapped_in_one_key(self) -> None:
+        self.assertTrue(_parse({"application": _plan()})[0].entities)

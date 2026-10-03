@@ -478,7 +478,8 @@ async def build_app_from_prompt(
             finish=_brief_finish(owner_brief),
         )
         built = _replace_result(built, scope=chosen.to_dict())
-        return await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+        return await _with_demo_data(await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+                           confirmed=scope is not None), prompt, provider, model_id, author_name, author_email,
                            confirmed=scope is not None)
 
     plan_started = time.perf_counter()
@@ -509,8 +510,38 @@ async def build_app_from_prompt(
     )
     built.timings["plan"] = plan_seconds
     built = _replace_result(built, scope=chosen.to_dict())
-    return await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+    return await _with_demo_data(await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+                           confirmed=scope is not None), prompt, provider, model_id, author_name, author_email,
                            confirmed=scope is not None)
+
+
+async def _with_demo_data(built: AppBuildResult, prompt: str, provider, model_id, author_name: str, author_email: str,
+                          *, confirmed: bool) -> AppBuildResult:
+    """PC-077: demo rows for the preview (services/api/demo) - never applied by publishing.
+
+    Values are the model's when the person confirmed the brief (one request), generated otherwise."""
+    from ..codegen.demo_data import PATH, demo_sql, write_values
+    from ..git_service import RepositoryError, commit_all
+
+    root = Path(built.target_dir)
+    if not (root / "services" / "api").is_dir():
+        return built
+    if not confirmed:
+        # The generated rows are already in the first commit (the assembler writes them).
+        return _replace_result(built, scope={**built.scope, "demo_data": {"path": PATH, "values_by": "generated"}})
+    written, by = await write_values(built.ir, prompt.split("\n\nProject brief")[0], provider, model_id)
+    sql = demo_sql(built.ir, written)
+    if not sql:
+        return built
+    target = root / PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(sql, encoding="utf-8")
+    try:
+        sha = commit_all(str(root), author_name=author_name, author_email=author_email,
+                         message="chore(demo): sample data for the preview").commit_sha
+    except RepositoryError:
+        sha = built.commit_sha
+    return _replace_result(built, commit_sha=sha, scope={**built.scope, "demo_data": {"path": PATH, "values_by": by}})
 
 
 async def _with_site(built: AppBuildResult, chosen, prompt: str, provider, model_id, owner_brief, author_name: str,
@@ -662,7 +693,8 @@ async def build_app_from_prompt_stream(
             finish=_brief_finish(owner_brief),
         )
         built = _replace_result(built, scope=chosen.to_dict())
-        yield await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+        yield await _with_demo_data(await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+                           confirmed=scope is not None), prompt, provider, model_id, author_name, author_email,
                            confirmed=scope is not None)
         return
 
@@ -702,5 +734,6 @@ async def build_app_from_prompt_stream(
     )
     built.timings["plan"] = plan_seconds
     built = _replace_result(built, scope=chosen.to_dict())
-    yield await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+    yield await _with_demo_data(await _with_site(built, chosen, prompt, provider, model_id, owner_brief, author_name, author_email,
+                           confirmed=scope is not None), prompt, provider, model_id, author_name, author_email,
                            confirmed=scope is not None)

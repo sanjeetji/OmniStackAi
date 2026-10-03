@@ -162,10 +162,14 @@ class FallbackChainProvider:
         """
         if not _worth_another_provider(error):
             return None
+        from . import health
+
         ids = [e.provider.provider_id for e in self._entries]
         if provider_id not in ids:
             return None
-        rest = self._entries[ids.index(provider_id) + 1:]
+        # The live order (PC-126), not the configured one: a provider listed earlier that is
+        # answering is still worth trying, and the one that just failed is left out.
+        rest = [self._entries[i] for i in health.order(ids) if ids[i] != provider_id]
         return FallbackChainProvider(rest) if rest else None
 
     def __getattr__(self, name: str) -> Any:

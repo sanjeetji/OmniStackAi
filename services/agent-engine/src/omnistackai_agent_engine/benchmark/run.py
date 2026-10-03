@@ -186,7 +186,8 @@ def _review(result: CaseResult, log: Callable[[str], None]) -> dict:
     scored = [r for r in reviews if not r.error]
     mean = round(sum(r.score for r in scored) / len(scored), 1) if scored else None
     log(f"   design review: {mean}/10 over {len(scored)} pages" if scored else "   design review: no model that can see answered")
-    return {"mean": mean, "pages": len(reviews), "scored": len(scored),
+    errors = sorted({r.error for r in reviews if r.error})
+    return {"mean": mean, "pages": len(reviews), "scored": len(scored), "errors": errors[:3],
             "below_bar": [f"{r.app}{r.route} {r.score:g}" for r in scored if r.score < PASS_SCORE],
             "worst": sorted(([r.score, f"{r.app}{r.route}", r.summary] for r in scored))[:3]}
 

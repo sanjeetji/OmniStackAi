@@ -1,8 +1,9 @@
 task_id: PC-077
-status: in_progress
+status: completed
 phase: Platform Completion — M3 Wow UI
 tracker_row: PC-077
 started_at: "2026-10-03"
+completed_at: "2026-10-03"
 branch: platform-completion
 objective: >-
   Realistic demo data in every preview: rows for every entity in dependency order, foreign keys
@@ -22,3 +23,11 @@ forbidden_changes:
 required_gates:
   - Live - a prompt built in the console shows domain-realistic rows in the preview's pages
   - scripts/verify.sh passes
+found_and_fixed:
+  - A plan whose tables refer to each other in a cycle failed the build; the foreign keys are now added after the tables, guarded.
+  - A planner timeout failed the build with local Ollama untried - the usage ledger hid the chain's restart hook; it is passed through, in the live health order.
+  - A plan with no schema version (or wrapped in one key) failed the build although the plan was sound; it is read now.
+  - The model marked up a plain-text value with HTML; markup is stripped from plain fields.
+deferred:
+  - Demo data for the phone apps' local stores and for media fields (images) is later; they read the same API rows.
+  - PC-136 (M1 gate) is still open - the quick benchmark ran out of free quota after 2 prompts (food-delivery 87.5, clinic 75.6); it runs again with a paid key.

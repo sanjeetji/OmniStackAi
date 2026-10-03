@@ -28,17 +28,17 @@ Work only from this folder's Work Queue, top to bottom. Other R_&_D plans and th
 
 | Status | Tasks |
 |---|---|
-| Completed | 470 |
+| Completed | 471 |
 | Completed - needs live proof | 8 |
 | In Progress | 0 |
-| Pending | 94 |
+| Pending | 93 |
 | Not Started | 505 |
 | Superseded | 14 |
 | Deferred | 57 |
 | Dropped | 9 |
 | **Total** | **1157** |
 
-Open work queue: **89** tasks (P0: 5, P1: 38, P2: 32, P3: 14).
+Open work queue: **88** tasks (P0: 5, P1: 38, P2: 31, P3: 14).
 
 ## Work queue (do these in order)
 
@@ -61,7 +61,7 @@ Open work queue: **89** tasks (P0: 5, P1: 38, P2: 32, P3: 14).
 | 12 | PC-130 | Design review: each page screenshotted on phone and desktop, critiqued and scored, and improved until it passes | Completed | P0 | Both | PC-129 |  | Done 2026-10-03: fresh screenshots, vision-model score and fixes per page, low pages redesigned and kept only if they score higher, Looks in the benchmark; live mean 5.0-5.4 on free models. Phone-screen review and forms end to end remain. Also (open from M1): a looks score from the screenshots in the benchmark (PC-122 shows them for a person to judge); forms filled in and saved end to end in the browser walk, not only list endpoints called; the hydration mismatch PC-125 found (server and client render differently) fed back to the model. |
 | 13 | PC-050 | Design System Pro: widen the LLM UI allowlist (motion, charts, rich text, command menu, drawer, toasts, tables, forms, maps, uploads) | Completed | P0 | Vibe |  | ARCH-ALLOWLIST | framer-motion, recharts, tiptap, cmdk, vaul, sonner, tanstack-table, react-hook-form + zod, date-fns, maplibre, uppy: pinned, validated, repaired like today's allowlist. From the architecture plan. Done 2026-09-29: framer-motion, recharts, @tanstack/react-table, react-hook-form + zod, date-fns, sonner, cmdk, vaul pinned for React 18 in every generated web and admin app, allowed and explained to the page writer; the type-check cache rebuilds when they change. Deferred: tiptap (rich text), maplibre (maps) and uppy (uploads) - heavy, and each needs a backend or tiles; add with the feature that uses them. Closed 2026-10-03: maplibre-gl arrived with PC-100, uploads (Uppy) with PC-102 and rich text (tiptap) with PC-104. |
 | 14 | PC-131 | Marketing website generator: a multi-section site with copy and SEO from the brief | Completed | P1 | Vibe | PC-128 |  | Done 2026-10-03: apps/site from the confirmed scope - checked model copy (no invented claims) on the platform's template, SEO, brand.json; live: a bakery site with 5 features and a CTA into the web app. |
-| 15 | PC-077 | Rich seed data generator: realistic, domain-aware, deterministic demo data | Pending | P2 | Both | PC-017 | SPEC-PACK-06E | Fixture seeds exist (R-248) and must stay deterministic (R-586). From specs/pack-framework/06e. |
+| 15 | PC-077 | Rich seed data generator: realistic, domain-aware, deterministic demo data | Completed | P2 | Both | PC-017 | SPEC-PACK-06E | Done 2026-10-03: services/api/demo/demo_data.sql loaded after migrations in the preview only - linked rows, lifecycle states, model-written values checked per column (generated without a model); live: a bakery admin with 7 cakes, 6 orders. Fixture seeds stay deterministic (R-586). |
 | | | **Phase M4 Any domain**: The model plans apps, people, data and flows for any domain; the domain library is hints, not a limit. | | | | | | |
 | 16 | PC-133 | Model-planned products for any domain: apps, people, data and flows planned by the model, the domain library as hints; validated and reviewed (R-582) | Not Started | P0 | Both |  |  | Founder: there are lakhs of domains; a fixed library cannot be the limit. Open from M1 (PC-122): the benchmark's clinic was planned from the booking library as Booking + Service, with no doctors, appointments or reminders, and the model was never asked - the clinic case must pass. |
 | | | **Phase M5 Features**: Custom behaviour the model writes and tests prove (escape hatch); more building blocks: reviews, chat, maps, analytics, search, forms, languages. | | | | | | |
@@ -935,6 +935,7 @@ What each tracker phase asks for, and where it is covered:
 | PC-053 | Notifications in generated apps: email, push (Expo and native), in-app, user preferences | Completed | 2026-10-02 | R-516 gives email. From the architecture plan. Done 2026-10-02 (in-app, email, preferences, reminders): a `notifications` capability; a trigger writes each notification in the database (muted channels left out), so every backend delivers the same; reminders are jobs that notify once per record; a live bell (R-569), a page with preferences, an email outbox with retries (Resend, keys last). 27/27 live on Python, Go, Express and Hono; 6/6 in a browser. Push is PC-121 (mobile work: founder's go-ahead). |
 | PC-062 | Native mobile preview: R&D and plan (open source first) | Completed | 2026-09-26 | NATIVE_MOBILE_PREVIEW_PLAN.md in this folder. |
 | PC-063 | Android emulator preview without Android Studio: SDK command-line bootstrap, headless emulator, auto-install, streamed into the Studio | Completed | 2026-09-30 | See NATIVE_MOBILE_PREVIEW_PLAN.md. Open source first; local on the founder's Mac, then hosted in PC-065. Done 2026-09-30: the preview's Mobile tab sets up (checksum-verified, ~1.5 GB once), boots and drives an emulator and opens the app in Expo Go; one account holds it at a time. Screenshots, not video, for now. |
+| PC-077 | Rich seed data generator: realistic, domain-aware, deterministic demo data | Completed | 2026-10-03 | Done 2026-10-03: services/api/demo/demo_data.sql loaded after migrations in the preview only - linked rows, lifecycle states, model-written values checked per column (generated without a model); live: a bakery admin with 7 cakes, 6 orders. Fixture seeds stay deterministic (R-586). |
 | PC-084 | Speed targets measured on every build and enforced: prompt -> preview under 90 s, prompt -> live URL under 3 min, as a dashboard and a regression gate | Completed | 2026-09-26 | The Targets sheet had numbers but no task measured them. Founder-approved 2026-09-26. |
 | PC-085 | Model quality evals and best-model routing: score every provider (NVIDIA, cloud, local) per task type and route each job to the best one | Completed | 2026-09-27 | NVIDIA nemotron is unproven for code; this keeps quality independent of one vendor. Founder-approved 2026-09-26. Done 2026-09-27: plan and code evals, scorecard routing; follow-ups: more code cases, score Gemini once its daily quota resets, route the build's repair step as a code job. |
 | PC-093 | Intake repairs instead of rejecting: a model's status-change endpoint becomes a workflow transition, and an undeclared request-schema reference is fixed, not fatal | Completed | 2026-09-26 | Found by PC-047's comparison (2026-09-26): 3 of 6 real intake runs, on both NVIDIA and Gemini, were rejected for the same reason. Roughly half of real prompts fail at the first step whichever model runs, so this comes before everything else. |

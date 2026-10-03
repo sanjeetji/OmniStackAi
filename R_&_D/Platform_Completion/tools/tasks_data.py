@@ -489,9 +489,10 @@ QUEUE = [
      "board, SOAP notes ...)", "2 Maximum features", "Both", "Not Started", "P1", "PC-017",
      "From specs/pack-framework/06c."),
     ("PC-077", "Rich seed data generator: realistic, domain-aware, deterministic demo data",
-     "2 Maximum features", "Both", "Pending", "P2", "PC-017",
-     "Fixture seeds exist (R-248) and must stay deterministic (R-586). From "
-     "specs/pack-framework/06e."),
+     "2 Maximum features", "Both", "Completed", "P2", "PC-017",
+     "Done 2026-10-03: services/api/demo/demo_data.sql loaded after migrations in the preview only - linked rows, "
+     "lifecycle states, model-written values checked per column (generated without a model); live: a bakery admin "
+     "with 7 cakes, 6 orders. Fixture seeds stay deterministic (R-586)."),
     ("PC-072", "Blueprint conversion: turn RideNow, Bazaar and CareClinic templates into "
      "blueprints that regenerate them (golden-file test)", "2 Maximum features", "Both",
      "Not Started", "P1", "PC-017, PC-075, PC-076", "From specs/pack-framework/05."),

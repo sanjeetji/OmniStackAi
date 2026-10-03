@@ -464,9 +464,14 @@ def _sanitize_ir_dict(data: dict) -> dict:
     # If the payload is completely devoid of entities and project_strategy,
     # it is not an IR payload (e.g. invalid test input like '{"name": "x"}').
     if "project_strategy" not in data and "entities" not in data:
-        return data
+        # PC-077, seen live: a small local model wrapped the plan in one key ({"application": {...}}).
+        inner = [v for v in data.values() if isinstance(v, dict) and ("entities" in v or "project_strategy" in v)]
+        if len(inner) != 1:
+            return data
+        data = dict(inner[0])
 
-    data.setdefault("schema_version", IR_SCHEMA_VERSION)
+    if data.get("schema_version") in (None, ""):
+        data["schema_version"] = IR_SCHEMA_VERSION
 
     # Name & Description
     raw_name = data.get("name") or data.get("app_name") or data.get("title")

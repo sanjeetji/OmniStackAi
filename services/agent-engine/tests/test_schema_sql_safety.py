@@ -139,7 +139,9 @@ class DependencyOrderingTests(TestCase):
         sql = render_postgres_schema(_ir((node,)))
         self.assertIn('"parent_id" UUID REFERENCES "node"("id")', sql)
 
-    def test_non_self_cycle_fails_instead_of_emitting_invalid_sql(self) -> None:
+    def test_a_cycle_is_created_then_linked(self) -> None:
+        """PC-077, found live: a model's Order and Delivery referred to each other and the build failed.
+        The tables are created first and the cycle's foreign key added after, guarded for re-runs."""
         alpha = Entity(
             "Alpha",
             (Field("id", FieldType.UUID, True),),
@@ -150,8 +152,11 @@ class DependencyOrderingTests(TestCase):
             (Field("id", FieldType.UUID, True),),
             (Relation("alpha", "Alpha", RelationKind.ONE_TO_ONE),),
         )
-        with self.assertRaisesRegex(ValueError, "cyclic foreign-key dependencies: Alpha, Beta"):
-            render_postgres_schema(_ir((alpha, beta)))
+        sql = render_postgres_schema(_ir((alpha, beta)))
+        self.assertLess(sql.index('CREATE TABLE IF NOT EXISTS "alpha"'), sql.index('CREATE TABLE IF NOT EXISTS "beta"'))
+        self.assertIn('"beta_id" UUID,', sql.replace("UUID\n", "UUID,\n"))
+        self.assertIn("IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_alpha_beta_id')", sql)
+        self.assertIn('REFERENCES "alpha"("id")', sql, "the other direction stays inline")
 
     def test_output_remains_byte_stable(self) -> None:
         ir = example_ir("minimal-blog")
